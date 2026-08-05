@@ -1,0 +1,8 @@
+.DS_Store
+.cursor/
+.tmp/
+*.ai
+*.backup
+*.bak
+index-original.html
+index2.html

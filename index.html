@@ -1,0 +1,2263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://use.typekit.net/cmx8gmo.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>INGYSYNTH</title>
+    <!-- Bump ?v= on css/js imports below when deploying updates -->
+    <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=288">
+</head>
+<body>
+    <div class="container">
+        <h1>INGYSYNTH</h1>
+        <div class="header-grid">
+            <div></div> <!-- Empty column to center oscilloscope -->
+            <div class="oscilloscope-container">
+                <canvas id="oscilloscope" height="200"></canvas>
+                <div id="logo-overlay">
+                    <div class="glitch-container logo-flicker">
+                        <div class="glitch">
+                            <svg id="logo-svg" class="logo-flicker" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 102.88">
+                                <g id="c" data-name="Layer 1">
+                                    <g>
+                                        <polygon points="38.71 7.6 38.71 28.16 44.08 28.16 44.08 7.6 38.71 7.6 38.71 7.6" fill="lime"/>
+                                        <rect x="38.71" width="5.36" height="5.36" fill="lime"/>
+                                        <path d="M51.83,12.96h18.18v15.2h5.36v-14.08c0-3.58-2.91-6.48-6.48-6.48h-22.43v20.56h5.36v-15.2Z" fill="lime"/>
+                                        <path d="M106.66,30.38V7.6h-22.43c-3.58,0-6.48,2.91-6.48,6.48v7.6c0,3.58,2.91,6.48,6.48,6.48h15.27v-5.36h-16.39v-9.84h18.18v17.44h-23.54v5.36h22.39l6.52-5.38Z" fill="lime"/>
+                                        <path d="M47.43,53.27v5.36h22.43c3.58,0,6.48-2.91,6.48-6.48s-2.91-6.48-6.48-6.48h-18.03v-2.24h23.54v-5.36h-22.43c-3.61,0-6.48,2.91-6.48,6.48s2.87,6.48,6.48,6.48h18.03v2.24h-23.54Z" fill="lime"/>
+                                        <path d="M132.22,38.07h-30.66l-18.44,15.56v-15.56h-5.36s0,0,0,0v15.65s0,0,0,.01v4.43l-9.57,8.08h8.47l33.15-27.97v20.37h5.36v-15.2h18.18v15.2h5.37v-14.08c0-3.58-2.91-6.48-6.48-6.48Z" fill="lime"/>
+                                        <path d="M146.45,30.47h-5.36v21.68c0,3.58,2.91,6.48,6.48,6.48h22.43v-5.36h-23.54v-9.84h23.54v-5.36h-23.54v-7.6Z" fill="lime"/>
+                                        <polygon points="103.91 35.76 104.02 35.76 104.02 35.76 112.26 35.76 112.26 35.76 112.37 35.76 145.75 7.6 145.64 7.6 145.64 7.6 137.4 7.6 137.4 7.6 137.29 7.6 118.96 23.06 118.96 7.6 118.68 7.6 113.6 7.6 113.32 7.6 113.32 27.82 103.91 35.76" fill="lime"/>
+                                        <path d="M201.29,58.64v-14.08c0-3.58-2.91-6.48-6.48-6.48h-17.06v-7.6h-5.36v28.16h5.36v-15.2h18.18v15.2h5.37" fill="lime"/>
+                                        <polygon points="38.71 7.6 30.25 7.6 0 33.12 30.25 58.64 38.71 58.64 8.47 33.12 38.71 7.6" fill="lime"/>
+                                        <polygon points="201.29 58.64 209.75 58.64 240 33.12 209.75 7.6 201.29 7.6 231.53 33.12 201.29 58.64" fill="lime"/>
+                                        <g>
+                                            <path d="M50.81,81.98h-11.49v-2.75h12.06v-1.15h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M69.67,82.55c0,1.83-1.49,3.32-3.32,3.32h-11.49v-2.75h12.06v-1.14h-8.74c-1.83,0-3.32-1.49-3.32-3.32v-7.21h2.75v7.79h9.31v-7.79h2.75v11.11Z" fill="lime"/>
+                                            <path d="M85.7,81.98h-2.75v-7.79h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M101.73,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-11.11h2.75v3.89h12.06v2.75h-12.06v5.04h12.06v2.75Z" fill="lime"/>
+                                            <path d="M117.76,81.98h-2.75v-7.79h-9.31v7.79h-2.75v-14.43h2.75v3.89h8.74c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M133.79,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.15h12.06v2.75ZM131.04,75.34v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M146.5,81.98h-11.49v-2.75h12.06v-1.15h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M153.29,70.3h-2.75v-2.75h2.75v2.75ZM153.29,81.98h-2.75v-10.53h2.75v10.53Z" fill="lime"/>
+                                            <path d="M167.61,77.03l-11.45,2.19h13.24v2.75h-12.63c-1.56,0-2.82-1.26-2.82-2.82,0-1.37.99-2.52,2.29-2.77l11.45-2.19h-13.17v-2.75h12.56c1.56,0,2.82,1.26,2.82,2.82,0,1.37-.99,2.52-2.29,2.77Z" fill="lime"/>
+                                            <path d="M185.43,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.15h12.06v2.75ZM182.68,75.34v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M201.46,77.17h-2.75v-2.98h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v2.4Z" fill="lime"/>
+                                        </g>
+                                        <g>
+                                            <path d="M54.74,96.91l-1.14-.25c-.42,1.36-1.68,2.33-3.17,2.33h-8.26c-1.81,0-3.3-1.49-3.3-3.32v-.55c0-.78.27-1.51.73-2.08-.42-.48-.67-1.11-.67-1.79,0-1.55,1.24-2.79,2.79-2.79h12.04v2.75h-12.37l9.62,2.14v-.99h2.75v1.6l.99.21v2.75ZM51,96.24v-.15l-9.31-2.02v2.18h9.31Z" fill="lime"/>
+                                            <path d="M72.49,98.99h-11.49v-2.75h12.06v-1.14h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M91.12,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM88.37,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M106.92,102.88h-2.75v-3.89h-8.74c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h11.49v14.43ZM104.17,96.24v-5.04h-9.31v5.04h9.31Z" fill="lime"/>
+                                            <path d="M122.72,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-7.21h2.75v7.79h9.31v-7.79h2.75v10.53Z" fill="lime"/>
+                                            <path d="M138.52,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM135.78,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M154.33,98.99h-2.75v-7.79h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M170.13,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h11.49v2.75h-12.06v5.04h12.06v2.75Z" fill="lime"/>
+                                            <path d="M185.62,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM182.88,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M201.43,94.18h-2.75v-2.98h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v2.4Z" fill="lime"/>
+                                        </g>
+                                    </g>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="scanlines"></div>
+                    <div class="vhs-static"></div>
+                    <!-- Add border to logo overlay -->
+                    <div class="oscilloscope-border logo-flicker"></div>
+                </div>
+                <!-- Add border to oscilloscope container -->
+                <div class="oscilloscope-border"></div>
+            </div>
+            <div></div> <!-- Empty column to center oscilloscope -->
+        </div>
+
+        <div id="midiFieldsetHome" class="midi-fieldset-home">
+        <fieldset class="midi-fieldset collapsible-fieldset collapsed" id="midiFieldset">
+            <legend class="collapsible-legend">
+                <button id="midiFieldsetToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="midiPanel">
+                    <span class="collapsible-label">MIDI In/Out</span>
+                    <span class="collapsible-arrow" aria-hidden="true"></span>
+                </button>
+            </legend>
+            <div id="midiPanel" class="midi-fieldset-body collapsible-panel hidden" hidden>
+                <div class="midi-buttons-container">
+                    <button id="midiMapping" class="pushable midi-mapping">
+                        <span class="front">MIDI Mapping: Off</span>
+                    </button>
+                    <button id="sendMidi" class="pushable send-midi">
+                        <span class="front">Send MIDI: Off</span>
+                    </button>
+                </div>
+                <div id="midiDeviceSelector" style="display: none; justify-content: center; margin-bottom: 15px;">
+                    <div style="background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);">
+                        <label for="midiInputSelect" style="margin-right: 10px; color: #00ffff;">MIDI Input Device:</label>
+                        <select id="midiInputSelect" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ffff; padding: 5px;">
+                            <option value="all">All Connected Devices</option>
+                            <!-- MIDI devices will be populated here -->
+                        </select>
+                    </div>
+                </div>
+                <div id="midiOutputSelector" style="display: none; justify-content: center; margin-bottom: 15px;">
+                    <div style="background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);">
+                        <label for="midiOutputSelect" style="margin-right: 10px; color: #00ff00;">MIDI Output Device:</label>
+                        <select id="midiOutputSelect" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ff00; padding: 5px;">
+                            <option value="none">Select MIDI Output...</option>
+                            <!-- MIDI output devices will be populated here -->
+                        </select>
+                        <div style="margin-top: 10px;">
+                            <label for="midiOutputChannel" style="margin-right: 10px; color: #00ff00;">MIDI Channel:</label>
+                            <select id="midiOutputChannel" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ff00; padding: 5px;">
+                                <option value="1">Channel 1</option>
+                                <option value="2">Channel 2</option>
+                                <option value="3">Channel 3</option>
+                                <option value="4">Channel 4</option>
+                                <option value="5">Channel 5</option>
+                                <option value="6">Channel 6</option>
+                                <option value="7">Channel 7</option>
+                                <option value="8">Channel 8</option>
+                                <option value="9">Channel 9</option>
+                                <option value="10">Channel 10</option>
+                                <option value="11">Channel 11</option>
+                                <option value="12">Channel 12</option>
+                                <option value="13">Channel 13</option>
+                                <option value="14">Channel 14</option>
+                                <option value="15">Channel 15</option>
+                                <option value="16">Channel 16</option>
+                            </select>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label for="midiBaseNote" style="margin-right: 10px; color: #00ff00;">Base Note:</label>
+                            <select id="midiBaseNote" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ff00; padding: 5px;">
+                                <option value="36">C2</option>
+                                <option value="48">C3</option>
+                                <option value="60" selected>C4 (Middle C)</option>
+                                <option value="72">C5</option>
+                                <option value="84">C6</option>
+                            </select>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label for="bendRange" style="margin-right: 10px; color: #00ff00;">Bend Range (fine tune):</label>
+                            <select id="bendRange" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ff00; padding: 5px;">
+                                <option value="1">&plusmn;1 semitone</option>
+                                <option value="2" selected>&plusmn;2 semitones</option>
+                                <option value="12">&plusmn;12 semitones</option>
+                                <option value="24">&plusmn;24 semitones</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        </div>
+        
+        <!-- Mobile Start/Stop button container -->
+        <div class="mobile-start-stop-container">
+            <button id="mobileStartStop" class="pushable start">
+                <span class="front">Start</span>
+            </button>
+        </div>
+
+        <div class="keyboard-section">
+            <div class="keyboard-toolbar">
+                <div class="keyboard-toolbar-top">
+                    <button id="keyboardVisibilityToggle" class="pushable">
+                        <span class="front">Keyboard: On</span>
+                    </button>
+                </div>
+                <div class="keyboard-stage-scope" id="keyboardStageScope">
+                    <div class="oscilloscope-container keyboard-stage-oscilloscope">
+                        <canvas id="kbOscilloscope" height="200"></canvas>
+<div id="kb-logo-overlay" class="logo-overlay">
+                    <div class="glitch-container logo-flicker">
+                        <div class="glitch">
+                            <svg id="kb-logo-svg" class="logo-flicker" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 102.88">
+                                <g id="c" data-name="Layer 1">
+                                    <g>
+                                        <polygon points="38.71 7.6 38.71 28.16 44.08 28.16 44.08 7.6 38.71 7.6 38.71 7.6" fill="lime"/>
+                                        <rect x="38.71" width="5.36" height="5.36" fill="lime"/>
+                                        <path d="M51.83,12.96h18.18v15.2h5.36v-14.08c0-3.58-2.91-6.48-6.48-6.48h-22.43v20.56h5.36v-15.2Z" fill="lime"/>
+                                        <path d="M106.66,30.38V7.6h-22.43c-3.58,0-6.48,2.91-6.48,6.48v7.6c0,3.58,2.91,6.48,6.48,6.48h15.27v-5.36h-16.39v-9.84h18.18v17.44h-23.54v5.36h22.39l6.52-5.38Z" fill="lime"/>
+                                        <path d="M47.43,53.27v5.36h22.43c3.58,0,6.48-2.91,6.48-6.48s-2.91-6.48-6.48-6.48h-18.03v-2.24h23.54v-5.36h-22.43c-3.61,0-6.48,2.91-6.48,6.48s2.87,6.48,6.48,6.48h18.03v2.24h-23.54Z" fill="lime"/>
+                                        <path d="M132.22,38.07h-30.66l-18.44,15.56v-15.56h-5.36s0,0,0,0v15.65s0,0,0,.01v4.43l-9.57,8.08h8.47l33.15-27.97v20.37h5.36v-15.2h18.18v15.2h5.37v-14.08c0-3.58-2.91-6.48-6.48-6.48Z" fill="lime"/>
+                                        <path d="M146.45,30.47h-5.36v21.68c0,3.58,2.91,6.48,6.48,6.48h22.43v-5.36h-23.54v-9.84h23.54v-5.36h-23.54v-7.6Z" fill="lime"/>
+                                        <polygon points="103.91 35.76 104.02 35.76 104.02 35.76 112.26 35.76 112.26 35.76 112.37 35.76 145.75 7.6 145.64 7.6 145.64 7.6 137.4 7.6 137.4 7.6 137.29 7.6 118.96 23.06 118.96 7.6 118.68 7.6 113.6 7.6 113.32 7.6 113.32 27.82 103.91 35.76" fill="lime"/>
+                                        <path d="M201.29,58.64v-14.08c0-3.58-2.91-6.48-6.48-6.48h-17.06v-7.6h-5.36v28.16h5.36v-15.2h18.18v15.2h5.37" fill="lime"/>
+                                        <polygon points="38.71 7.6 30.25 7.6 0 33.12 30.25 58.64 38.71 58.64 8.47 33.12 38.71 7.6" fill="lime"/>
+                                        <polygon points="201.29 58.64 209.75 58.64 240 33.12 209.75 7.6 201.29 7.6 231.53 33.12 201.29 58.64" fill="lime"/>
+                                        <g>
+                                            <path d="M50.81,81.98h-11.49v-2.75h12.06v-1.15h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M69.67,82.55c0,1.83-1.49,3.32-3.32,3.32h-11.49v-2.75h12.06v-1.14h-8.74c-1.83,0-3.32-1.49-3.32-3.32v-7.21h2.75v7.79h9.31v-7.79h2.75v11.11Z" fill="lime"/>
+                                            <path d="M85.7,81.98h-2.75v-7.79h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M101.73,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-11.11h2.75v3.89h12.06v2.75h-12.06v5.04h12.06v2.75Z" fill="lime"/>
+                                            <path d="M117.76,81.98h-2.75v-7.79h-9.31v7.79h-2.75v-14.43h2.75v3.89h8.74c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M133.79,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.15h12.06v2.75ZM131.04,75.34v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M146.5,81.98h-11.49v-2.75h12.06v-1.15h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M153.29,70.3h-2.75v-2.75h2.75v2.75ZM153.29,81.98h-2.75v-10.53h2.75v10.53Z" fill="lime"/>
+                                            <path d="M167.61,77.03l-11.45,2.19h13.24v2.75h-12.63c-1.56,0-2.82-1.26-2.82-2.82,0-1.37.99-2.52,2.29-2.77l11.45-2.19h-13.17v-2.75h12.56c1.56,0,2.82,1.26,2.82,2.82,0,1.37-.99,2.52-2.29,2.77Z" fill="lime"/>
+                                            <path d="M185.43,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.15h12.06v2.75ZM182.68,75.34v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M201.46,77.17h-2.75v-2.98h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v2.4Z" fill="lime"/>
+                                        </g>
+                                        <g>
+                                            <path d="M54.74,96.91l-1.14-.25c-.42,1.36-1.68,2.33-3.17,2.33h-8.26c-1.81,0-3.3-1.49-3.3-3.32v-.55c0-.78.27-1.51.73-2.08-.42-.48-.67-1.11-.67-1.79,0-1.55,1.24-2.79,2.79-2.79h12.04v2.75h-12.37l9.62,2.14v-.99h2.75v1.6l.99.21v2.75ZM51,96.24v-.15l-9.31-2.02v2.18h9.31Z" fill="lime"/>
+                                            <path d="M72.49,98.99h-11.49v-2.75h12.06v-1.14h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M91.12,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM88.37,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M106.92,102.88h-2.75v-3.89h-8.74c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h11.49v14.43ZM104.17,96.24v-5.04h-9.31v5.04h9.31Z" fill="lime"/>
+                                            <path d="M122.72,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-7.21h2.75v7.79h9.31v-7.79h2.75v10.53Z" fill="lime"/>
+                                            <path d="M138.52,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM135.78,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M154.33,98.99h-2.75v-7.79h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M170.13,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h11.49v2.75h-12.06v5.04h12.06v2.75Z" fill="lime"/>
+                                            <path d="M185.62,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM182.88,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M201.43,94.18h-2.75v-2.98h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v2.4Z" fill="lime"/>
+                                        </g>
+                                    </g>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="scanlines"></div>
+                    <div class="vhs-static"></div>
+                    <!-- Add border to logo overlay -->
+                    <div class="oscilloscope-border logo-flicker"></div>
+                </div>
+                                        <div class="oscilloscope-border"></div>
+                    </div>
+                    <div id="midiFieldsetStage" class="midi-fieldset-stage"></div>
+                </div>
+            </div>
+            <div class="chromatic-keyboard-wrap">
+                <div class="keyboard-filter-knobs" aria-label="Keyboard performance controls">
+                    <div class="keyboard-perf-top">
+                        <fieldset class="keyboard-perf-fieldset keyboard-transport-fieldset">
+                            <legend><span class="legend-hex">Sequencer</span></legend>
+                            <div class="keyboard-tempo-div-row">
+                            <div class="keyboard-perf-btn-slot">
+                            <button id="kbStartStop" class="pushable start keyboard-start-stop" type="button" aria-label="Start or stop sequencer">
+                                <span class="front"><span class="kb-transport-icon" aria-hidden="true"></span></span>
+                            </button>
+                            </div>
+                            <div class="keyboard-perf-btn-slot">
+                            <button id="kbRev" class="pushable off keyboard-rev" type="button" aria-label="Reverse sequencer" aria-pressed="false">
+                                <span class="front">Rev</span>
+                            </button>
+                            </div>
+                            <div class="synth-knob" data-param="tempo">
+                                <span class="synth-knob-label">TEMPO</span>
+                                <span class="synth-knob-value" id="kbTempoValue">120</span>
+                                <div class="synth-knob-dial-wrap">
+                                    <div class="synth-knob-dial" id="kbTempoKnob" role="slider" aria-label="Tempo" aria-valuemin="60" aria-valuemax="240" tabindex="0">
+                                        <span class="synth-knob-indicator"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="synth-knob synth-knob--stepped" data-param="division">
+                                <span class="synth-knob-label">DIV</span>
+                                <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                <div class="synth-knob-dial-wrap">
+                                    <div class="synth-knob-ticks" aria-hidden="true">
+                                        <span class="synth-knob-tick" style="--tick-angle: -135deg">1/2</span>
+                                        <span class="synth-knob-tick" style="--tick-angle: -45deg">1/4</span>
+                                        <span class="synth-knob-tick" style="--tick-angle: 45deg">1/8</span>
+                                        <span class="synth-knob-tick" style="--tick-angle: 135deg">1/16</span>
+                                    </div>
+                                    <div class="synth-knob-dial" id="kbDivisionKnob" role="slider" aria-label="Division" aria-valuemin="0" aria-valuemax="3" tabindex="0">
+                                        <span class="synth-knob-indicator"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="synth-knob" data-param="steps">
+                                <span class="synth-knob-label">STEPS</span>
+                                <span class="synth-knob-value" id="kbStepsValue">8</span>
+                                <div class="synth-knob-dial-wrap">
+                                    <div class="synth-knob-dial" id="kbStepsKnob" role="slider" aria-label="Steps" aria-valuemin="1" aria-valuemax="32" tabindex="0">
+                                        <span class="synth-knob-indicator"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="keyboard-step-vfd-wrap">
+                                <span class="keyboard-step-vfd-label">DISP</span>
+                                <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                <div class="keyboard-step-vfd-bezel">
+                                <div class="keyboard-step-vfd" aria-live="polite" aria-atomic="true" aria-label="Current sequencer step">
+                                    <div class="keyboard-step-vfd-digits" id="kbStepDisplay" data-value="--">
+                                        <div class="sixteen-seg" data-digit="sp" aria-hidden="true">
+                                            <span class="seg a1"></span><span class="seg a2"></span>
+                                            <span class="seg b"></span><span class="seg c"></span>
+                                            <span class="seg d1"></span><span class="seg d2"></span>
+                                            <span class="seg e"></span><span class="seg f"></span>
+                                            <span class="seg g1"></span><span class="seg g2"></span>
+                                            <span class="seg h"></span><span class="seg i"></span>
+                                            <span class="seg j"></span><span class="seg k"></span>
+                                            <span class="seg l"></span><span class="seg m"></span>
+                                            <span class="seg dp"></span>
+                                        </div>
+                                        <div class="sixteen-seg" data-digit="sp" aria-hidden="true">
+                                            <span class="seg a1"></span><span class="seg a2"></span>
+                                            <span class="seg b"></span><span class="seg c"></span>
+                                            <span class="seg d1"></span><span class="seg d2"></span>
+                                            <span class="seg e"></span><span class="seg f"></span>
+                                            <span class="seg g1"></span><span class="seg g2"></span>
+                                            <span class="seg h"></span><span class="seg i"></span>
+                                            <span class="seg j"></span><span class="seg k"></span>
+                                            <span class="seg l"></span><span class="seg m"></span>
+                                            <span class="seg dp"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+                            </div>
+                        </fieldset>
+                        <fieldset class="keyboard-perf-fieldset keyboard-write-fieldset">
+                            <legend><span class="legend-hex">Step Input</span></legend>
+                            <div class="keyboard-write-row">
+                                <div class="keyboard-perf-btn-slot">
+                                <button id="kbWrite" class="pushable off keyboard-write" type="button"
+                                        aria-label="Step pattern write" aria-pressed="false">
+                                    <span class="front">
+                                        <span class="kb-write-label">Write</span>
+                                        <span class="kb-write-rec" aria-hidden="true"></span>
+                                    </span>
+                                </button>
+                                </div>
+                                <div class="keyboard-write-step-select" aria-label="Step select">
+                                    <span class="keyboard-write-step-select-label">STEP SELECT</span>
+                                    <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                    <div class="keyboard-write-step-select-btns">
+                                        <button id="kbWritePrev" class="pushable keyboard-write-nav" type="button"
+                                                aria-label="Previous write step" disabled>
+                                            <span class="front">◀</span>
+                                        </button>
+                                        <button id="kbWriteNext" class="pushable keyboard-write-nav" type="button"
+                                                aria-label="Next write step" disabled>
+                                            <span class="front">▶</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                <button id="kbWriteAcc" class="pushable off keyboard-write-arm" type="button"
+                                        aria-label="Arm accent for next write" aria-pressed="false" disabled>
+                                    <span class="front">Acc</span>
+                                </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                <button id="kbWriteSld" class="pushable off keyboard-write-arm" type="button"
+                                        aria-label="Arm slide for next write" aria-pressed="false" disabled>
+                                    <span class="front">Sld</span>
+                                </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                <button id="kbRest" class="pushable off keyboard-write-rest" type="button"
+                                        aria-label="Toggle rest on current step" aria-pressed="false" disabled>
+                                    <span class="front">Rst</span>
+                                </button>
+                                </div>
+                                <div class="keyboard-write-fine-col">
+                                <div class="synth-knob keyboard-write-fine-knob" data-param="write-fine">
+                                    <span class="synth-knob-label">µTUNE</span>
+                                    <span class="synth-knob-value" id="kbWriteFineValue">0¢</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbWriteFineKnob" role="slider"
+                                             aria-label="Step microtune cents" aria-valuemin="-100" aria-valuemax="100" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <input type="range" id="kbWriteFineProxy" class="keyboard-write-fine-proxy"
+                                           min="-100" max="100" value="0" step="1" tabindex="-1" aria-hidden="true">
+                                </div>
+                                <button id="kbMicrotuneLock" class="kb-step-btn kb-microtune-lock off" type="button"
+                                        aria-label="Microtune lock" aria-pressed="false">Full</button>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <fieldset class="keyboard-tuning-fieldset collapsible-fieldset" id="keyboardTuningFieldset">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardTuningToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardTuningPanel">
+                                <span class="collapsible-label">Tuning</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardTuningPanel" class="keyboard-tuning-body collapsible-panel">
+                            <div class="keyboard-tuning-row">
+                                <div class="keyboard-tuning-left">
+                                    <label class="keyboard-master-tune">
+                                        <span class="keyboard-master-tune-label">Tune</span>
+                                        <input type="range" id="kbTuningMasterTune" class="keyboard-master-tune-slider"
+                                               min="-36" max="36" value="0" step="1" aria-label="Master tune">
+                                        <span id="kbTuningMasterTuneValue" class="keyboard-master-tune-value">0</span>
+                                    </label>
+                                    <div class="keyboard-transpose-screen" aria-label="Keyboard transpose">
+                                        <span id="keyboardTransposeReadout" class="keyboard-transpose-readout">T: 0 (C)</span>
+                                    </div>
+                                    <button id="kbPatternScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Scale: Off</button>
+                                </div>
+                                <div class="keyboard-tuning-center">
+                                    <div class="keyboard-tuning-note note-vfd" id="kbPatternNoteVisualizer" aria-live="polite" aria-label="Current note" data-text="Note">
+                                        <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
+                                    </div>
+                                </div>
+                                <div class="keyboard-tuning-right">
+                                    <div class="keyboard-pattern-octave" aria-label="Octave switch">
+                                        <div class="keyboard-pattern-octave-buttons">
+                                            <button type="button" id="kbPatternOctaveDown" class="pushable keyboard-pattern-octave-btn" aria-label="Octave down">
+                                                <span class="front">
+                                                    <span class="kb-pattern-oct-text">OCT</span>
+                                                    <span class="kb-pattern-oct-dir kb-pattern-oct-dir-down" aria-hidden="true"></span>
+                                                </span>
+                                            </button>
+                                            <button type="button" id="kbPatternOctaveUp" class="pushable keyboard-pattern-octave-btn" aria-label="Octave up">
+                                                <span class="front">
+                                                    <span class="kb-pattern-oct-text">OCT</span>
+                                                    <span class="kb-pattern-oct-dir kb-pattern-oct-dir-up" aria-hidden="true"></span>
+                                                </span>
+                                            </button>
+                                        </div>
+                                        <div class="keyboard-octave-screen" aria-live="polite">
+                                            <span id="kbPatternOctaveValue" class="keyboard-octave-readout">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="keyboard-tuning-semi" aria-label="Semitone switch">
+                                        <label class="keyboard-master-tune">
+                                            <span class="keyboard-master-tune-label">Semitone</span>
+                                            <input type="range" id="kbPatternSemiSwitch" class="keyboard-master-tune-slider"
+                                                   min="-2" max="2" step="1" value="0"
+                                                   aria-label="Semitone switch">
+                                            <span id="kbPatternSemiSwitchValue" class="keyboard-master-tune-value">0</span>
+                                        </label>
+                                        <select id="kbPatternSemiAmount" class="keyboard-tuning-semi-amount" aria-label="Semitone amount">
+                                            <option value="0">0</option>
+                                            <option value="1">1</option>
+                                            <option value="2">2</option>
+                                            <option value="3">3</option>
+                                            <option value="4">4</option>
+                                            <option value="5">5</option>
+                                            <option value="6">6</option>
+                                            <option value="7" selected>7</option>
+                                            <option value="8">8</option>
+                                            <option value="9">9</option>
+                                            <option value="10">10</option>
+                                            <option value="11">11</option>
+                                            <option value="12">12</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="keyboard-tuning-scale-row" id="kbTuningScaleSelectRow" style="display: none;">
+                                <select id="kbPatternScaleSelect" class="keyboard-scale-select" aria-label="Pattern scale">
+                                    <!-- Populated to match sequencer scale list -->
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="keyboard-steps-fieldset collapsible-fieldset" id="keyboardStepsFieldset">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardStepsToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardStepsPanel">
+                                <span class="collapsible-label">Steps</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardStepsPanel" class="keyboard-steps-collapsible-panel collapsible-panel">
+                            <fieldset class="berlin-dream-frame">
+                            <div class="berlin-mode-brand" aria-hidden="true">
+                                <span class="berlin-mode-brand-lockup"></span>
+                            </div>
+                            <div class="pattern-bank-bar" aria-label="Pattern bank">
+                                <div class="pattern-bank-slots" role="group" aria-label="Pattern slot">
+                                    <span class="pattern-bank-label">PATTERN</span>
+                                    <button type="button" class="pattern-slot-btn kb-step-btn" data-slot="0" aria-pressed="true">P1</button>
+                                    <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="1" aria-pressed="false">P2</button>
+                                    <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="2" aria-pressed="false">P3</button>
+                                    <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="3" aria-pressed="false">P4</button>
+                                </div>
+                                <div class="pattern-bank-clipboard" role="group" aria-label="Pattern clipboard">
+                                    <button type="button" id="patternBankCopy" class="kb-step-btn pattern-copy-btn" aria-label="Copy pattern">Copy</button>
+                                    <button type="button" id="patternBankPaste" class="kb-step-btn pattern-paste-btn is-disabled" aria-label="Paste pattern" aria-disabled="true" disabled>Paste</button>
+                                    <button type="button" id="patternBankClear" class="kb-step-btn pattern-clear-btn" aria-label="Clear pattern steps">Clear</button>
+                                </div>
+                                <div class="pattern-bank-berlin">
+                                    <div class="berlin-count" role="group" aria-label="Active Berlin patterns">
+                                        <span class="pattern-bank-label">ROWS</span>
+                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="1" aria-pressed="false">1</button>
+                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="2" aria-pressed="false">2</button>
+                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="3" aria-pressed="false">3</button>
+                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="4" aria-pressed="false">4</button>
+                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="5" aria-pressed="false">5</button>
+                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="6" aria-pressed="false">6</button>
+                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="7" aria-pressed="false">7</button>
+                                        <button type="button" class="berlin-count-btn kb-step-btn" data-count="8" aria-pressed="true">8</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="berlinPanel" class="berlin-panel" hidden>
+                                <div id="berlinRows" class="berlin-rows">
+                                    <!-- Eight phosphor pattern rows built by berlin.js -->
+                                </div>
+                                <div class="berlin-footer-brand" aria-hidden="true">
+                                    <span class="berlin-footer-logo"></span>
+                                </div>
+                            </div>
+                            </fieldset>
+                            <div class="keyboard-mode-toggle-row" aria-label="Mode toggles">
+                                <button id="kbAcidStripToggle" class="pushable off keyboard-acid-strip-toggle" type="button" aria-label="Acid mode on or off" aria-pressed="false">
+                                    <span class="front">Acid Mode</span>
+                                </button>
+                                <button id="berlinToggle" class="pushable off keyboard-berlin-toggle" type="button" aria-label="Berlin Dream-960 on or off" aria-pressed="false">
+                                    <span class="front">Berlin Dream-960</span>
+                                </button>
+                            </div>
+                            <div id="keyboardAcidStrip" class="keyboard-acid-strip" aria-label="Acid mode">
+                                <div class="keyboard-acid-strip-controls" hidden>
+                                    <div class="keyboard-acid-strip-panel">
+                                        <div class="keyboard-acid-strip-brand-col">
+                                            <div class="keyboard-osc-wave keyboard-acid-osc-wave" role="radiogroup" aria-label="Acid waveform">
+                                                <button type="button" class="keyboard-osc-wave-btn active" data-wave="sawtooth" role="radio" aria-checked="true" aria-label="Sawtooth">
+                                                    <svg class="keyboard-osc-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 24,1 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>
+                                                </button>
+                                                <button type="button" class="keyboard-osc-wave-btn" data-wave="square" role="radio" aria-checked="false" aria-label="Square">
+                                                    <svg class="keyboard-osc-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 6,11 6,2 18,2 18,11 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>
+                                                </button>
+                                            </div>
+                                            <span class="keyboard-acid-logo keyboard-acid-logo--ingy" aria-hidden="true"></span>
+                                        </div>
+                                        <div class="keyboard-acid-strip-knobs" aria-label="Acid tone controls">
+                                            <div class="synth-knob acid-303-knob" data-param="masterTune">
+                                                <span class="synth-knob-label">TUNING</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-ticks" aria-hidden="true"></div>
+                                                    <div class="synth-knob-dial acid-303-dial" id="kbAcidTuningKnob" role="slider" aria-label="Tuning" aria-valuemin="-36" aria-valuemax="36" tabindex="0">
+                                                        <span class="acid-303-knurl" aria-hidden="true"></span>
+                                                        <span class="acid-303-bevel" aria-hidden="true"></span>
+                                                        <span class="acid-303-face" aria-hidden="true"></span>
+                                                        <span class="acid-303-cutout" aria-hidden="true"></span>
+                                                        <span class="synth-knob-indicator acid-303-indicator" aria-hidden="true"></span>
+                                                    </div>
+                                                </div>
+                                                <span id="kbAcidTuningValue" class="synth-knob-value">0</span>
+                                            </div>
+                                            <div class="synth-knob acid-303-knob" data-param="cutoff">
+                                                <span class="synth-knob-label">CUT OFF FREQ</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-ticks" aria-hidden="true"></div>
+                                                    <div class="synth-knob-dial acid-303-dial" id="kbAcidCutoffKnob" role="slider" aria-label="Cut off frequency" aria-valuemin="20" aria-valuemax="10000" tabindex="0">
+                                                        <span class="acid-303-knurl" aria-hidden="true"></span>
+                                                        <span class="acid-303-bevel" aria-hidden="true"></span>
+                                                        <span class="acid-303-face" aria-hidden="true"></span>
+                                                        <span class="acid-303-cutout" aria-hidden="true"></span>
+                                                        <span class="synth-knob-indicator acid-303-indicator" aria-hidden="true"></span>
+                                                    </div>
+                                                </div>
+                                                <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                            </div>
+                                            <div class="synth-knob acid-303-knob" data-param="resonance">
+                                                <span class="synth-knob-label">RESONANCE</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-ticks" aria-hidden="true"></div>
+                                                    <div class="synth-knob-dial acid-303-dial" id="kbAcidResonanceKnob" role="slider" aria-label="Resonance" aria-valuemin="0" aria-valuemax="20" tabindex="0">
+                                                        <span class="acid-303-knurl" aria-hidden="true"></span>
+                                                        <span class="acid-303-bevel" aria-hidden="true"></span>
+                                                        <span class="acid-303-face" aria-hidden="true"></span>
+                                                        <span class="acid-303-cutout" aria-hidden="true"></span>
+                                                        <span class="synth-knob-indicator acid-303-indicator" aria-hidden="true"></span>
+                                                    </div>
+                                                </div>
+                                                <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                            </div>
+                                            <div class="synth-knob acid-303-knob" data-param="filterEnvAmount">
+                                                <span class="synth-knob-label">ENV MOD</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-ticks" aria-hidden="true"></div>
+                                                    <div class="synth-knob-dial acid-303-dial" id="kbAcidEnvModKnob" role="slider" aria-label="Envelope modulation" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+                                                        <span class="acid-303-knurl" aria-hidden="true"></span>
+                                                        <span class="acid-303-bevel" aria-hidden="true"></span>
+                                                        <span class="acid-303-face" aria-hidden="true"></span>
+                                                        <span class="acid-303-cutout" aria-hidden="true"></span>
+                                                        <span class="synth-knob-indicator acid-303-indicator" aria-hidden="true"></span>
+                                                    </div>
+                                                </div>
+                                                <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                            </div>
+                                            <div class="synth-knob acid-303-knob" data-param="filterDecay">
+                                                <span class="synth-knob-label">DECAY</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-ticks" aria-hidden="true"></div>
+                                                    <div class="synth-knob-dial acid-303-dial" id="kbAcidDecayKnob" role="slider" aria-label="Filter decay" aria-valuemin="0" aria-valuemax="2" tabindex="0">
+                                                        <span class="acid-303-knurl" aria-hidden="true"></span>
+                                                        <span class="acid-303-bevel" aria-hidden="true"></span>
+                                                        <span class="acid-303-face" aria-hidden="true"></span>
+                                                        <span class="acid-303-cutout" aria-hidden="true"></span>
+                                                        <span class="synth-knob-indicator acid-303-indicator" aria-hidden="true"></span>
+                                                    </div>
+                                                </div>
+                                                <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                            </div>
+                                            <div class="synth-knob acid-303-knob" data-param="accentAmount">
+                                                <span class="synth-knob-label">ACCENT</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-ticks" aria-hidden="true"></div>
+                                                    <div class="synth-knob-dial acid-303-dial" id="kbAcidAccentKnob" role="slider" aria-label="Accent amount" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+                                                        <span class="acid-303-knurl" aria-hidden="true"></span>
+                                                        <span class="acid-303-bevel" aria-hidden="true"></span>
+                                                        <span class="acid-303-face" aria-hidden="true"></span>
+                                                        <span class="acid-303-cutout" aria-hidden="true"></span>
+                                                        <span class="synth-knob-indicator acid-303-indicator" aria-hidden="true"></span>
+                                                    </div>
+                                                </div>
+                                                <span id="kbAcidAccentValue" class="synth-knob-value">100</span>
+                                            </div>
+                                            <div class="synth-knob acid-303-knob" data-param="distortion">
+                                                <span class="synth-knob-label">DISTORTION</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-ticks" aria-hidden="true"></div>
+                                                    <div class="synth-knob-dial acid-303-dial" id="kbAcidDistortionKnob" role="slider" aria-label="Distortion" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+                                                        <span class="acid-303-knurl" aria-hidden="true"></span>
+                                                        <span class="acid-303-bevel" aria-hidden="true"></span>
+                                                        <span class="acid-303-face" aria-hidden="true"></span>
+                                                        <span class="acid-303-cutout" aria-hidden="true"></span>
+                                                        <span class="synth-knob-indicator acid-303-indicator" aria-hidden="true"></span>
+                                                    </div>
+                                                </div>
+                                                <span id="kbAcidDistortionValue" class="synth-knob-value">0</span>
+                                            </div>
+                                        </div>
+                                        <div class="keyboard-acid-strip-brand-col keyboard-acid-strip-brand-col--acid">
+                                            <span class="keyboard-acid-logo keyboard-acid-logo--acid" aria-hidden="true"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="keyboardStepsGrid" class="keyboard-steps-panel">
+                                <!-- Compact steps generated by keyboard-steps.js -->
+                            </div>
+                            <fieldset class="keyboard-pattern-fieldset" id="keyboardPatternFieldset">
+                                <div class="keyboard-pattern-controls">
+                                    <div class="keyboard-pattern-shift" aria-label="Pattern shift">
+                                        <span class="keyboard-pattern-shift-label">PATTERN SHIFT</span>
+                                        <div class="keyboard-pattern-shift-buttons">
+                                            <button type="button" id="kbPatternShiftBack" class="pushable keyboard-pattern-shift-btn" aria-label="Shift pattern back">
+                                                <span class="front">◀</span>
+                                            </button>
+                                            <button type="button" id="kbPatternShiftForward" class="pushable keyboard-pattern-shift-btn" aria-label="Shift pattern forward">
+                                                <span class="front">▶</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="keyboard-pattern-slide-accent" aria-label="Slide, accent, and gate">
+                                        <div class="synth-knob keyboard-pattern-knob" data-param="slideTime">
+                                            <span class="synth-knob-label">Slide</span>
+                                            <div class="synth-knob-dial" id="kbSlideTimeKnob" role="slider" aria-label="Slide time" aria-valuemin="10" aria-valuemax="500" tabindex="0">
+                                                <span class="synth-knob-indicator"></span>
+                                            </div>
+                                            <span id="kbSlideTimeValue" class="synth-knob-value">60</span>
+                                        </div>
+                                        <div class="synth-knob keyboard-pattern-knob" data-param="accentAmount">
+                                            <span class="synth-knob-label">Accent</span>
+                                            <div class="synth-knob-dial" id="kbAccentAmountKnob" role="slider" aria-label="Accent amount" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+                                                <span class="synth-knob-indicator"></span>
+                                            </div>
+                                            <span id="kbAccentAmountValue" class="synth-knob-value">100</span>
+                                        </div>
+                                        <div class="synth-knob keyboard-pattern-knob" data-param="gateLength">
+                                            <span class="synth-knob-label">Gate</span>
+                                            <div class="synth-knob-dial" id="kbGateLengthKnob" role="slider" aria-label="Gate length" aria-valuemin="5" aria-valuemax="100" tabindex="0">
+                                                <span class="synth-knob-indicator"></span>
+                                            </div>
+                                            <span id="kbGateLengthValue" class="synth-knob-value">90</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </fieldset>
+                    <fieldset class="keyboard-automation-fieldset collapsible-fieldset collapsed" id="keyboardAutomationFieldset">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardAutomationToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardAutomationPanel">
+                                <span class="collapsible-label">Automation</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardAutomationPanel" class="keyboard-automation-panel collapsible-panel hidden" hidden>
+                            <div class="keyboard-automation-controls">
+                                <div class="keyboard-perf-btn-slot">
+                                    <button id="kbAutomationRecord" class="pushable off keyboard-automation-btn" type="button" aria-pressed="false" aria-label="Record automation">
+                                        <span class="front">
+                                            <span class="kb-auto-rec-label">Rec</span>
+                                            <span class="kb-auto-rec-dot" aria-hidden="true"></span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                    <button id="kbAutomationUndo" class="pushable keyboard-automation-btn" type="button" aria-label="Undo automation" disabled>
+                                        <span class="front">
+                                            <svg class="kb-auto-history-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                    <button id="kbAutomationRedo" class="pushable keyboard-automation-btn" type="button" aria-label="Redo automation" disabled>
+                                        <span class="front">
+                                            <svg class="kb-auto-history-icon kb-auto-history-icon--redo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                    <button id="kbAutomationClear" class="pushable keyboard-automation-btn" type="button" aria-label="Clear automation">
+                                        <span class="front">Clr</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="keyboard-synth-fieldset collapsible-fieldset collapsed" id="keyboardSynthFieldset">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardSynthToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardSynthPanel">
+                                <span class="collapsible-label">Synthesizer</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardSynthPanel" class="keyboard-synth-panel collapsible-panel hidden" hidden>
+                            <div class="keyboard-synth-grid">
+                            <fieldset class="keyboard-perf-fieldset keyboard-osc-group keyboard-synth-col keyboard-synth-col--oscs">
+                                <legend>Oscillators</legend>
+                                <div class="keyboard-osc-rows">
+                            <fieldset class="keyboard-perf-fieldset keyboard-osc-field" data-osc="0">
+                                <legend>OSC 1</legend>
+                                <div class="keyboard-osc-controls">
+                                <div class="keyboard-osc-wave" data-osc="0" role="radiogroup" aria-label="Oscillator 1 waveform"></div>
+                                <div class="keyboard-osc-knob-row">
+                                <div class="synth-knob keyboard-osc-knob">
+                                    <span class="synth-knob-label">TUNE</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc1TuneKnob" role="slider" aria-label="Oscillator 1 tune" aria-valuemin="-12" aria-valuemax="12" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="kbOsc1TuneValue">0</span>
+                                </div>
+                                <div class="synth-knob keyboard-osc-knob">
+                                    <span class="synth-knob-label">VOL</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc1VolKnob" role="slider" aria-label="Oscillator 1 volume" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="kbOsc1VolValue">0.33</span>
+                                </div>
+                                </div>
+                                <div class="keyboard-osc-pan-row">
+                                    <span class="keyboard-osc-pan-label">PAN</span>
+                                    <input type="range" class="kb-osc-pan" data-osc="0"
+                                           min="-1" max="1" value="0" step="0.01"
+                                           aria-label="Oscillator 1 pan">
+                                    <span class="kb-osc-pan-value" data-osc="0">C</span>
+                                </div>
+                                <div class="keyboard-osc-toggle-row">
+                                <button type="button" class="kb-step-btn kb-osc-toggle" data-osc="0" aria-label="Oscillator 1 on or off" aria-pressed="true">On</button>
+                                </div>
+                                </div>
+                            </fieldset>
+                            <fieldset class="keyboard-perf-fieldset keyboard-osc-field" data-osc="1">
+                                <legend>OSC 2</legend>
+                                <div class="keyboard-osc-controls">
+                                <div class="keyboard-osc-wave" data-osc="1" role="radiogroup" aria-label="Oscillator 2 waveform"></div>
+                                <div class="keyboard-osc-knob-row">
+                                <div class="synth-knob keyboard-osc-knob">
+                                    <span class="synth-knob-label">TUNE</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc2TuneKnob" role="slider" aria-label="Oscillator 2 tune" aria-valuemin="-12" aria-valuemax="12" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="kbOsc2TuneValue">0</span>
+                                </div>
+                                <div class="synth-knob keyboard-osc-knob">
+                                    <span class="synth-knob-label">VOL</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc2VolKnob" role="slider" aria-label="Oscillator 2 volume" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="kbOsc2VolValue">0.33</span>
+                                </div>
+                                </div>
+                                <div class="keyboard-osc-pan-row">
+                                    <span class="keyboard-osc-pan-label">PAN</span>
+                                    <input type="range" class="kb-osc-pan" data-osc="1"
+                                           min="-1" max="1" value="0" step="0.01"
+                                           aria-label="Oscillator 2 pan">
+                                    <span class="kb-osc-pan-value" data-osc="1">C</span>
+                                </div>
+                                <div class="keyboard-osc-toggle-row">
+                                <button type="button" class="kb-step-btn kb-osc-toggle" data-osc="1" aria-label="Oscillator 2 on or off" aria-pressed="true">On</button>
+                                </div>
+                                </div>
+                            </fieldset>
+                            <fieldset class="keyboard-perf-fieldset keyboard-osc-field" data-osc="2">
+                                <legend>OSC 3</legend>
+                                <div class="keyboard-osc-controls">
+                                <div class="keyboard-osc-wave" data-osc="2" role="radiogroup" aria-label="Oscillator 3 waveform"></div>
+                                <div class="keyboard-osc-knob-row">
+                                <div class="synth-knob keyboard-osc-knob">
+                                    <span class="synth-knob-label">TUNE</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc3TuneKnob" role="slider" aria-label="Oscillator 3 tune" aria-valuemin="-12" aria-valuemax="12" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="kbOsc3TuneValue">0</span>
+                                </div>
+                                <div class="synth-knob keyboard-osc-knob">
+                                    <span class="synth-knob-label">VOL</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc3VolKnob" role="slider" aria-label="Oscillator 3 volume" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="kbOsc3VolValue">0.33</span>
+                                </div>
+                                </div>
+                                <div class="keyboard-osc-pan-row">
+                                    <span class="keyboard-osc-pan-label">PAN</span>
+                                    <input type="range" class="kb-osc-pan" data-osc="2"
+                                           min="-1" max="1" value="0" step="0.01"
+                                           aria-label="Oscillator 3 pan">
+                                    <span class="kb-osc-pan-value" data-osc="2">C</span>
+                                </div>
+                                <div class="keyboard-osc-toggle-row">
+                                <button type="button" class="kb-step-btn kb-osc-toggle" data-osc="2" aria-label="Oscillator 3 on or off" aria-pressed="true">On</button>
+                                </div>
+                                </div>
+                            </fieldset>
+                            <fieldset class="keyboard-perf-fieldset keyboard-osc-field" data-osc="3">
+                                <legend>OSC 4</legend>
+                                <div class="keyboard-osc-controls">
+                                <div class="keyboard-osc-wave" data-osc="3" role="radiogroup" aria-label="Oscillator 4 waveform"></div>
+                                <div class="keyboard-osc-knob-row">
+                                <div class="synth-knob keyboard-osc-knob">
+                                    <span class="synth-knob-label">TUNE</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc4TuneKnob" role="slider" aria-label="Oscillator 4 tune" aria-valuemin="-12" aria-valuemax="12" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="kbOsc4TuneValue">0</span>
+                                </div>
+                                <div class="synth-knob keyboard-osc-knob">
+                                    <span class="synth-knob-label">VOL</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc4VolKnob" role="slider" aria-label="Oscillator 4 volume" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="kbOsc4VolValue">0.33</span>
+                                </div>
+                                </div>
+                                <div class="keyboard-osc-pan-row">
+                                    <span class="keyboard-osc-pan-label">PAN</span>
+                                    <input type="range" class="kb-osc-pan" data-osc="3"
+                                           min="-1" max="1" value="0" step="0.01"
+                                           aria-label="Oscillator 4 pan">
+                                    <span class="kb-osc-pan-value" data-osc="3">C</span>
+                                </div>
+                                <div class="keyboard-osc-toggle-row">
+                                <button type="button" class="kb-step-btn kb-osc-toggle off" data-osc="3" aria-label="Oscillator 4 on or off" aria-pressed="false">Off</button>
+                                </div>
+                                </div>
+                            </fieldset>
+                                </div>
+                            <fieldset class="keyboard-perf-fieldset keyboard-unison-field" id="keyboardUnisonField">
+                                <legend>Unison</legend>
+                                <div class="keyboard-unison-controls">
+                                    <div class="keyboard-unison-left">
+                                        <div class="keyboard-unison-toggle-row">
+                                            <button type="button" class="kb-step-btn off" id="kbUnisonToggle" aria-label="Unison on or off" aria-pressed="false">Off</button>
+                                            <button type="button" class="kb-step-btn off" id="kbPolyUnisonToggle" aria-label="Poly unison on or off" aria-pressed="false" hidden>Poly Uni: Off</button>
+                                        </div>
+                                        <div class="keyboard-unison-voices">
+                                            <span class="keyboard-unison-voices-label">Voices</span>
+                                            <select id="kbUnisonVoices" aria-label="Unison voices">
+                                                <option value="3" selected>3</option>
+                                                <option value="5">5</option>
+                                                <option value="7">7</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="synth-knob keyboard-osc-knob">
+                                        <span class="synth-knob-label">DETUNE</span>
+                                        <div class="synth-knob-dial-wrap">
+                                            <div class="synth-knob-dial" id="kbUnisonDetuneKnob" role="slider" aria-label="Unison detune" aria-valuemin="0" aria-valuemax="50" tabindex="0">
+                                                <span class="synth-knob-indicator"></span>
+                                            </div>
+                                        </div>
+                                        <span class="synth-knob-value" id="kbUnisonDetuneValue">10¢</span>
+                                    </div>
+                                </div>
+                            </fieldset>
+                            <fieldset class="keyboard-perf-fieldset keyboard-phase-reset-field" id="keyboardPhaseResetField">
+                                <legend>Phase Reset</legend>
+                                <div class="keyboard-phase-reset-controls">
+                                    <button type="button" class="kb-step-btn" id="kbPhaseResetToggle" aria-label="Phase reset on or off" aria-pressed="true">On</button>
+                                </div>
+                            </fieldset>
+                            </fieldset>
+                            <div class="keyboard-synth-col-stack keyboard-synth-col-stack--2">
+                                <fieldset class="keyboard-perf-fieldset keyboard-filter-knob-group">
+                                    <legend>Filter</legend>
+                                    <div class="keyboard-filter-controls">
+                                    <div class="synth-knob keyboard-filter-cutoff-knob" data-param="cutoff">
+                                        <span class="synth-knob-label">CUTOFF</span>
+                                        <div class="synth-knob-dial" id="kbCutoffKnob" role="slider" aria-label="Cutoff" aria-valuemin="20" aria-valuemax="10000" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <div class="keyboard-filter-knob-row">
+                                    <div class="synth-knob keyboard-effects-knob" data-param="resonance">
+                                        <span class="synth-knob-label">RES</span>
+                                        <div class="synth-knob-dial" id="kbResonanceKnob" role="slider" aria-label="Resonance" aria-valuemin="0" aria-valuemax="20" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <div class="synth-knob keyboard-effects-knob" data-param="highPass">
+                                        <span class="synth-knob-label">HP</span>
+                                        <div class="synth-knob-dial" id="kbHighPassKnob" role="slider" aria-label="High Pass" aria-valuemin="20" aria-valuemax="2000" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    </div>
+                                    </div>
+                                </fieldset>
+                                <fieldset class="keyboard-perf-fieldset keyboard-noise-group">
+                                    <legend>Noise</legend>
+                                    <div class="keyboard-noise-controls">
+                                        <div class="keyboard-noise-left">
+                                            <div class="keyboard-noise-toggle-row">
+                                                <button type="button" id="kbNoiseToggle" class="kb-step-btn kb-noise-toggle off" aria-label="Noise on or off" aria-pressed="false">Off</button>
+                                            </div>
+                                            <div class="keyboard-noise-type">
+                                                <span class="keyboard-noise-type-label">Type</span>
+                                                <select id="kbNoiseTypeSelect" class="keyboard-noise-type-select" aria-label="Noise type">
+                                                    <option value="white">White</option>
+                                                    <option value="pink">Pink</option>
+                                                    <option value="brown">Brown</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="synth-knob keyboard-osc-knob" data-param="noiseVol">
+                                            <span class="synth-knob-label">VOL</span>
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbNoiseVolKnob" role="slider" aria-label="Noise volume" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div class="keyboard-synth-col-stack keyboard-synth-col-stack--3">
+                                <fieldset class="keyboard-perf-fieldset keyboard-filter-env-group">
+                                    <legend>Filter Env</legend>
+                                    <div class="keyboard-filter-env-controls">
+                                        <fieldset class="keyboard-perf-fieldset keyboard-filter-env-field">
+                                            <legend>Filter Envelope</legend>
+                                            <div class="keyboard-filter-env-panel">
+                                                <div class="vfd-frame adsr-vfd-frame">
+                                                    <canvas id="kbFilterAdsrVisualizer" class="keyboard-adsr-visualizer vfd-glass" width="180" height="84" aria-label="Filter envelope shape"></canvas>
+                                                </div>
+                                                <div class="keyboard-filter-env-knob-row">
+                                                    <div class="synth-knob keyboard-filter-env-knob" data-param="filterAttack">
+                                                        <span class="synth-knob-label">A</span>
+                                                        <div class="synth-knob-dial" id="kbFilterAttackKnob" role="slider" aria-label="Filter attack" aria-valuemin="0" aria-valuemax="2" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="synth-knob keyboard-filter-env-knob" data-param="filterDecay">
+                                                        <span class="synth-knob-label">D</span>
+                                                        <div class="synth-knob-dial" id="kbFilterDecayKnob" role="slider" aria-label="Filter decay" aria-valuemin="0" aria-valuemax="2" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="synth-knob keyboard-filter-env-knob" data-param="filterSustain">
+                                                        <span class="synth-knob-label">S</span>
+                                                        <div class="synth-knob-dial" id="kbFilterSustainKnob" role="slider" aria-label="Filter sustain" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="synth-knob keyboard-filter-env-knob" data-param="filterRelease">
+                                                        <span class="synth-knob-label">R</span>
+                                                        <div class="synth-knob-dial" id="kbFilterReleaseKnob" role="slider" aria-label="Filter release" aria-valuemin="0" aria-valuemax="5" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="synth-knob keyboard-filter-env-knob" data-param="filterEnvAmount">
+                                                        <span class="synth-knob-label">Amt</span>
+                                                        <div class="synth-knob-dial" id="kbFilterEnvAmountKnob" role="slider" aria-label="Filter envelope amount" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                        <span id="kbFilterEnvAmountValue" class="synth-knob-value">100</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="keyboard-filter-env-toggle-row">
+                                                <button type="button" id="kbFilterEnvToggle" class="kb-step-btn kb-filter-env-toggle off" aria-label="Filter envelope on or off" aria-pressed="false">Off</button>
+                                                <button type="button" id="kbFilterEnvInvert" class="kb-step-btn kb-filter-env-invert off" aria-label="Invert filter envelope" aria-pressed="false">Inv</button>
+                                            </div>
+                                        </fieldset>
+                                    </div>
+                                </fieldset>
+                                <fieldset class="keyboard-perf-fieldset keyboard-amp-group">
+                                    <legend>Amp</legend>
+                                    <div class="keyboard-amp-controls">
+                                        <fieldset class="keyboard-perf-fieldset keyboard-vol-env-field">
+                                            <legend>Volume Envelope</legend>
+                                            <div class="keyboard-vol-env-controls">
+                                                <div class="vfd-frame adsr-vfd-frame">
+                                                    <canvas id="kbAdsrVisualizer" class="keyboard-adsr-visualizer vfd-glass" width="180" height="84" aria-label="Volume envelope shape"></canvas>
+                                                </div>
+                                                <div class="keyboard-vol-env-knob-row">
+                                                    <div class="synth-knob keyboard-vol-env-knob" data-param="attack">
+                                                        <span class="synth-knob-label">A</span>
+                                                        <div class="synth-knob-dial" id="kbAttackKnob" role="slider" aria-label="Attack" aria-valuemin="0" aria-valuemax="2" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="synth-knob keyboard-vol-env-knob" data-param="decay">
+                                                        <span class="synth-knob-label">D</span>
+                                                        <div class="synth-knob-dial" id="kbDecayKnob" role="slider" aria-label="Decay" aria-valuemin="0" aria-valuemax="2" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="synth-knob keyboard-vol-env-knob" data-param="sustain">
+                                                        <span class="synth-knob-label">S</span>
+                                                        <div class="synth-knob-dial" id="kbSustainKnob" role="slider" aria-label="Sustain" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="synth-knob keyboard-vol-env-knob" data-param="release">
+                                                        <span class="synth-knob-label">R</span>
+                                                        <div class="synth-knob-dial" id="kbReleaseKnob" role="slider" aria-label="Release" aria-valuemin="0" aria-valuemax="5" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </fieldset>
+                                        <fieldset class="keyboard-perf-fieldset keyboard-volume-field">
+                                            <legend>Volume</legend>
+                                            <div class="synth-knob keyboard-effects-knob" data-param="volume">
+                                                <span class="synth-knob-label">VOL</span>
+                                                <div class="synth-knob-dial" id="kbVolumeKnob" role="slider" aria-label="Master volume" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                        </fieldset>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <fieldset id="keyboardEffectsFieldset" class="keyboard-perf-fieldset keyboard-effects-group keyboard-synth-col keyboard-synth-col--effects collapsible-fieldset">
+                                <legend class="collapsible-legend">
+                                    <button id="keyboardEffectsToggle" class="collapsible-toggle" type="button" aria-expanded="true" aria-controls="keyboardEffectsPanel">
+                                        <span class="collapsible-label">Effects</span>
+                                        <span class="collapsible-arrow" aria-hidden="true"></span>
+                                    </button>
+                                </legend>
+                                <div id="keyboardEffectsPanel" class="keyboard-effects-controls collapsible-panel">
+                                    <fieldset class="keyboard-perf-fieldset keyboard-effects-ringmod-field">
+                                        <legend>Ring Mod</legend>
+                                        <div class="keyboard-effects-ringmod-controls">
+                                            <div class="keyboard-effects-ringmod-toggle-row">
+                                                <button type="button" id="kbRingModToggle" class="kb-step-btn off" aria-label="Ring mod on or off" aria-pressed="false">Off</button>
+                                            </div>
+                                            <div class="synth-knob keyboard-effects-knob" data-param="ringMod">
+                                                <span class="synth-knob-label">RING</span>
+                                                <div class="synth-knob-dial" id="kbRingModKnob" role="slider" aria-label="Ring mod" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    <fieldset class="keyboard-perf-fieldset keyboard-effects-dist-field">
+                                        <legend>Distortion</legend>
+                                        <div class="keyboard-effects-dist-controls">
+                                            <div class="keyboard-effects-dist-toggle-row">
+                                                <button type="button" id="kbDistortionToggle" class="kb-step-btn off" aria-label="Distortion on or off" aria-pressed="false">Off</button>
+                                            </div>
+                                            <div class="synth-knob keyboard-effects-knob" data-param="distortion">
+                                                <span class="synth-knob-label">DIST</span>
+                                                <div class="synth-knob-dial" id="kbDistortionKnob" role="slider" aria-label="Distortion" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    <fieldset class="keyboard-perf-fieldset keyboard-effects-bitcrush-field">
+                                        <legend>Bit Crush</legend>
+                                        <div class="keyboard-effects-bitcrush-controls">
+                                            <div class="keyboard-effects-bitcrush-toggle-row">
+                                                <button type="button" id="kbBitcrushToggle" class="kb-step-btn off" aria-label="Bit crusher on or off" aria-pressed="false">Off</button>
+                                            </div>
+                                            <div class="synth-knob keyboard-effects-knob" data-param="bitDepth">
+                                                <span class="synth-knob-label">CRUSH</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-dial" id="kbBitDepthKnob" role="slider" aria-label="Bit depth" aria-valuemin="2" aria-valuemax="16" tabindex="0">
+                                                        <span class="synth-knob-indicator"></span>
+                                                    </div>
+                                                </div>
+                                                <span class="synth-knob-value" id="kbBitDepthValue">16</span>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    <fieldset class="keyboard-perf-fieldset keyboard-effects-chorus-field">
+                                        <legend>Chorus</legend>
+                                        <div class="keyboard-effects-chorus-controls">
+                                            <div class="keyboard-effects-chorus-toggles">
+                                                <button type="button" id="kbChorusI" class="kb-step-btn kb-chorus-toggle off" aria-label="Chorus I" aria-pressed="false">I</button>
+                                                <button type="button" id="kbChorusII" class="kb-step-btn kb-chorus-toggle off" aria-label="Chorus II" aria-pressed="false">II</button>
+                                            </div>
+                                            <div class="synth-knob keyboard-effects-knob" data-param="chorusAmount">
+                                                <span class="synth-knob-label">CHR</span>
+                                                <div class="synth-knob-dial" id="kbChorusAmountKnob" role="slider" aria-label="Chorus amount" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    <fieldset class="keyboard-perf-fieldset keyboard-effects-delay-field">
+                                        <legend>Delay</legend>
+                                        <div class="keyboard-effects-delay-controls">
+                                            <div class="keyboard-effects-delay-left">
+                                                <div class="keyboard-effects-delay-toggle-row">
+                                                    <button type="button" id="kbDelayToggle" class="kb-step-btn off" aria-label="Delay on or off" aria-pressed="false">Off</button>
+                                                </div>
+                                                <div class="keyboard-effects-delay-time">
+                                                    <span class="keyboard-effects-delay-time-label">Time</span>
+                                                    <select id="kbDelayTimeSelect" class="keyboard-delay-time-select" aria-label="Delay time">
+                                                        <option value="2">1/2</option>
+                                                        <option value="4">1/4</option>
+                                                        <option value="8">1/8</option>
+                                                        <option value="16">1/16</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="synth-knob keyboard-effects-knob" data-param="delayAmount">
+                                                <span class="synth-knob-label">DLY</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-dial" id="kbDelayAmountKnob" role="slider" aria-label="Delay amount" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                        <span class="synth-knob-indicator"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    <fieldset class="keyboard-perf-fieldset keyboard-effects-reverb-field">
+                                        <legend>Reverb</legend>
+                                        <div class="keyboard-effects-reverb-controls">
+                                            <div class="keyboard-effects-reverb-toggle-row">
+                                                <button type="button" id="kbReverbToggle" class="kb-step-btn off" aria-label="Reverb on or off" aria-pressed="false">Off</button>
+                                            </div>
+                                            <div class="keyboard-effects-reverb-knob-row">
+                                                <div class="synth-knob keyboard-effects-knob" data-param="reverbSize">
+                                                    <span class="synth-knob-label">SIZE</span>
+                                                    <div class="synth-knob-dial-wrap">
+                                                        <div class="synth-knob-dial" id="kbReverbSizeKnob" role="slider" aria-label="Reverb size" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="synth-knob keyboard-effects-knob" data-param="reverbDecay">
+                                                    <span class="synth-knob-label">DEC</span>
+                                                    <div class="synth-knob-dial-wrap">
+                                                        <div class="synth-knob-dial" id="kbReverbDecayKnob" role="slider" aria-label="Reverb decay" aria-valuemin="0.45" aria-valuemax="4.5" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="synth-knob keyboard-effects-knob" data-param="reverbDamp">
+                                                    <span class="synth-knob-label">DAMP</span>
+                                                    <div class="synth-knob-dial-wrap">
+                                                        <div class="synth-knob-dial" id="kbReverbDampKnob" role="slider" aria-label="Reverb damp" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="synth-knob keyboard-effects-knob" data-param="reverbAmount">
+                                                    <span class="synth-knob-label">WET</span>
+                                                    <div class="synth-knob-dial-wrap">
+                                                        <div class="synth-knob-dial" id="kbReverbAmountKnob" role="slider" aria-label="Reverb dry/wet" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                            <span class="synth-knob-indicator"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                    <fieldset class="keyboard-perf-fieldset keyboard-effects-comp-field">
+                                        <legend>Compressor</legend>
+                                        <div class="keyboard-effects-comp-controls">
+                                            <div class="keyboard-effects-comp-toggle-row">
+                                                <button type="button" id="kbCompToggle" class="kb-step-btn" aria-label="Compressor on or off" aria-pressed="true">On</button>
+                                            </div>
+                                            <div class="synth-knob keyboard-effects-knob" data-param="compThreshold">
+                                                <span class="synth-knob-label">THRESH</span>
+                                                <div class="synth-knob-dial-wrap">
+                                                    <div class="synth-knob-dial" id="kbCompThresholdKnob" role="slider" aria-label="Compressor threshold" aria-valuemin="-100" aria-valuemax="0" tabindex="0">
+                                                        <span class="synth-knob-indicator"></span>
+                                                    </div>
+                                                </div>
+                                                <span class="synth-knob-value" id="kbCompThresholdValue">-24</span>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            </fieldset>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="keyboard-xy-fieldset collapsible-fieldset collapsed" id="keyboardXyFieldset" hidden>
+                        <legend class="collapsible-legend">
+                            <button id="keyboardXyToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardXyPanel">
+                                <span class="collapsible-label">XY Pad</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardXyPanel" class="keyboard-xy-panel collapsible-panel hidden" hidden>
+                            <fieldset class="keyboard-perf-fieldset keyboard-xy-pad-field">
+                                <div class="xy-pad-container">
+                                    <div class="xy-pad-wrapper">
+                                        <canvas id="xyPad" width="280" height="280"></canvas>
+                                        <div class="xy-pointer" id="xyPointer"></div>
+                                    </div>
+                                    <div class="xy-controls">
+                                        <div class="xy-select-group">
+                                            <label for="yAxisParam">Y</label>
+                                            <select id="yAxisParam" class="xy-select"></select>
+                                        </div>
+                                        <div class="xy-select-group">
+                                            <label for="xAxisParam">X</label>
+                                            <select id="xAxisParam" class="xy-select"></select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </fieldset>
+                    <fieldset class="keyboard-tuning-fieldset collapsible-fieldset" id="keyboardXyTuningFieldset">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardXyTuningToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardXyTuningPanel">
+                                <span class="collapsible-label">Tuning</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardXyTuningPanel" class="keyboard-tuning-body collapsible-panel">
+                            <div class="keyboard-tuning-row">
+                                <div class="keyboard-tuning-left">
+                                    <label class="keyboard-master-tune">
+                                        <span class="keyboard-master-tune-label">Tune</span>
+                                        <input type="range" id="kbXyTuningMasterTune" class="keyboard-master-tune-slider"
+                                               min="-36" max="36" value="0" step="1" aria-label="Master tune">
+                                        <span id="kbXyTuningMasterTuneValue" class="keyboard-master-tune-value">0</span>
+                                    </label>
+                                    <div class="keyboard-transpose-screen" aria-label="Keyboard transpose">
+                                        <span id="kbXyTransposeReadout" class="keyboard-transpose-readout">T: 0 (C)</span>
+                                    </div>
+                                    <button id="kbXyScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Scale: Off</button>
+                                </div>
+                                <div class="keyboard-tuning-center">
+                                    <div class="keyboard-tuning-note note-vfd" id="kbXyNoteVisualizer" aria-live="polite" aria-label="Current note" data-text="Note">
+                                        <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
+                                    </div>
+                                </div>
+                                <div class="keyboard-tuning-right">
+                                    <div class="keyboard-pattern-octave" aria-label="Octave switch">
+                                        <div class="keyboard-pattern-octave-buttons">
+                                            <button type="button" id="kbXyOctaveDown" class="pushable keyboard-pattern-octave-btn" aria-label="Octave down">
+                                                <span class="front">
+                                                    <span class="kb-pattern-oct-text">OCT</span>
+                                                    <span class="kb-pattern-oct-dir kb-pattern-oct-dir-down" aria-hidden="true"></span>
+                                                </span>
+                                            </button>
+                                            <button type="button" id="kbXyOctaveUp" class="pushable keyboard-pattern-octave-btn" aria-label="Octave up">
+                                                <span class="front">
+                                                    <span class="kb-pattern-oct-text">OCT</span>
+                                                    <span class="kb-pattern-oct-dir kb-pattern-oct-dir-up" aria-hidden="true"></span>
+                                                </span>
+                                            </button>
+                                        </div>
+                                        <div class="keyboard-octave-screen" aria-live="polite">
+                                            <span id="kbXyOctaveValue" class="keyboard-octave-readout">0</span>
+                                        </div>
+                                    </div>
+                                    <div class="keyboard-tuning-semi" aria-label="Semitone switch">
+                                        <label class="keyboard-master-tune">
+                                            <span class="keyboard-master-tune-label">Semitone</span>
+                                            <input type="range" id="kbXySemiSwitch" class="keyboard-master-tune-slider"
+                                                   min="-2" max="2" step="1" value="0"
+                                                   aria-label="Semitone switch">
+                                            <span id="kbXySemiSwitchValue" class="keyboard-master-tune-value">0</span>
+                                        </label>
+                                        <select id="kbXySemiAmount" class="keyboard-tuning-semi-amount" aria-label="Semitone amount">
+                                            <option value="0">0</option>
+                                            <option value="1">1</option>
+                                            <option value="2">2</option>
+                                            <option value="3">3</option>
+                                            <option value="4">4</option>
+                                            <option value="5">5</option>
+                                            <option value="6">6</option>
+                                            <option value="7" selected>7</option>
+                                            <option value="8">8</option>
+                                            <option value="9">9</option>
+                                            <option value="10">10</option>
+                                            <option value="11">11</option>
+                                            <option value="12">12</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="keyboard-tuning-scale-row" id="kbXyScaleSelectRow" style="display: none;">
+                                <select id="kbXyScaleSelect" class="keyboard-scale-select" aria-label="Keyboard scale">
+                                    <!-- Populated to match sequencer scale list -->
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <div id="keyboardPolyToggleHome" class="keyboard-mode-toggle-row keyboard-poly-toggle-row" aria-label="Mode toggles">
+                        <button id="keyboardChordMemToggle" class="pushable off keyboard-chord-mem-toggle" type="button" aria-pressed="false" aria-label="Chord memory learn">
+                            <span class="front">
+                                <span class="kb-chord-mem-label">Chord Memory</span>
+                                <span class="kb-chord-mem-dot" aria-hidden="true"></span>
+                            </span>
+                        </button>
+                        <button id="keyboardPolyToggle" class="pushable off keyboard-poly-toggle" type="button" aria-pressed="false" aria-label="Polyphonic mode">
+                            <span class="front">Poly Mode</span>
+                        </button>
+                    </div>
+                    <!-- Ingy 6 (poly) panel — visible only in poly mode; no fieldset legend -->
+                    <div id="ingy6Panel" class="ingy6-panel" hidden aria-label="Ingy 6">
+                        <div class="ingy6-panel-shell">
+                            <div class="ingy6-brand">
+                                <div id="ingy6ChordMemSlot" class="ingy6-brand-left"></div>
+                                <div id="ingy6PolyToggleSlot" class="ingy6-brand-center"></div>
+                                <span class="ingy6-logo" aria-hidden="true"></span>
+                            </div>
+                            <div class="ingy6-sections">
+                                <section class="ingy6-section ingy6-section--dco" aria-label="DCO">
+                                    <header class="ingy6-section-header">DCO</header>
+                                    <div class="ingy6-section-body">
+                                        <svg class="ingy6-silk" aria-hidden="true"><polyline class="ingy6-silk-line" points="" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+                                        <div class="ingy6-wave-group" role="group" aria-label="Main DCO waveform (latching; all can be off)">
+                                            <button type="button" class="ingy6-wave-btn" data-wave="sawtooth" aria-pressed="false" aria-label="Sawtooth">
+                                                <svg class="ingy6-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 24,1 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>
+                                            </button>
+                                            <button type="button" class="ingy6-wave-btn active" data-wave="square" aria-pressed="true" aria-label="Square">
+                                                <svg class="ingy6-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 6,11 6,2 18,2 18,11 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>
+                                            </button>
+                                            <button type="button" class="ingy6-wave-btn" data-wave="sine" aria-pressed="false" aria-label="Sine">
+                                                <svg class="ingy6-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><path d="M0,6 Q6,1 12,6 T24,6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                            </button>
+                                            <button type="button" class="ingy6-wave-btn" data-wave="triangle" aria-pressed="false" aria-label="Triangle">
+                                                <svg class="ingy6-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 12,1 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>
+                                            </button>
+                                        </div>
+                                        <div class="ingy6-fader-row">
+                                            <div class="ingy6-fader" data-param="subOsc">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="0" orient="vertical" aria-label="Sub oscillator">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">SUB OSC</span>
+                                            </div>
+                                            <div class="ingy6-fader" data-param="noise">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="0" orient="vertical" aria-label="Noise">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">NOISE</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="ingy6-section ingy6-section--hpf" aria-label="HPF">
+                                    <header class="ingy6-section-header">HPF</header>
+                                    <div class="ingy6-section-body">
+                                        <div class="ingy6-fader ingy6-fader--hpf" data-param="highPass">
+                                            <div class="ingy6-fader-body">
+                                                <div class="ingy6-fader-scale-labels" aria-hidden="true">
+                                                    <span>3</span><span>2</span><span>1</span><span>0</span>
+                                                </div>
+                                                <div class="ingy6-fader-ticks ingy6-fader-ticks--hpf" aria-hidden="true"></div>
+                                                <div class="ingy6-fader-slot">
+                                                    <input type="range" class="ingy6-fader-input" min="0" max="3" step="1" value="0" orient="vertical" aria-label="HPF frequency">
+                                                </div>
+                                            </div>
+                                            <span class="ingy6-fader-label">FREQ</span>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="ingy6-section ingy6-section--vcf" aria-label="VCF">
+                                    <header class="ingy6-section-header">VCF</header>
+                                    <div class="ingy6-section-body">
+                                        <svg class="ingy6-silk" aria-hidden="true"><polyline class="ingy6-silk-line" points="" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+                                        <div class="ingy6-fader-row">
+                                            <div class="ingy6-fader" data-param="cutoff">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="7" orient="vertical" aria-label="VCF frequency">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">FREQ</span>
+                                            </div>
+                                            <div class="ingy6-fader" data-param="resonance">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="0" orient="vertical" aria-label="VCF resonance">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">RES</span>
+                                            </div>
+                                            <!-- Juno-60: switch+glyphs; bracket to ENV is drawn in keyboard-ingy6-panel.js -->
+                                            <div class="ingy6-vcf-env-group">
+                                                <div class="ingy6-vcf-polarity" aria-label="Filter envelope polarity">
+                                                    <button type="button" id="ingy6FilterEnvInvert" class="ingy6-polarity-switch" aria-label="Invert filter envelope" aria-pressed="false">
+                                                        <span class="ingy6-polarity-well" aria-hidden="true">
+                                                            <span class="ingy6-polarity-lever"></span>
+                                                        </span>
+                                                    </button>
+                                                    <div class="ingy6-polarity-glyphs">
+                                                        <span class="ingy6-polarity-glyph ingy6-polarity-glyph--norm"></span>
+                                                        <span class="ingy6-polarity-glyph ingy6-polarity-glyph--inv"></span>
+                                                    </div>
+                                                </div>
+                                                <div class="ingy6-fader" data-param="filterEnvAmount">
+                                                    <div class="ingy6-fader-body">
+                                                        <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                        <div class="ingy6-fader-slot">
+                                                            <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="0" orient="vertical" aria-label="VCF envelope">
+                                                        </div>
+                                                    </div>
+                                                    <span class="ingy6-fader-label">ENV</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="ingy6-section ingy6-section--vca" aria-label="VCA">
+                                    <header class="ingy6-section-header">VCA</header>
+                                    <div class="ingy6-section-body">
+                                        <div class="ingy6-vca-switch" role="group" aria-label="VCA mode">
+                                            <button type="button" class="ingy6-switch-btn off" data-vca="gate" aria-pressed="false">GATE</button>
+                                            <button type="button" class="ingy6-switch-btn" data-vca="env" aria-pressed="true">ENV</button>
+                                        </div>
+                                        <div class="ingy6-fader" data-param="vcaLevel">
+                                            <div class="ingy6-fader-body">
+                                                <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                <div class="ingy6-fader-slot">
+                                                    <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="8" orient="vertical" aria-label="VCA level">
+                                                </div>
+                                            </div>
+                                            <span class="ingy6-fader-label">LEVEL</span>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="ingy6-section ingy6-section--env" aria-label="ENV">
+                                    <header class="ingy6-section-header">ENV</header>
+                                    <div class="ingy6-section-body">
+                                        <div class="ingy6-fader-row">
+                                            <div class="ingy6-fader" data-param="attack">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="1" orient="vertical" aria-label="Attack">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">A</span>
+                                            </div>
+                                            <div class="ingy6-fader" data-param="decay">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="3" orient="vertical" aria-label="Decay">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">D</span>
+                                            </div>
+                                            <div class="ingy6-fader" data-param="sustain">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="7" orient="vertical" aria-label="Sustain">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">S</span>
+                                            </div>
+                                            <div class="ingy6-fader" data-param="release">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="2" orient="vertical" aria-label="Release">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">R</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="ingy6-section ingy6-section--chorus" aria-label="Chorus">
+                                    <header class="ingy6-section-header">CHORUS</header>
+                                    <div class="ingy6-section-body ingy6-section-body--chorus">
+                                        <div class="ingy6-chorus-group" role="group" aria-label="Chorus">
+                                            <button type="button" class="ingy6-chorus-btn" data-chorus="off" aria-pressed="true">OFF</button>
+                                            <button type="button" class="ingy6-chorus-btn off" data-chorus="i" aria-pressed="false">I</button>
+                                            <button type="button" class="ingy6-chorus-btn off" data-chorus="ii" aria-pressed="false">II</button>
+                                        </div>
+                                    </div>
+                                </section>
+
+                            </div>
+                            <div class="ingy6-footer-brand" aria-hidden="true">
+                                <span class="ingy6-sublogo"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <fieldset class="keyboard-controls-fieldset collapsible-fieldset collapsed" id="keyboardControlsFieldset">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardControlsToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardControlsPanel">
+                                <span class="collapsible-label">Keyboard Controls</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardControlsPanel" class="keyboard-controls-body collapsible-panel hidden" hidden>
+                            <div class="keyboard-controls-row">
+                                <button id="keyboardFullscreenToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Fullscreen</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="keyboard-play-row">
+                    <div class="keyboard-play-bend-lfo">
+                        <fieldset class="keyboard-arp-panel" aria-label="Arpeggiator">
+                            <legend><span class="legend-hex">Arpeggiator</span></legend>
+                            <div class="keyboard-arp-panel-body">
+                                <button id="keyboardArpToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Arp: Off</button>
+                                <button id="keyboardArpChordToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Arp Chord: Off</button>
+                                <button id="keyboardArpOrderToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Order: Up</button>
+                                <button id="keyboardArpRangeToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Range: 1</button>
+                                <button id="keyboardLatchToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Latch: Off</button>
+                            </div>
+                        </fieldset>
+                        <div class="keyboard-play-strips">
+                            <div class="keyboard-pitch-bend" id="keyboardPitchBend" role="slider" aria-label="Pitch bend" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0" tabindex="0">
+                                <span class="synth-knob-label">PITCH BEND</span>
+                                <div class="keyboard-pitch-bend-track">
+                                    <div class="keyboard-pitch-bend-center"></div>
+                                    <div class="keyboard-pitch-bend-thumb" id="keyboardPitchBendThumb"></div>
+                                </div>
+                            </div>
+                            <div class="keyboard-lfo-strip" id="keyboardLfoStrip" role="slider" aria-label="LFO amount" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" tabindex="0">
+                                <span class="synth-knob-label">LFO AMOUNT</span>
+                                <div class="keyboard-lfo-strip-track">
+                                    <div class="keyboard-lfo-strip-thumb" id="keyboardLfoStripThumb"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <fieldset class="keyboard-mod-matrix" id="keyboardModMatrix">
+                        <legend><span class="legend-hex">Modulation</span></legend>
+                        <div class="keyboard-mod-matrix-body">
+                            <div class="keyboard-mod-matrix-left">
+                                <div class="keyboard-mod-matrix-lfo-shape">
+                                    <div class="keyboard-lfo-wave" id="kbLfoWave" role="radiogroup" aria-label="LFO waveform"></div>
+                                    <div class="keyboard-mod-matrix-lfo-toggles">
+                                        <button type="button" id="kbLfoToggle" class="kb-step-btn" aria-label="LFO on or off" aria-pressed="true">On</button>
+                                        <button type="button" id="kbLfoRetrigger" class="kb-step-btn off" aria-label="LFO retrigger on or off" aria-pressed="false">Retrig</button>
+                                    </div>
+                                </div>
+                                <div class="keyboard-mod-matrix-rate">
+                                    <div class="synth-knob keyboard-mod-matrix-knob" data-param="lfoSpeed">
+                                        <span class="synth-knob-label">RATE</span>
+                                        <span class="synth-knob-value" id="kbLfoRateValue">1 Hz</span>
+                                        <div class="synth-knob-dial-wrap">
+                                            <div class="synth-knob-dial" id="kbLfoRateKnob" role="slider" aria-label="LFO rate" aria-valuemin="0.1" aria-valuemax="20" tabindex="0">
+                                                <span class="synth-knob-indicator"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" id="kbLfoSync" class="kb-step-btn off" aria-label="LFO rate sync" aria-pressed="false">Hz</button>
+                                </div>
+                            </div>
+                            <div class="keyboard-mod-matrix-dests" aria-label="LFO destinations">
+                                <div class="synth-knob keyboard-mod-matrix-knob" data-param="cutoffMod">
+                                    <span class="synth-knob-label">CUT</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbCutoffModKnob" role="slider" aria-label="Cutoff mod" aria-valuemin="-5000" aria-valuemax="5000" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="synth-knob keyboard-mod-matrix-knob" data-param="resonanceMod">
+                                    <span class="synth-knob-label">RES</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbResonanceModKnob" role="slider" aria-label="Resonance mod" aria-valuemin="-20" aria-valuemax="20" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="synth-knob keyboard-mod-matrix-knob" data-param="highpassMod">
+                                    <span class="synth-knob-label">HP</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbHighpassModKnob" role="slider" aria-label="Highpass mod" aria-valuemin="-800" aria-valuemax="800" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="synth-knob keyboard-mod-matrix-knob" data-param="osc1PitchMod">
+                                    <span class="synth-knob-label">OSC 1</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc1PitchModKnob" role="slider" aria-label="Osc 1 pitch mod" aria-valuemin="-12" aria-valuemax="12" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="synth-knob keyboard-mod-matrix-knob" data-param="osc2PitchMod">
+                                    <span class="synth-knob-label">OSC 2</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc2PitchModKnob" role="slider" aria-label="Osc 2 pitch mod" aria-valuemin="-12" aria-valuemax="12" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="synth-knob keyboard-mod-matrix-knob" data-param="osc3PitchMod">
+                                    <span class="synth-knob-label">OSC 3</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc3PitchModKnob" role="slider" aria-label="Osc 3 pitch mod" aria-valuemin="-12" aria-valuemax="12" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="synth-knob keyboard-mod-matrix-knob" data-param="osc4PitchMod">
+                                    <span class="synth-knob-label">OSC 4</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbOsc4PitchModKnob" role="slider" aria-label="Osc 4 pitch mod" aria-valuemin="-12" aria-valuemax="12" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+                <div id="chromaticKeyboardPanel" class="chromatic-keyboard-panel">
+                    <div id="chromaticKeyboard" class="chromatic-keyboard"></div>
+                </div>
+                <div id="chromaticSpaceBarRow" class="chromatic-spacebar-row" hidden>
+                    <button type="button" id="chromaticSpace" class="ckb-key ckb-space pushable start" data-code="Space" aria-label="Start or stop sequencer">
+                        <span class="front">
+                            <span class="ckb-transport-icon" aria-hidden="true"></span>
+                        </span>
+                    </button>
+                </div>
+                <div id="computerKeyboardPanel" class="computer-keyboard-panel" hidden>
+                    <div id="computerKeyboardBoard" class="computer-keyboard-board" aria-label="Computer keyboard"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="swipe-dots" id="swipeDots" style="display: none;" aria-label="Page selector">
+            <div class="swipe-arrow swipe-arrow-left touch-target" data-swipe-dir="left">&lt;</div>
+            <div class="swipe-dot active" data-index="0"></div>
+            <div class="swipe-dot" data-index="1"></div>
+            <div class="swipe-dot" data-index="2"></div>
+            <div class="swipe-dot" data-index="3"></div>
+            <div class="swipe-arrow swipe-arrow-right touch-target" data-swipe-dir="right">&gt;</div>
+        </div>
+        
+        <div class="synth-container" id="synthContainer">
+            <div class="section">
+                <h2>Sequencer</h2>
+                <div class="sequencer-controls">
+                    <button id="startStop" class="pushable start">
+                        <span class="front">Start</span>
+                    </button>
+                    <div class="control">
+                        <label>Tempo (BPM)</label>
+                        <input type="range" id="tempo" min="60" max="240" value="120">
+                        <span id="tempoValue">120</span>
+                    </div>
+                    <div class="control">
+                        <label>Division</label>
+                        <select id="division">
+                            <option value="2">1/2 Note</option>
+                            <option value="4">1/4 Note</option>
+                            <option value="8" selected>1/8 Note</option>
+                            <option value="16">1/16 Note</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label>Steps</label>
+                        <input type="range" id="stepCount" min="1" max="32" value="8">
+                        <span id="stepCountValue">8</span>
+                    </div>
+                    <div class="control">
+                        <label>Slide Time (ms)</label>
+                        <input type="range" id="slideTime" min="10" max="500" value="60">
+                        <span id="slideTimeValue">60</span>
+                    </div>
+                    <div class="control">
+                        <label>Accent Amount</label>
+                        <input type="range" id="accentAmount" min="0" max="100" value="100">
+                        <span id="accentAmountValue">100</span>
+                    </div>
+                    <div class="control">
+                        <label>Gate Length (%)</label>
+                        <input type="range" id="gateLength" min="5" max="100" value="90">
+                        <span id="gateLengthValue">90</span>
+                    </div>
+                    <button id="reverse" class="pushable">
+                        <span class="front">Reverse: Off</span>
+                    </button>
+                    <button id="scaleToggle" class="pushable off">
+                        <span class="front">Scale: Off</span>
+                    </button>
+                    <div class="control" id="scaleSelectControl" style="display: none;">
+                        <label>Scale</label>
+                        <select id="scaleSelect">
+                            <!-- Scales are populated by JavaScript -->
+                        </select>
+                    </div>
+                    <button id="microtuneLockToggle" class="pushable off">
+                        <span class="front">Microtuning: Full</span>
+                    </button>
+                </div>
+                <div id="noteVisualizer" class="note-vfd note-vfd--panel" aria-live="polite" aria-label="Current note" data-text="Note">
+                    <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
+                </div>
+                <div class="control pattern-shift-control">
+                    <span class="pattern-shift-label">PATTERN SHIFT</span>
+                    <div class="pattern-shift-buttons">
+                        <button type="button" id="patternShiftBack" class="pushable" aria-label="Shift pattern back">
+                            <span class="front">◀</span>
+                        </button>
+                        <button type="button" id="patternShiftForward" class="pushable" aria-label="Shift pattern forward">
+                            <span class="front">▶</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="steps">
+                    <!-- Steps will be generated by JavaScript -->
+                </div>
+            </div>
+            <div class="section">
+                <h2>Oscillators</h2>
+                <!-- Tuning Group Start -->
+                <fieldset class="control-group tuning-group">
+                    <legend>Tuning</legend>
+                    <div class="control">
+                        <label>Master Tune</label>
+                        <input type="range" id="masterTune" min="-36" max="36" value="0">
+                        <span id="masterTuneValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>Octave Switch</label>
+                        <input type="range" id="octaveSwitch" min="-2" max="2" step="1" value="0">
+                        <span id="octaveSwitchValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>Semitone Switch</label>
+                        <input type="range" id="semitoneSwitch" min="-2" max="2" step="1" value="0">
+                        <span id="semitoneSwitchValue">0</span>
+                        <select id="semitoneAmount">
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7" selected>7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                        </select>
+                    </div>
+                </fieldset>
+                <!-- Tuning Group End -->
+                <!-- Oscillator 1 Group Start -->
+                <fieldset class="control-group osc1-group">
+                    <legend>OSC 1</legend>
+                    <div class="control">
+                        <label>OSC 1 Tune</label>
+                        <input type="range" class="osc-tune" data-osc="0" min="-12" max="12" value="0">
+                        <span class="osc-tune-value">0</span>
+                        <select class="osc-type" data-osc="0">
+                            <option value="sawtooth">Saw</option>
+                            <option value="square">Square</option>
+                            <option value="sine">Sine</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                        <label>OSC 1 Pan</label>
+                        <input type="range" class="osc-pan" data-osc="0" min="-1" max="1" step="0.01" value="0">
+                        <span class="osc-pan-value">C</span>
+                        <button class="pushable osc-toggle" data-osc="0">
+                            <span class="front">On</span>
+                        </button>
+                        <label>OSC 1 Vol</label>
+                        <input type="range" class="osc-vol" data-osc="0" min="0" max="1" step="0.01" value="0.33">
+                        <span class="osc-vol-value">0.33</span>
+                    </div>
+                </fieldset>
+                <!-- Oscillator 1 Group End -->
+                <!-- Oscillator 2 Group Start -->
+                <fieldset class="control-group osc2-group">
+                    <legend>OSC 2</legend>
+                    <div class="control">
+                        <label>OSC 2 Tune</label>
+                        <input type="range" class="osc-tune" data-osc="1" min="-12" max="12" value="0">
+                        <span class="osc-tune-value">0</span>
+                        <select class="osc-type" data-osc="1">
+                            <option value="sawtooth">Saw</option>
+                            <option value="square">Square</option>
+                            <option value="sine">Sine</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                        <label>OSC 2 Pan</label>
+                        <input type="range" class="osc-pan" data-osc="1" min="-1" max="1" step="0.01" value="0">
+                        <span class="osc-pan-value">C</span>
+                        <button class="pushable osc-toggle" data-osc="1">
+                            <span class="front">On</span>
+                        </button>
+                        <label>OSC 2 Vol</label>
+                        <input type="range" class="osc-vol" data-osc="1" min="0" max="1" step="0.01" value="0.33">
+                        <span class="osc-vol-value">0.33</span>
+                    </div>
+                </fieldset>
+                <!-- Oscillator 2 Group End -->
+                <!-- Oscillator 3 Group Start -->
+                <fieldset class="control-group osc3-group">
+                    <legend>OSC 3</legend>
+                    <div class="control">
+                        <label>OSC 3 Tune</label>
+                        <input type="range" class="osc-tune" data-osc="2" min="-12" max="12" value="0">
+                        <span class="osc-tune-value">0</span>
+                        <select class="osc-type" data-osc="2">
+                            <option value="sawtooth">Saw</option>
+                            <option value="square">Square</option>
+                            <option value="sine">Sine</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                        <label>OSC 3 Pan</label>
+                        <input type="range" class="osc-pan" data-osc="2" min="-1" max="1" step="0.01" value="0">
+                        <span class="osc-pan-value">C</span>
+                        <button class="pushable osc-toggle" data-osc="2">
+                            <span class="front">On</span>
+                        </button>
+                        <label>OSC 3 Vol</label>
+                        <input type="range" class="osc-vol" data-osc="2" min="0" max="1" step="0.01" value="0.33">
+                        <span class="osc-vol-value">0.33</span>
+                    </div>
+                </fieldset>
+                <!-- Oscillator 3 Group End -->
+                <!-- Oscillator 4 Group Start -->
+                <fieldset class="control-group osc4-group">
+                    <legend>OSC 4</legend>
+                    <div class="control">
+                        <label>OSC 4 Tune</label>
+                        <input type="range" class="osc-tune" data-osc="3" min="-12" max="12" value="0">
+                        <span class="osc-tune-value">0</span>
+                        <select class="osc-type" data-osc="3">
+                            <option value="sawtooth">Saw</option>
+                            <option value="square">Square</option>
+                            <option value="sine">Sine</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                        <label>OSC 4 Pan</label>
+                        <input type="range" class="osc-pan" data-osc="3" min="-1" max="1" step="0.01" value="0">
+                        <span class="osc-pan-value">C</span>
+                        <button class="pushable osc-toggle off" data-osc="3">
+                            <span class="front">Off</span>
+                        </button>
+                        <label>OSC 4 Vol</label>
+                        <input type="range" class="osc-vol" data-osc="3" min="0" max="1" step="0.01" value="0.33">
+                        <span class="osc-vol-value">0.33</span>
+                    </div>
+                </fieldset>
+                <!-- Oscillator 4 Group End -->
+                <!-- Unison Group Start -->
+                <fieldset class="control-group unison-group">
+                    <legend>Unison</legend>
+                    <div class="control">
+                        <button id="unisonToggle" class="pushable osc-toggle off" type="button">
+                            <span class="front">Off</span>
+                        </button>
+                        <label>Voices</label>
+                        <select id="unisonVoices">
+                            <option value="3" selected>3</option>
+                            <option value="5">5</option>
+                            <option value="7">7</option>
+                        </select>
+                        <label>Detune</label>
+                        <input type="range" id="unisonDetune" min="0" max="50" step="1" value="10">
+                        <span id="unisonDetuneValue">10¢</span>
+                    </div>
+                </fieldset>
+                <!-- Unison Group End -->
+                <!-- Phase Reset Group Start -->
+                <fieldset class="control-group phase-reset-group">
+                    <legend>Phase Reset</legend>
+                    <div class="control">
+                        <button id="phaseResetToggle" class="pushable osc-toggle" type="button">
+                            <span class="front">On</span>
+                        </button>
+                    </div>
+                </fieldset>
+                <!-- Phase Reset Group End -->
+                <!-- Ring Mod Group Start -->
+                <fieldset class="control-group ring-mod-group">
+                    <legend>Ring Mod.</legend>
+                    <div class="control">
+                        <button id="ringModToggle" class="pushable osc-toggle off" type="button" aria-label="Ring mod on or off">
+                            <span class="front">Off</span>
+                        </button>
+                        <label>Ring Mod</label>
+                        <input type="range" id="ringMod" min="0" max="1" step="0.01" value="0">
+                        <span id="ringModValue">0</span>
+                    </div>
+                </fieldset>
+                <!-- Ring Mod Group End -->
+                <!-- Noise Group Start -->
+                <fieldset class="control-group noise-group">
+                    <legend>Noise</legend>
+                    <div class="control">
+                        <label>Noise Type</label>
+                        <select id="noiseType">
+                            <option value="white">White</option>
+                            <option value="pink">Pink</option>
+                            <option value="brown">Brown</option>
+                        </select>
+                        <button id="noiseToggle" class="pushable noise-toggle">
+                            <span class="front">Off</span>
+                        </button>
+                        <label>Noise Vol</label>
+                        <input type="range" id="noiseVol" min="0" max="1" step="0.01" value="0">
+                        <span id="noiseVolValue">0</span>
+                    </div>
+                </fieldset>
+                <!-- Noise Group End -->
+            </div>
+            <div class="section">
+                <h2>Filter & Effects</h2>
+                <!-- Filter Group Start -->
+                <fieldset class="control-group filter-group">
+                    <legend>Filter</legend>
+                    <div class="control">
+                        <label>Cutoff</label>
+                        <input type="range" id="cutoff" min="20" max="10000" value="1000">
+                        <span id="cutoffValue">1000</span>
+                    </div>
+                    <div class="control">
+                        <label>Resonance</label>
+                        <input type="range" id="resonance" min="0" max="20" value="1">
+                        <span id="resonanceValue">1</span>
+                    </div>
+                    <div class="control">
+                        <label>High Pass</label>
+                        <input type="range" id="highPass" min="20" max="2000" value="20">
+                        <span id="highPassValue">20</span>
+                    </div>
+                </fieldset>
+                <!-- Filter Group End -->
+                <!-- Filter Envelope Group Start -->
+                <fieldset class="control-group adsr-group filter-env-group">
+                    <legend>Filter Envelope</legend>
+                    <div class="control">
+                        <button id="filterEnvToggle" class="pushable filter-env-toggle off">
+                            <span class="front">Off</span>
+                        </button>
+                    </div>
+                    <div class="control">
+                        <button id="acidModeToggle" class="pushable acid-mode-toggle off" type="button" aria-pressed="false">
+                            <span class="front">Acid: Off</span>
+                        </button>
+                    </div>
+                    <div id="filterEnvControls" class="filter-env-controls hidden">
+                        <div class="control">
+                            <div class="vfd-frame adsr-vfd-frame adsr-vfd-frame--panel">
+                                <canvas id="filterAdsrVisualizer" class="panel-adsr-visualizer vfd-glass" width="220" height="120" aria-label="Filter envelope shape"></canvas>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <label>Env Amount</label>
+                            <input type="range" id="filterEnvAmount" min="0" max="100" step="1" value="100">
+                            <span id="filterEnvAmountValue">100</span>
+                        </div>
+                        <div class="control">
+                            <label>Attack</label>
+                            <input type="range" id="filterAttack" min="0" max="2" step="0.01" value="0.1">
+                            <span id="filterAttackValue">0.1</span>
+                        </div>
+                        <div class="control">
+                            <label>Decay</label>
+                            <input type="range" id="filterDecay" min="0" max="2" step="0.01" value="0.3">
+                            <span id="filterDecayValue">0.3</span>
+                        </div>
+                        <div class="control">
+                            <label>Sustain</label>
+                            <input type="range" id="filterSustain" min="0" max="1" step="0.01" value="0.5">
+                            <span id="filterSustainValue">0.5</span>
+                        </div>
+                        <div class="control">
+                            <label>Release</label>
+                            <input type="range" id="filterRelease" min="0" max="5" step="0.01" value="0.5">
+                            <span id="filterReleaseValue">0.5</span>
+                        </div>
+                    </div>
+                </fieldset>
+                <!-- Filter Envelope Group End -->
+                <!-- ADSR Group Start -->
+                <fieldset class="control-group adsr-group"> <!-- Changed div to fieldset -->
+                    <legend>Vol. Envelope</legend> <!-- Changed text again -->
+                    <div class="control">
+                        <div class="vfd-frame adsr-vfd-frame adsr-vfd-frame--panel">
+                            <canvas id="adsrVisualizer" class="panel-adsr-visualizer vfd-glass" width="220" height="120" aria-label="Volume envelope shape"></canvas>
+                        </div>
+                    </div>
+                    <div class="control">
+                        <label>Attack</label>
+                        <input type="range" id="attack" min="0" max="2" step="0.01" value="0">
+                        <span id="attackValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>Decay</label>
+                        <input type="range" id="decay" min="0" max="2" step="0.01" value="0.5">
+                        <span id="decayValue">0.5</span>
+                    </div>
+                    <div class="control">
+                        <label>Sustain</label>
+                        <input type="range" id="sustain" min="0" max="1" step="0.01" value="0.5">
+                        <span id="sustainValue">0.5</span>
+                    </div>
+                    <div class="control">
+                        <label>Release</label>
+                        <input type="range" id="release" min="0" max="5" step="0.01" value="1">
+                        <span id="releaseValue">1</span>
+                    </div>
+                </fieldset>
+                <!-- ADSR Group End -->
+                <!-- Effects Group Start -->
+                <fieldset class="control-group effects-group">
+                    <legend>Effects</legend>
+                    <fieldset class="control-group effects-distortion-group">
+                        <legend>Distortion</legend>
+                        <div class="control">
+                            <button id="distortionToggle" class="pushable osc-toggle off" type="button" aria-label="Distortion on or off">
+                                <span class="front">Off</span>
+                            </button>
+                            <input type="range" id="distortion" min="0" max="100" value="0">
+                            <span id="distortionValue">0</span>
+                        </div>
+                    </fieldset>
+                    <fieldset class="control-group effects-bitcrusher-group">
+                        <legend>Bit Crush</legend>
+                        <div class="control">
+                            <button id="bitcrusherToggle" class="pushable osc-toggle off" type="button" aria-label="Bit crusher on or off">
+                                <span class="front">Off</span>
+                            </button>
+                            <label>Bit Depth</label>
+                            <input type="range" id="bitDepth" min="2" max="16" step="1" value="16">
+                            <span id="bitDepthValue">16</span>
+                        </div>
+                    </fieldset>
+                    <fieldset class="control-group effects-chorus-group">
+                        <legend>Chorus</legend>
+                        <div class="control">
+                            <div style="display: flex; gap: 5px; margin: 5px 0;">
+                                <button id="chorusI" class="pushable chorus-toggle off">
+                                    <span class="front">I</span>
+                                </button>
+                                <button id="chorusII" class="pushable chorus-toggle off">
+                                    <span class="front">II</span>
+                                </button>
+                            </div>
+                            <label>Amount</label>
+                            <input type="range" id="chorusAmount" min="0" max="1" step="0.01" value="0">
+                            <span id="chorusAmountValue">0</span>
+                        </div>
+                    </fieldset>
+                    <fieldset class="control-group effects-delay-group">
+                        <legend>Delay</legend>
+                        <div class="control">
+                            <button id="delayToggle" class="pushable osc-toggle off" type="button" aria-label="Delay on or off">
+                                <span class="front">Off</span>
+                            </button>
+                            <label>Time</label>
+                            <select id="delayTime">
+                                <option value="2">1/2 Note</option>
+                                <option value="4">1/4 Note</option>
+                                <option value="8">1/8 Note</option>
+                                <option value="16">1/16 Note</option>
+                            </select>
+                            <label>Amount</label>
+                            <input type="range" id="delayAmount" min="0" max="1" step="0.01" value="0">
+                            <span id="delayAmountValue">0</span>
+                        </div>
+                    </fieldset>
+                    <fieldset class="control-group effects-reverb-group">
+                        <legend>Reverb</legend>
+                        <div class="control">
+                            <button id="reverbToggle" class="pushable osc-toggle off" type="button" aria-label="Reverb on or off">
+                                <span class="front">Off</span>
+                            </button>
+                            <label>Size</label>
+                            <input type="range" id="reverbSize" min="0" max="1" step="0.01" value="0.45">
+                            <span id="reverbSizeValue">0.45</span>
+                            <label>Decay</label>
+                            <input type="range" id="reverbDecay" min="0.45" max="4.5" step="0.05" value="1.8">
+                            <span id="reverbDecayValue">1.8</span>
+                            <label>Damp</label>
+                            <input type="range" id="reverbDamp" min="0" max="1" step="0.01" value="0.35">
+                            <span id="reverbDampValue">0.35</span>
+                            <label>Dry/Wet</label>
+                            <input type="range" id="reverbAmount" min="0" max="1" step="0.01" value="0">
+                            <span id="reverbAmountValue">0</span>
+                        </div>
+                    </fieldset>
+                </fieldset>
+                <!-- Effects Group End -->
+                <!-- Master Volume Group Start -->
+                <fieldset class="control-group master-volume-group">
+                    <legend>Volume</legend>
+                    <div class="control">
+                        <label>Volume</label>
+                        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
+                        <span id="volumeValue">0.5</span>
+                    </div>
+                </fieldset>
+                <!-- Master Volume Group End -->
+                <!-- Compressor Group Start -->
+                <fieldset class="control-group compressor-group">
+                    <legend>Compressor</legend>
+                    <div class="control">
+                        <button id="compToggle" class="pushable osc-toggle" type="button" aria-label="Compressor on or off">
+                            <span class="front">On</span>
+                        </button>
+                        <label>Threshold</label>
+                        <input type="range" id="compThreshold" min="-100" max="0" value="-24">
+                        <span id="compThresholdValue">-24</span>
+                    </div>
+                </fieldset>
+                <!-- Compressor Group End -->
+            </div>
+            <div class="section">
+                <h2>Modulation</h2>
+                <!-- LFO Group Start -->
+                <fieldset class="control-group lfo-group">
+                    <legend>LFO</legend>
+                    <div class="control">
+                        <label>LFO Waveform</label>
+                        <select id="lfoWaveform">
+                            <option value="sawtooth">Saw</option>
+                            <option value="square">Square</option>
+                            <option value="sine" selected>Sine</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                    </div>
+                    <div class="control" id="lfoSpeedControl">
+                        <label id="lfoRateLabel">Rate (Hz)</label>
+                        <input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="1">
+                        <span id="lfoSpeedValue">1 Hz</span>
+                    </div>
+                    <div class="control hidden" id="lfoSyncDivisionControl" hidden>
+                        <label>Rate (Sync)</label>
+                        <input type="range" id="lfoSyncDivision" min="0" max="12" step="1" value="6">
+                        <span id="lfoSyncDivisionValue">1/4</span>
+                    </div>
+                    <div class="control">
+                        <button id="lfoSyncToggle" class="pushable off" aria-pressed="false">
+                            <span class="front">Hz</span>
+                        </button>
+                    </div>
+                    <div class="control">
+                        <button id="lfoToggle" class="pushable osc-toggle">
+                            <span class="front">On</span>
+                        </button>
+                    </div>
+                    <div class="control">
+                        <button id="lfoRetrigger" class="pushable osc-toggle">
+                            <span class="front">Retrigger: Off</span>
+                        </button>
+                    </div>
+                </fieldset>
+                <!-- LFO Group End -->
+                <!-- LFO Destination Group Start -->
+                <fieldset class="control-group lfo-dest-group">
+                    <legend>LFO Destination</legend>
+                    <div class="control">
+                        <label>Cutoff Mod</label>
+                        <input type="range" id="cutoffMod" min="-5000" max="5000" step="100" value="0">
+                        <span id="cutoffModValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>Resonance Mod</label>
+                        <input type="range" id="resonanceMod" min="-20" max="20" step="0.1" value="0">
+                        <span id="resonanceModValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>Highpass Mod</label>
+                        <input type="range" id="highpassMod" min="-800" max="800" step="1" value="0">
+                        <span id="highpassModValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>OSC 1 Mod </label>
+                        <input type="range" id="osc1PitchMod" min="-12" max="12" step="0.1" value="0">
+                        <span id="osc1PitchModValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>OSC 2 Mod </label>
+                        <input type="range" id="osc2PitchMod" min="-12" max="12" step="0.1" value="0">
+                        <span id="osc2PitchModValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>OSC 3 Mod </label>
+                        <input type="range" id="osc3PitchMod" min="-12" max="12" step="0.1" value="0">
+                        <span id="osc3PitchModValue">0</span>
+                    </div>
+                    <div class="control">
+                        <label>OSC 4 Mod </label>
+                        <input type="range" id="osc4PitchMod" min="-12" max="12" step="0.1" value="0">
+                        <span id="osc4PitchModValue">0</span>
+                    </div>
+                </fieldset>
+                <!-- LFO Destination Group End -->
+            </div>
+        </div>
+
+        <div class="swipe-dots" id="swipeDotsBottom" style="display: none;" aria-label="Page selector">
+            <div class="swipe-arrow swipe-arrow-left touch-target" data-swipe-dir="left">&lt;</div>
+            <div class="swipe-dot active" data-index="0"></div>
+            <div class="swipe-dot" data-index="1"></div>
+            <div class="swipe-dot" data-index="2"></div>
+            <div class="swipe-dot" data-index="3"></div>
+            <div class="swipe-arrow swipe-arrow-right touch-target" data-swipe-dir="right">&gt;</div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js?v=279"></script>
+</body>
+</html>

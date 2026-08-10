@@ -161,12 +161,13 @@ export const state = {
     stopCleanupTimeout: undefined,
     playGeneration: 0,
 
-    // Pattern bank (P1–P4) + Berlin Dream-960 (8 lanes)
+    // Pattern bank (P1–P8) + Berlin Dream-960 (8 lanes)
     patterns: [],                      // 8 × Pattern (see pattern-bank.js)
-    editSlot: 0,                       // bank slot shown in the step strips (0–3 normal)
+    editSlot: 0,                       // bank slot shown in the step strips (0–7 normal)
     pendingEditSlot: null,             // armed slot; commits at next loop start
     berlinMode: false,                 // eight rows in parallel, own clocks/destinations
-    berlinActiveCount: 8,              // 1–8 visible Berlin lanes
+    berlinOscCount: 3,                 // 1–4 visible oscillator lanes (O1–O4)
+    berlinModCount: 1,                 // 1–4 visible modulation lanes (M1–M4)
     berlinSoloRow: null,               // exclusive Solo index, or null when none
     berlinPlayheads: [],               // playhead × 8
     berlinLoopAnchor: 0,               // audio time the master loop last wrapped

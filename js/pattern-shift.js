@@ -2,13 +2,13 @@
 // Main Sequencer controls are source of truth; keyboard strip mirrors after apply.
 
 import { state } from './state.js?v=104';
-import { refreshStepTuneReadouts } from './sequencer.js?v=159';
+import { refreshStepTuneReadouts } from './sequencer.js?v=163';
 import {
     syncAllKeyboardStepButtonsFromMain,
     syncAllKeyboardStepFinesFromMain,
 } from './keyboard-steps.js?v=92';
 import { setWriteCursor } from './pattern-write.js?v=86';
-import { rotateAutomationLanes } from './automation.js?v=32';
+import { rotateAutomationLanes } from './automation.js?v=33';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 function stepCount() {

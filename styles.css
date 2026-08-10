@@ -3780,9 +3780,9 @@ body.acid-mode .berlin-step-ratch {
 /* --- Pattern bank bar + Berlin Dream-960 ------------------------------- */
 
 :root {
-    --berlin-p1: #ff7a18;
-    --berlin-p2: #ffc107;
-    --berlin-p3: #ff2a2a;
+    --berlin-p1: #ff2a2a;
+    --berlin-p2: #ff7a18;
+    --berlin-p3: #ffc107;
     --berlin-p4: #c8f000;
     --berlin-m1: #1e6bff;
     --berlin-m2: #4da3ff;
@@ -3794,28 +3794,79 @@ body.acid-mode .berlin-step-ratch {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 10px;
     padding: 4px 2px 6px;
     border-bottom: 1px solid rgba(0, 170, 0, 0.35);
     margin-bottom: 4px;
+    position: relative;
 }
-.pattern-bank-slots,
-.pattern-bank-clipboard,
-.pattern-bank-berlin,
+.keyboard-section fieldset.pattern-bank-select {
+    margin: 0;
+    padding: 6px 10px 8px;
+    border: 1px solid #00aa00;
+    border-radius: 5px;
+    width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.keyboard-section fieldset.pattern-bank-select > legend {
+    padding: 0 6px;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    width: fit-content;
+    margin: 0 auto;
+}
+.pattern-bank-slots {
+    display: grid;
+    grid-template-columns: repeat(8, auto);
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+.pattern-bank-berlin {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: center;
+    gap: 10px;
+}
 .berlin-count {
     display: flex;
     align-items: center;
     gap: 4px;
 }
-.pattern-bank-berlin {
-    gap: 10px;
-}
-/* Normal-mode clipboard lives in the bank bar; Berlin rows have their own */
-body.berlin-mode .pattern-bank-clipboard {
+/* Lane count selects are Berlin-only; keep PATTERN SELECT centered in normal mode */
+body:not(.berlin-mode) .pattern-bank-berlin {
     display: none;
 }
-.pattern-bank-clipboard .kb-step-btn.is-disabled,
+body.berlin-mode .pattern-bank-select {
+    display: none;
+}
+.keyboard-section fieldset.berlin-lane-select {
+    margin: 0;
+    padding: 6px 10px 8px;
+    border: 1px solid #00aa00;
+    border-radius: 5px;
+    width: fit-content;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.keyboard-section fieldset.berlin-lane-select > legend {
+    padding: 0 6px;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    width: fit-content;
+    margin: 0 auto;
+}
+.berlin-lane-select .berlin-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
 .pattern-paste-btn.is-disabled {
     opacity: 0.35;
     pointer-events: none;
@@ -4300,16 +4351,24 @@ body.berlin-mode .keyboard-section fieldset.berlin-dream-frame {
     flex: 1 1 100%;
 }
 
-/* Berlin owns the voice: single-strip editing and rival modes step aside */
+/* Berlin owns the voice: single-strip editing and rival modes step aside.
+ * Pattern toolbar (Slide / Accent / Gate) stays; clipboard is per-lane. */
 body.berlin-mode #keyboardStepsGrid,
-body.berlin-mode #keyboardAcidStrip {
+body.berlin-mode #keyboardAcidStrip,
+body.berlin-mode .keyboard-pattern-shift {
     display: none;
+}
+body.berlin-mode .keyboard-pattern-clipboard {
+    display: none;
+}
+body.berlin-mode .keyboard-section fieldset.berlin-dream-frame > #keyboardPatternFieldset {
+    margin: 0 0 2px;
 }
 body.berlin-mode .berlin-locked {
     opacity: 0.4;
     pointer-events: none;
 }
-/* Berlin mode header: Acid/Berlin toggles, then lockup, then bank + rows */
+/* Berlin mode header inside Steps: lockup, then bank + rows */
 .berlin-mode-brand {
     display: none;
     flex-direction: column;
@@ -4319,9 +4378,6 @@ body.berlin-mode .berlin-locked {
     padding: 4px 8px 8px;
     box-sizing: border-box;
     color: #00ff00;
-}
-body.berlin-mode .keyboard-mode-toggle-row {
-    order: -2;
 }
 body.berlin-mode .berlin-mode-brand {
     display: flex;
@@ -4542,8 +4598,8 @@ body.berlin-mode .berlin-mode-brand {
 }
 /* Nested full-width Pattern tools inside Steps */
 .keyboard-pattern-fieldset {
-    margin: 0;
-    padding: 8px;
+    margin: 0 0 6px;
+    padding: 6px 8px;
     border: 1px solid #00aa00;
     border-radius: 5px;
     width: 100%;
@@ -4553,7 +4609,7 @@ body.berlin-mode .berlin-mode-brand {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 0;
 }
 .keyboard-pattern-note {
     margin: 0 auto;
@@ -4688,12 +4744,26 @@ canvas.vfd-glass {
 }
 .keyboard-pattern-controls {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    gap: 10px 14px;
     width: 100%;
     min-width: 0;
+    padding: 2px 0;
     box-sizing: border-box;
+}
+.keyboard-pattern-clipboard {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.keyboard-pattern-clipboard .kb-step-btn {
+    flex: 0 0 auto;
+    min-width: 34px;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 7px;
 }
 .keyboard-pattern-scale {
     display: flex;
@@ -4727,6 +4797,7 @@ canvas.vfd-glass {
     align-items: center;
     gap: 6px;
     width: auto;
+    margin: 4px auto 0;
     padding: 4px 0 2px;
     box-sizing: border-box;
 }
@@ -4777,11 +4848,27 @@ canvas.vfd-glass {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
-    gap: 18px;
-    padding: 4px 0 2px;
+    gap: 10px;
+    padding: 0;
     box-sizing: border-box;
+}
+/* Match Berlin row control chrome (label + slim tune slider + value) */
+.keyboard-pattern-ctl.berlin-ctl {
+    gap: 4px;
+}
+.keyboard-pattern-ctl .berlin-ctl-label,
+.keyboard-pattern-ctl .berlin-ctl-value {
+    color: #00aa00;
+}
+.keyboard-pattern-ctl .berlin-ctl-value {
+    min-width: 24px;
+}
+.keyboard-section .keyboard-pattern-ctl input[type="range"].keyboard-master-tune-slider {
+    width: 110px;
+    max-width: 110px;
+    height: 11px;
 }
 /* --- Acid Mode strip (below mode toggles) --- */
 .keyboard-mode-toggle-row {
@@ -5363,31 +5450,6 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 }
 #kbPolyUnisonToggle[hidden] {
     display: none !important;
-}
-.keyboard-pattern-knob.synth-knob {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    width: auto;
-}
-.keyboard-pattern-knob .synth-knob-label {
-    font-size: 8px;
-    letter-spacing: 0.04em;
-}
-.keyboard-pattern-knob .synth-knob-dial {
-    width: 36px;
-    height: 36px;
-}
-.keyboard-pattern-knob .synth-knob-indicator {
-    width: 2px;
-    height: 12px;
-}
-.keyboard-pattern-knob .synth-knob-value {
-    font-family: 'Michroma', sans-serif;
-    font-size: 8px;
-    color: #00ff00;
-    min-height: 1em;
 }
 .kb-semi-group {
     display: flex;

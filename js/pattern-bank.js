@@ -1,4 +1,4 @@
-// Pattern bank: normal mode uses slots 0–3 (P1–P4). Berlin Dream uses all 8 lanes
+// Pattern bank: normal mode uses slots 0–7 (P1–P8). Berlin Dream uses all 8 lanes
 // (O1–O4 pitch + M1–M4 modulation). Dom step strip is a view of `editSlot`.
 
 import { state } from './state.js?v=104';
@@ -6,8 +6,8 @@ import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Total Berlin lanes (and bank array length). */
 export const PATTERN_COUNT = 8;
-/** Normal-mode P1–P4 slots only. */
-export const BANK_COUNT = 4;
+/** Normal-mode P1–P8 slots. */
+export const BANK_COUNT = 8;
 export const STEP_SLOTS = 32;
 
 export const OSC_LANE_COUNT = 4;
@@ -367,13 +367,13 @@ export function selectSlot(slot, { flush = true } = {}) {
     document.dispatchEvent(new CustomEvent('ingysynth:pattern-slot', { detail: { slot: next } }));
 }
 
-/** P1–P4 press: instant when stopped, armed for the next loop while playing. */
+/** P1–P8 press: instant when stopped, armed for the next loop while playing. */
 export function requestSlot(slot) {
     const next = clampBankSlot(slot);
     const running = state.isPlaying || state.isArping;
 
     if (state.berlinMode) {
-        // Every row is already live; P1–P4 only moves the edit focus among bank slots.
+        // Every row is already live; pattern buttons only move edit focus.
         state.editSlot = next;
         state.pendingEditSlot = null;
         syncPatternSlotUi();

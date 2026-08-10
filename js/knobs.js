@@ -3,7 +3,7 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=159';
+import { previewStepsOnVfd } from './sequencer.js?v=163';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -33,9 +33,6 @@ const KNOB_BINDINGS = [
     { dialId: 'kbFilterSustainKnob', inputId: 'filterSustain' },
     { dialId: 'kbFilterReleaseKnob', inputId: 'filterRelease' },
     { dialId: 'kbFilterEnvAmountKnob', inputId: 'filterEnvAmount', valueId: 'kbFilterEnvAmountValue' },
-    { dialId: 'kbSlideTimeKnob', inputId: 'slideTime', valueId: 'kbSlideTimeValue' },
-    { dialId: 'kbAccentAmountKnob', inputId: 'accentAmount', valueId: 'kbAccentAmountValue' },
-    { dialId: 'kbGateLengthKnob', inputId: 'gateLength', valueId: 'kbGateLengthValue' },
     // Acid Mode strip (mirrors same params as Filter / Pattern knobs)
     { dialId: 'kbAcidTuningKnob', inputId: 'masterTune', valueId: 'kbAcidTuningValue' },
     { dialId: 'kbAcidCutoffKnob', inputId: 'cutoff' },

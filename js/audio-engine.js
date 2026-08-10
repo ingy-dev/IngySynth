@@ -1,5 +1,5 @@
 import { state, OSC_COUNT } from './state.js?v=104';
-import { wireControls } from './controls.js?v=157';
+import { wireControls } from './controls.js?v=160';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { updateLfoSmoothing } from './lfo-strip.js?v=15';
 import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=7';

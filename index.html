@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=288">
+    <link rel="stylesheet" href="styles.css?v=299">
 </head>
 <body>
     <div class="container">
@@ -452,6 +452,14 @@
                             </div>
                         </div>
                     </fieldset>
+                    <div class="keyboard-mode-toggle-row" aria-label="Mode toggles">
+                        <button id="kbAcidStripToggle" class="pushable off keyboard-acid-strip-toggle" type="button" aria-label="Acid mode on or off" aria-pressed="false">
+                            <span class="front">Acid Mode</span>
+                        </button>
+                        <button id="berlinToggle" class="pushable off keyboard-berlin-toggle" type="button" aria-label="Berlin Dream-960 on or off" aria-pressed="false">
+                            <span class="front">Berlin Dream-960</span>
+                        </button>
+                    </div>
                     <fieldset class="keyboard-steps-fieldset collapsible-fieldset" id="keyboardStepsFieldset">
                         <legend class="collapsible-legend">
                             <button id="keyboardStepsToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardStepsPanel">
@@ -465,32 +473,69 @@
                                 <span class="berlin-mode-brand-lockup"></span>
                             </div>
                             <div class="pattern-bank-bar" aria-label="Pattern bank">
-                                <div class="pattern-bank-slots" role="group" aria-label="Pattern slot">
-                                    <span class="pattern-bank-label">PATTERN</span>
-                                    <button type="button" class="pattern-slot-btn kb-step-btn" data-slot="0" aria-pressed="true">P1</button>
-                                    <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="1" aria-pressed="false">P2</button>
-                                    <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="2" aria-pressed="false">P3</button>
-                                    <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="3" aria-pressed="false">P4</button>
-                                </div>
-                                <div class="pattern-bank-clipboard" role="group" aria-label="Pattern clipboard">
-                                    <button type="button" id="patternBankCopy" class="kb-step-btn pattern-copy-btn" aria-label="Copy pattern">Copy</button>
-                                    <button type="button" id="patternBankPaste" class="kb-step-btn pattern-paste-btn is-disabled" aria-label="Paste pattern" aria-disabled="true" disabled>Paste</button>
-                                    <button type="button" id="patternBankClear" class="kb-step-btn pattern-clear-btn" aria-label="Clear pattern steps">Clear</button>
-                                </div>
-                                <div class="pattern-bank-berlin">
-                                    <div class="berlin-count" role="group" aria-label="Active Berlin patterns">
-                                        <span class="pattern-bank-label">ROWS</span>
-                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="1" aria-pressed="false">1</button>
-                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="2" aria-pressed="false">2</button>
-                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="3" aria-pressed="false">3</button>
-                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="4" aria-pressed="false">4</button>
-                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="5" aria-pressed="false">5</button>
-                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="6" aria-pressed="false">6</button>
-                                        <button type="button" class="berlin-count-btn kb-step-btn off" data-count="7" aria-pressed="false">7</button>
-                                        <button type="button" class="berlin-count-btn kb-step-btn" data-count="8" aria-pressed="true">8</button>
+                                <fieldset class="pattern-bank-select">
+                                    <legend>PATTERN SELECT</legend>
+                                    <div class="pattern-bank-slots" role="group" aria-label="Pattern slot">
+                                        <button type="button" class="pattern-slot-btn kb-step-btn" data-slot="0" aria-pressed="true">P1</button>
+                                        <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="1" aria-pressed="false">P2</button>
+                                        <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="2" aria-pressed="false">P3</button>
+                                        <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="3" aria-pressed="false">P4</button>
+                                        <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="4" aria-pressed="false">P5</button>
+                                        <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="5" aria-pressed="false">P6</button>
+                                        <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="6" aria-pressed="false">P7</button>
+                                        <button type="button" class="pattern-slot-btn kb-step-btn off" data-slot="7" aria-pressed="false">P8</button>
                                     </div>
+                                </fieldset>
+                                <div class="pattern-bank-berlin">
+                                    <fieldset class="berlin-lane-select berlin-lane-select--osc">
+                                        <legend>OSC LANES</legend>
+                                        <div class="berlin-count" role="group" aria-label="Active oscillator lanes">
+                                            <button type="button" class="berlin-count-btn kb-step-btn" data-lane-kind="osc" data-count="1" aria-pressed="true">1</button>
+                                            <button type="button" class="berlin-count-btn kb-step-btn" data-lane-kind="osc" data-count="2" aria-pressed="true">2</button>
+                                            <button type="button" class="berlin-count-btn kb-step-btn" data-lane-kind="osc" data-count="3" aria-pressed="true">3</button>
+                                            <button type="button" class="berlin-count-btn kb-step-btn off" data-lane-kind="osc" data-count="4" aria-pressed="false">4</button>
+                                        </div>
+                                    </fieldset>
+                                    <fieldset class="berlin-lane-select berlin-lane-select--mod">
+                                        <legend>MOD LANES</legend>
+                                        <div class="berlin-count" role="group" aria-label="Active modulation lanes">
+                                            <button type="button" class="berlin-count-btn kb-step-btn" data-lane-kind="mod" data-count="1" aria-pressed="true">1</button>
+                                            <button type="button" class="berlin-count-btn kb-step-btn off" data-lane-kind="mod" data-count="2" aria-pressed="false">2</button>
+                                            <button type="button" class="berlin-count-btn kb-step-btn off" data-lane-kind="mod" data-count="3" aria-pressed="false">3</button>
+                                            <button type="button" class="berlin-count-btn kb-step-btn off" data-lane-kind="mod" data-count="4" aria-pressed="false">4</button>
+                                        </div>
+                                    </fieldset>
                                 </div>
                             </div>
+                            <fieldset class="keyboard-pattern-fieldset" id="keyboardPatternFieldset">
+                                <div class="keyboard-pattern-controls">
+                                    <div class="keyboard-pattern-slide-accent" aria-label="Slide, accent, and gate">
+                                        <label class="berlin-ctl keyboard-pattern-ctl" data-param="slideTime">
+                                            <span class="berlin-ctl-label">SLIDE</span>
+                                            <input type="range" id="kbSlideTime" class="keyboard-master-tune-slider"
+                                                   min="10" max="500" value="60" step="1" aria-label="Slide time">
+                                            <span id="kbSlideTimeValue" class="berlin-ctl-value">60</span>
+                                        </label>
+                                        <label class="berlin-ctl keyboard-pattern-ctl" data-param="accentAmount">
+                                            <span class="berlin-ctl-label">ACCENT</span>
+                                            <input type="range" id="kbAccentAmount" class="keyboard-master-tune-slider"
+                                                   min="0" max="100" value="100" step="1" aria-label="Accent amount">
+                                            <span id="kbAccentAmountValue" class="berlin-ctl-value">100</span>
+                                        </label>
+                                        <label class="berlin-ctl keyboard-pattern-ctl" data-param="gateLength">
+                                            <span class="berlin-ctl-label">GATE</span>
+                                            <input type="range" id="kbGateLength" class="keyboard-master-tune-slider"
+                                                   min="5" max="100" value="90" step="1" aria-label="Gate length">
+                                            <span id="kbGateLengthValue" class="berlin-ctl-value">90</span>
+                                        </label>
+                                    </div>
+                                    <div class="keyboard-pattern-clipboard" role="group" aria-label="Pattern clipboard">
+                                        <button type="button" id="patternBankCopy" class="kb-step-btn pattern-copy-btn" aria-label="Copy pattern">Copy</button>
+                                        <button type="button" id="patternBankPaste" class="kb-step-btn pattern-paste-btn is-disabled" aria-label="Paste pattern" aria-disabled="true" disabled>Paste</button>
+                                        <button type="button" id="patternBankClear" class="kb-step-btn pattern-clear-btn" aria-label="Clear pattern steps">Clear</button>
+                                    </div>
+                                </div>
+                            </fieldset>
                             <div id="berlinPanel" class="berlin-panel" hidden>
                                 <div id="berlinRows" class="berlin-rows">
                                     <!-- Eight phosphor pattern rows built by berlin.js -->
@@ -500,14 +545,6 @@
                                 </div>
                             </div>
                             </fieldset>
-                            <div class="keyboard-mode-toggle-row" aria-label="Mode toggles">
-                                <button id="kbAcidStripToggle" class="pushable off keyboard-acid-strip-toggle" type="button" aria-label="Acid mode on or off" aria-pressed="false">
-                                    <span class="front">Acid Mode</span>
-                                </button>
-                                <button id="berlinToggle" class="pushable off keyboard-berlin-toggle" type="button" aria-label="Berlin Dream-960 on or off" aria-pressed="false">
-                                    <span class="front">Berlin Dream-960</span>
-                                </button>
-                            </div>
                             <div id="keyboardAcidStrip" class="keyboard-acid-strip" aria-label="Acid mode">
                                 <div class="keyboard-acid-strip-controls" hidden>
                                     <div class="keyboard-acid-strip-panel">
@@ -631,44 +668,17 @@
                             <div id="keyboardStepsGrid" class="keyboard-steps-panel">
                                 <!-- Compact steps generated by keyboard-steps.js -->
                             </div>
-                            <fieldset class="keyboard-pattern-fieldset" id="keyboardPatternFieldset">
-                                <div class="keyboard-pattern-controls">
-                                    <div class="keyboard-pattern-shift" aria-label="Pattern shift">
-                                        <span class="keyboard-pattern-shift-label">PATTERN SHIFT</span>
-                                        <div class="keyboard-pattern-shift-buttons">
-                                            <button type="button" id="kbPatternShiftBack" class="pushable keyboard-pattern-shift-btn" aria-label="Shift pattern back">
-                                                <span class="front">◀</span>
-                                            </button>
-                                            <button type="button" id="kbPatternShiftForward" class="pushable keyboard-pattern-shift-btn" aria-label="Shift pattern forward">
-                                                <span class="front">▶</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="keyboard-pattern-slide-accent" aria-label="Slide, accent, and gate">
-                                        <div class="synth-knob keyboard-pattern-knob" data-param="slideTime">
-                                            <span class="synth-knob-label">Slide</span>
-                                            <div class="synth-knob-dial" id="kbSlideTimeKnob" role="slider" aria-label="Slide time" aria-valuemin="10" aria-valuemax="500" tabindex="0">
-                                                <span class="synth-knob-indicator"></span>
-                                            </div>
-                                            <span id="kbSlideTimeValue" class="synth-knob-value">60</span>
-                                        </div>
-                                        <div class="synth-knob keyboard-pattern-knob" data-param="accentAmount">
-                                            <span class="synth-knob-label">Accent</span>
-                                            <div class="synth-knob-dial" id="kbAccentAmountKnob" role="slider" aria-label="Accent amount" aria-valuemin="0" aria-valuemax="100" tabindex="0">
-                                                <span class="synth-knob-indicator"></span>
-                                            </div>
-                                            <span id="kbAccentAmountValue" class="synth-knob-value">100</span>
-                                        </div>
-                                        <div class="synth-knob keyboard-pattern-knob" data-param="gateLength">
-                                            <span class="synth-knob-label">Gate</span>
-                                            <div class="synth-knob-dial" id="kbGateLengthKnob" role="slider" aria-label="Gate length" aria-valuemin="5" aria-valuemax="100" tabindex="0">
-                                                <span class="synth-knob-indicator"></span>
-                                            </div>
-                                            <span id="kbGateLengthValue" class="synth-knob-value">90</span>
-                                        </div>
-                                    </div>
+                            <div class="keyboard-pattern-shift" aria-label="Pattern shift">
+                                <span class="keyboard-pattern-shift-label">PATTERN SHIFT</span>
+                                <div class="keyboard-pattern-shift-buttons">
+                                    <button type="button" id="kbPatternShiftBack" class="pushable keyboard-pattern-shift-btn" aria-label="Shift pattern back">
+                                        <span class="front">◀</span>
+                                    </button>
+                                    <button type="button" id="kbPatternShiftForward" class="pushable keyboard-pattern-shift-btn" aria-label="Shift pattern forward">
+                                        <span class="front">▶</span>
+                                    </button>
                                 </div>
-                            </fieldset>
+                            </div>
                         </div>
                     </fieldset>
                     <fieldset class="keyboard-automation-fieldset collapsible-fieldset collapsed" id="keyboardAutomationFieldset">
@@ -2258,6 +2268,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=279"></script>
+    <script type="module" src="js/main.js?v=290"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 
 import { state } from './state.js?v=104';
 import { getQuantizedStepTune } from './tuning.js?v=74';
-import { bindKnob } from './knobs.js?v=96';
+import { bindKnob } from './knobs.js?v=97';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
 import {
     observeMainControl,

@@ -3,7 +3,7 @@
 // ring mod, and distortion mirror the main panel.
 
 import { state } from './state.js?v=104';
-import { bindKnob, formatRangeValue } from './knobs.js?v=96';
+import { bindKnob, formatRangeValue } from './knobs.js?v=97';
 import {
     observeMainControl,
     syncClassButtonFromMain,

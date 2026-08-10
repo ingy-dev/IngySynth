@@ -7,12 +7,12 @@ import { state } from './state.js?v=104';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=74';
 import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=76';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=75';
-import { ensureDisplayStep } from './knobs.js?v=96';
+import { ensureDisplayStep } from './knobs.js?v=97';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=4';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=18';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=27';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */
@@ -37,6 +37,7 @@ const RANGE_IDS = [
 /** Transport / pattern / write µTUNE — never automate. */
 const EXCLUDE_IDS = new Set([
     'tempo', 'stepCount', 'division', 'slideTime', 'accentAmount', 'gateLength',
+    'kbSlideTime', 'kbAccentAmount', 'kbGateLength',
     'keyboardMasterTune', 'kbTuningMasterTune', 'kbXyTuningMasterTune', 'kbWriteFineProxy',
 ]);
 
@@ -566,6 +567,8 @@ function highlightTargetForKey(key, fromEl) {
     if (!input) return null;
     const kbKnob = document.querySelector(`.synth-knob[data-param="${key}"]`);
     if (kbKnob) return kbKnob;
+    const kbCtl = document.querySelector(`.keyboard-pattern-ctl[data-param="${key}"]`);
+    if (kbCtl) return kbCtl;
     if (key.startsWith('osc-vol-')) {
         const osc = key.slice(8);
         return document.querySelector(`#kbOsc${parseInt(osc, 10) + 1}VolKnob`)?.closest('.synth-knob')

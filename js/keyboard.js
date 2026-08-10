@@ -12,7 +12,7 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=159';
+} from './sequencer.js?v=163';
 import { syncKeyboardStepsVisibilityWithKeyboard } from './keyboard-steps.js?v=92';
 import { refreshXYPad } from './xy-pad.js?v=75';
 import {

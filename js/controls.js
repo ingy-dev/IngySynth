@@ -8,14 +8,14 @@ import {
 import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=4';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { clearAccentSweep } from './acid-env.js?v=6';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=159';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=163';
 import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=90';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=74';
 import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown } from './midi.js?v=79';
 import { applyScaleState } from './keyboard.js?v=152';
 import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=92';
 import { syncUnisonControlsEnabled } from './unison.js?v=76';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=96';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=97';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=15';
 import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=7';
 import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=6';
@@ -1178,6 +1178,30 @@ document.getElementById('tempo').addEventListener('input', function () {
     if (state.lfoSync) applyLfoRate({ ramp: 0.02 });
 });
 
+/** Fullscreen pattern toolbar sliders ↔ classic Sequencer ranges. */
+function bindKeyboardPatternRange(mirrorId, mainId, kbValueId) {
+    const mirror = document.getElementById(mirrorId);
+    const main = document.getElementById(mainId);
+    const kbValue = document.getElementById(kbValueId);
+    if (!mirror || !main) return;
+
+    const syncFromMain = () => {
+        if (mirror.value !== main.value) mirror.value = main.value;
+        if (kbValue) kbValue.textContent = formatRangeValue(main);
+    };
+
+    mirror.addEventListener('input', () => {
+        if (main.value === mirror.value) {
+            if (kbValue) kbValue.textContent = formatRangeValue(mirror);
+            return;
+        }
+        main.value = mirror.value;
+        main.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    main.addEventListener('input', syncFromMain);
+    syncFromMain();
+}
+
 document.getElementById('slideTime').addEventListener('input', function () {
     updateDisplay(this, 'slideTimeValue');
 });
@@ -1189,6 +1213,10 @@ document.getElementById('accentAmount').addEventListener('input', function () {
 document.getElementById('gateLength').addEventListener('input', function () {
     updateDisplay(this, 'gateLengthValue');
 });
+
+bindKeyboardPatternRange('kbSlideTime', 'slideTime', 'kbSlideTimeValue');
+bindKeyboardPatternRange('kbAccentAmount', 'accentAmount', 'kbAccentAmountValue');
+bindKeyboardPatternRange('kbGateLength', 'gateLength', 'kbGateLengthValue');
 
 document.getElementById('cutoff').addEventListener('input', function () {
     if (!state.audioContext) return;

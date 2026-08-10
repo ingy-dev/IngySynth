@@ -7,7 +7,7 @@ import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=90
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { setPolyMode } from './poly-voice.js?v=27';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=6';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=96';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=97';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=4';
 import {
     PATTERN_COUNT,
@@ -28,12 +28,12 @@ import {
     clearPatternSteps,
     flashCopiedToast,
     syncPatternClipboardUi,
-} from './pattern-bank.js?v=6';
+} from './pattern-bank.js?v=7';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
 export const BERLIN_COLORS = [
-    '#FF7A18', '#FFC107', '#FF2A2A', '#C8F000',
+    '#FF2A2A', '#FF7A18', '#FFC107', '#C8F000',
     '#1E6BFF', '#4DA3FF', '#A8D4FF', '#E8F2FF',
 ];
 
@@ -86,14 +86,27 @@ export function isBerlinOn() {
     return !!state.berlinMode;
 }
 
-export function berlinActiveCount() {
-    return clamp(Math.round(state.berlinActiveCount) || 8, 1, PATTERN_COUNT);
+export function berlinOscCount() {
+    return clamp(Math.round(state.berlinOscCount) || 3, 1, OSC_LANE_COUNT);
 }
 
-/** Row indexes that are live right now (visible ROWS set — mute is separate). */
+export function berlinModCount() {
+    return clamp(Math.round(state.berlinModCount) || 1, 1, OSC_LANE_COUNT);
+}
+
+/** Total visible lanes (osc + mod). */
+export function berlinActiveCount() {
+    return berlinOscCount() + berlinModCount();
+}
+
+/** Row indexes that are live right now (visible OSC/MOD sets — mute is separate). */
 export function berlinActiveRows() {
-    const n = berlinActiveCount();
-    return Array.from({ length: n }, (_, i) => i);
+    const osc = berlinOscCount();
+    const mod = berlinModCount();
+    const rows = [];
+    for (let i = 0; i < osc; i++) rows.push(i);
+    for (let i = 0; i < mod; i++) rows.push(OSC_LANE_COUNT + i);
+    return rows;
 }
 
 /** Output mute: pattern stays visible/editable; playhead keeps phase. */
@@ -107,7 +120,7 @@ export function getSoloRow() {
     const n = state.berlinSoloRow;
     if (n === null || n === undefined) return null;
     const row = Math.round(n);
-    if (row < 0 || row >= berlinActiveCount()) return null;
+    if (!berlinActiveRows().includes(row)) return null;
     return row;
 }
 
@@ -714,17 +727,24 @@ export function syncBerlinRowUi(row) {
 
 export function syncBerlinUi() {
     ensureBank();
-    const count = berlinActiveCount();
+    const oscCount = berlinOscCount();
+    const modCount = berlinModCount();
 
     document.querySelectorAll('.berlin-row').forEach((el) => {
         const row = parseInt(el.dataset.row, 10);
-        el.classList.toggle('hidden', row >= count);
+        const hidden = isOscLane(row)
+            ? row >= oscCount
+            : (row - OSC_LANE_COUNT) >= modCount;
+        el.classList.toggle('hidden', hidden);
     });
 
     document.querySelectorAll('.berlin-count-btn').forEach((btn) => {
         const n = parseInt(btn.dataset.count, 10);
-        btn.classList.toggle('off', n !== count);
-        btn.setAttribute('aria-pressed', n === count ? 'true' : 'false');
+        const kind = btn.dataset.laneKind;
+        const active = kind === 'mod' ? modCount : oscCount;
+        const on = n <= active;
+        btn.classList.toggle('off', !on);
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
 
     const toggle = document.getElementById('berlinToggle');
@@ -915,6 +935,34 @@ function buildUi() {
 
 // --- Mode switching --------------------------------------------------------
 
+/** Pre-Berlin master GATE (%); restored on exit so normal steps keep their value. */
+let stashedMasterGatePct = null;
+
+function readMasterGatePct() {
+    const el = document.getElementById('gateLength');
+    const v = el ? parseFloat(el.value) : 90;
+    return Math.max(5, Math.min(100, Number.isFinite(v) ? v : 90));
+}
+
+/** Drive main GATE so the Steps mirror (`kbGateLength`) stays in sync. */
+function setMasterGatePct(pct) {
+    const main = document.getElementById('gateLength');
+    if (!main) return;
+    main.value = String(Math.max(5, Math.min(100, Math.round(pct))));
+    main.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function applyBerlinMasterGateEnter() {
+    stashedMasterGatePct = readMasterGatePct();
+    setMasterGatePct(100);
+}
+
+function applyBerlinMasterGateExit() {
+    if (stashedMasterGatePct == null) return;
+    setMasterGatePct(stashedMasterGatePct);
+    stashedMasterGatePct = null;
+}
+
 /** Controls that make no sense while Berlin lanes drive the voice in parallel.
  *  Acid stays clickable so it can take the voice back (same mutex as Berlin-from-Acid). */
 function setBerlinLockedUi(on) {
@@ -956,12 +1004,15 @@ export function setBerlinMode(on) {
         resetBerlinPlayheads(state.audioContext ? state.audioContext.currentTime : 0);
         buildUi();
         setBerlinLockedUi(true);
+        // Master GATE at 100% = unity over per-lane gates (stash for exit)
+        applyBerlinMasterGateEnter();
     } else {
         state.berlinMode = false;
         state.berlinSoloRow = null;
         setBerlinLockedUi(false);
         clearBerlinStepActive();
-        // Normal bank is P1–P4 only
+        applyBerlinMasterGateExit();
+        // Normal bank is P1–P8
         if (state.editSlot >= BANK_COUNT) state.editSlot = 0;
         hydratePatternToDom(state.editSlot);
         // The single-row clock stood still while Berlin ran — rejoin it now
@@ -982,24 +1033,38 @@ export function toggleBerlinMode() {
     setBerlinMode(!state.berlinMode);
 }
 
-export function setBerlinActiveCount(count) {
-    const next = clamp(Math.round(count) || 8, 1, PATTERN_COUNT);
-    if (state.berlinActiveCount === next) {
+export function setBerlinOscCount(count) {
+    const next = clamp(Math.round(count) || 3, 1, OSC_LANE_COUNT);
+    if (state.berlinOscCount === next) {
         syncBerlinUi();
         return;
     }
     const prevSounding = new Set(
         berlinActiveRows().filter((i) => isOscLane(i) && isRowSounding(i))
     );
-    state.berlinActiveCount = next;
-    // Solo target left the visible set — drop Solo so the mix returns
-    if (state.berlinSoloRow !== null && state.berlinSoloRow >= next) {
+    state.berlinOscCount = next;
+    if (state.berlinSoloRow !== null && isOscLane(state.berlinSoloRow)
+        && state.berlinSoloRow >= next) {
         state.berlinSoloRow = null;
     }
     syncBerlinUi();
     prevSounding.forEach((i) => {
         if (i >= next || !isRowSounding(i)) notifyOscLaneSilenced(i);
     });
+}
+
+export function setBerlinModCount(count) {
+    const next = clamp(Math.round(count) || 1, 1, OSC_LANE_COUNT);
+    if (state.berlinModCount === next) {
+        syncBerlinUi();
+        return;
+    }
+    state.berlinModCount = next;
+    if (state.berlinSoloRow !== null && isModLane(state.berlinSoloRow)
+        && (state.berlinSoloRow - OSC_LANE_COUNT) >= next) {
+        state.berlinSoloRow = null;
+    }
+    syncBerlinUi();
 }
 
 export function initBerlin() {
@@ -1012,7 +1077,9 @@ export function initBerlin() {
 
     document.querySelectorAll('.berlin-count-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-            setBerlinActiveCount(parseInt(btn.dataset.count, 10));
+            const n = parseInt(btn.dataset.count, 10);
+            if (btn.dataset.laneKind === 'mod') setBerlinModCount(n);
+            else setBerlinOscCount(n);
         });
     });
 

@@ -16,7 +16,7 @@ import { getLfoRateHz } from './lfo-rate.js?v=7';
 import { bentFrequency } from './pitch-bend.js?v=76';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
 import { spawnOscStack, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents } from './unison.js?v=76';
-import { notifyAutomationLoopAnchor } from './automation.js?v=32';
+import { notifyAutomationLoopAnchor } from './automation.js?v=33';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=5';
 import {
     scheduleAcidAmpEnvelope,
@@ -43,8 +43,8 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=18';
-import { getPattern } from './pattern-bank.js?v=6';
+} from './berlin.js?v=27';
+import { getPattern } from './pattern-bank.js?v=7';
 import {
     clampRatch,
     nextRatch,
@@ -1516,7 +1516,8 @@ function triggerBerlinOscLane(row, pattern, startTime, stepDuration, data, playh
     const glissRoll = ratchN > 1 && !!data.slide;
     const accentAmount = getAccentAmount();
     const accentThisStep = !!data.accent && !slideIn;
-    const gateLen = patternGate(pattern);
+    // Master GATE (toolbar) scales each OSC lane relative to its own gate
+    const gateLen = Math.max(0.05, Math.min(1, patternGate(pattern) * getGateLength()));
     const fromHz = berlinFrequency(playhead.semi, playhead.fine, oscIndex);
     const toHz = nextPitch
         ? berlinFrequency(nextPitch.semi, nextPitch.fine, oscIndex)
@@ -1527,7 +1528,6 @@ function triggerBerlinOscLane(row, pattern, startTime, stepDuration, data, playh
 
     armBerlinSharedAmpPath(startTime);
     silenceMainPhaseResetOscs(startTime);
-    state.lastStepFreqs[oscIndex] = glissRoll ? toHz : fromHz;
 
     const slideTime = getSlideTime();
     for (let k = 0; k < hits; k++) {
@@ -1546,6 +1546,8 @@ function triggerBerlinOscLane(row, pattern, startTime, stepDuration, data, playh
             toHz: glissRoll ? toHz : null,
         });
     }
+    // Update after spawn so slide-in can read the previous step's pitch
+    state.lastStepFreqs[oscIndex] = glissRoll ? toHz : fromHz;
 
     // Shared filter env on every On (same as normal playStep). Env-On closes
     // the cutoff floor — without this, non-accent Berlin notes stay silent.
@@ -2081,7 +2083,7 @@ function playStep(step, startTime, stepDuration) {
     const isLoopStart = state.isReverse ? step === stepsN - 1 : step === 0;
     if (state.isPlaying && isLoopStart) {
         notifyAutomationLoopAnchor(startTime);
-        // Bank switches land here so P1–P4 stays in time
+        // Bank switches land here so P1–P8 stays in time
         document.dispatchEvent(new CustomEvent('ingysynth:loop-start', { detail: { startTime } }));
     }
 

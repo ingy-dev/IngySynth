@@ -2,7 +2,7 @@
 // pad + mild pre-limit → LP → post soft-clip → makeup.
 // Chord intervals also soft-scale Q (biquad rails at high Q + multi-pitch).
 
-import { state, OSC_COUNT } from './state.js?v=104';
+import { state, OSC_COUNT } from './state.js?v=106';
 
 /** Soft-clip / peak-limit curve (drive↑ = more compression of peaks). */
 export function makeFilterInputCurve(drive = 2.0) {
@@ -99,7 +99,19 @@ export function refreshFilterInputDrive(rampTime = 0.04) {
     if (active >= 2 && spread > 1.08) {
         pad = Math.min(pad, 0.22);
     }
+    // Mild WT-only trim (same family as bright) — click fixes are architectural now
+    const dark = !!(state.osc4Wavetable && state.oscStates[3]);
+    if (dark) {
+        pad = Math.min(pad, active >= 2 ? 0.18 : 0.28);
+    }
+    // Shared makeup formula for bright and dark — restores level parity
     const makeup = Math.max(1.15, Math.min(3.8, 0.72 / pad));
+
+    // Same soft-clip character; tiny WT ease only
+    if (state.filterSoftClip) {
+        const drive = dark ? 2.25 : 2.45;
+        try { state.filterSoftClip.curve = makeFilterInputCurve(drive); } catch (_) { /* ignore */ }
+    }
 
     const now = state.audioContext.currentTime;
     const t = Math.max(0.01, rampTime);
@@ -111,6 +123,19 @@ export function refreshFilterInputDrive(rampTime = 0.04) {
     makeParam.cancelScheduledValues(now);
     makeParam.setValueAtTime(makeParam.value, now);
     makeParam.linearRampToValueAtTime(makeup, now + t);
+
+    // Shared compressor — dark no longer gets a quieter bus
+    if (state.compressor) {
+        try {
+            state.compressor.attack.setTargetAtTime(0.003, now, 0.05);
+            state.compressor.ratio.setTargetAtTime(12, now, 0.05);
+            state.compressor.threshold.setTargetAtTime(-24, now, 0.05);
+        } catch (_) { /* ignore */ }
+    }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5a7886'},body:JSON.stringify({sessionId:'5a7886',runId:'parity',hypothesisId:'V',location:'filter-drive.js:refreshFilterInputDrive',message:'drive staging',data:{pad,makeup,product:pad*makeup,dark,active,sum,spread,wtOut:dark?0.52:null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     applyFilterResonance(t);
 }

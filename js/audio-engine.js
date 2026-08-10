@@ -1,9 +1,10 @@
-import { state, OSC_COUNT } from './state.js?v=104';
-import { wireControls } from './controls.js?v=160';
+import { state, OSC_COUNT } from './state.js?v=106';
+import { wireControls } from './controls.js?v=209';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { updateLfoSmoothing } from './lfo-strip.js?v=15';
 import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=7';
-import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=4';
+import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=7';
+import { ensurePlaitsWorklet, createOscSource } from './osc-source.js?v=27';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;
@@ -155,6 +156,7 @@ function generateNoiseBuffers() {
     state.noiseBuffers.brown = brownBuffer;
 }
 
+
 function initAudio() {
     if (state.audioContext) {
         if (state.audioContext.state === 'suspended') {
@@ -167,6 +169,35 @@ function initAudio() {
     state.audioContext = new AudioContext({
         latencyHint: 'playback',
         sampleRate: 44100
+    });
+
+    // Kick off multi-engine worklet load (OSC4 digital); rebuild OSC4 if Digital was armed early.
+    ensurePlaitsWorklet(state.audioContext).then((ok) => {
+        if (!ok || !state.osc4Wavetable) return;
+        if (state.phaseResetEnabled || !state.oscillators?.[3]) return;
+        // Persistent path: swap classic → digital now that the worklet is ready
+        try {
+            const old = state.oscillators[3];
+            const freq = old?.frequency?.value || 261.63;
+            try { if (old?.started) old.stop(); } catch (_) { /* ignore */ }
+            try { old?.disconnect(); } catch (_) { /* ignore */ }
+            const osc = createOscSource(state.audioContext, {
+                oscIndex: 3,
+                wave: document.querySelector('.osc-type[data-osc="3"]')?.value || 'sawtooth',
+                frequency: freq,
+            });
+            osc.frequency.value = freq;
+            osc.connect(state.oscGains[3]);
+            osc.start();
+            osc.started = true;
+            state.oscillators[3] = osc;
+            if (state.lfoGainOsc4Pitch) {
+                try { state.lfoGainOsc4Pitch.disconnect(); } catch (_) { /* ignore */ }
+                try { state.lfoGainOsc4Pitch.connect(osc.detune); } catch (_) { /* ignore */ }
+            }
+        } catch (err) {
+            console.warn('OSC4 digital rebuild after worklet load failed:', err);
+        }
     });
     
     // Fix potential browser audio context limitations
@@ -185,7 +216,11 @@ function initAudio() {
         document.body.addEventListener('keydown', resumeAudio);
     }
 
-    state.oscillators = Array(OSC_COUNT).fill().map(() => state.audioContext.createOscillator());
+    state.oscillators = Array(OSC_COUNT).fill().map((_, i) => createOscSource(state.audioContext, {
+        oscIndex: i,
+        wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
+        frequency: 261.63,
+    }));
     state.oscGains = Array(OSC_COUNT).fill().map(() => state.audioContext.createGain());
     state.oscPanners = Array(OSC_COUNT).fill().map(() => {
         const panner = state.audioContext.createStereoPanner();
@@ -334,6 +369,7 @@ function initAudio() {
     state.filterMakeup.connect(state.highPassFilter);
     state.highPassFilter.connect(state.envelope);
     state.envelope.connect(state.distortion);
+
 
     // Bit crusher sits right after distortion, feeding the chorus/delay split
     state.distortion.connect(state.bitcrusher);

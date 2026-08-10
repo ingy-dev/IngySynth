@@ -1,7 +1,7 @@
 // Entry point: import order mirrors the original single-file script order.
-import { initAudio } from './audio-engine.js?v=117';
-import { startIdleMarquee } from './sequencer.js?v=163';
-import './controls.js?v=160';
+import { initAudio } from './audio-engine.js?v=129';
+import { startIdleMarquee } from './sequencer.js?v=189';
+import './controls.js?v=209';
 import './midi.js?v=79';
 import './visualizers.js?v=90';
 import { syncNoteVfdFromPeer } from './visualizers.js?v=90';
@@ -9,13 +9,13 @@ import './mobile.js?v=73';
 import { refreshXYPad } from './xy-pad.js?v=75';
 import { initKeyboard } from './keyboard.js?v=153';
 import { initComputerKeyboard } from './computer-keyboard.js?v=150';
-import { initKeyboardKnobs, initDoubleClickReset } from './knobs.js?v=97';
+import { initKeyboardKnobs, initDoubleClickReset } from './knobs.js?v=99';
 import { initPitchBendStrip } from './pitch-bend.js?v=76';
 import { initLfoStrip, applyLfoStartupDefaults, updateLfoSmoothing } from './lfo-strip.js?v=15';
 import { initLfoRateKnob, initLfoRateControls, onLfoRateApplied } from './lfo-rate.js?v=7';
 import { initKeyboardSteps } from './keyboard-steps.js?v=92';
 import { initPatternShift } from './pattern-shift.js?v=93';
-import { initKeyboardOscillators, syncKeyboardOscillatorsFromMain } from './keyboard-oscillators.js?v=82';
+import { initKeyboardOscillators, syncKeyboardOscillatorsFromMain } from './keyboard-oscillators.js?v=84';
 import { initKeyboardEffects, syncKeyboardEffectsFromMain } from './keyboard-effects.js?v=87';
 import { initKeyboardNoise, syncKeyboardNoiseFromMain } from './keyboard-noise.js?v=73';
 import { initKeyboardFilterEnv, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=79';

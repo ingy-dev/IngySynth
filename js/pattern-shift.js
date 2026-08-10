@@ -1,8 +1,8 @@
 // Shift Pattern: rotate active step content left/right within stepCount.
 // Main Sequencer controls are source of truth; keyboard strip mirrors after apply.
 
-import { state } from './state.js?v=104';
-import { refreshStepTuneReadouts } from './sequencer.js?v=163';
+import { state } from './state.js?v=106';
+import { refreshStepTuneReadouts } from './sequencer.js?v=189';
 import {
     syncAllKeyboardStepButtonsFromMain,
     syncAllKeyboardStepFinesFromMain,

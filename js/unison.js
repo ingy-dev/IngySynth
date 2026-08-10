@@ -1,7 +1,8 @@
 // Global unison stacks for the phase-reset oscillator path.
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
-import { state } from './state.js?v=104';
+import { state } from './state.js?v=106';
+import { createOscSource, softStartVoiceGain } from './osc-source.js?v=27';
 
 const ALLOWED_VOICES = [3, 5, 7];
 
@@ -55,6 +56,13 @@ function lfoPitchGainFor(oscIndex) {
     ][oscIndex] || null;
 }
 
+/** Current OSC pan from the main slider (−1…1). */
+export function readOscPanValue(oscIndex) {
+    const panEl = document.querySelector(`.osc-pan[data-osc="${oscIndex}"]`);
+    const pan = parseFloat(panEl?.value ?? '0');
+    return Number.isFinite(pan) ? Math.max(-1, Math.min(1, pan)) : 0;
+}
+
 /**
  * Spawn N detuned oscillators for one OSC slot into state.activeOscillators.
  * Caller clears previous active oscs when replacing a note.
@@ -79,11 +87,23 @@ export function spawnOscStack(oscIndex, baseFreq, startTime, {
         try { lfoGain.disconnect(); } catch (_) { /* ignore */ }
     }
 
+    // Keep shared panner in sync (digital + analog) before connecting the stack
+    const panner = state.oscPanners?.[oscIndex];
+    if (panner && connectTarget === panner) {
+        try {
+            panner.pan.setValueAtTime(readOscPanValue(oscIndex), Math.max(0, startTime));
+        } catch (_) { /* ignore */ }
+    }
+
     for (let k = 0; k < n; k++) {
         const cents = unisonCents(k, n, spread);
-        const osc = state.audioContext.createOscillator();
-        osc.type = wave;
-        osc.frequency.value = voiceTargetFreq({ unisonCents: cents }, baseFreq);
+        const freq = voiceTargetFreq({ unisonCents: cents }, baseFreq);
+        const osc = createOscSource(state.audioContext, {
+            oscIndex,
+            wave,
+            frequency: freq,
+        });
+        osc.frequency.value = freq;
         osc.oscIndex = oscIndex;
         osc.unisonIndex = k;
         osc.unisonCents = cents;
@@ -95,8 +115,9 @@ export function spawnOscStack(oscIndex, baseFreq, startTime, {
         osc.gainNode = gain;
 
         osc.start(oscStart);
-        gain.gain.setValueAtTime(0, gainRampStart);
-        gain.gain.linearRampToValueAtTime(voiceVol, gainRampEnd);
+        softStartVoiceGain(gain.gain, voiceVol, gainRampStart, {
+            wavetable: !!osc.isWavetable,
+        });
 
         osc.started = true;
         state.activeOscillators.push(osc);

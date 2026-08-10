@@ -1,4 +1,4 @@
-import { state } from './state.js?v=104';
+import { state } from './state.js?v=106';
 import { refreshParamStatusIndicators } from './param-status.js?v=4';
 import {
     heldNoteDown,

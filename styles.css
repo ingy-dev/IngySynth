@@ -1400,6 +1400,121 @@ html {
         gap: 5px;
     }
 
+    /* OSC 4 Analog / Digital — same chrome as Ingy 6 VCA, horizontal */
+    .osc4-engine-switch {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        margin: 0 auto 6px;
+        align-self: center;
+    }
+    .osc4-engine-switch .osc4-engine-btn {
+        flex: 0 0 auto;
+        min-width: 0;
+        padding: 3px 7px;
+        font-size: 7px;
+        letter-spacing: 0.06em;
+        min-height: 0;
+        line-height: 1.1;
+    }
+    .osc4-engine-switch .osc4-engine-btn[data-engine="analog"] {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-right-width: 0;
+    }
+    .osc4-engine-switch .osc4-engine-btn[data-engine="digital"] {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    .keyboard-osc-field[data-osc="3"] .osc4-engine-switch {
+        margin-bottom: 8px;
+    }
+
+    .osc4-model-row {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        width: 100%;
+        margin: 0 0 6px;
+    }
+    .osc4-bank-row {
+        margin-bottom: 8px;
+    }
+    .osc4-model-label {
+        font-family: 'Michroma', sans-serif;
+        font-size: 7px;
+        letter-spacing: 0.06em;
+        color: #00aa00;
+        text-transform: uppercase;
+        line-height: 1;
+    }
+    .osc4-model-select {
+        font-family: 'Michroma', sans-serif;
+        font-size: 8px;
+        color: #00ff00;
+        background: #111;
+        border: 1px solid #00aa00;
+        border-radius: 3px;
+        padding: 4px 8px;
+        min-width: 7.5rem;
+        max-width: 100%;
+        width: auto;
+        box-sizing: border-box;
+        text-align: center;
+    }
+    .osc4-model-select:focus-visible {
+        outline: 1px solid #00ff00;
+        outline-offset: 1px;
+    }
+    .osc4-group .osc4-model-label {
+        color: #aaa;
+    }
+    .osc4-group .osc4-model-select {
+        color: #ddd;
+        background: #1a1a1a;
+        border-color: #666;
+    }
+    .osc4-group .osc4-model-select:focus-visible {
+        outline-color: #aaa;
+    }
+
+    .osc4-tone-knob-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        margin: 0 0 8px;
+    }
+    .osc4-tone-knob-row .synth-knob-label {
+        font-size: 6px;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+    }
+    .osc4-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-label,
+    .osc4-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-value {
+        color: #aaa;
+    }
+    .osc4-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-dial {
+        border-color: #666;
+    }
+    .osc4-tone-knob.is-model-inactive {
+        opacity: 0.35;
+        filter: grayscale(0.35);
+        pointer-events: none;
+    }
+    .osc4-tone-knob.is-model-inactive .synth-knob-dial {
+        cursor: default;
+    }
+
     /* Unison Group Start */
     fieldset.control-group.unison-group {
         border: 2px solid #555;
@@ -3463,10 +3578,12 @@ body.acid-mode .berlin-step-ratch {
 .keyboard-osc-toggle-row {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
+    gap: 4px;
     width: 100%;
-    max-width: 96px;
+    max-width: 120px;
     min-width: 0;
 }
 .keyboard-osc-knob {
@@ -3511,6 +3628,28 @@ body.acid-mode .berlin-step-ratch {
     box-sizing: border-box;
     overflow: hidden;
 }
+.keyboard-osc-wave.is-wavetable-hidden {
+    display: none;
+}
+.keyboard-osc4-wt {
+    display: grid;
+    gap: 4px;
+    width: 100%;
+    margin-bottom: 4px;
+}
+.keyboard-osc4-wt-ctl {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) 36px;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    color: #00aa00;
+    font-size: 10px;
+}
+body.osc4-wavetable .keyboard-osc-field[data-osc="3"] .keyboard-osc-wave {
+    display: none;
+}
+
 .keyboard-osc-wave-btn {
     display: flex;
     align-items: center;

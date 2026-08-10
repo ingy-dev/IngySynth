@@ -1,11 +1,11 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
-import { state } from './state.js?v=104';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=163';
+import { state } from './state.js?v=106';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=189';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
-import { bindKnob } from './knobs.js?v=97';
+import { bindKnob } from './knobs.js?v=99';
 import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=9';
-import { forceNoteOff } from './voice.js?v=85';
-import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=27';
+import { forceNoteOff } from './voice.js?v=101';
+import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=28';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8

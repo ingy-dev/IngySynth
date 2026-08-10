@@ -2,8 +2,8 @@
 // Classic #lfoSpeed / #lfoSyncDivision are source of truth; applyLfoRate() is
 // the single writer to state.lfo.frequency.
 
-import { state } from './state.js?v=104';
-import { ensureDisplayStep, formatRangeValue, resetInputToDefault } from './knobs.js?v=97';
+import { state } from './state.js?v=106';
+import { ensureDisplayStep, formatRangeValue, resetInputToDefault } from './knobs.js?v=99';
 
 /** Optional hook so applyLfoRate can refresh smoothing without a circular import. */
 let onRateApplied = null;

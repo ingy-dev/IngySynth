@@ -1,17 +1,17 @@
 // Kb-only 6-voice polyphonic playground (shared filter, per-voice amp).
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
-import { state, OSC_COUNT } from './state.js?v=104';
+import { state, OSC_COUNT } from './state.js?v=106';
 import { semitonesToFrequency } from './tuning.js?v=74';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=78';
-import { refreshFilterInputDrive } from './filter-drive.js?v=4';
+import { refreshFilterInputDrive } from './filter-drive.js?v=7';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
 } from './visualizers.js?v=90';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=76';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=135';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=6';
 import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=13';
 import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=79';

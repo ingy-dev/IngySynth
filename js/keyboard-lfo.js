@@ -6,7 +6,7 @@ import {
     syncToggleButtonFromMain,
 } from './control-mirror.js?v=74';
 import { setLfoSyncMode } from './lfo-rate.js?v=7';
-import { state } from './state.js?v=104';
+import { state } from './state.js?v=106';
 
 const WAVEFORMS = [
     {

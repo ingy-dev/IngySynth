@@ -1,25 +1,32 @@
-import { state, OSC_COUNT } from './state.js?v=104';
+import { state, OSC_COUNT } from './state.js?v=106';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=117';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=4';
+} from './audio-engine.js?v=129';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=7';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { clearAccentSweep } from './acid-env.js?v=6';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=163';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=189';
 import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=90';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=74';
 import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown } from './midi.js?v=79';
 import { applyScaleState } from './keyboard.js?v=152';
 import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=92';
-import { syncUnisonControlsEnabled } from './unison.js?v=76';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=97';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=135';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=99';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=15';
 import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=7';
 import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=6';
-import { setPolyMode, applyPolyOscPan } from './poly-voice.js?v=27';
+import { setPolyMode, applyPolyOscPan } from './poly-voice.js?v=28';
+import {
+    ensurePlaitsWorklet,
+    createOscSource,
+    applyOsc4MorphToLive,
+    fadeStopOsc,
+    OSC4_INDEX,
+} from './osc-source.js?v=27';
 
 function syncAcidModeUi() {
     syncAcidStripUi();
@@ -656,20 +663,288 @@ export function wireControls() {
             if (!state.audioContext) return;
             const oscIndex = parseInt(this.dataset.osc, 10);
             const wave = this.value;
+            if (oscIndex === OSC4_INDEX && state.osc4Wavetable) return;
 
             // Persistent oscillators (phase-reset off)
-            if (state.oscillators[oscIndex]) {
+            if (state.oscillators[oscIndex] && !state.oscillators[oscIndex].isWavetable) {
                 state.oscillators[oscIndex].type = wave;
             }
 
             // Live / phase-reset voices currently sounding
             state.activeOscillators.forEach(osc => {
-                if (osc.oscIndex === oscIndex) {
+                if (osc.oscIndex === oscIndex && !osc.isWavetable) {
                     try { osc.type = wave; } catch (_) {}
                 }
             });
         });
     });
+
+    /** Which Plaits-style tone knobs are live for each digital model. */
+    const OSC4_MODEL_TONES = {
+        wavetable: { harmonics: false, timbre: true, morph: true },
+        pluck: { harmonics: true, timbre: true, morph: true },
+    };
+
+    function syncOsc4WavetableUi() {
+        const on = !!state.osc4Wavetable;
+        document.body.classList.toggle('osc4-wavetable', on);
+        document.querySelectorAll('.osc4-engine-btn').forEach((btn) => {
+            const digital = btn.dataset.engine === 'digital';
+            const active = digital ? on : !on;
+            btn.classList.toggle('off', !active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        const waveGroup = document.querySelector('.keyboard-osc-wave[data-osc="3"]');
+        waveGroup?.classList.toggle('is-wavetable-hidden', on);
+        const typeSelect = document.querySelector('.osc-type[data-osc="3"]');
+        if (typeSelect) typeSelect.disabled = on;
+        document.querySelectorAll('.osc4-digital-params').forEach((el) => {
+            el.hidden = !on;
+        });
+        document.querySelectorAll('.osc4-wt-params').forEach((el) => {
+            el.hidden = !on;
+        });
+        const model = state.osc4Model || 'wavetable';
+        ['osc4Model', 'kbOsc4Model'].forEach((id) => {
+            const sel = document.getElementById(id);
+            if (sel && sel.value !== model) sel.value = model;
+        });
+        const bank = String(Math.max(0, Math.min(3, Math.round(Number(state.osc4Bank) || 0))));
+        const showBank = on && model === 'wavetable';
+        document.querySelectorAll('.osc4-bank-row').forEach((el) => {
+            el.hidden = !showBank;
+        });
+        ['osc4Bank', 'kbOsc4Bank'].forEach((id) => {
+            const sel = document.getElementById(id);
+            if (sel && sel.value !== bank) sel.value = bank;
+        });
+
+        // Grey out tone knobs that do nothing on the active model (BANK owns WT bank pick)
+        const activeTones = OSC4_MODEL_TONES[model] || OSC4_MODEL_TONES.wavetable;
+        document.querySelectorAll('.osc4-tone-knob[data-osc4-tone]').forEach((knob) => {
+            const tone = knob.dataset.osc4Tone;
+            const active = !!activeTones[tone];
+            knob.classList.toggle('is-model-inactive', !active);
+            const dial = knob.querySelector('.synth-knob-dial');
+            if (dial) {
+                dial.setAttribute('aria-disabled', active ? 'false' : 'true');
+                dial.tabIndex = active ? 0 : -1;
+            }
+        });
+        const harmInput = document.getElementById('osc4Harmonics');
+        if (harmInput) harmInput.disabled = !activeTones.harmonics;
+    }
+
+    function setOsc4Bank(next) {
+        const bank = Math.max(0, Math.min(3, Math.round(Number(next) || 0)));
+        if (state.osc4Bank === bank) {
+            syncOsc4WavetableUi();
+            return;
+        }
+        state.osc4Bank = bank;
+        syncOsc4WavetableUi();
+        applyOsc4MorphToLive();
+    }
+
+    function setOsc4Model(next) {
+        const model = next === 'pluck' ? 'pluck' : 'wavetable';
+        if (state.osc4Model === model) {
+            syncOsc4WavetableUi();
+            return;
+        }
+        state.osc4Model = model;
+        syncOsc4WavetableUi();
+        // Worklet engines share the same node; tell live voices which model to run.
+        const now = state.audioContext?.currentTime ?? 0;
+        const touch = (osc) => {
+            if (!osc?.isWavetable || !osc._worklet) return;
+            try {
+                osc._worklet.port.postMessage({ engine: model });
+            } catch (_) { /* ignore */ }
+            void now;
+        };
+        if (Array.isArray(state.activeOscillators)) state.activeOscillators.forEach(touch);
+        if (state.oscillators?.[OSC4_INDEX]) touch(state.oscillators[OSC4_INDEX]);
+        if (Array.isArray(state.berlinOscVoices)) {
+            state.berlinOscVoices.forEach((voice) => {
+                voice?.oscs?.forEach(({ osc }) => touch(osc));
+            });
+        }
+    }
+
+    function rebuildOsc4EngineSources() {
+        const ctx = state.audioContext;
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const i = OSC4_INDEX;
+
+        // Tear down phase-reset / live OSC4 voices so the next hit uses the new engine
+        if (Array.isArray(state.activeOscillators) && state.activeOscillators.length) {
+            const survivors = [];
+            let hadOsc4 = false;
+            const freq = Math.max(20, state.lastStepFreqs?.[i] || 261.63);
+            for (const osc of state.activeOscillators) {
+                if (osc?.oscIndex === i) {
+                    hadOsc4 = true;
+                    fadeStopOsc(osc, now + 0.02, { fadeSec: 0.018 });
+                } else {
+                    survivors.push(osc);
+                }
+            }
+            state.activeOscillators = survivors;
+            // Keyboard live note still held — respawn OSC4 in the new mode
+            if (
+                hadOsc4
+                && state.oscStates?.[i]
+                && state.keyboardVoiceActive
+                && !state.isPlaying
+                && state.phaseResetEnabled
+            ) {
+                spawnOscStack(i, freq, now, {
+                    oscStart: now,
+                    gainRampStart: now,
+                    gainRampEnd: now + 0.012,
+                });
+            }
+        }
+
+        // Berlin lane voices for OSC4
+        if (Array.isArray(state.berlinOscVoices) && state.berlinOscVoices.length) {
+            const keep = [];
+            for (const voice of state.berlinOscVoices) {
+                if (voice?.oscIndex !== i) {
+                    keep.push(voice);
+                    continue;
+                }
+                try {
+                    voice.amp?.gain.cancelScheduledValues(now);
+                    voice.amp?.gain.setValueAtTime(
+                        Math.max(0.00001, voice.amp.gain.value || 0.00001),
+                        now,
+                    );
+                    voice.amp?.gain.exponentialRampToValueAtTime(0.00001, now + 0.04);
+                } catch (_) { /* ignore */ }
+                voice.oscs?.forEach(({ osc }) => fadeStopOsc(osc, now + 0.04, { fadeSec: 0.03 }));
+            }
+            state.berlinOscVoices = keep;
+        }
+
+        // Persistent oscillators (phase reset off)
+        if (!state.phaseResetEnabled && state.oscillators?.[i]) {
+            const old = state.oscillators[i];
+            const freq = old.frequency?.value || state.lastStepFreqs?.[i] || 261.63;
+            try {
+                if (old.started) old.stop(now + 0.02);
+                else if (typeof old.stop === 'function') old.stop(now + 0.02);
+            } catch (_) { /* ignore */ }
+            try { fadeStopOsc(old, now + 0.02, { fadeSec: 0.018 }); } catch (_) { /* ignore */ }
+            const osc = createOscSource(ctx, {
+                oscIndex: i,
+                wave: document.querySelector('.osc-type[data-osc="3"]')?.value || 'sawtooth',
+                frequency: freq,
+            });
+            try { osc.frequency.value = freq; } catch (_) { /* ignore */ }
+            try { osc.connect(state.oscGains[i]); } catch (_) { /* ignore */ }
+            try {
+                osc.start(now + 0.005);
+                osc.started = true;
+            } catch (_) { /* ignore */ }
+            state.oscillators[i] = osc;
+            if (state.lfoGainOsc4Pitch) {
+                try { state.lfoGainOsc4Pitch.disconnect(); } catch (_) { /* ignore */ }
+                try { state.lfoGainOsc4Pitch.connect(osc.detune); } catch (_) { /* ignore */ }
+            }
+        }
+    }
+
+    async function setOsc4Wavetable(next) {
+        const want = !!next;
+        if (want) {
+            if (!state.audioContext) {
+                // Flag on; audio init will load the worklet and build the right OSC4 source
+                state.osc4Wavetable = true;
+                syncOsc4WavetableUi();
+                return;
+            }
+            const ok = await ensurePlaitsWorklet(state.audioContext);
+            if (!ok) {
+                console.warn('Digital engine unavailable');
+                state.osc4Wavetable = false;
+                syncOsc4WavetableUi();
+                return;
+            }
+        }
+        const changed = state.osc4Wavetable !== want;
+        state.osc4Wavetable = want;
+        syncOsc4WavetableUi();
+        if (state.audioContext) refreshFilterInputDrive();
+        // Always rebuild so DIGITAL isn't "UI only" while old analog voices keep ringing
+        if (state.audioContext && (changed || want)) {
+            rebuildOsc4EngineSources();
+        }
+    }
+
+    document.querySelectorAll('.osc4-engine-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            setOsc4Wavetable(btn.dataset.engine === 'digital');
+        });
+    });
+    ['osc4Model', 'kbOsc4Model'].forEach((id) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        sel.addEventListener('change', () => {
+            const otherId = id === 'osc4Model' ? 'kbOsc4Model' : 'osc4Model';
+            const other = document.getElementById(otherId);
+            if (other && other.value !== sel.value) other.value = sel.value;
+            setOsc4Model(sel.value);
+        });
+    });
+    ['osc4Bank', 'kbOsc4Bank'].forEach((id) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        sel.addEventListener('change', () => {
+            const otherId = id === 'osc4Bank' ? 'kbOsc4Bank' : 'osc4Bank';
+            const other = document.getElementById(otherId);
+            if (other && other.value !== sel.value) other.value = sel.value;
+            setOsc4Bank(sel.value);
+        });
+    });
+
+    function formatTone01(n) {
+        const v = Number(n);
+        return Number.isFinite(v) ? v.toFixed(2) : '0.00';
+    }
+
+    function syncOsc4ToneValueLabels() {
+        const h = document.getElementById('osc4Harmonics');
+        const x = document.getElementById('osc4MorphX');
+        const y = document.getElementById('osc4MorphY');
+        const pairs = [
+            ['kbOsc4HarmonicsValue', 'osc4HarmonicsKnobValue', h],
+            ['kbOsc4TimbreValue', 'osc4TimbreKnobValue', x],
+            ['kbOsc4MorphValue', 'osc4MorphKnobValue', y],
+        ];
+        pairs.forEach(([a, b, input]) => {
+            if (!input) return;
+            const text = formatTone01(input.value);
+            const elA = document.getElementById(a);
+            const elB = document.getElementById(b);
+            if (elA) elA.textContent = text;
+            if (elB) elB.textContent = text;
+        });
+    }
+
+    ['osc4Harmonics', 'osc4MorphX', 'osc4MorphY'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', () => {
+            syncOsc4ToneValueLabels();
+            applyOsc4MorphToLive();
+        });
+    });
+    syncOsc4ToneValueLabels();
+
+    syncOsc4WavetableUi();
 
     document.getElementById('lfoWaveform').addEventListener('change', function () {
         if (!state.lfo || !state.audioContext) return;
@@ -817,8 +1092,11 @@ export function wireControls() {
                 }
             });
             state.oscillators = Array(OSC_COUNT).fill().map((_, i) => {
-                const osc = state.audioContext.createOscillator();
-                osc.type = document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth';
+                const osc = createOscSource(state.audioContext, {
+                    oscIndex: i,
+                    wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
+                    frequency: 261.63,
+                });
                 osc.frequency.value = 261.63;
                 osc.connect(state.oscGains[i]);
                 try { state.oscGains[i].disconnect(); } catch (_) { /* ignore */ }
@@ -845,7 +1123,11 @@ export function wireControls() {
                     osc.disconnect();
                 }
             });
-            state.oscillators = Array(OSC_COUNT).fill().map(() => state.audioContext.createOscillator());
+            state.oscillators = Array(OSC_COUNT).fill().map((_, i) => createOscSource(state.audioContext, {
+                oscIndex: i,
+                wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
+                frequency: 261.63,
+            }));
             state.activeOscillators.forEach(osc => {
                 if (osc.started) {
                     osc.stop();
@@ -1225,12 +1507,14 @@ document.getElementById('cutoff').addEventListener('input', function () {
     updateFilterCutoffRange(actualCutoff, state.audioContext.currentTime);
     updateLfoCutoffSafety();
     applyFilterResonance(0.03);
+    refreshFilterInputDrive(0.05);
 });
 
 document.getElementById('resonance').addEventListener('input', function () {
     if (!state.audioContext) return;
     updateDisplay(this, 'resonanceValue');
     applyFilterResonance(0.03);
+    refreshFilterInputDrive(0.05);
 });
 
 document.getElementById('highPass').addEventListener('input', function () {

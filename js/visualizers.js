@@ -1,4 +1,4 @@
-import { state } from './state.js?v=104';
+import { state } from './state.js?v=106';
 import { calculateSemitoneShift, semitonesToNoteName } from './tuning.js?v=74';
 import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=2';
 

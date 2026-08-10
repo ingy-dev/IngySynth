@@ -3,7 +3,7 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=163';
+import { previewStepsOnVfd } from './sequencer.js?v=189';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -64,6 +64,12 @@ const KNOB_BINDINGS = [
     { dialId: 'kbOsc2PitchModKnob', inputId: 'osc2PitchMod' },
     { dialId: 'kbOsc3PitchModKnob', inputId: 'osc3PitchMod' },
     { dialId: 'kbOsc4PitchModKnob', inputId: 'osc4PitchMod' },
+    { dialId: 'kbOsc4HarmonicsKnob', inputId: 'osc4Harmonics', valueId: 'kbOsc4HarmonicsValue' },
+    { dialId: 'kbOsc4TimbreKnob', inputId: 'osc4MorphX', valueId: 'kbOsc4TimbreValue' },
+    { dialId: 'kbOsc4MorphKnob', inputId: 'osc4MorphY', valueId: 'kbOsc4MorphValue' },
+    { dialId: 'osc4HarmonicsKnob', inputId: 'osc4Harmonics', valueId: 'osc4HarmonicsKnobValue' },
+    { dialId: 'osc4TimbreKnob', inputId: 'osc4MorphX', valueId: 'osc4TimbreKnobValue' },
+    { dialId: 'osc4MorphKnob', inputId: 'osc4MorphY', valueId: 'osc4MorphKnobValue' },
 ];
 
 const DIVISION_STEPS = [
@@ -276,6 +282,7 @@ export function bindKnob(dial, input, valueEl, { onInteract } = {}) {
 
     const onPointerDown = (e) => {
         if (e.button !== undefined && e.button !== 0) return;
+        if (input.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         e.preventDefault();
         e.stopPropagation();
         dragging = true;

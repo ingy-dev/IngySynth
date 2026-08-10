@@ -1,4 +1,4 @@
-import { state } from './state.js?v=104';
+import { state } from './state.js?v=106';
 
 // Base reference frequency: C4.
 export const BASE_FREQ = 261.63;

@@ -1,9 +1,10 @@
-import { state } from './state.js?v=104';
+import { state } from './state.js?v=106';
 import { semitonesToFrequency } from './tuning.js?v=74';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=78';
 import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=90';
 import { bentFrequency } from './pitch-bend.js?v=76';
-import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=76';
+import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=135';
+import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive } from './osc-source.js?v=27';
 import {
     triggerAcidLiveAmp,
     triggerAcidLiveFilter,
@@ -59,18 +60,7 @@ function shouldLegatoRetrigger() {
 
 function stopLiveOscillators(now) {
     if (state.phaseResetEnabled) {
-        state.activeOscillators.forEach(osc => {
-            if (!osc.started) return;
-            try {
-                if (osc.gainNode) {
-                    osc.gainNode.gain.cancelScheduledValues(now);
-                    osc.gainNode.gain.setValueAtTime(Math.max(0.00001, osc.gainNode.gain.value || 0.00001), now);
-                    osc.gainNode.gain.linearRampToValueAtTime(0, now + 0.03);
-                }
-                osc.stop(now + 0.04);
-                osc.disconnect();
-            } catch (e) {}
-        });
+        state.activeOscillators.forEach((osc) => fadeStopOsc(osc, now + 0.03, { fadeSec: 0.03 }));
         state.activeOscillators = [];
     }
 }
@@ -118,7 +108,11 @@ function triggerLiveAmpEnvelope(now, { fromCurrent = false } = {}) {
     const attack = parseFloat(document.getElementById('attack').value);
     const decay = parseFloat(document.getElementById('decay').value);
     const sustain = parseFloat(document.getElementById('sustain').value);
-    const safeAttack = scaleAdsrTime(attack);
+    const darkOsc = hasDarkOscActive();
+    const safeAttack = Math.max(
+        darkOsc ? Math.max(0.008, wtAttackSecForFilter() * 0.55) : 0,
+        scaleAdsrTime(attack)
+    );
     const safeDecay = scaleAdsrTime(decay);
     const startLevel = fromCurrent
         ? Math.max(0.00001, ampEnvelopeLevel() || 0.00001)

@@ -1,4 +1,4 @@
-import { state } from './state.js?v=104';
+import { state } from './state.js?v=106';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -11,11 +11,12 @@ import {
 } from './tuning.js?v=74';
 import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=90';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { forceNoteOff } from './voice.js?v=85';
+import { forceNoteOff } from './voice.js?v=101';
 import { getLfoRateHz } from './lfo-rate.js?v=7';
 import { bentFrequency } from './pitch-bend.js?v=76';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { spawnOscStack, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents } from './unison.js?v=76';
+import { spawnOscStack, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=135';
+import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, wtAttackTuningSnapshot } from './osc-source.js?v=27';
 import { notifyAutomationLoopAnchor } from './automation.js?v=33';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=5';
 import {
@@ -335,7 +336,15 @@ function scheduleStepFilterEnvelope({
         depthParam.linearRampToValueAtTime(baseSignedDepth, stepEnd);
     }
 
-    gainParam.cancelScheduledValues(t0);
+    // Lookahead-safe boundary (same stale-.value bug as amp env — logs: R)
+    let heldAtBoundary = false;
+    if (!slideThisStep && typeof gainParam.cancelAndHoldAtTime === 'function') {
+        try {
+            gainParam.cancelAndHoldAtTime(t0);
+            heldAtBoundary = true;
+        } catch (_) { /* fall through */ }
+    }
+    if (!heldAtBoundary) gainParam.cancelScheduledValues(t0);
 
     if (slideThisStep) {
         if (!nextStepWillSlide) {
@@ -357,24 +366,26 @@ function scheduleStepFilterEnvelope({
         ? getGateLength()
         : Math.max(0.05, Math.min(1, Number(gateLen) || 0.9));
     const gateWindow = stepDuration * gateFrac;
-    const minAttack = cutModHot ? 0.01 : 0.002;
+    // High-Q: sweeping cutoff in 2ms rings the filter (pings every step).
+    // Scale the attack floor with resonance so the sweep stays under the ring threshold.
+    const qNow = parseFloat(document.getElementById('resonance')?.value) || 0;
+    const qFloor = Math.max(0, Math.min(1, (qNow - 6) / 14)) * 0.014;
+    const minAttack = Math.max(cutModHot ? 0.01 : 0.002, qFloor);
     const safeAttackTime = Math.max(minAttack, scaleAdsrTime(attack));
     const availableDecayTime = Math.max(0, gateWindow * 0.8 - safeAttackTime);
     // Accent forces short filter decay (~200 ms), matching TB-303 MEG-on-accent
     const decaySource = accentThisStep ? ACCENT_FILTER_DECAY : scaleAdsrTime(decay);
     const safeDecayTime = Math.max(0.002, Math.min(decaySource, availableDecayTime));
 
-    // Soft retrigger: never hard-zero under a hot CUT LFO (zippers the shared AudioParam)
-    const cur = Math.max(minValue, Number(gainParam.value) || minValue);
+    // Soft retrigger from the held boundary value (no stale-.value pinning)
     let attackStart = t0;
-    if (cur > 0.06) {
-        const closeT = cutModHot ? 0.008 : 0.004;
+    const closeT = Math.max(cutModHot ? 0.008 : 0.004, qFloor * 0.6);
+    if (!heldAtBoundary) {
+        const cur = Math.max(minValue, Number(gainParam.value) || minValue);
         gainParam.setValueAtTime(cur, t0);
-        gainParam.linearRampToValueAtTime(minValue, t0 + closeT);
-        attackStart = t0 + closeT;
-    } else {
-        gainParam.setValueAtTime(minValue, t0);
     }
+    gainParam.linearRampToValueAtTime(minValue, t0 + closeT);
+    attackStart = t0 + closeT;
     gainParam.linearRampToValueAtTime(1, attackStart + safeAttackTime);
 
     const decayEnd = attackStart + safeAttackTime + safeDecayTime;
@@ -435,15 +446,39 @@ function scheduleStepEnvelope({
     const ampPeak = accentThisStep ? 1 + 0.5 * accentAmount : 1;
     const ampSustain = accentThisStep ? Math.min(1, sustain) * ampPeak : sustain;
 
-    state.envelope.gain.cancelScheduledValues(t0);
+    // Dark waves (sine/tri/WT) into high-Q/open filter: 2ms hard VCA retrigger
+    // is the remaining click (logs: L). Saw/square mask it — keep them punchy.
+    const darkOsc = hasDarkOscActive();
+    const clickRisk = darkOsc ? wtFilterClickRisk() : 0;
+    const useSoftRetrigger = !slideThisStep && (softRetrigger || (darkOsc && clickRisk > 0.25));
+
+    // Note-OFF, not note-on, is where the Master click lives: transients measured
+    // at ~77ms into a 125ms step = gate end (logs: phase analysis). Closing the
+    // shared post-filter VCA in ~5ms after a resonant filter ticks; Berlin never
+    // closes it, which is why Berlin Dream is clean.
+    const releaseFloorRaw = darkOsc ? Math.max(0.025, wtAttackSecForFilter() * 0.8) : 0;
+    // Never eat more than ~30% of the step, or 16ths turn to mush
+    const releaseFloor = Math.min(releaseFloorRaw, Math.max(0.01, stepDuration * 0.3));
+    const safeReleaseTime = Math.max(releaseTime, releaseFloor);
+
+    // Lookahead-safe boundary: reading .value now and pinning it at future t0
+    // jumps when the env is still moving (16ths clicked, 8ths didn't — logs: R).
+    let heldAtBoundary = false;
+    if (useSoftRetrigger && typeof state.envelope.gain.cancelAndHoldAtTime === 'function') {
+        try {
+            state.envelope.gain.cancelAndHoldAtTime(t0);
+            heldAtBoundary = true;
+        } catch (_) { /* fall through to cancel below */ }
+    }
+    if (!heldAtBoundary) state.envelope.gain.cancelScheduledValues(t0);
 
     if (slideThisStep) {
         if (!nextStepWillSlide) {
             const releaseStart = Math.min(
                 hardEnd - 0.005,
-                Math.max(hardEnd - Math.min(releaseTime, stepDuration - 0.01) - 0.001, hardEnd - releaseTime - 0.001)
+                Math.max(hardEnd - Math.min(safeReleaseTime, stepDuration - 0.01) - 0.001, hardEnd - safeReleaseTime - 0.001)
             );
-            const effectiveRelease = Math.min(releaseTime, Math.max(0.005, hardEnd - releaseStart - 0.001));
+            const effectiveRelease = Math.min(safeReleaseTime, Math.max(0.005, hardEnd - releaseStart - 0.001));
             state.envelope.gain.setValueAtTime(Math.max(minValue, sustain), releaseStart);
             state.envelope.gain.exponentialRampToValueAtTime(minValue, releaseStart + effectiveRelease);
             state.envelopeHeld = false;
@@ -455,23 +490,33 @@ function scheduleStepEnvelope({
 
     const gateLen = getGateLength();
     const gateWindow = stepDuration * gateLen;
-    const safeAttackTime = Math.max(0.002, scaleAdsrTime(attack));
+    const wtAmpFloor = darkOsc ? Math.max(0.008, wtAttackSecForFilter() * 0.55) : 0.002;
+    const safeAttackTime = Math.max(wtAmpFloor, scaleAdsrTime(attack));
+    // #region agent log
+    if (darkOsc || !!state.osc4Wavetable) {
+        fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5a7886'},body:JSON.stringify({sessionId:'5a7886',runId:'defaults-restored',hypothesisId:'A',location:'sequencer.js:scheduleStepEnvelope',message:'amp attack floor',data:{safeAttackTime,wtAmpFloor,wtGate:wtAttackSecForFilter(),darkOsc,wt:!!state.osc4Wavetable,...wtAttackTuningSnapshot()},timestamp:Date.now()})}).catch(()=>{});
+    }
+    // #endregion
     const availableDecayTime = Math.max(0, gateWindow * 0.8 - safeAttackTime);
     const safeDecayTime = Math.max(0.002, Math.min(scaleAdsrTime(decay), availableDecayTime));
 
     let attackStart = t0;
-    if (softRetrigger) {
-        // Soft close → attack (same idea as filter env) so ratchets keep body instead of clicks
-        const cur = Math.max(minValue, Number(state.envelope.gain.value) || minValue);
-        if (cur > 0.06) {
-            const closeT = 0.004;
+    if (useSoftRetrigger) {
+        // Soft re-articulate without hard duck when click-risk is high
+        const berlinStyle = darkOsc && clickRisk > 0.25;
+        if (!heldAtBoundary) {
+            const cur = Math.max(minValue, Number(state.envelope.gain.value) || minValue);
             state.envelope.gain.setValueAtTime(cur, t0);
+        }
+        if (berlinStyle) {
+            state.envelope.gain.linearRampToValueAtTime(ampPeak, t0 + Math.min(0.012, safeAttackTime));
+            attackStart = t0;
+        } else {
+            const closeT = darkOsc ? Math.max(0.006, 0.004 + clickRisk * 0.01) : 0.004;
             state.envelope.gain.linearRampToValueAtTime(minValue, t0 + closeT);
             attackStart = t0 + closeT;
-        } else {
-            state.envelope.gain.setValueAtTime(minValue, t0);
+            state.envelope.gain.linearRampToValueAtTime(ampPeak, attackStart + safeAttackTime);
         }
-        state.envelope.gain.linearRampToValueAtTime(ampPeak, attackStart + safeAttackTime);
     } else {
         // Hard retrigger from silence so attack is audible even after a long release
         state.envelope.gain.setValueAtTime(0, t0);
@@ -487,11 +532,14 @@ function scheduleStepEnvelope({
     }
 
     const gateEnd = t0 + gateWindow;
+    const darkGateEnd = releaseFloor > 0
+        ? Math.min(gateEnd, hardEnd - releaseFloor - 0.002)
+        : gateEnd;
     const releaseStart = Math.min(
         hardEnd - 0.005,
-        Math.max(decayEnd + 0.01, gateEnd)
+        Math.max(decayEnd + 0.01, darkGateEnd)
     );
-    const effectiveRelease = Math.min(releaseTime, Math.max(0.005, hardEnd - releaseStart - 0.001));
+    const effectiveRelease = Math.min(safeReleaseTime, Math.max(0.005, hardEnd - releaseStart - 0.001));
 
     state.envelope.gain.setValueAtTime(Math.max(minValue, ampSustain), releaseStart);
     state.envelope.gain.exponentialRampToValueAtTime(minValue, releaseStart + effectiveRelease);
@@ -512,18 +560,7 @@ function silenceMainEnvelope(atTime) {
 function silenceMainPhaseResetOscs(atTime) {
     if (!state.phaseResetEnabled || !Array.isArray(state.activeOscillators)) return;
     const t = Math.max(state.audioContext.currentTime, atTime);
-    state.activeOscillators.forEach((osc) => {
-        if (!osc?.started) return;
-        try {
-            if (osc.gainNode) {
-                osc.gainNode.gain.cancelScheduledValues(t - 0.005);
-                osc.gainNode.gain.setValueAtTime(osc.gainNode.gain.value, t - 0.005);
-                osc.gainNode.gain.linearRampToValueAtTime(0, t);
-            }
-            osc.stop(t + 0.001);
-            osc.disconnect();
-        } catch (_) { /* ignore */ }
-    });
+    state.activeOscillators.forEach((osc) => fadeStopOsc(osc, t, { fadeSec: 0.02 }));
     state.activeOscillators = [];
 }
 
@@ -566,7 +603,10 @@ function scheduleFullNoteOnGain(gainParam, {
         ? getGateLength()
         : Math.max(0.05, Math.min(1, Number(gateLen) || 0.9));
     const gateWindow = stepDuration * gateFrac;
-    const safeAttackTime = Math.max(0.002, scaleAdsrTime(attack));
+    const safeAttackTime = Math.max(
+        state.osc4Wavetable && state.oscStates?.[3] ? wtAttackSecForFilter() : 0.002,
+        scaleAdsrTime(attack),
+    );
     const availableDecayTime = Math.max(0, gateWindow * 0.8 - safeAttackTime);
     const safeDecayTime = Math.max(0.002, Math.min(scaleAdsrTime(decay), availableDecayTime));
 
@@ -651,9 +691,12 @@ function spawnRatchVoice({
         const vol = parseFloat(document.querySelector(`.osc-vol[data-osc="${i}"]`)?.value ?? '0.33');
         if (!(vol > 0.0001)) continue;
 
-        const osc = ctx.createOscillator();
-        osc.type = wave;
         const fromHz = Math.max(20, bentFrequency(freqForOsc(i)));
+        const osc = createOscSource(ctx, {
+            oscIndex: i,
+            wave,
+            frequency: fromHz,
+        });
         osc.frequency.setValueAtTime(fromHz, Math.max(ctx.currentTime, startTime));
         if (glissRoll && typeof nextFreqForOsc === 'function') {
             const toHz = Math.max(20, bentFrequency(nextFreqForOsc(i)));
@@ -663,10 +706,20 @@ function spawnRatchVoice({
         }
 
         const g = ctx.createGain();
-        g.gain.value = vol;
+        g.gain.value = 0;
+        // Private panner — overlapping ratches can't share state.oscPanners
+        const panNode = ctx.createStereoPanner();
+        panNode.pan.value = readOscPanValue(i);
         osc.connect(g);
-        g.connect(mix);
-        const oscStart = Math.max(ctx.currentTime, startTime - 0.002);
+        g.connect(panNode);
+        panNode.connect(mix);
+        const tHit = Math.max(ctx.currentTime, startTime);
+        const oscStart = osc.isWavetable
+            ? tHit
+            : Math.max(ctx.currentTime, startTime - 0.002);
+        softStartVoiceGain(g.gain, vol, Math.max(tHit, oscStart), {
+            wavetable: !!osc.isWavetable,
+        });
         osc.start(oscStart);
         oscs.push({ osc, gain: g });
     }
@@ -1426,13 +1479,14 @@ function spawnBerlinOscVoice({
     amp.gain.value = 0;
 
     mix.connect(amp);
-    amp.connect(dest);
+    // Per-OSC pan (digital + analog). Shared panner sums concurrent lane voices.
+    const panner = state.oscPanners?.[oscIndex];
+    amp.connect(panner || dest);
 
     const n = getUnisonVoices();
     const spread = getUnisonSpread();
     const voiceVol = vol / n;
     const t0 = Math.max(ctx.currentTime, startTime);
-    const oscStart = Math.max(ctx.currentTime, startTime - 0.002);
     const slideFromBase = (slideIn && state.lastStepFreqs?.[oscIndex] > 0)
         ? state.lastStepFreqs[oscIndex]
         : null;
@@ -1446,8 +1500,11 @@ function spawnBerlinOscVoice({
     const oscs = [];
     for (let k = 0; k < n; k++) {
         const cents = unisonCents(k, n, spread);
-        const osc = ctx.createOscillator();
-        osc.type = wave;
+        const osc = createOscSource(ctx, {
+            oscIndex,
+            wave,
+            frequency: voiceTargetFreq({ unisonCents: cents }, fromHz),
+        });
         const targetHz = voiceTargetFreq({ unisonCents: cents }, fromHz);
         if (slideFromBase != null) {
             const slideFrom = voiceTargetFreq({ unisonCents: cents }, slideFromBase);
@@ -1470,15 +1527,30 @@ function spawnBerlinOscVoice({
         }
 
         const g = ctx.createGain();
-        g.gain.value = voiceVol;
+        g.gain.value = 0;
         osc.connect(g);
         g.connect(mix);
+        // Align WT with amp envelope — early start + full voiceVol clicked into high-Q filter
+        const oscStart = osc.isWavetable
+            ? t0
+            : Math.max(ctx.currentTime, startTime - 0.002);
+        softStartVoiceGain(g.gain, voiceVol, Math.max(t0, oscStart), {
+            wavetable: !!osc.isWavetable,
+        });
         osc.start(oscStart);
         if (lfoGain) {
             try { lfoGain.connect(osc.detune); } catch (_) { /* ignore */ }
         }
         oscs.push({ osc, gain: g, unisonCents: cents });
     }
+
+    // Keep shared panner in sync for this lane (live pan while Berlin runs)
+    if (panner) {
+        try {
+            panner.pan.setValueAtTime(readOscPanValue(oscIndex), t0);
+        } catch (_) { /* ignore */ }
+    }
+
 
     const doneAt = scheduleFullNoteOnGain(amp.gain, {
         startTime,
@@ -1816,17 +1888,7 @@ function startArp() {
 
     // Fade out any leftover phase-reset oscs before the new pattern starts
     if (state.phaseResetEnabled && state.activeOscillators.length > 0) {
-        state.activeOscillators.forEach(osc => {
-            if (!osc.started || !osc.gainNode) return;
-            try {
-                const g = osc.gainNode.gain;
-                g.cancelScheduledValues(now);
-                g.setValueAtTime(Math.max(0.00001, g.value || 0.00001), now);
-                g.exponentialRampToValueAtTime(0.00001, now + 0.008);
-                osc.stop(now + 0.012);
-                osc.disconnect();
-            } catch (_) { /* ignore */ }
-        });
+        state.activeOscillators.forEach((osc) => fadeStopOsc(osc, now + 0.012, { fadeSec: 0.02 }));
         state.activeOscillators = [];
     }
 
@@ -1975,28 +2037,15 @@ function playChordArpNote(cellSemitone, startTime, stepDuration) {
     }
 
     if (state.phaseResetEnabled) {
-        state.activeOscillators.forEach(osc => {
-            if (osc.started) {
-                try {
-                    const gainNode = osc.gainNode;
-                    if (gainNode) {
-                        gainNode.gain.cancelScheduledValues(startTime - 0.005);
-                        gainNode.gain.setValueAtTime(gainNode.gain.value, startTime - 0.005);
-                        gainNode.gain.linearRampToValueAtTime(0, startTime);
-                    }
-                    osc.stop(startTime + 0.001);
-                    osc.disconnect();
-                } catch (_) { /* ignore */ }
-            }
-        });
+        state.activeOscillators.forEach((osc) => fadeStopOsc(osc, startTime, { fadeSec: 0.022 }));
         state.activeOscillators = [];
         for (let i = 0; i < state.oscStates.length; i++) {
             if (state.oscStates[i]) {
                 const baseFreq = semitonesToFrequency(sounding, i);
                 spawnOscStack(i, baseFreq, startTime, {
-                    oscStart: startTime - 0.003,
-                    gainRampStart: startTime - 0.003,
-                    gainRampEnd: startTime,
+                    oscStart: startTime,
+                    gainRampStart: startTime,
+                    gainRampEnd: startTime + 0.02,
                 });
             }
         }
@@ -2250,26 +2299,14 @@ function playStep(step, startTime, stepDuration) {
         if (glissRoll) {
             // Land on this pitch (respawn unless continuing a non-gliss slide-in), then ramp out
             if (!(slideThisStep && state.activeOscillators.length > 0)) {
-                state.activeOscillators.forEach((osc) => {
-                    if (!osc.started) return;
-                    try {
-                        const gainNode = osc.gainNode;
-                        if (gainNode) {
-                            gainNode.gain.cancelScheduledValues(startTime - 0.005);
-                            gainNode.gain.setValueAtTime(gainNode.gain.value, startTime - 0.005);
-                            gainNode.gain.linearRampToValueAtTime(0, startTime);
-                        }
-                        osc.stop(startTime + 0.001);
-                        osc.disconnect();
-                    } catch (_) { /* ignore */ }
-                });
+                state.activeOscillators.forEach((osc) => fadeStopOsc(osc, startTime, { fadeSec: 0.022 }));
                 state.activeOscillators = [];
                 for (let i = 0; i < state.oscStates.length; i++) {
                     if (!state.oscStates[i]) continue;
                     spawnOscStack(i, stepToFrequency(step, i), startTime, {
-                        oscStart: startTime - 0.003,
-                        gainRampStart: startTime - 0.003,
-                        gainRampEnd: startTime,
+                        oscStart: startTime,
+                        gainRampStart: startTime,
+                        gainRampEnd: startTime + 0.02,
                     });
                 }
             }
@@ -2284,9 +2321,9 @@ function playStep(step, startTime, stepDuration) {
                     if (!state.oscStates[i]) continue;
                     const fromBase = state.lastStepFreqs[i] ?? stepToFrequency(step, i);
                     spawnOscStack(i, fromBase, startTime, {
-                        oscStart: startTime - 0.003,
-                        gainRampStart: startTime - 0.003,
-                        gainRampEnd: startTime,
+                        oscStart: startTime,
+                        gainRampStart: startTime,
+                        gainRampEnd: startTime + 0.02,
                     });
                 }
             }
@@ -2299,29 +2336,15 @@ function playStep(step, startTime, stepDuration) {
                 state.lastStepFreqs[i] = baseFreq;
             });
         } else {
-        state.activeOscillators.forEach(osc => {
-            if (osc.started) {
-                try {
-                    // Apply quick fadeout before stopping to avoid clicks
-                    const gainNode = osc.gainNode;
-                    if (gainNode) {
-                        gainNode.gain.cancelScheduledValues(startTime - 0.005);
-                        gainNode.gain.setValueAtTime(gainNode.gain.value, startTime - 0.005);
-                        gainNode.gain.linearRampToValueAtTime(0, startTime);
-                    }
-                    osc.stop(startTime + 0.001);
-                    osc.disconnect();
-                } catch (e) {}
-            }
-        });
+        state.activeOscillators.forEach((osc) => fadeStopOsc(osc, startTime, { fadeSec: 0.022 }));
         state.activeOscillators = [];
         for (let i = 0; i < state.oscStates.length; i++) {
             if (state.oscStates[i]) {
                 const baseFreq = stepToFrequency(step, i);
                 spawnOscStack(i, baseFreq, startTime, {
-                    oscStart: startTime - 0.003,
-                    gainRampStart: startTime - 0.003,
-                    gainRampEnd: startTime,
+                    oscStart: startTime,
+                    gainRampStart: startTime,
+                    gainRampEnd: startTime + 0.02,
                 });
             }
         }

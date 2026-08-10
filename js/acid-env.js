@@ -1,7 +1,7 @@
 // ACID mode: TB-303-style AD envelopes + accent sweep (Robin Whittle MEG/VEG).
 // When Off, callers keep the normal ADSR path untouched.
 
-import { state } from './state.js?v=104';
+import { state } from './state.js?v=106';
 import {
     getFilterEnvAmount,
     getFilterCutoffRange,

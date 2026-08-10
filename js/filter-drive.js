@@ -2,7 +2,7 @@
 // pad + mild pre-limit → LP → post soft-clip → makeup.
 // Chord intervals also soft-scale Q (biquad rails at high Q + multi-pitch).
 
-import { state, OSC_COUNT } from './state.js?v=106';
+import { state, OSC_COUNT } from './state.js?v=107';
 
 /** Soft-clip / peak-limit curve (drive↑ = more compression of peaks). */
 export function makeFilterInputCurve(drive = 2.0) {
@@ -132,10 +132,6 @@ export function refreshFilterInputDrive(rampTime = 0.04) {
             state.compressor.threshold.setTargetAtTime(-24, now, 0.05);
         } catch (_) { /* ignore */ }
     }
-
-    // #region agent log
-    fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5a7886'},body:JSON.stringify({sessionId:'5a7886',runId:'parity',hypothesisId:'V',location:'filter-drive.js:refreshFilterInputDrive',message:'drive staging',data:{pad,makeup,product:pad*makeup,dark,active,sum,spread,wtOut:dark?0.52:null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     applyFilterResonance(t);
 }

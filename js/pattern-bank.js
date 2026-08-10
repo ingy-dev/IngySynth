@@ -1,7 +1,7 @@
 // Pattern bank: normal mode uses slots 0–7 (P1–P8). Berlin Dream uses all 8 lanes
 // (O1–O4 pitch + M1–M4 modulation). Dom step strip is a view of `editSlot`.
 
-import { state } from './state.js?v=106';
+import { state } from './state.js?v=107';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Total Berlin lanes (and bank array length). */

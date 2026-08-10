@@ -856,7 +856,7 @@
                                         <span class="osc4-model-label">MODEL</span>
                                         <select id="kbOsc4Model" class="osc4-model-select" aria-label="Digital model">
                                             <option value="wavetable" selected>Wavetable</option>
-                                            <option value="pluck">Pluck</option>
+                                            <option value="fm">FM</option>
                                         </select>
                                     </div>
                                     <div class="osc4-model-row osc4-bank-row">
@@ -876,7 +876,7 @@
                                                     <span class="synth-knob-indicator"></span>
                                                 </div>
                                             </div>
-                                            <span class="synth-knob-value" id="kbOsc4HarmonicsValue">0.00</span>
+                                            <span class="synth-knob-value" id="kbOsc4HarmonicsValue">0.50</span>
                                         </div>
                                         <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="timbre">
                                             <span class="synth-knob-label">TIMBRE</span>
@@ -1948,7 +1948,7 @@
                                 <span class="osc4-model-label">MODEL</span>
                                 <select id="osc4Model" class="osc4-model-select" aria-label="Digital model">
                                     <option value="wavetable" selected>Wavetable</option>
-                                    <option value="pluck">Pluck</option>
+                                    <option value="fm">FM</option>
                                 </select>
                             </div>
                             <div class="osc4-model-row osc4-bank-row">
@@ -1968,7 +1968,7 @@
                                             <span class="synth-knob-indicator"></span>
                                         </div>
                                     </div>
-                                    <span class="synth-knob-value" id="osc4HarmonicsKnobValue">0.00</span>
+                                    <span class="synth-knob-value" id="osc4HarmonicsKnobValue">0.50</span>
                                 </div>
                                 <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="timbre">
                                     <span class="synth-knob-label">TIMBRE</span>
@@ -1991,7 +1991,7 @@
                             </div>
                         </div>
                         <!-- Canonical digital tone params (driven by knobs) -->
-                        <input type="range" id="osc4Harmonics" min="0" max="1" step="0.01" value="0" hidden aria-hidden="true">
+                        <input type="range" id="osc4Harmonics" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
                         <input type="range" id="osc4MorphX" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
                         <input type="range" id="osc4MorphY" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
                         <label>OSC 4 Tune</label>

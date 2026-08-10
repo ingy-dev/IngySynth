@@ -1,4 +1,4 @@
-import { state } from './state.js?v=106';
+import { state } from './state.js?v=107';
 import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=74';
 import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=101';
 import { initAudio } from './audio-engine.js?v=129';
@@ -12,7 +12,7 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=189';
+} from './sequencer.js?v=190';
 import { syncKeyboardStepsVisibilityWithKeyboard } from './keyboard-steps.js?v=92';
 import { refreshXYPad } from './xy-pad.js?v=75';
 import {

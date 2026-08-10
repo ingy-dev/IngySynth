@@ -1,7 +1,7 @@
 // Unipolar LFO amount strip on the keyboard play row (hardware mod-wheel style).
 // Latches on release; scales lfoMasterGain when LFO is On.
 
-import { state } from './state.js?v=106';
+import { state } from './state.js?v=107';
 import { getFilterCutoffRange, getFilterEnvAmount, refreshFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { getLfoRateHz } from './lfo-rate.js?v=7';
 

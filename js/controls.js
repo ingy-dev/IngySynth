@@ -1,14 +1,14 @@
-import { state, OSC_COUNT } from './state.js?v=106';
+import { state, OSC_COUNT } from './state.js?v=107';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
 } from './audio-engine.js?v=129';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=7';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=8';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { clearAccentSweep } from './acid-env.js?v=6';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=189';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=190';
 import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=90';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=74';
 import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown } from './midi.js?v=79';
@@ -26,7 +26,7 @@ import {
     applyOsc4MorphToLive,
     fadeStopOsc,
     OSC4_INDEX,
-} from './osc-source.js?v=27';
+} from './osc-source.js?v=34';
 
 function syncAcidModeUi() {
     syncAcidStripUi();
@@ -682,7 +682,21 @@ export function wireControls() {
     /** Which Plaits-style tone knobs are live for each digital model. */
     const OSC4_MODEL_TONES = {
         wavetable: { harmonics: false, timbre: true, morph: true },
-        pluck: { harmonics: true, timbre: true, morph: true },
+        fm: { harmonics: true, timbre: true, morph: true },
+    };
+
+    /** Per-model knob captions (Plaits manual meanings). BANK dropdown replaces WT harmonics. */
+    const OSC4_MODEL_LABELS = {
+        wavetable: {
+            harmonics: 'HARMONICS',
+            timbre: 'ROW',
+            morph: 'COLUMN',
+        },
+        fm: {
+            harmonics: 'RATIO',
+            timbre: 'INDEX',
+            morph: 'FEEDBACK',
+        },
     };
 
     function syncOsc4WavetableUi() {
@@ -719,14 +733,19 @@ export function wireControls() {
             if (sel && sel.value !== bank) sel.value = bank;
         });
 
-        // Grey out tone knobs that do nothing on the active model (BANK owns WT bank pick)
+        // Grey out inactive knobs + swap captions to the active model's meanings
         const activeTones = OSC4_MODEL_TONES[model] || OSC4_MODEL_TONES.wavetable;
+        const labels = OSC4_MODEL_LABELS[model] || OSC4_MODEL_LABELS.wavetable;
         document.querySelectorAll('.osc4-tone-knob[data-osc4-tone]').forEach((knob) => {
             const tone = knob.dataset.osc4Tone;
             const active = !!activeTones[tone];
+            const caption = labels[tone] || tone.toUpperCase();
             knob.classList.toggle('is-model-inactive', !active);
+            const labelEl = knob.querySelector('.synth-knob-label');
+            if (labelEl) labelEl.textContent = caption;
             const dial = knob.querySelector('.synth-knob-dial');
             if (dial) {
+                dial.setAttribute('aria-label', caption);
                 dial.setAttribute('aria-disabled', active ? 'false' : 'true');
                 dial.tabIndex = active ? 0 : -1;
             }
@@ -747,7 +766,7 @@ export function wireControls() {
     }
 
     function setOsc4Model(next) {
-        const model = next === 'pluck' ? 'pluck' : 'wavetable';
+        const model = next === 'fm' ? 'fm' : 'wavetable';
         if (state.osc4Model === model) {
             syncOsc4WavetableUi();
             return;

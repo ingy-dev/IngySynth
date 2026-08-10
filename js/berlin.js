@@ -1,7 +1,7 @@
 // Berlin Dream-960: eight lanes on one tempo — O1–O4 pitch+amp, M1–M4 filter CV.
 // Acid and Poly are mutually exclusive with it.
 
-import { state } from './state.js?v=106';
+import { state } from './state.js?v=107';
 import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=74';
 import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=90';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';

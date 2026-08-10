@@ -1,7 +1,7 @@
 // Entry point: import order mirrors the original single-file script order.
 import { initAudio } from './audio-engine.js?v=129';
-import { startIdleMarquee } from './sequencer.js?v=189';
-import './controls.js?v=209';
+import { startIdleMarquee } from './sequencer.js?v=190';
+import './controls.js?v=211';
 import './midi.js?v=79';
 import './visualizers.js?v=90';
 import { syncNoteVfdFromPeer } from './visualizers.js?v=90';

@@ -1,10 +1,10 @@
-import { state, OSC_COUNT } from './state.js?v=106';
-import { wireControls } from './controls.js?v=209';
+import { state, OSC_COUNT } from './state.js?v=107';
+import { wireControls } from './controls.js?v=211';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { updateLfoSmoothing } from './lfo-strip.js?v=15';
 import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=7';
-import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=7';
-import { ensurePlaitsWorklet, createOscSource } from './osc-source.js?v=27';
+import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=8';
+import { ensurePlaitsWorklet, createOscSource } from './osc-source.js?v=34';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;

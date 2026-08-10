@@ -1,6 +1,6 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
-import { state } from './state.js?v=106';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=189';
+import { state } from './state.js?v=107';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=190';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
 import { bindKnob } from './knobs.js?v=99';
 import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=9';

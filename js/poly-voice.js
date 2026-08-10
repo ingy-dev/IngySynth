@@ -1,10 +1,10 @@
 // Kb-only 6-voice polyphonic playground (shared filter, per-voice amp).
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
-import { state, OSC_COUNT } from './state.js?v=106';
+import { state, OSC_COUNT } from './state.js?v=107';
 import { semitonesToFrequency } from './tuning.js?v=74';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=78';
-import { refreshFilterInputDrive } from './filter-drive.js?v=7';
+import { refreshFilterInputDrive } from './filter-drive.js?v=8';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,

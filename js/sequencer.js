@@ -1,4 +1,4 @@
-import { state } from './state.js?v=106';
+import { state } from './state.js?v=107';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -16,7 +16,7 @@ import { getLfoRateHz } from './lfo-rate.js?v=7';
 import { bentFrequency } from './pitch-bend.js?v=76';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
 import { spawnOscStack, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=135';
-import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, wtAttackTuningSnapshot } from './osc-source.js?v=27';
+import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc } from './osc-source.js?v=34';
 import { notifyAutomationLoopAnchor } from './automation.js?v=33';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=5';
 import {
@@ -492,11 +492,6 @@ function scheduleStepEnvelope({
     const gateWindow = stepDuration * gateLen;
     const wtAmpFloor = darkOsc ? Math.max(0.008, wtAttackSecForFilter() * 0.55) : 0.002;
     const safeAttackTime = Math.max(wtAmpFloor, scaleAdsrTime(attack));
-    // #region agent log
-    if (darkOsc || !!state.osc4Wavetable) {
-        fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5a7886'},body:JSON.stringify({sessionId:'5a7886',runId:'defaults-restored',hypothesisId:'A',location:'sequencer.js:scheduleStepEnvelope',message:'amp attack floor',data:{safeAttackTime,wtAmpFloor,wtGate:wtAttackSecForFilter(),darkOsc,wt:!!state.osc4Wavetable,...wtAttackTuningSnapshot()},timestamp:Date.now()})}).catch(()=>{});
-    }
-    // #endregion
     const availableDecayTime = Math.max(0, gateWindow * 0.8 - safeAttackTime);
     const safeDecayTime = Math.max(0.002, Math.min(scaleAdsrTime(decay), availableDecayTime));
 

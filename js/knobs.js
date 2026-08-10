@@ -3,7 +3,7 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=189';
+import { previewStepsOnVfd } from './sequencer.js?v=190';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;

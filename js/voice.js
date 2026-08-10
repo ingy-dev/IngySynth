@@ -1,10 +1,10 @@
-import { state } from './state.js?v=106';
+import { state } from './state.js?v=107';
 import { semitonesToFrequency } from './tuning.js?v=74';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=78';
 import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=90';
 import { bentFrequency } from './pitch-bend.js?v=76';
 import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=135';
-import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive } from './osc-source.js?v=27';
+import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive } from './osc-source.js?v=34';
 import {
     triggerAcidLiveAmp,
     triggerAcidLiveFilter,

@@ -2,7 +2,7 @@
 // Each step mirrors the Sequencer section: semitone knob → .step-tune,
 // tiny microtune → .step-fine, Acc/Sld/On → accent/slide/toggle.
 
-import { state } from './state.js?v=106';
+import { state } from './state.js?v=107';
 import { getQuantizedStepTune } from './tuning.js?v=74';
 import { bindKnob } from './knobs.js?v=99';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';

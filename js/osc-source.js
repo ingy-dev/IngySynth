@@ -1,8 +1,8 @@
 // Shared oscillator factory: classic OscillatorNode or OSC4 wavetable worklet.
-// Built so additional Plaits-style engines (pluck, etc.) can share the same shell.
+// Built so additional Plaits-style engines (fm, etc.) can share the same shell.
 // Wavetable voices are pooled — creating AudioWorkletNode per note causes crackle.
 
-import { state } from './state.js?v=106';
+import { state } from './state.js?v=107';
 
 export const OSC4_INDEX = 3;
 export const PLAITS_PROCESSOR = 'plaits-engine-processor';
@@ -86,11 +86,6 @@ export function softStartVoiceGain(gainParam, targetVol, when, { wavetable = fal
     const t = Math.max(0, when || 0);
     const peak = Math.max(0, Number(targetVol) || 0);
     const attack = wavetable ? wtAttackSecForFilter() : 0.004;
-    // #region agent log
-    if (wavetable) {
-        fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5a7886'},body:JSON.stringify({sessionId:'5a7886',runId:'defaults-restored',hypothesisId:'A',location:'osc-source.js:softStartVoiceGain',message:'voice gain attack',data:{attack,peak,...wtAttackTuningSnapshot()},timestamp:Date.now()})}).catch(()=>{});
-    }
-    // #endregion
     try {
         gainParam.cancelScheduledValues(t);
         gainParam.setValueAtTime(0, t);
@@ -115,24 +110,30 @@ export function softStartVoiceGain(gainParam, targetVol, when, { wavetable = fal
 function holdThenRamp(param, when, target, endTime) {
     if (!param) return { held: false, lookahead: 0, valueNow: 0 };
     const ctx = state.audioContext;
-    const t = Math.max(ctx?.currentTime || 0, when || 0);
+    const now = ctx?.currentTime || 0;
+    const t = Math.max(now, when || 0);
     const end = Math.max(t, endTime || t);
     const valueNow = Number(param.value) || 0;
-    const lookahead = t - (ctx?.currentTime || 0);
+    const lookahead = t - now;
     let held = false;
     try {
+        // Prefer hold-at-t so future note-offs don't jump from a stale .value (often 0)
         if (typeof param.cancelAndHoldAtTime === 'function') {
             param.cancelAndHoldAtTime(t);
             held = true;
-        } else {
+        } else if (t <= now + 0.0005) {
             param.cancelScheduledValues(t);
             param.setValueAtTime(Math.max(0.00001, valueNow), t);
+        } else {
+            // Future schedule without hold API: assume digital gate is open at release
+            param.cancelScheduledValues(t);
+            param.setValueAtTime(Math.max(0.00001, valueNow > 0.05 ? valueNow : 1), t);
         }
         param.linearRampToValueAtTime(target, end);
     } catch (_) {
         try {
             param.cancelScheduledValues(t);
-            param.setValueAtTime(Math.max(0.00001, valueNow), t);
+            param.setValueAtTime(Math.max(0.00001, valueNow > 0.05 ? valueNow : 1), t);
             param.linearRampToValueAtTime(target, end);
         } catch (__) { /* ignore */ }
     }
@@ -165,9 +166,49 @@ export function fadeStopOsc(osc, when, { fadeSec = 0.02 } = {}) {
     } catch (_) { /* ignore */ }
 }
 
-/** @type {{ ctx: AudioContext, node: AudioWorkletNode, inUse: boolean, gen: number }[]} */
+/** @type {{ ctx: AudioContext, node: AudioWorkletNode, inUse: boolean, gen: number, tablesSent?: boolean }[]} */
 let wtPool = [];
 let wtPoolCtx = null;
+/** Official Plaits wavetable ROM (float32 LE, 4×64×128). */
+let plaitsTablesBuffer = null;
+let plaitsTablesPromise = null;
+
+const PLAITS_TABLES_URL = () =>
+    new URL(`js/worklets/plaits-wavetables.bin?v=1`, window.location.href).href;
+
+function loadPlaitsTables() {
+    if (plaitsTablesBuffer) return Promise.resolve(plaitsTablesBuffer);
+    if (plaitsTablesPromise) return plaitsTablesPromise;
+    plaitsTablesPromise = fetch(PLAITS_TABLES_URL())
+        .then((r) => {
+            if (!r.ok) throw new Error(`wavetables HTTP ${r.status}`);
+            return r.arrayBuffer();
+        })
+        .then((buf) => {
+            // 4 banks × 64 waves × 128 samples × 4 bytes
+            if (buf.byteLength < 4 * 64 * 128 * 4) {
+                throw new Error(`wavetables too small: ${buf.byteLength}`);
+            }
+            plaitsTablesBuffer = buf;
+            return buf;
+        })
+        .catch((err) => {
+            console.warn('Plaits wavetable ROM failed to load:', err);
+            plaitsTablesPromise = null;
+            return null;
+        });
+    return plaitsTablesPromise;
+}
+
+function injectPlaitsTables(node) {
+    if (!node || !plaitsTablesBuffer) return;
+    try {
+        // Clone so multiple worklet nodes each get a usable copy
+        node.port.postMessage({ tables: plaitsTablesBuffer.slice(0) });
+    } catch (err) {
+        console.warn('Failed to inject Plaits tables into worklet:', err);
+    }
+}
 
 export function isOsc4Wavetable() {
     return !!state.osc4Wavetable && !!state.plaitsWorkletReady;
@@ -184,6 +225,12 @@ export function readOsc4Morph() {
     };
 }
 
+export function readOsc4Harmonics() {
+    const el = document.getElementById('osc4Harmonics');
+    const v = el ? parseFloat(el.value) : state.osc4Harmonics;
+    return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.5;
+}
+
 function resetWtPoolIfNeeded(ctx) {
     if (wtPoolCtx === ctx) return;
     wtPool.forEach((slot) => {
@@ -193,13 +240,13 @@ function resetWtPoolIfNeeded(ctx) {
     wtPoolCtx = ctx;
 }
 
-/** Load AudioWorklet once per AudioContext. Safe to call repeatedly. */
+/** Load AudioWorklet + official Plaits wavetable ROM once per AudioContext. */
 export function ensurePlaitsWorklet(ctx = state.audioContext) {
     if (!ctx?.audioWorklet) {
         state.plaitsWorkletReady = false;
         return Promise.resolve(false);
     }
-    if (state.plaitsWorkletReady && state.plaitsWorkletCtx === ctx) {
+    if (state.plaitsWorkletReady && state.plaitsWorkletCtx === ctx && plaitsTablesBuffer) {
         return Promise.resolve(true);
     }
     if (state.plaitsWorkletPromise && state.plaitsWorkletCtx === ctx) {
@@ -207,10 +254,16 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
     }
 
     state.plaitsWorkletCtx = ctx;
-    const url = new URL(`js/worklets/plaits-engine-processor.js?v=7`, window.location.href).href;
-    state.plaitsWorkletPromise = ctx.audioWorklet
-        .addModule(url)
-        .then(() => {
+    const url = new URL(`js/worklets/plaits-engine-processor.js?v=13`, window.location.href).href;
+    state.plaitsWorkletPromise = Promise.all([
+        ctx.audioWorklet.addModule(url),
+        loadPlaitsTables(),
+    ])
+        .then(([, tables]) => {
+            if (!tables) {
+                state.plaitsWorkletReady = false;
+                return false;
+            }
             state.plaitsWorkletReady = true;
             resetWtPoolIfNeeded(ctx);
             return true;
@@ -252,16 +305,22 @@ function acquirePoolSlot(ctx) {
                     detune: 0,
                     morphX: 0.5,
                     morphY: 0.5,
+                    harmonics: 0.5,
                     bank: 0,
                     gate: 0,
                 },
             });
-            slot = { ctx, node, inUse: false, gen: 0 };
+            injectPlaitsTables(node);
+            slot = { ctx, node, inUse: false, gen: 0, tablesSent: true };
             wtPool.push(slot);
         }
     }
     slot.inUse = true;
     slot.gen += 1;
+    if (!slot.tablesSent) {
+        injectPlaitsTables(slot.node);
+        slot.tablesSent = true;
+    }
     return slot;
 }
 
@@ -279,6 +338,7 @@ function releasePoolSlot(slot, gen) {
 
 function createWavetableProxy(ctx, frequency) {
     const { x, y } = readOsc4Morph();
+    const harmonics = readOsc4Harmonics();
     const slot = acquirePoolSlot(ctx);
     const node = slot.node;
     const gen = slot.gen;
@@ -289,6 +349,7 @@ function createWavetableProxy(ctx, frequency) {
     const gateParam = node.parameters.get('gate');
     const morphXParam = node.parameters.get('morphX');
     const morphYParam = node.parameters.get('morphY');
+    const harmonicsParam = node.parameters.get('harmonics');
 
     try {
         gateParam.cancelScheduledValues(now);
@@ -297,6 +358,7 @@ function createWavetableProxy(ctx, frequency) {
         detuneParam.setValueAtTime(0, now);
         morphXParam.setValueAtTime(x, now);
         morphYParam.setValueAtTime(y, now);
+        if (harmonicsParam) harmonicsParam.setValueAtTime(harmonics, now);
         node.parameters.get('bank').setValueAtTime(state.osc4Bank || 0, now);
         // Idle reset only — note-on phase reset is edge-triggered in the worklet
         node.port.postMessage({ reset: true, engine: state.osc4Model || 'wavetable' });
@@ -315,6 +377,7 @@ function createWavetableProxy(ctx, frequency) {
         detune: detuneParam,
         morphX: morphXParam,
         morphY: morphYParam,
+        harmonics: harmonicsParam,
         isWavetable: true,
         _worklet: node,
         _outGain: outGain,
@@ -393,11 +456,13 @@ export function createOscSource(ctx, {
     return osc;
 }
 
-/** Push current OSC4 digital tone params onto all live wavetable voices. */
+/** Push current OSC4 digital tone params onto all live digital voices. */
 export function applyOsc4MorphToLive() {
     const { x, y } = readOsc4Morph();
+    const harmonics = readOsc4Harmonics();
     state.osc4MorphX = x;
     state.osc4MorphY = y;
+    state.osc4Harmonics = harmonics;
     const bankEl = document.getElementById('osc4Bank');
     const bankFromUi = bankEl ? parseInt(bankEl.value, 10) : state.osc4Bank;
     const bank = Math.max(0, Math.min(3, Number.isFinite(bankFromUi) ? bankFromUi : 0));
@@ -412,6 +477,9 @@ export function applyOsc4MorphToLive() {
             }
             if (osc.morphY) {
                 osc.morphY.setValueAtTime(y, now);
+            }
+            if (osc.harmonics) {
+                osc.harmonics.setValueAtTime(harmonics, now);
             }
             const bankParam = osc._worklet?.parameters?.get('bank');
             if (bankParam) {

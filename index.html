@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=307">
+    <link rel="stylesheet" href="styles.css?v=313">
 </head>
 <body>
     <div class="container">
@@ -392,12 +392,22 @@
                                     <div class="keyboard-transpose-screen" aria-label="Keyboard transpose">
                                         <span id="keyboardTransposeReadout" class="keyboard-transpose-readout">T: 0 (C)</span>
                                     </div>
-                                    <button id="kbPatternScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Scale: Off</button>
                                 </div>
                                 <div class="keyboard-tuning-center">
                                     <div class="keyboard-tuning-note note-vfd" id="kbPatternNoteVisualizer" aria-live="polite" aria-label="Current note" data-text="Note">
                                         <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
                                     </div>
+                                    <fieldset class="keyboard-scale-fieldset" aria-label="Scale">
+                                        <legend><span class="legend-hex">Scale</span></legend>
+                                        <div class="keyboard-scale-fieldset-body">
+                                            <div class="keyboard-tuning-scale-row" id="kbTuningScaleSelectRow" style="display: none;">
+                                                <select id="kbPatternScaleSelect" class="keyboard-scale-select" aria-label="Pattern scale">
+                                                    <!-- Populated to match sequencer scale list -->
+                                                </select>
+                                            </div>
+                                            <button id="kbPatternScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Off</button>
+                                        </div>
+                                    </fieldset>
                                 </div>
                                 <div class="keyboard-tuning-right">
                                     <div class="keyboard-pattern-octave" aria-label="Octave switch">
@@ -445,19 +455,20 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="keyboard-tuning-scale-row" id="kbTuningScaleSelectRow" style="display: none;">
-                                <select id="kbPatternScaleSelect" class="keyboard-scale-select" aria-label="Pattern scale">
-                                    <!-- Populated to match sequencer scale list -->
-                                </select>
-                            </div>
                         </div>
                     </fieldset>
                     <div class="keyboard-mode-toggle-row" aria-label="Mode toggles">
                         <button id="kbAcidStripToggle" class="pushable off keyboard-acid-strip-toggle" type="button" aria-label="Acid mode on or off" aria-pressed="false">
-                            <span class="front">Acid Mode</span>
+                            <span class="front">
+                                <span class="kb-acid-mode-label" aria-hidden="true"></span>
+                                <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
+                            </span>
                         </button>
                         <button id="berlinToggle" class="pushable off keyboard-berlin-toggle" type="button" aria-label="Berlin Dream-960 on or off" aria-pressed="false">
-                            <span class="front">Berlin Dream-960</span>
+                            <span class="front">
+                                <span class="kb-berlin-label" aria-hidden="true"></span>
+                                <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
+                            </span>
                         </button>
                     </div>
                     <fieldset class="keyboard-steps-fieldset collapsible-fieldset" id="keyboardStepsFieldset">
@@ -724,14 +735,14 @@
                             </div>
                         </div>
                     </fieldset>
-                    <fieldset class="keyboard-synth-fieldset collapsible-fieldset collapsed" id="keyboardSynthFieldset">
+                    <fieldset class="keyboard-synth-fieldset collapsible-fieldset" id="keyboardSynthFieldset">
                         <legend class="collapsible-legend">
-                            <button id="keyboardSynthToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardSynthPanel">
+                            <button id="keyboardSynthToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardSynthPanel">
                                 <span class="collapsible-label">Synthesizer</span>
                                 <span class="collapsible-arrow" aria-hidden="true"></span>
                             </button>
                         </legend>
-                        <div id="keyboardSynthPanel" class="keyboard-synth-panel collapsible-panel hidden" hidden>
+                        <div id="keyboardSynthPanel" class="keyboard-synth-panel collapsible-panel">
                             <div class="keyboard-synth-grid">
                             <fieldset class="keyboard-perf-fieldset keyboard-osc-group keyboard-synth-col keyboard-synth-col--oscs">
                                 <legend>Oscillators</legend>
@@ -739,6 +750,68 @@
                             <fieldset class="keyboard-perf-fieldset keyboard-osc-field" data-osc="0">
                                 <legend>OSC 1</legend>
                                 <div class="keyboard-osc-controls">
+                                <div class="osc4-engine-switch" role="group" aria-label="Oscillator 1 engine">
+                                    <button type="button" class="ingy6-switch-btn osc4-engine-btn" data-engine="analog" aria-pressed="true">ANALOG</button>
+                                    <button type="button" class="ingy6-switch-btn osc4-engine-btn off" data-engine="digital" aria-pressed="false">DIGITAL</button>
+                                </div>
+                                <span class="osc4-plaititudes-logo" aria-hidden="true"></span>
+                                <div class="osc4-digital-params" hidden>
+                                    <div class="osc4-model-row">
+                                        <span class="osc4-model-label">MODEL</span>
+                                        <select id="kbOsc4Model" class="osc4-model-select" aria-label="Digital model">
+                                            <option value="wavetable" selected>Wavetable</option>
+                                            <option value="fm">FM</option>
+                                            <option value="waveshaper">Waveshaper</option>
+                                            <option value="modal">Modal</option>
+                                            <option value="string">Pluck</option>
+                                            <optgroup label="Drums">
+                                                <option value="bass_drum">Bass Drum</option>
+                                                <option value="snare">Snare</option>
+                                                <option value="hihat">Hi-Hat</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div class="osc4-model-row osc4-bank-row">
+                                        <span class="osc4-model-label">BANK</span>
+                                        <select id="kbOsc4Bank" class="osc4-model-select osc4-bank-select" aria-label="Wavetable bank">
+                                            <option value="-1" selected>Scan (Harmonics)</option>
+                                            <option value="0">A</option>
+                                            <option value="1">B</option>
+                                            <option value="2">C</option>
+                                            <option value="3">D</option>
+                                        </select>
+                                    </div>
+                                    <div class="keyboard-osc-knob-row osc4-tone-knob-row">
+                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="harmonics">
+                                            <span class="synth-knob-label">HARMONICS</span>
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbOsc4HarmonicsKnob" role="slider" aria-label="Harmonics" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                            <span class="synth-knob-value" id="kbOsc4HarmonicsValue">0.50</span>
+                                        </div>
+                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="timbre">
+                                            <span class="synth-knob-label">TIMBRE</span>
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbOsc4TimbreKnob" role="slider" aria-label="Timbre" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                            <span class="synth-knob-value" id="kbOsc4TimbreValue">0.50</span>
+                                        </div>
+                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="morph">
+                                            <span class="synth-knob-label">MORPH</span>
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbOsc4MorphKnob" role="slider" aria-label="Morph" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                            <span class="synth-knob-value" id="kbOsc4MorphValue">0.50</span>
+                                        </div>
+                                    </div>
+                                    <span class="osc4-multi-model-body" aria-hidden="true"></span>
+                                </div>
                                 <div class="keyboard-osc-wave" data-osc="0" role="radiogroup" aria-label="Oscillator 1 waveform"></div>
                                 <div class="keyboard-osc-knob-row">
                                 <div class="synth-knob keyboard-osc-knob">
@@ -847,57 +920,6 @@
                             <fieldset class="keyboard-perf-fieldset keyboard-osc-field" data-osc="3">
                                 <legend>OSC 4</legend>
                                 <div class="keyboard-osc-controls">
-                                <div class="osc4-engine-switch" role="group" aria-label="Oscillator 4 engine">
-                                    <button type="button" class="ingy6-switch-btn osc4-engine-btn" data-engine="analog" aria-pressed="true">ANALOG</button>
-                                    <button type="button" class="ingy6-switch-btn osc4-engine-btn off" data-engine="digital" aria-pressed="false">DIGITAL</button>
-                                </div>
-                                <div class="osc4-digital-params" hidden>
-                                    <div class="osc4-model-row">
-                                        <span class="osc4-model-label">MODEL</span>
-                                        <select id="kbOsc4Model" class="osc4-model-select" aria-label="Digital model">
-                                            <option value="wavetable" selected>Wavetable</option>
-                                            <option value="fm">FM</option>
-                                        </select>
-                                    </div>
-                                    <div class="osc4-model-row osc4-bank-row">
-                                        <span class="osc4-model-label">BANK</span>
-                                        <select id="kbOsc4Bank" class="osc4-model-select osc4-bank-select" aria-label="Wavetable bank">
-                                            <option value="0" selected>A</option>
-                                            <option value="1">B</option>
-                                            <option value="2">C</option>
-                                            <option value="3">D</option>
-                                        </select>
-                                    </div>
-                                    <div class="keyboard-osc-knob-row osc4-tone-knob-row">
-                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="harmonics">
-                                            <span class="synth-knob-label">HARMONICS</span>
-                                            <div class="synth-knob-dial-wrap">
-                                                <div class="synth-knob-dial" id="kbOsc4HarmonicsKnob" role="slider" aria-label="Harmonics" aria-valuemin="0" aria-valuemax="1" tabindex="0">
-                                                    <span class="synth-knob-indicator"></span>
-                                                </div>
-                                            </div>
-                                            <span class="synth-knob-value" id="kbOsc4HarmonicsValue">0.50</span>
-                                        </div>
-                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="timbre">
-                                            <span class="synth-knob-label">TIMBRE</span>
-                                            <div class="synth-knob-dial-wrap">
-                                                <div class="synth-knob-dial" id="kbOsc4TimbreKnob" role="slider" aria-label="Timbre" aria-valuemin="0" aria-valuemax="1" tabindex="0">
-                                                    <span class="synth-knob-indicator"></span>
-                                                </div>
-                                            </div>
-                                            <span class="synth-knob-value" id="kbOsc4TimbreValue">0.50</span>
-                                        </div>
-                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="morph">
-                                            <span class="synth-knob-label">MORPH</span>
-                                            <div class="synth-knob-dial-wrap">
-                                                <div class="synth-knob-dial" id="kbOsc4MorphKnob" role="slider" aria-label="Morph" aria-valuemin="0" aria-valuemax="1" tabindex="0">
-                                                    <span class="synth-knob-indicator"></span>
-                                                </div>
-                                            </div>
-                                            <span class="synth-knob-value" id="kbOsc4MorphValue">0.50</span>
-                                        </div>
-                                    </div>
-                                </div>
                                 <div class="keyboard-osc-wave" data-osc="3" role="radiogroup" aria-label="Oscillator 4 waveform"></div>
                                 <div class="keyboard-osc-knob-row">
                                 <div class="synth-knob keyboard-osc-knob">
@@ -1326,12 +1348,22 @@
                                     <div class="keyboard-transpose-screen" aria-label="Keyboard transpose">
                                         <span id="kbXyTransposeReadout" class="keyboard-transpose-readout">T: 0 (C)</span>
                                     </div>
-                                    <button id="kbXyScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Scale: Off</button>
                                 </div>
                                 <div class="keyboard-tuning-center">
                                     <div class="keyboard-tuning-note note-vfd" id="kbXyNoteVisualizer" aria-live="polite" aria-label="Current note" data-text="Note">
                                         <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
                                     </div>
+                                    <fieldset class="keyboard-scale-fieldset" aria-label="Scale">
+                                        <legend><span class="legend-hex">Scale</span></legend>
+                                        <div class="keyboard-scale-fieldset-body">
+                                            <div class="keyboard-tuning-scale-row" id="kbXyScaleSelectRow" style="display: none;">
+                                                <select id="kbXyScaleSelect" class="keyboard-scale-select" aria-label="Keyboard scale">
+                                                    <!-- Populated to match sequencer scale list -->
+                                                </select>
+                                            </div>
+                                            <button id="kbXyScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Off</button>
+                                        </div>
+                                    </fieldset>
                                 </div>
                                 <div class="keyboard-tuning-right">
                                     <div class="keyboard-pattern-octave" aria-label="Octave switch">
@@ -1379,22 +1411,20 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="keyboard-tuning-scale-row" id="kbXyScaleSelectRow" style="display: none;">
-                                <select id="kbXyScaleSelect" class="keyboard-scale-select" aria-label="Keyboard scale">
-                                    <!-- Populated to match sequencer scale list -->
-                                </select>
-                            </div>
                         </div>
                     </fieldset>
                     <div id="keyboardPolyToggleHome" class="keyboard-mode-toggle-row keyboard-poly-toggle-row" aria-label="Mode toggles">
                         <button id="keyboardChordMemToggle" class="pushable off keyboard-chord-mem-toggle" type="button" aria-pressed="false" aria-label="Chord memory learn">
                             <span class="front">
-                                <span class="kb-chord-mem-label">Chord Memory</span>
+                                <span class="kb-chord-mem-label" aria-hidden="true"></span>
                                 <span class="kb-chord-mem-dot" aria-hidden="true"></span>
                             </span>
                         </button>
                         <button id="keyboardPolyToggle" class="pushable off keyboard-poly-toggle" type="button" aria-pressed="false" aria-label="Polyphonic mode">
-                            <span class="front">Poly Mode</span>
+                            <span class="front">
+                                <span class="kb-poly-mode-label" aria-hidden="true"></span>
+                                <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
+                            </span>
                         </button>
                     </div>
                     <!-- Ingy 6 (poly) panel — visible only in poly mode; no fieldset legend -->
@@ -1864,6 +1894,72 @@
                 <fieldset class="control-group osc1-group">
                     <legend>OSC 1</legend>
                     <div class="control">
+                        <div class="osc4-engine-switch" role="group" aria-label="Oscillator 1 engine">
+                            <button type="button" class="ingy6-switch-btn osc4-engine-btn" data-engine="analog" aria-pressed="true">ANALOG</button>
+                            <button type="button" class="ingy6-switch-btn osc4-engine-btn off" data-engine="digital" aria-pressed="false">DIGITAL</button>
+                        </div>
+                        <span class="osc4-plaititudes-logo" aria-hidden="true"></span>
+                        <div class="osc4-digital-params" hidden>
+                            <div class="osc4-model-row">
+                                <span class="osc4-model-label">MODEL</span>
+                                <select id="osc4Model" class="osc4-model-select" aria-label="Digital model">
+                                    <option value="wavetable" selected>Wavetable</option>
+                                    <option value="fm">FM</option>
+                                    <option value="waveshaper">Waveshaper</option>
+                                    <option value="modal">Modal</option>
+                                    <option value="string">Pluck</option>
+                                    <optgroup label="Drums">
+                                        <option value="bass_drum">Bass Drum</option>
+                                        <option value="snare">Snare</option>
+                                        <option value="hihat">Hi-Hat</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="osc4-model-row osc4-bank-row">
+                                <span class="osc4-model-label">BANK</span>
+                                <select id="osc4Bank" class="osc4-model-select osc4-bank-select" aria-label="Wavetable bank">
+                                    <option value="-1" selected>Scan (Harmonics)</option>
+                                    <option value="0">A</option>
+                                    <option value="1">B</option>
+                                    <option value="2">C</option>
+                                    <option value="3">D</option>
+                                </select>
+                            </div>
+                            <div class="osc4-tone-knob-row">
+                                <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="harmonics">
+                                    <span class="synth-knob-label">HARMONICS</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="osc4HarmonicsKnob" role="slider" aria-label="Harmonics" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="osc4HarmonicsKnobValue">0.50</span>
+                                </div>
+                                <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="timbre">
+                                    <span class="synth-knob-label">TIMBRE</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="osc4TimbreKnob" role="slider" aria-label="Timbre" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="osc4TimbreKnobValue">0.50</span>
+                                </div>
+                                <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="morph">
+                                    <span class="synth-knob-label">MORPH</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="osc4MorphKnob" role="slider" aria-label="Morph" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <span class="synth-knob-value" id="osc4MorphKnobValue">0.50</span>
+                                </div>
+                            </div>
+                            <span class="osc4-multi-model-body" aria-hidden="true"></span>
+                        </div>
+                        <!-- Canonical digital tone params (driven by knobs) -->
+                        <input type="range" id="osc4Harmonics" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
+                        <input type="range" id="osc4MorphX" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
+                        <input type="range" id="osc4MorphY" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
                         <label>OSC 1 Tune</label>
                         <input type="range" class="osc-tune" data-osc="0" min="-12" max="12" value="0">
                         <span class="osc-tune-value">0</span>
@@ -1939,61 +2035,6 @@
                 <fieldset class="control-group osc4-group">
                     <legend>OSC 4</legend>
                     <div class="control">
-                        <div class="osc4-engine-switch" role="group" aria-label="Oscillator 4 engine">
-                            <button type="button" class="ingy6-switch-btn osc4-engine-btn" data-engine="analog" aria-pressed="true">ANALOG</button>
-                            <button type="button" class="ingy6-switch-btn osc4-engine-btn off" data-engine="digital" aria-pressed="false">DIGITAL</button>
-                        </div>
-                        <div class="osc4-digital-params" hidden>
-                            <div class="osc4-model-row">
-                                <span class="osc4-model-label">MODEL</span>
-                                <select id="osc4Model" class="osc4-model-select" aria-label="Digital model">
-                                    <option value="wavetable" selected>Wavetable</option>
-                                    <option value="fm">FM</option>
-                                </select>
-                            </div>
-                            <div class="osc4-model-row osc4-bank-row">
-                                <span class="osc4-model-label">BANK</span>
-                                <select id="osc4Bank" class="osc4-model-select osc4-bank-select" aria-label="Wavetable bank">
-                                    <option value="0" selected>A</option>
-                                    <option value="1">B</option>
-                                    <option value="2">C</option>
-                                    <option value="3">D</option>
-                                </select>
-                            </div>
-                            <div class="osc4-tone-knob-row">
-                                <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="harmonics">
-                                    <span class="synth-knob-label">HARMONICS</span>
-                                    <div class="synth-knob-dial-wrap">
-                                        <div class="synth-knob-dial" id="osc4HarmonicsKnob" role="slider" aria-label="Harmonics" aria-valuemin="0" aria-valuemax="1" tabindex="0">
-                                            <span class="synth-knob-indicator"></span>
-                                        </div>
-                                    </div>
-                                    <span class="synth-knob-value" id="osc4HarmonicsKnobValue">0.50</span>
-                                </div>
-                                <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="timbre">
-                                    <span class="synth-knob-label">TIMBRE</span>
-                                    <div class="synth-knob-dial-wrap">
-                                        <div class="synth-knob-dial" id="osc4TimbreKnob" role="slider" aria-label="Timbre" aria-valuemin="0" aria-valuemax="1" tabindex="0">
-                                            <span class="synth-knob-indicator"></span>
-                                        </div>
-                                    </div>
-                                    <span class="synth-knob-value" id="osc4TimbreKnobValue">0.50</span>
-                                </div>
-                                <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="morph">
-                                    <span class="synth-knob-label">MORPH</span>
-                                    <div class="synth-knob-dial-wrap">
-                                        <div class="synth-knob-dial" id="osc4MorphKnob" role="slider" aria-label="Morph" aria-valuemin="0" aria-valuemax="1" tabindex="0">
-                                            <span class="synth-knob-indicator"></span>
-                                        </div>
-                                    </div>
-                                    <span class="synth-knob-value" id="osc4MorphKnobValue">0.50</span>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Canonical digital tone params (driven by knobs) -->
-                        <input type="range" id="osc4Harmonics" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
-                        <input type="range" id="osc4MorphX" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
-                        <input type="range" id="osc4MorphY" min="0" max="1" step="0.01" value="0.5" hidden aria-hidden="true">
                         <label>OSC 4 Tune</label>
                         <input type="range" class="osc-tune" data-osc="3" min="-12" max="12" value="0">
                         <span class="osc-tune-value">0</span>
@@ -2374,6 +2415,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=321"></script>
+    <script type="module" src="js/main.js?v=90"></script>
 </body>
 </html>

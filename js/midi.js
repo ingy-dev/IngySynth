@@ -7,7 +7,7 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=152';
+} from './keyboard.js?v=158';
 import { needsHeldNoteSet } from './held-notes.js?v=5';
 
 /** MIDI note number → cell semitone while held (for Chord arp / Chord Mem). */

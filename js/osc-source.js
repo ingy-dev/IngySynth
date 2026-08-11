@@ -1,15 +1,59 @@
-// Shared oscillator factory: classic OscillatorNode or OSC4 wavetable worklet.
-// Built so additional Plaits-style engines (fm, etc.) can share the same shell.
-// Wavetable voices are pooled — creating AudioWorkletNode per note causes crackle.
+// Shared oscillator factory: classic OscillatorNode or OSC1 digital worklet.
+// Plaits-style engines share one pooled AudioWorkletNode shell.
+// Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
 import { state } from './state.js?v=107';
 
-export const OSC4_INDEX = 3;
+/** Slot index for the Analog/Digital engine (OSC 1). */
+export const OSC4_INDEX = 0;
 export const PLAITS_PROCESSOR = 'plaits-engine-processor';
 
-/** Soften WT into the shared filter so resonance/soft-clip stay usable when mixed. */
-const WT_OUTPUT_GAIN = 0.52;
+/**
+ * Per-engine output trim vs analog saw (~RMS 0.577).
+ * Calibrate via scripts/calibrate-levels.html.
+ *
+ * History: blanket WT_OUTPUT_GAIN was 0.52 during the click-war (protect shared
+ * high-Q soft-clip). Integrated wavetable AA restores level; these trims target
+ * ~1 dB of analog saw while staying under ~1.0 so Master-mode 16ths at max
+ * cutoff/resonance do not slam the soft-clip. If soft-clip returns, lower
+ * wavetable/fm first (0.70–0.75) before touching attack slews.
+ */
+export const ENGINE_TRIM = {
+    wavetable: 0.82,
+    fm: 0.78,
+    waveshaper: 0.72,
+    modal: 0.95,
+    string: 0.88,
+    bass_drum: 1.0,
+    snare: 0.85,
+    hihat: 0.7,
+};
+
+/** Engines that ring after gate-off (trigger/exciter model). */
+export const TRIGGERED_ENGINES = new Set([
+    'modal', 'string', 'bass_drum', 'snare', 'hihat',
+]);
+
+export const ENGINE_TAIL_SEC = {
+    modal: 8,
+    string: 8,
+    bass_drum: 2.5,
+    snare: 2.5,
+    hihat: 2.0,
+};
+
+export const DRUM_ENGINES = new Set(['bass_drum', 'snare', 'hihat']);
+
 const WT_POOL_MAX = 16;
+
+export function engineTrim(model = state.osc4Model) {
+    const key = model || 'wavetable';
+    return ENGINE_TRIM[key] ?? 0.8;
+}
+
+export function isTriggeredEngine(model = state.osc4Model) {
+    return TRIGGERED_ENGINES.has(model || 'wavetable');
+}
 
 /**
  * Proven click-free attack (restore if a nudge brings clicks back).
@@ -29,19 +73,8 @@ export const WT_ATTACK_RISK_STRETCH = Math.max(
     WT_ATTACK_RISK_STRETCH_DEFAULT - WT_ATTACK_NUDGE_STEP * WT_ATTACK_NUDGE_SEC,
 );
 export const WT_RELEASE_SEC = 0.04;
-
-export function wtAttackTuningSnapshot() {
-    return {
-        nudgeStep: WT_ATTACK_NUDGE_STEP,
-        nudgeSec: WT_ATTACK_NUDGE_SEC,
-        defaultBase: WT_ATTACK_DEFAULT_SEC,
-        defaultStretch: WT_ATTACK_RISK_STRETCH_DEFAULT,
-        activeBase: WT_ATTACK_SEC,
-        activeStretch: WT_ATTACK_RISK_STRETCH,
-        defaultMax: WT_ATTACK_DEFAULT_SEC + WT_ATTACK_RISK_STRETCH_DEFAULT,
-        activeMax: WT_ATTACK_SEC + WT_ATTACK_RISK_STRETCH,
-    };
-}
+/** Digital worklet gate/outGain only — does not affect analog or dark-osc amp floors. */
+export const WT_GATE_ATTACK_SCALE = 0.6;
 
 /**
  * Spectrally dark sources (sine/triangle/wavetable) leave a high-Q resonant
@@ -71,7 +104,7 @@ export function wtFilterClickRisk() {
     return Math.max(bright, scream, bright * scream * 1.35);
 }
 
-/** Soft gate stretch from filter cut/res. Defaults logged via wtAttackTuningSnapshot. */
+/** Soft gate stretch from filter cut/res for digital worklet onsets. */
 export function wtAttackSecForFilter() {
     const risk = wtFilterClickRisk();
     return WT_ATTACK_SEC + risk * WT_ATTACK_RISK_STRETCH;
@@ -81,11 +114,16 @@ export function wtAttackSecForFilter() {
  * Fade a per-voice GainNode in. Wavetable + high-Q filters need a longer ramp
  * than classic OscillatorNode (seq/Berlin previously jumped to full voiceVol).
  */
-export function softStartVoiceGain(gainParam, targetVol, when, { wavetable = false } = {}) {
+export function softStartVoiceGain(gainParam, targetVol, when, { wavetable = false, triggered = false } = {}) {
     if (!gainParam) return;
     const t = Math.max(0, when || 0);
     const peak = Math.max(0, Number(targetVol) || 0);
-    const attack = wavetable ? wtAttackSecForFilter() : 0.004;
+    // Triggered engines need a near-instant onset or plucks/drums die on arrival.
+    const attack = triggered
+        ? 0.002
+        : wavetable
+            ? Math.max(0.008, wtAttackSecForFilter() * WT_GATE_ATTACK_SCALE)
+            : 0.004;
     try {
         gainParam.cancelScheduledValues(t);
         gainParam.setValueAtTime(0, t);
@@ -143,19 +181,37 @@ function holdThenRamp(param, when, target, endTime) {
 /**
  * Schedule a click-free teardown. NEVER disconnect synchronously — that cuts
  * the graph before the fade and pops hard into an open filter (seq step changes).
+ *
+ * @param {{ fadeSec?: number, hard?: boolean }} [opts]
+ *   hard=true: for triggered engines (pluck/drums), free the pool after a short
+ *   outGain fade instead of an 8s ring. Use when replacing a voice (Master
+ *   phase-reset step change, Berlin/ratch dispose). Leave false for keyboard
+ *   note-off so the physical model can still ring out.
  */
-export function fadeStopOsc(osc, when, { fadeSec = 0.02 } = {}) {
+export function fadeStopOsc(osc, when, { fadeSec = 0.02, hard = false } = {}) {
     if (!osc?.started) return;
     const ctx = state.audioContext;
     if (!ctx) return;
     const tEnd = Math.max(ctx.currentTime, when || ctx.currentTime);
-    const fade = Math.max(0.01, fadeSec);
+    // Master replaces into an open shared filter — need enough outGain fade to
+    // avoid ticks. Berlin dispose already silenced the voice amp (silent cut).
+    const fade = hard && osc.isTriggered
+        ? Math.max(0.045, fadeSec)
+        : Math.max(0.01, fadeSec);
     const t0 = Math.max(ctx.currentTime, tEnd - fade);
     try {
         if (osc.gainNode) {
             holdThenRamp(osc.gainNode.gain, t0, 0.00001, tEnd);
+        } else if (osc._outGain?.gain && hard && osc.isTriggered) {
+            // Wavetable proxy: no external gainNode — fade the worklet outGain
+            // before / as we hard-release so Master step replaces don't click.
+            holdThenRamp(osc._outGain.gain, t0, 0.00001, tEnd);
         }
-        osc.stop(tEnd);
+        if (hard && osc.isTriggered) {
+            osc.stop(tEnd, { hard: true, fadeSec: fade, silent: false });
+        } else {
+            osc.stop(tEnd);
+        }
         if (!osc.isWavetable) {
             const delayMs = Math.max(0, (tEnd - ctx.currentTime) * 1000) + 30;
             setTimeout(() => {
@@ -166,15 +222,20 @@ export function fadeStopOsc(osc, when, { fadeSec = 0.02 } = {}) {
     } catch (_) { /* ignore */ }
 }
 
-/** @type {{ ctx: AudioContext, node: AudioWorkletNode, inUse: boolean, gen: number, tablesSent?: boolean }[]} */
+/** @type {{ ctx: AudioContext, node: AudioWorkletNode, inUse: boolean, gen: number, tablesSent?: boolean, ringing?: boolean }[]} */
 let wtPool = [];
 let wtPoolCtx = null;
-/** Official Plaits wavetable ROM (float32 LE, 4×64×128). */
+/** Official Plaits wavetable ROM (float32 LE, 4×64×128 integrated). */
 let plaitsTablesBuffer = null;
 let plaitsTablesPromise = null;
+/** Waveshaper / fold / stiffness LUTs. */
+let plaitsWsBuffer = null;
+let plaitsWsPromise = null;
 
 const PLAITS_TABLES_URL = () =>
-    new URL(`js/worklets/plaits-wavetables.bin?v=1`, window.location.href).href;
+    new URL(`js/worklets/plaits-wavetables.bin?v=2`, window.location.href).href;
+const PLAITS_WS_URL = () =>
+    new URL(`js/worklets/plaits-waveshaper.bin?v=1`, window.location.href).href;
 
 function loadPlaitsTables() {
     if (plaitsTablesBuffer) return Promise.resolve(plaitsTablesBuffer);
@@ -200,13 +261,37 @@ function loadPlaitsTables() {
     return plaitsTablesPromise;
 }
 
-function injectPlaitsTables(node) {
-    if (!node || !plaitsTablesBuffer) return;
+function loadPlaitsWaveshaper() {
+    if (plaitsWsBuffer) return Promise.resolve(plaitsWsBuffer);
+    if (plaitsWsPromise) return plaitsWsPromise;
+    plaitsWsPromise = fetch(PLAITS_WS_URL())
+        .then((r) => {
+            if (!r.ok) throw new Error(`waveshaper HTTP ${r.status}`);
+            return r.arrayBuffer();
+        })
+        .then((buf) => {
+            plaitsWsBuffer = buf;
+            return buf;
+        })
+        .catch((err) => {
+            console.warn('Plaits waveshaper LUTs failed to load:', err);
+            plaitsWsPromise = null;
+            return null;
+        });
+    return plaitsWsPromise;
+}
+
+function injectPlaitsAssets(node) {
+    if (!node) return;
     try {
-        // Clone so multiple worklet nodes each get a usable copy
-        node.port.postMessage({ tables: plaitsTablesBuffer.slice(0) });
+        if (plaitsTablesBuffer) {
+            node.port.postMessage({ tables: plaitsTablesBuffer.slice(0) });
+        }
+        if (plaitsWsBuffer) {
+            node.port.postMessage({ waveshaper: plaitsWsBuffer.slice(0) });
+        }
     } catch (err) {
-        console.warn('Failed to inject Plaits tables into worklet:', err);
+        console.warn('Failed to inject Plaits assets into worklet:', err);
     }
 }
 
@@ -240,7 +325,7 @@ function resetWtPoolIfNeeded(ctx) {
     wtPoolCtx = ctx;
 }
 
-/** Load AudioWorklet + official Plaits wavetable ROM once per AudioContext. */
+/** Load AudioWorklet + Plaits ROM assets once per AudioContext. */
 export function ensurePlaitsWorklet(ctx = state.audioContext) {
     if (!ctx?.audioWorklet) {
         state.plaitsWorkletReady = false;
@@ -254,10 +339,11 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
     }
 
     state.plaitsWorkletCtx = ctx;
-    const url = new URL(`js/worklets/plaits-engine-processor.js?v=13`, window.location.href).href;
+    const url = new URL(`js/worklets/plaits-engine-processor.js?v=23`, window.location.href).href;
     state.plaitsWorkletPromise = Promise.all([
         ctx.audioWorklet.addModule(url),
         loadPlaitsTables(),
+        loadPlaitsWaveshaper(),
     ])
         .then(([, tables]) => {
             if (!tables) {
@@ -278,13 +364,15 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
 
 function acquirePoolSlot(ctx) {
     resetWtPoolIfNeeded(ctx);
-    let slot = wtPool.find((s) => !s.inUse);
+    let slot = wtPool.find((s) => !s.inUse && !s.ringing);
     if (!slot) {
         if (wtPool.length >= WT_POOL_MAX) {
-            // Prefer a free slot; never hard-disconnect an in-use node (filterIn 0.09→0 click)
-            slot = wtPool.find((s) => !s.inUse);
+            // Prefer idle non-ringing; never steal a ringing physical-model voice
+            slot = wtPool.find((s) => !s.inUse && !s.ringing);
             if (!slot) {
-                // Force-fade oldest, then reuse after a short settle — better than a hard cut
+                slot = wtPool.find((s) => !s.inUse);
+            }
+            if (!slot) {
                 slot = wtPool[0];
                 try {
                     const g = slot.node.parameters.get('gate');
@@ -294,6 +382,7 @@ function acquirePoolSlot(ctx) {
                     g.linearRampToValueAtTime(0, t + 0.012);
                 } catch (_) { /* ignore */ }
                 slot.inUse = false;
+                slot.ringing = false;
             }
         } else {
             const node = new AudioWorkletNode(ctx, PLAITS_PROCESSOR, {
@@ -306,19 +395,27 @@ function acquirePoolSlot(ctx) {
                     morphX: 0.5,
                     morphY: 0.5,
                     harmonics: 0.5,
-                    bank: 0,
+                    bank: -1,
                     gate: 0,
                 },
             });
-            injectPlaitsTables(node);
-            slot = { ctx, node, inUse: false, gen: 0, tablesSent: true };
+            injectPlaitsAssets(node);
+            slot = { ctx, node, inUse: false, gen: 0, tablesSent: true, ringing: false };
+            // Silence / ring-end from triggered engines
+            node.port.onmessage = (ev) => {
+                const msg = ev.data;
+                if (msg?.silent) {
+                    slot.ringing = false;
+                }
+            };
             wtPool.push(slot);
         }
     }
     slot.inUse = true;
+    slot.ringing = false;
     slot.gen += 1;
     if (!slot.tablesSent) {
-        injectPlaitsTables(slot.node);
+        injectPlaitsAssets(slot.node);
         slot.tablesSent = true;
     }
     return slot;
@@ -334,11 +431,15 @@ function releasePoolSlot(slot, gen) {
         slot.node.port.postMessage({ reset: true, engine: state.osc4Model || 'wavetable' });
     } catch (_) { /* ignore */ }
     slot.inUse = false;
+    slot.ringing = false;
 }
 
 function createWavetableProxy(ctx, frequency) {
     const { x, y } = readOsc4Morph();
     const harmonics = readOsc4Harmonics();
+    const model = state.osc4Model || 'wavetable';
+    const triggered = isTriggeredEngine(model);
+    const trim = engineTrim(model);
     const slot = acquirePoolSlot(ctx);
     const node = slot.node;
     const gen = slot.gen;
@@ -351,6 +452,9 @@ function createWavetableProxy(ctx, frequency) {
     const morphYParam = node.parameters.get('morphY');
     const harmonicsParam = node.parameters.get('harmonics');
 
+    const bankRaw = Number(state.osc4Bank);
+    const bank = Number.isFinite(bankRaw) ? Math.max(-1, Math.min(3, bankRaw)) : -1;
+
     try {
         gateParam.cancelScheduledValues(now);
         gateParam.setValueAtTime(0, now);
@@ -359,12 +463,11 @@ function createWavetableProxy(ctx, frequency) {
         morphXParam.setValueAtTime(x, now);
         morphYParam.setValueAtTime(y, now);
         if (harmonicsParam) harmonicsParam.setValueAtTime(harmonics, now);
-        node.parameters.get('bank').setValueAtTime(state.osc4Bank || 0, now);
+        node.parameters.get('bank').setValueAtTime(bank, now);
         // Idle reset only — note-on phase reset is edge-triggered in the worklet
-        node.port.postMessage({ reset: true, engine: state.osc4Model || 'wavetable' });
+        node.port.postMessage({ reset: true, engine: model });
     } catch (_) { /* ignore */ }
 
-    // Fixed trim so WT doesn't slam the shared soft-clip / kill resonance
     const outGain = ctx.createGain();
     outGain.gain.value = 0;
     node.connect(outGain);
@@ -379,22 +482,29 @@ function createWavetableProxy(ctx, frequency) {
         morphY: morphYParam,
         harmonics: harmonicsParam,
         isWavetable: true,
+        isTriggered: triggered,
+        isDrum: DRUM_ENGINES.has(model),
+        engineModel: model,
         _worklet: node,
         _outGain: outGain,
+        _slot: slot,
         started: false,
         connect(...args) {
             return outGain.connect(...args);
         },
         disconnect(...args) {
             // After stop(), teardown is owned by the pool release timer.
-            // Sync disconnect here was cutting audio mid-fade → open-filter clicks.
             if (stopped) return;
             try { outGain.disconnect(...args); } catch (_) { /* ignore */ }
         },
         start(when = 0) {
             if (stopped) return;
+            // Slot was stolen for another voice — do not touch the shared worklet.
+            if (slot.gen !== gen) return;
             const t = Math.max(ctx.currentTime, when || 0);
-            const attack = wtAttackSecForFilter();
+            const attack = triggered
+                ? 0.002
+                : Math.max(0.008, wtAttackSecForFilter() * WT_GATE_ATTACK_SCALE);
             const attackEnd = t + attack;
             gateParam.cancelScheduledValues(t);
             gateParam.setValueAtTime(0, t);
@@ -402,13 +512,140 @@ function createWavetableProxy(ctx, frequency) {
             outGain.gain.cancelScheduledValues(t);
             outGain.gain.setValueAtTime(0, t);
             const mid = t + attack * 0.55;
-            outGain.gain.linearRampToValueAtTime(WT_OUTPUT_GAIN * 0.7, mid);
-            outGain.gain.setTargetAtTime(WT_OUTPUT_GAIN, mid, Math.max(0.003, attack * 0.25));
+            outGain.gain.linearRampToValueAtTime(trim * 0.7, mid);
+            outGain.gain.setTargetAtTime(trim, mid, Math.max(0.001, attack * 0.25));
+            if (triggered) slot.ringing = true;
             proxy.started = true;
         },
-        stop(when = 0) {
-            if (stopped) return;
+        /**
+         * Master phase-reset: pulse gate on the same worklet instead of
+         * stop+spawn. Avoids outGain cuts into the open shared filter (kick/modal clicks).
+         */
+        retrigger(when = 0, frequency = null) {
+            if (stopped) return false;
+            if (slot.gen !== gen) return false;
             const t = Math.max(ctx.currentTime, when || 0);
+            try {
+                // The worklet samples gate at block starts (parameters.gate[0]),
+                // so the zero must HOLD for ≥1 render block (128/44100 ≈ 2.9ms)
+                // or the rising edge is never seen and the exciter never refires
+                // (symptom: one droning note). Open the gap ahead of the hit —
+                // the scheduler runs with lookahead, so the attack lands on time.
+                // Sustained engines (fm/wavetable/waveshaper) are still sounding
+                // when the gate falls: give them a ramped release into the gap so
+                // the 14ms in-worklet slew tracks it (phase resets on the edge).
+                let gapStart;
+                let holdEnd;
+                if (triggered) {
+                    gapStart = Math.max(ctx.currentTime, t - 0.008);
+                    holdEnd = Math.max(t, gapStart + 0.004);
+                } else {
+                    const relStart = Math.max(ctx.currentTime, t - 0.05);
+                    const relLen = Math.min(0.02, Math.max(0.004, (t - relStart) * 0.5));
+                    gateParam.cancelScheduledValues(relStart);
+                    gateParam.setValueAtTime(1, relStart);
+                    gateParam.linearRampToValueAtTime(0, relStart + relLen);
+                    gapStart = relStart + relLen;
+                    holdEnd = Math.max(t, gapStart + 0.004);
+                }
+                if (frequency != null && Number.isFinite(frequency)) {
+                    frequencyParam.cancelScheduledValues(gapStart);
+                    frequencyParam.setValueAtTime(Math.max(20, frequency), gapStart);
+                }
+                if (triggered) {
+                    gateParam.cancelScheduledValues(gapStart);
+                    gateParam.setValueAtTime(0, gapStart);
+                }
+                gateParam.setValueAtTime(0, holdEnd);
+                gateParam.linearRampToValueAtTime(1, holdEnd + 0.003);
+                // Keep outGain at trim — ducking a kick/modal into an open filter clicks.
+                outGain.gain.cancelScheduledValues(t);
+                const cur = Math.max(0.00001, Number(outGain.gain.value) || trim);
+                outGain.gain.setValueAtTime(cur, t);
+                outGain.gain.setTargetAtTime(trim, t, 0.004);
+                if (triggered) slot.ringing = true;
+                proxy.started = true;
+                return true;
+            } catch (_) {
+                return false;
+            }
+        },
+        /**
+         * @param {number} [when]
+         * @param {{ hard?: boolean, fadeSec?: number, silent?: boolean }} [opts]
+         *   hard: free pool after a short fade instead of ENGINE_TAIL_SEC.
+         *   silent: external VCA already closed (Berlin) — short fade OK.
+         *   audible Master replaces need a longer outGain fade into open filter.
+         */
+        stop(when = 0, opts = {}) {
+            if (stopped) return;
+            const hard = !!opts?.hard;
+            const silent = !!opts?.silent;
+            // Stale after pool steal: never gate-kill the new owner's worklet.
+            if (slot.gen !== gen) {
+                stopped = true;
+                proxy.started = false;
+                clearTimeout(releaseTimer);
+                try { outGain.disconnect(); } catch (_) { /* ignore */ }
+                return;
+            }
+            const t = Math.max(ctx.currentTime, when || 0);
+            if (triggered) {
+                // Hard: free CPU/pool after a short fade (not the 8s physical tail).
+                if (hard) {
+                    const fade = silent
+                        ? Math.max(0.015, Number(opts.fadeSec) || 0.02)
+                        : Math.max(0.045, Number(opts.fadeSec) || WT_RELEASE_SEC);
+                    const gateFade = silent ? 0.005 : Math.min(0.014, fade * 0.35);
+                    holdThenRamp(gateParam, t, 0, t + gateFade);
+                    holdThenRamp(outGain.gain, t, 0, t + fade);
+                    proxy.started = false;
+                    stopped = true;
+                    // Keep ringing=true until release so we don't steal mid-fade
+                    slot.ringing = true;
+                    clearTimeout(releaseTimer);
+                    const delayMs = Math.max(0, (t + fade - ctx.currentTime) * 1000) + 12;
+                    releaseTimer = setTimeout(() => {
+                        try { outGain.disconnect(); } catch (_) { /* ignore */ }
+                        releasePoolSlot(slot, gen);
+                    }, delayMs);
+                    return;
+                }
+                // Soft: gate-off ends excitation only; audio must ring out.
+                holdThenRamp(gateParam, t, 0, t + 0.005);
+                const tail = ENGINE_TAIL_SEC[model] || 4;
+                const relEnd = t + tail;
+                // Keep outGain open; fade only as a safety near timeout
+                holdThenRamp(outGain.gain, Math.max(t, relEnd - 0.08), 0, relEnd);
+                proxy.started = false;
+                stopped = true;
+                clearTimeout(releaseTimer);
+                const delayMs = Math.max(0, (relEnd - ctx.currentTime) * 1000) + 8;
+                releaseTimer = setTimeout(() => {
+                    if (slot.gen !== gen) return;
+                    try { outGain.disconnect(); } catch (_) { /* ignore */ }
+                    releasePoolSlot(slot, gen);
+                }, delayMs);
+                // Early release if worklet reports silence
+                const onSilent = (ev) => {
+                    if (!ev.data?.silent) return;
+                    if (slot.gen !== gen) return;
+                    try { node.port.removeEventListener('message', onSilent); } catch (_) { /* ignore */ }
+                    clearTimeout(releaseTimer);
+                    try {
+                        const nowT = ctx.currentTime;
+                        outGain.gain.cancelScheduledValues(nowT);
+                        outGain.gain.setValueAtTime(Math.max(0, outGain.gain.value || 0), nowT);
+                        outGain.gain.linearRampToValueAtTime(0, nowT + 0.02);
+                    } catch (_) { /* ignore */ }
+                    releaseTimer = setTimeout(() => {
+                        try { outGain.disconnect(); } catch (_) { /* ignore */ }
+                        releasePoolSlot(slot, gen);
+                    }, 30);
+                };
+                try { node.port.addEventListener('message', onSilent); } catch (_) { /* ignore */ }
+                return;
+            }
             const relEnd = t + WT_RELEASE_SEC;
             holdThenRamp(gateParam, t, 0, relEnd);
             holdThenRamp(outGain.gain, t, 0, relEnd);
@@ -417,6 +654,7 @@ function createWavetableProxy(ctx, frequency) {
             clearTimeout(releaseTimer);
             const delayMs = Math.max(0, (relEnd - ctx.currentTime) * 1000) + 8;
             releaseTimer = setTimeout(() => {
+                if (slot.gen !== gen) return;
                 try { outGain.disconnect(); } catch (_) { /* ignore */ }
                 releasePoolSlot(slot, gen);
             }, delayMs);
@@ -456,7 +694,7 @@ export function createOscSource(ctx, {
     return osc;
 }
 
-/** Push current OSC4 digital tone params onto all live digital voices. */
+/** Push current OSC1 digital tone params onto all live digital voices. */
 export function applyOsc4MorphToLive() {
     const { x, y } = readOsc4Morph();
     const harmonics = readOsc4Harmonics();
@@ -465,7 +703,10 @@ export function applyOsc4MorphToLive() {
     state.osc4Harmonics = harmonics;
     const bankEl = document.getElementById('osc4Bank');
     const bankFromUi = bankEl ? parseInt(bankEl.value, 10) : state.osc4Bank;
-    const bank = Math.max(0, Math.min(3, Number.isFinite(bankFromUi) ? bankFromUi : 0));
+    // -1 = Scan (Harmonics); 0–3 = pinned bank
+    const bank = Number.isFinite(bankFromUi)
+        ? Math.max(-1, Math.min(3, bankFromUi))
+        : -1;
     state.osc4Bank = bank;
     const now = state.audioContext?.currentTime ?? 0;
 

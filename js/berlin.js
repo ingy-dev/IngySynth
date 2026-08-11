@@ -3,11 +3,11 @@
 
 import { state } from './state.js?v=107';
 import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=74';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=90';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=92';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { setPolyMode } from './poly-voice.js?v=28';
+import { setPolyMode } from './poly-voice.js?v=34';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=6';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=99';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=100';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=4';
 import {
     PATTERN_COUNT,
@@ -964,12 +964,14 @@ function applyBerlinMasterGateExit() {
 }
 
 /** Controls that make no sense while Berlin lanes drive the voice in parallel.
- *  Acid stays clickable so it can take the voice back (same mutex as Berlin-from-Acid). */
+ *  Acid stays clickable so it can take the voice back (same mutex as Berlin-from-Acid).
+ *  Main Rev / DIV are per-lane in Berlin — grey them out on the transport. */
 function setBerlinLockedUi(on) {
     document.body.classList.toggle('berlin-mode', !!on);
     [
         'keyboardPolyToggle',
         'kbWrite',
+        'kbRev',
         'patternShiftBack',
         'patternShiftForward',
         'kbPatternShiftBack',
@@ -981,6 +983,20 @@ function setBerlinLockedUi(on) {
         el.classList.toggle('berlin-locked', !!on);
         if (on) el.setAttribute('aria-disabled', 'true');
         else if (!el.disabled) el.removeAttribute('aria-disabled');
+    });
+
+    // DIV + STEPS knobs — lanes own length/division
+    [
+        ['division', 'kbDivisionKnob'],
+        ['steps', 'kbStepsKnob'],
+    ].forEach(([param, dialId]) => {
+        document.querySelector(
+            `.keyboard-transport-fieldset .synth-knob[data-param="${param}"]`
+        )?.classList.toggle('berlin-locked', !!on);
+        const dial = document.getElementById(dialId);
+        if (!dial) return;
+        if (on) dial.setAttribute('aria-disabled', 'true');
+        else dial.removeAttribute('aria-disabled');
     });
 }
 

@@ -9,14 +9,14 @@ import {
     getGlobalTune,
     semitonesToFrequency,
 } from './tuning.js?v=74';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=90';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=92';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { forceNoteOff } from './voice.js?v=101';
+import { forceNoteOff } from './voice.js?v=111';
 import { getLfoRateHz } from './lfo-rate.js?v=7';
 import { bentFrequency } from './pitch-bend.js?v=76';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { spawnOscStack, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=135';
-import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc } from './osc-source.js?v=34';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=145';
+import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=66';
 import { notifyAutomationLoopAnchor } from './automation.js?v=33';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=5';
 import {
@@ -24,7 +24,7 @@ import {
     scheduleAcidFilterEnvelope,
     clearAccentSweep,
     acidVegDecaySec,
-} from './acid-env.js?v=6';
+} from './acid-env.js?v=8';
 import {
     isBerlinOn,
     berlinActiveRows,
@@ -44,7 +44,7 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=27';
+} from './berlin.js?v=29';
 import { getPattern } from './pattern-bank.js?v=7';
 import {
     clampRatch,
@@ -54,11 +54,14 @@ import {
 } from './step-ratch.js?v=1';
 
 const stepsDiv = document.getElementById('steps');
-for (let i = 0; i < 32; i++) {
-    const stepDiv = document.createElement('fieldset');
-    stepDiv.className = 'sequencer-step';
-    stepDiv.dataset.step = i;
-    stepDiv.innerHTML = `
+// Guard against duplicate ES module instances (?v= skew) appending a second bank of steps.
+if (stepsDiv && !globalThis.__ingySynthStepsBuilt) {
+    globalThis.__ingySynthStepsBuilt = true;
+    for (let i = 0; i < 32; i++) {
+        const stepDiv = document.createElement('fieldset');
+        stepDiv.className = 'sequencer-step';
+        stepDiv.dataset.step = i;
+        stepDiv.innerHTML = `
         <legend>Step ${i + 1}</legend>
         <input type="range" class="step-tune" data-step="${i}" min="-39" max="48" value="0">
         <span class="step-value">0</span>
@@ -85,31 +88,33 @@ for (let i = 0; i < 32; i++) {
             </div>
         </div>
     `;
-    stepsDiv.appendChild(stepDiv);
+        stepsDiv.appendChild(stepDiv);
+    }
 }
 
-// Slide toggle buttons (per step)
-document.querySelectorAll('.step-slide').forEach(button => {
-    button.addEventListener('click', function () {
-        this.classList.toggle('off');
+// Slide / Accent toggles — bind once globally.
+// Different ?v= query strings create separate ES module instances; without this
+// guard each instance re-binds and one click toggles twice (ends up unchanged).
+if (!globalThis.__ingySynthStepFlagBound) {
+    globalThis.__ingySynthStepFlagBound = true;
+    document.querySelectorAll('.step-slide').forEach(button => {
+        button.addEventListener('click', function () {
+            this.classList.toggle('off');
+        });
     });
-});
-
-// Accent toggle buttons (per step)
-document.querySelectorAll('.step-accent').forEach(button => {
-    button.addEventListener('click', function () {
-        this.classList.toggle('off');
+    document.querySelectorAll('.step-accent').forEach(button => {
+        button.addEventListener('click', function () {
+            this.classList.toggle('off');
+        });
     });
-});
-
-// Ratchet cycle: Off → R 2 … R 8 → Off (disabled in Acid — 303 had none)
-document.querySelectorAll('.step-ratch').forEach((button) => {
-    syncRatchButton(button, 1);
-    button.addEventListener('click', function () {
-        if (state.acidMode) return;
-        syncRatchButton(this, nextRatch(readRatchFromButton(this)));
+    document.querySelectorAll('.step-ratch').forEach((button) => {
+        syncRatchButton(button, 1);
+        button.addEventListener('click', function () {
+            if (state.acidMode) return;
+            syncRatchButton(this, nextRatch(readRatchFromButton(this)));
+        });
     });
-});
+}
 
 function isStepSlideOn(step) {
     const button = document.querySelector(`.step-slide[data-step="${step}"]`);
@@ -421,6 +426,32 @@ function scheduleStepEnvelope({
     softRetrigger = false,
     releaseUntil = null,
 }) {
+    // Drum models are self-enveloped inside the worklet — keep the shared amp open
+    // so ADSR doesn't fight the internal drum envelopes.
+    if (
+        state.osc4Wavetable
+        && state.oscStates?.[OSC4_INDEX]
+        && DRUM_ENGINES.has(state.osc4Model)
+    ) {
+        const nowT = state.audioContext?.currentTime || 0;
+        const t0 = Math.max(nowT, startTime);
+        // Reopen with a short pre-ramp: a hard set to 1 while the off-step
+        // drum ring-out (180ms+) is still mid-ramp steps the VCA over a
+        // ringing tail — tiny click at the drum's start.
+        const tPre = Math.max(nowT, t0 - 0.012);
+        try {
+            const g = state.envelope.gain;
+            if (typeof g.cancelAndHoldAtTime === 'function') {
+                g.cancelAndHoldAtTime(tPre);
+            } else {
+                g.cancelScheduledValues(tPre);
+                g.setValueAtTime(Math.max(0.00001, Number(g.value) || 0.00001), tPre);
+            }
+            g.linearRampToValueAtTime(1, t0);
+        } catch (_) { /* ignore */ }
+        state.envelopeHeld = true;
+        return 0.002;
+    }
     if (state.acidMode) {
         return scheduleAcidAmpEnvelope({
             startTime,
@@ -504,7 +535,18 @@ function scheduleStepEnvelope({
             state.envelope.gain.setValueAtTime(cur, t0);
         }
         if (berlinStyle) {
-            state.envelope.gain.linearRampToValueAtTime(ampPeak, t0 + Math.min(0.012, safeAttackTime));
+            // Mid-note re-articulation keeps the quick 12ms ramp, but after a
+            // gap the env sits at ~0 and a 12ms 0→1 swing pings a high-Q
+            // filter (logs: SOFT envVal≈0 only on gapped patterns). Starting
+            // from silence gets the full risk-stretched attack instead.
+            const curEnv = Number(state.envelope.gain.value) || 0;
+            const rampLen = curEnv < 0.2 ? safeAttackTime : Math.min(0.012, safeAttackTime);
+            // From silence, cancelAndHold leaves NO anchor (automation already
+            // finished), so the ramp interpolates from the release that ended
+            // mid-gap — env swells BEFORE the step and the osc swap at step
+            // start is audible through the filter (logs: PROBE rising at dt<0).
+            if (curEnv < 0.2) state.envelope.gain.setValueAtTime(Math.max(minValue, curEnv), t0);
+            state.envelope.gain.linearRampToValueAtTime(ampPeak, t0 + rampLen);
             attackStart = t0;
         } else {
             const closeT = darkOsc ? Math.max(0.006, 0.004 + clickRisk * 0.01) : 0.004;
@@ -546,8 +588,21 @@ function scheduleStepEnvelope({
 function silenceMainEnvelope(atTime) {
     if (!state.envelope) return;
     const t = Math.max(state.audioContext.currentTime, atTime);
+    // Drum models may still have the shared VCA open after empty steps
+    // (off = no trigger, not mute). Soft-close before ratch private voices take over.
+    const drumHold = !!(
+        state.osc4Wavetable
+        && state.oscStates?.[OSC4_INDEX]
+        && DRUM_ENGINES.has(state.osc4Model)
+    );
+    const cur = Math.max(0.00001, Number(state.envelope.gain.value) || 0.00001);
     state.envelope.gain.cancelScheduledValues(t);
-    state.envelope.gain.setValueAtTime(0, t);
+    if (drumHold && cur > 0.001) {
+        state.envelope.gain.setValueAtTime(cur, t);
+        state.envelope.gain.exponentialRampToValueAtTime(0.00001, t + 0.1);
+    } else {
+        state.envelope.gain.setValueAtTime(0, t);
+    }
     state.envelopeHeld = false;
 }
 
@@ -555,7 +610,22 @@ function silenceMainEnvelope(atTime) {
 function silenceMainPhaseResetOscs(atTime) {
     if (!state.phaseResetEnabled || !Array.isArray(state.activeOscillators)) return;
     const t = Math.max(state.audioContext.currentTime, atTime);
-    state.activeOscillators.forEach((osc) => fadeStopOsc(osc, t, { fadeSec: 0.02 }));
+    const envLevel = Number(state.envelope?.gain?.value) || 0;
+    // If the VCA is still open (drum ring across offs), delay the worklet
+    // release so we don't cut a kick at full level into the bus.
+    const drumDelay = envLevel > 0.05 ? 0.07 : 0;
+    state.activeOscillators.forEach((osc) => {
+        if (osc?.isTriggered && osc?.isDrum) {
+            const stopAt = t + drumDelay;
+            try {
+                osc.stop(stopAt, { hard: true, silent: true, fadeSec: 0.05 });
+            } catch (_) {
+                fadeStopOsc(osc, stopAt, { fadeSec: 0.08, hard: true });
+            }
+            return;
+        }
+        fadeStopOsc(osc, t, { fadeSec: osc.isWavetable ? 0.055 : 0.02, hard: !!osc.isTriggered });
+    });
     state.activeOscillators = [];
 }
 
@@ -570,10 +640,31 @@ function scheduleFullNoteOnGain(gainParam, {
     accentAmount,
     peakScale = 1,
     gateLen = null,
+    holdForDrum = false,
 }) {
     const now = state.audioContext.currentTime;
     const t0 = Math.max(now, startTime);
     const minValue = 0.00001;
+
+    // Ratch voices: self-enveloped drums must not be chopped by the ADSR
+    // (same mechanism as the main-path drum hold — logs: BD-OFF). Hold the
+    // amp open for the hit, then ring out gently.
+    const holdDrum = holdForDrum && !!(
+        state.osc4Wavetable
+        && state.oscStates?.[OSC4_INDEX]
+        && DRUM_ENGINES.has(state.osc4Model)
+    );
+    if (holdDrum) {
+        const peak = (accentThisStep ? 1 + 0.5 * accentAmount : 1) * peakScale;
+        const relStart = t0 + stepDuration;
+        const relLen = 0.18;
+        gainParam.cancelScheduledValues(t0);
+        gainParam.setValueAtTime(0, t0);
+        gainParam.linearRampToValueAtTime(peak, t0 + 0.002);
+        gainParam.setValueAtTime(peak, relStart);
+        gainParam.exponentialRampToValueAtTime(minValue, relStart + relLen);
+        return relStart + relLen + 0.05;
+    }
 
     if (state.acidMode) {
         const peak = (accentThisStep ? 1 + RATCH_ACCENT_AMP_BOOST * accentAmount : 1) * peakScale;
@@ -598,10 +689,20 @@ function scheduleFullNoteOnGain(gainParam, {
         ? getGateLength()
         : Math.max(0.05, Math.min(1, Number(gateLen) || 0.9));
     const gateWindow = stepDuration * gateFrac;
-    const safeAttackTime = Math.max(
-        state.osc4Wavetable && state.oscStates?.[3] ? wtAttackSecForFilter() : 0.002,
-        scaleAdsrTime(attack),
+    // Dark/WT click floor is for sustained digital tones into a high-Q filter.
+    // Triggered engines (pluck/modal/drums) put their transient in the first few
+    // ms — applying wtAttackSecForFilter() here opens the VCA after the hit.
+    const triggeredDigital = !!(
+        state.osc4Wavetable
+        && state.oscStates?.[OSC4_INDEX]
+        && isTriggeredEngine(state.osc4Model)
     );
+    const wtFloor = (
+        state.osc4Wavetable
+        && state.oscStates?.[OSC4_INDEX]
+        && !triggeredDigital
+    ) ? wtAttackSecForFilter() : 0.002;
+    const safeAttackTime = Math.max(wtFloor, scaleAdsrTime(attack));
     const availableDecayTime = Math.max(0, gateWindow * 0.8 - safeAttackTime);
     const safeDecayTime = Math.max(0.002, Math.min(scaleAdsrTime(decay), availableDecayTime));
 
@@ -714,6 +815,7 @@ function spawnRatchVoice({
             : Math.max(ctx.currentTime, startTime - 0.002);
         softStartVoiceGain(g.gain, vol, Math.max(tHit, oscStart), {
             wavetable: !!osc.isWavetable,
+            triggered: !!osc.isTriggered,
         });
         osc.start(oscStart);
         oscs.push({ osc, gain: g });
@@ -755,6 +857,7 @@ function spawnRatchVoice({
         accentThisStep,
         accentAmount,
         peakScale,
+        holdForDrum: true,
     });
 
     const voice = { oscs, noiseSource, noiseGain, mix, filter, highPass, amp };
@@ -772,15 +875,35 @@ function spawnRatchVoice({
 function disposeRatchVoice(voice) {
     if (!voice) return;
     const t = state.audioContext?.currentTime ?? 0;
+    const ampVal = Number(voice.amp?.gain?.value) || 0;
+    const ampSilent = ampVal < 0.002;
     voice.oscs?.forEach(({ osc, gain }) => {
         try {
             if (gain) {
                 gain.gain.cancelScheduledValues(t);
-                gain.gain.setValueAtTime(0, t);
+                // If the voice amp already rang out, don't hard-zero the osc
+                // gain into a live filter — that was the off-step click.
+                if (!ampSilent) {
+                    gain.gain.setValueAtTime(Math.max(0.00001, Number(gain.gain.value) || 0.00001), t);
+                    gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.02);
+                } else {
+                    gain.gain.setValueAtTime(0, t);
+                }
             }
-            osc.stop(t + 0.01);
-            osc.disconnect();
-            gain?.disconnect();
+            if (osc?.isTriggered) {
+                osc.stop(t + 0.01, { hard: true, silent: true, fadeSec: ampSilent ? 0.02 : 0.05 });
+            } else {
+                osc.stop(t + 0.01);
+            }
+            if (ampSilent) {
+                osc.disconnect();
+                gain?.disconnect();
+            } else {
+                setTimeout(() => {
+                    try { osc.disconnect(); } catch (_) { /* ignore */ }
+                    try { gain?.disconnect(); } catch (_) { /* ignore */ }
+                }, 40);
+            }
         } catch (_) { /* ignore */ }
     });
     if (voice.noiseSource) {
@@ -986,6 +1109,16 @@ function stopIdleMarquee() {
     }
 }
 
+/** Berlin Dream owns DISP: static cyan "bd" (idle and while playing). */
+function showBerlinBdOnVfd() {
+    stopIdleMarquee();
+    setKeyboardStepDigits('bd', {
+        lit: true,
+        label: 'Berlin Dream',
+        cyan: true,
+    });
+}
+
 function idleMarqueeSource() {
     if (state.keyboardWrite && writeAwaitingFirstProgram) {
         return { text: WRITE_MARQUEE_TEXT, label: 'Write Steps', brand: false, cyan: true };
@@ -1022,6 +1155,10 @@ function tickIdleMarquee() {
 function startIdleMarquee() {
     // Sequencer play owns the VFD for step numbers — never scroll brand over it
     if (state.isPlaying) return;
+    if (isBerlinOn()) {
+        showBerlinBdOnVfd();
+        return;
+    }
     stopIdleMarquee();
     idleMarqueeIndex = 0;
     tickIdleMarquee();
@@ -1030,6 +1167,11 @@ function startIdleMarquee() {
 
 /** Refresh idle VFD (brand vs ArP vs Write vs Scale) when mode toggles. */
 export function refreshIdleVfd() {
+    if (isBerlinOn()) {
+        clearStepsPreviewTimer();
+        showBerlinBdOnVfd();
+        return;
+    }
     if (state.isPlaying) return;
     if (state.keyboardWrite) {
         showWriteStepOnVfd();
@@ -1108,6 +1250,10 @@ function updateKeyboardStepDisplay(stepIndex) {
     lastVfdStepIndex = stepIndex;
     // Keep STEPS knob preview on the VFD until its timeout ends
     if (stepsPreviewTimer !== null) return;
+    if (isBerlinOn()) {
+        showBerlinBdOnVfd();
+        return;
+    }
     // Write cursor (cyan) when stopped; during play always show green step numbers
     if (state.keyboardWrite && !state.isPlaying) {
         showWriteStepOnVfd();
@@ -1126,6 +1272,10 @@ function updateKeyboardStepDisplay(stepIndex) {
 
 function clearKeyboardStepDisplay() {
     clearStepsPreviewTimer();
+    if (isBerlinOn()) {
+        showBerlinBdOnVfd();
+        return;
+    }
     if (state.keyboardWrite) {
         showWriteStepOnVfd();
         return;
@@ -1149,7 +1299,9 @@ export function previewStepsOnVfd(stepCount) {
     setKeyboardStepDigits(text, { lit: true, label: `Steps ${text}` });
     stepsPreviewTimer = setTimeout(() => {
         stepsPreviewTimer = null;
-        if (state.keyboardWrite) {
+        if (isBerlinOn()) {
+            showBerlinBdOnVfd();
+        } else if (state.keyboardWrite) {
             showWriteStepOnVfd();
         } else if (!state.isPlaying && state.keyboardArp) {
             startIdleMarquee();
@@ -1334,7 +1486,13 @@ function disposeBerlinOscVoice(voice) {
                 gain.gain.cancelScheduledValues(t);
                 gain.gain.setValueAtTime(0, t);
             }
-            osc.stop(t + 0.01);
+            // Triggered engines (pluck/drums): amp already closed — hard-free the
+            // worklet so Berlin cannot bank 16 silent 8s rings then steal/silence.
+            if (osc?.isTriggered) {
+                osc.stop(t + 0.01, { hard: true, silent: true, fadeSec: 0.02 });
+            } else {
+                osc.stop(t + 0.01);
+            }
             osc.disconnect();
             gain?.disconnect();
         } catch (_) { /* ignore */ }
@@ -1531,6 +1689,7 @@ function spawnBerlinOscVoice({
             : Math.max(ctx.currentTime, startTime - 0.002);
         softStartVoiceGain(g.gain, voiceVol, Math.max(t0, oscStart), {
             wavetable: !!osc.isWavetable,
+            triggered: !!osc.isTriggered,
         });
         osc.start(oscStart);
         if (lfoGain) {
@@ -1735,9 +1894,16 @@ document.addEventListener('ingysynth:berlin-mode', (e) => {
     if (e.detail?.on) {
         silenceMainPhaseResetOscs(state.audioContext?.currentTime ?? 0);
         // Shared path arms on first osc-lane hit so mod CV can reach the filter
+        clearStepsPreviewTimer();
+        showBerlinBdOnVfd();
     } else {
         releaseBerlinOscVoices(state.audioContext?.currentTime ?? 0);
         disarmBerlinSharedAmpPath(state.audioContext?.currentTime ?? 0);
+        if (state.isPlaying) {
+            updateKeyboardStepDisplay(lastVfdStepIndex);
+        } else {
+            refreshIdleVfd();
+        }
     }
 });
 
@@ -1883,7 +2049,7 @@ function startArp() {
 
     // Fade out any leftover phase-reset oscs before the new pattern starts
     if (state.phaseResetEnabled && state.activeOscillators.length > 0) {
-        state.activeOscillators.forEach((osc) => fadeStopOsc(osc, now + 0.012, { fadeSec: 0.02 }));
+        state.activeOscillators.forEach((osc) => fadeStopOsc(osc, now + 0.012, { fadeSec: osc.isWavetable ? 0.055 : 0.02, hard: !!osc.isTriggered }));
         state.activeOscillators = [];
     }
 
@@ -2032,12 +2198,11 @@ function playChordArpNote(cellSemitone, startTime, stepDuration) {
     }
 
     if (state.phaseResetEnabled) {
-        state.activeOscillators.forEach((osc) => fadeStopOsc(osc, startTime, { fadeSec: 0.022 }));
-        state.activeOscillators = [];
+        stopDisabledOscStacks(startTime);
         for (let i = 0; i < state.oscStates.length; i++) {
             if (state.oscStates[i]) {
                 const baseFreq = semitonesToFrequency(sounding, i);
-                spawnOscStack(i, baseFreq, startTime, {
+                firePhaseResetOscStack(i, baseFreq, startTime, {
                     oscStart: startTime,
                     gainRampStart: startTime,
                     gainRampEnd: startTime + 0.02,
@@ -2138,16 +2303,31 @@ function playStep(step, startTime, stepDuration) {
 
     const toggle = document.querySelector(`.step-toggle[data-step="${step}"]`);
     if (toggle.querySelector('.front').textContent === 'Off') {
-        // If the previous step held the envelope open for a slide that never
-        // arrived (step turned off), release it now to avoid a stuck note.
+        // Drum-machine model: an OFF step means "no new trigger", not "mute".
+        // Self-enveloped drums (and their ratch voices) must keep ringing through
+        // empty steps; the next note-on / ratch hit is what resets them.
+        // HEAD only released a held shared VCA for stuck-note/slide guards —
+        // never tore down oscs or ratch voices here.
+        const drumVoice = !!(
+            state.osc4Wavetable
+            && state.oscStates?.[OSC4_INDEX]
+            && DRUM_ENGINES.has(state.osc4Model)
+        );
         if (state.envelopeHeld) {
-            const release = parseFloat(document.getElementById('release').value);
-            const releaseTime = Math.max(0.005, release * 0.3);
-            const t = Math.max(state.audioContext.currentTime, startTime);
-            state.envelope.gain.cancelScheduledValues(t);
-            state.envelope.gain.setValueAtTime(state.envelope.gain.value || 0.00001, t);
-            state.envelope.gain.exponentialRampToValueAtTime(0.00001, t + releaseTime);
-            state.envelopeHeld = false;
+            if (drumVoice) {
+                // Keep shared VCA open so the kick/snare/hat can finish its
+                // internal decay across empty steps. Clear the held flag so we
+                // don't treat this as a stuck slide note.
+                state.envelopeHeld = false;
+            } else {
+                const release = parseFloat(document.getElementById('release').value);
+                const releaseTime = Math.max(0.005, release * 0.3);
+                const t = Math.max(state.audioContext.currentTime, startTime);
+                state.envelope.gain.cancelScheduledValues(t);
+                state.envelope.gain.setValueAtTime(state.envelope.gain.value || 0.00001, t);
+                state.envelope.gain.exponentialRampToValueAtTime(0.00001, t + releaseTime);
+                state.envelopeHeld = false;
+            }
         }
         if (state.filterEnvelopeHeld) {
             const filterRelease = parseFloat(document.getElementById('filterRelease').value);
@@ -2158,6 +2338,7 @@ function playStep(step, startTime, stepDuration) {
             state.filterEnvGain.gain.exponentialRampToValueAtTime(0.00001, t + filterReleaseTime);
             state.filterEnvelopeHeld = false;
         }
+        // Intentionally do NOT stop activeOscillators or duck ratchVoices.
         state.lastStepSounded = false;
         return;
     }
@@ -2291,14 +2472,13 @@ function playStep(step, startTime, stepDuration) {
     };
 
     if (state.phaseResetEnabled) {
+        stopDisabledOscStacks(startTime);
         if (glissRoll) {
             // Land on this pitch (respawn unless continuing a non-gliss slide-in), then ramp out
             if (!(slideThisStep && state.activeOscillators.length > 0)) {
-                state.activeOscillators.forEach((osc) => fadeStopOsc(osc, startTime, { fadeSec: 0.022 }));
-                state.activeOscillators = [];
                 for (let i = 0; i < state.oscStates.length; i++) {
                     if (!state.oscStates[i]) continue;
-                    spawnOscStack(i, stepToFrequency(step, i), startTime, {
+                    firePhaseResetOscStack(i, stepToFrequency(step, i), startTime, {
                         oscStart: startTime,
                         gainRampStart: startTime,
                         gainRampEnd: startTime + 0.02,
@@ -2331,12 +2511,10 @@ function playStep(step, startTime, stepDuration) {
                 state.lastStepFreqs[i] = baseFreq;
             });
         } else {
-        state.activeOscillators.forEach((osc) => fadeStopOsc(osc, startTime, { fadeSec: 0.022 }));
-        state.activeOscillators = [];
         for (let i = 0; i < state.oscStates.length; i++) {
             if (state.oscStates[i]) {
                 const baseFreq = stepToFrequency(step, i);
-                spawnOscStack(i, baseFreq, startTime, {
+                firePhaseResetOscStack(i, baseFreq, startTime, {
                     oscStart: startTime,
                     gainRampStart: startTime,
                     gainRampEnd: startTime + 0.02,
@@ -2431,6 +2609,7 @@ function playStep(step, startTime, stepDuration) {
         accentThisStep,
         accentAmount,
     });
+
 
     state.lastStepSounded = true;
 }

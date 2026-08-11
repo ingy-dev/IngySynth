@@ -7,6 +7,7 @@ Sources (MIT License, Copyright 2016 Emilie Gillet):
 
 Bank D uses Plaits' default shuffle: index = (wave * 101) % 192
 Output: float32 little-endian, shape [4 banks][64 waves][128 samples]
+Each wave is equal-RMS normalized then first-order integrated (Plaits AA path).
 """
 from pathlib import Path
 import numpy as np
@@ -157,13 +158,38 @@ def make_braids_family(indices, fix=True):
     return family
 
 
-def normalize_wave(wave):
+# Target RMS for level-stable morphing (analog saw ≈ 0.577).
+TARGET_RMS = 0.5
+
+
+def normalize_wave(wave, rms_target=TARGET_RMS):
+    """DC-remove, then equal-RMS normalize (peak-capped softly)."""
     x = np.asarray(wave, dtype=np.float64).copy()
     x -= x.mean()
+    rms = np.sqrt(np.mean(x * x))
+    if rms > 1e-12:
+        x *= rms_target / rms
+    # Soft peak limit so integrated AA stays well-behaved
     peak = np.abs(x).max()
-    if peak > 1e-12:
-        x /= peak
-    return x.astype(np.float32)
+    if peak > 1.25:
+        x *= 1.25 / peak
+    return x.astype(np.float64)
+
+
+def integrate_wave(wave):
+    """First-order integrated wavetable (Plaits / Franck & Välimäki).
+
+    Stores WAVE_SIZE samples of demeaned cumsum, scaled so that differentiating
+    with Differentiator recovers approximately the original float waveform.
+    Scale matches Plaits' (4 / WAVE_SIZE) relative to unit waves.
+    """
+    x = np.asarray(wave, dtype=np.float64)
+    # Duplicate wrap samples for hermite-safe endpoints (stored as length WAVE_SIZE;
+    # worklet wraps indices). Integrate one period.
+    integ = np.cumsum(x)
+    integ -= integ.mean()
+    integ *= (4.0 / WAVETABLE_SIZE)
+    return integ.astype(np.float32)
 
 
 def main():
@@ -205,10 +231,17 @@ def main():
     assert len(all_waves) == 192
     base = np.stack([normalize_wave(w) for w in all_waves], axis=0)
     bank_d = np.stack([base[(i * 101) % 192] for i in range(64)], axis=0)
-    banks = np.stack([base[0:64], base[64:128], base[128:192], bank_d], axis=0)
+    banks_raw = np.stack([base[0:64], base[64:128], base[128:192], bank_d], axis=0)
+    # Integrate each wave (Plaits anti-aliased wavetable path)
+    banks = np.empty_like(banks_raw, dtype=np.float32)
+    for b in range(4):
+        for w in range(64):
+            banks[b, w] = integrate_wave(banks_raw[b, w])
     OUT_BIN.parent.mkdir(parents=True, exist_ok=True)
     OUT_BIN.write_bytes(banks.astype('<f4').tobytes())
+    rmses = [float(np.sqrt(np.mean(banks_raw[b, w] ** 2))) for b in range(4) for w in range(0, 64, 8)]
     print(f'wrote {OUT_BIN} ({OUT_BIN.stat().st_size} bytes, shape {banks.shape})')
+    print(f'pre-integrate RMS sample mean={np.mean(rmses):.4f} (target {TARGET_RMS})')
 
 
 if __name__ == '__main__':

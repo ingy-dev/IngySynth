@@ -4,7 +4,7 @@ import {
     intervalsFromHeldNotes,
 } from './held-notes.js?v=5';
 import { refreshFilterInputDrive } from './filter-drive.js?v=8';
-import { setPolyMode } from './poly-voice.js?v=28';
+import { setPolyMode } from './poly-voice.js?v=34';
 
 /** Notes heard during the current Learn gesture (survives staggered key-ups). */
 let learnSessionNotes = [];

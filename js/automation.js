@@ -7,12 +7,12 @@ import { state } from './state.js?v=107';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=74';
 import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=76';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=75';
-import { ensureDisplayStep } from './knobs.js?v=99';
+import { ensureDisplayStep } from './knobs.js?v=100';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=4';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=27';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=29';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */

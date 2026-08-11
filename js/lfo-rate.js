@@ -3,7 +3,7 @@
 // the single writer to state.lfo.frequency.
 
 import { state } from './state.js?v=107';
-import { ensureDisplayStep, formatRangeValue, resetInputToDefault } from './knobs.js?v=99';
+import { ensureDisplayStep, formatRangeValue, resetInputToDefault } from './knobs.js?v=100';
 
 /** Optional hook so applyLfoRate can refresh smoothing without a circular import. */
 let onRateApplied = null;

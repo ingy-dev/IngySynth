@@ -2,7 +2,7 @@
 // Knobs drive .osc-tune / .osc-vol; pan uses a microtune-style slider mirroring .osc-pan.
 
 import { state } from './state.js?v=107';
-import { bindKnob } from './knobs.js?v=99';
+import { bindKnob } from './knobs.js?v=100';
 import {
     observeMainControl,
     syncToggleButtonFromMain,

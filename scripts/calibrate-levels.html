@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>IngySynth — OSC level calibration</title>
+  <style>
+    body { font: 14px/1.4 ui-monospace, Menlo, monospace; background: #111; color: #ddd; margin: 24px; }
+    button { font: inherit; padding: 8px 14px; cursor: pointer; }
+    pre { background: #1a1a1a; padding: 12px; overflow: auto; max-height: 70vh; }
+    .hint { color: #888; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Level calibration</h1>
+  <p class="hint">
+    Renders analog OscillatorNode waves and Plaits worklet engines through OfflineAudioContext.
+    Target: digital engines within ~1 dB of analog saw RMS. Open via local HTTP server.
+  </p>
+  <button id="run">Run calibration</button>
+  <pre id="out">Idle.</pre>
+  <script type="module">
+    const out = document.getElementById('out');
+    const log = (s) => { out.textContent += s + '\n'; };
+
+    function stats(buf) {
+      const ch = buf.getChannelData(0);
+      let sum = 0, peak = 0;
+      for (let i = 0; i < ch.length; i++) {
+        const a = Math.abs(ch[i]);
+        sum += ch[i] * ch[i];
+        if (a > peak) peak = a;
+      }
+      const rms = Math.sqrt(sum / ch.length);
+      return { rms, peak, db: 20 * Math.log10(Math.max(1e-12, rms)) };
+    }
+
+    async function renderAnalog(type, hz = 440, sec = 0.4, sr = 48000) {
+      const len = Math.floor(sr * sec);
+      const ctx = new OfflineAudioContext(1, len, sr);
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = hz;
+      const g = ctx.createGain();
+      g.gain.value = 1;
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(0);
+      osc.stop(sec);
+      return stats(await ctx.startRendering());
+    }
+
+    async function renderWorklet(engine, opts = {}) {
+      const sr = 48000;
+      const sec = 0.4;
+      const len = Math.floor(sr * sec);
+      const ctx = new OfflineAudioContext(1, len, sr);
+      const url = new URL('../js/worklets/plaits-engine-processor.js?v=cal', window.location.href);
+      await ctx.audioWorklet.addModule(url.href);
+      const tablesUrl = new URL('../js/worklets/plaits-wavetables.bin?v=1', window.location.href);
+      const tables = await fetch(tablesUrl).then((r) => r.arrayBuffer());
+      const node = new AudioWorkletNode(ctx, 'plaits-engine-processor', {
+        numberOfInputs: 0,
+        numberOfOutputs: 1,
+        outputChannelCount: [1],
+        parameterData: {
+          frequency: opts.hz || 440,
+          detune: 0,
+          morphX: opts.morphX ?? 0.5,
+          morphY: opts.morphY ?? 0.5,
+          harmonics: opts.harmonics ?? 0.5,
+          bank: opts.bank ?? -1,
+          gate: 1,
+        },
+      });
+      node.port.postMessage({ engine, tables: tables.slice(0) });
+      const g = ctx.createGain();
+      g.gain.value = opts.trim ?? 1;
+      node.connect(g);
+      g.connect(ctx.destination);
+      return stats(await ctx.startRendering());
+    }
+
+    document.getElementById('run').onclick = async () => {
+      out.textContent = '';
+      try {
+        log('=== Analog (gain=1) ===');
+        for (const t of ['sawtooth', 'square', 'sine', 'triangle']) {
+          const s = await renderAnalog(t);
+          log(`${t.padEnd(10)} RMS=${s.rms.toFixed(4)} peak=${s.peak.toFixed(4)} dB=${s.db.toFixed(2)}`);
+        }
+        const saw = await renderAnalog('sawtooth');
+        log(`\n=== Digital worklet (trim=1, gate=1) target saw RMS=${saw.rms.toFixed(4)} ===`);
+        const cases = [
+          ['wavetable', { bank: 0 }],
+          ['wavetable', { bank: 1 }],
+          ['wavetable', { bank: 2 }],
+          ['wavetable', { bank: 3 }],
+          ['wavetable', { bank: -1, harmonics: 0.2 }],
+          ['fm', { harmonics: 0.5, morphX: 0.5, morphY: 0.5 }],
+          ['waveshaper', {}],
+          ['modal', {}],
+          ['string', {}],
+          ['bass_drum', {}],
+          ['snare', {}],
+          ['hihat', {}],
+        ];
+        for (const [engine, opts] of cases) {
+          try {
+            const s = await renderWorklet(engine, opts);
+            const delta = s.db - saw.db;
+            const suggest = saw.rms / Math.max(1e-6, s.rms);
+            log(`${engine.padEnd(12)} ${JSON.stringify(opts).padEnd(40)} RMS=${s.rms.toFixed(4)} dB=${s.db.toFixed(2)} Δ=${delta.toFixed(2)}dB trim≈${suggest.toFixed(3)}`);
+          } catch (e) {
+            log(`${engine} FAILED: ${e.message}`);
+          }
+        }
+        log('\nDone. Copy suggested trims into ENGINE_TRIM in js/osc-source.js');
+      } catch (err) {
+        log('Error: ' + err.stack);
+      }
+    };
+  </script>
+</body>
+</html>

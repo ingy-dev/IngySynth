@@ -3,8 +3,8 @@
 
 import { state } from './state.js?v=107';
 import { midiPitchBendValue } from './tuning.js?v=74';
-import { voiceTargetFreq } from './unison.js?v=135';
-import { applyPolyPitchBend, hasPolyVoices } from './poly-voice.js?v=28';
+import { voiceTargetFreq } from './unison.js?v=145';
+import { applyPolyPitchBend, hasPolyVoices } from './poly-voice.js?v=34';
 
 const BEND_RAMP = 0.01;
 

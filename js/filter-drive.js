@@ -3,6 +3,7 @@
 // Chord intervals also soft-scale Q (biquad rails at high Q + multi-pitch).
 
 import { state, OSC_COUNT } from './state.js?v=107';
+import { OSC4_INDEX } from './osc-source.js?v=66';
 
 /** Soft-clip / peak-limit curve (drive↑ = more compression of peaks). */
 export function makeFilterInputCurve(drive = 2.0) {
@@ -100,7 +101,7 @@ export function refreshFilterInputDrive(rampTime = 0.04) {
         pad = Math.min(pad, 0.22);
     }
     // Mild WT-only trim (same family as bright) — click fixes are architectural now
-    const dark = !!(state.osc4Wavetable && state.oscStates[3]);
+    const dark = !!(state.osc4Wavetable && state.oscStates[OSC4_INDEX]);
     if (dark) {
         pad = Math.min(pad, active >= 2 ? 0.18 : 0.28);
     }

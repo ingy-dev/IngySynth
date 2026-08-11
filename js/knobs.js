@@ -3,7 +3,7 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=190';
+import { previewStepsOnVfd } from './sequencer.js?v=227';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -331,6 +331,7 @@ export function bindKnob(dial, input, valueEl, { onInteract } = {}) {
 
     // Keyboard fine control when focused
     dial.addEventListener('keydown', (e) => {
+        if (input.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         const stepNorm = e.shiftKey ? 0.05 : 0.01;
         let norm = valueToNorm(input);
         if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
@@ -407,6 +408,7 @@ function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
 
     const onPointerDown = (e) => {
         if (e.button !== undefined && e.button !== 0) return;
+        if (control.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         e.preventDefault();
         e.stopPropagation();
         dragging = true;
@@ -450,6 +452,7 @@ function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
     control.addEventListener('input', syncFromControl);
 
     dial.addEventListener('keydown', (e) => {
+        if (control.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         let idx = nearestSteppedIndex(control, steps);
         if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
             e.preventDefault();

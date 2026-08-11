@@ -50,13 +50,13 @@ export const state = {
     compressor: undefined,
     analyser: undefined,
     oscStates: [true, true, true, false], // OSC 4 Off on load
-    // OSC 4 digital engine (wavetable | fm)
+    // OSC 1 digital engine (wavetable | fm | …)
     osc4Wavetable: false,
     osc4Model: 'wavetable',
     osc4MorphX: 0.5,
     osc4MorphY: 0.5,
     osc4Harmonics: 0.5,
-    osc4Bank: 0,
+    osc4Bank: -1, // -1 = Scan via HARMONICS; 0–3 = pinned
     plaitsWorkletReady: false,
     plaitsWorkletPromise: null,
     plaitsWorkletCtx: null,

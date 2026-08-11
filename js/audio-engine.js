@@ -1,10 +1,10 @@
 import { state, OSC_COUNT } from './state.js?v=107';
-import { wireControls } from './controls.js?v=211';
+import { wireControls } from './controls.js?v=216';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { updateLfoSmoothing } from './lfo-strip.js?v=15';
 import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=7';
-import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=8';
-import { ensurePlaitsWorklet, createOscSource } from './osc-source.js?v=34';
+import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=10';
+import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX } from './osc-source.js?v=66';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;
@@ -171,32 +171,39 @@ function initAudio() {
         sampleRate: 44100
     });
 
-    // Kick off multi-engine worklet load (OSC4 digital); rebuild OSC4 if Digital was armed early.
+    // Kick off multi-engine worklet load (OSC1 digital); rebuild if Digital was armed early.
     ensurePlaitsWorklet(state.audioContext).then((ok) => {
         if (!ok || !state.osc4Wavetable) return;
-        if (state.phaseResetEnabled || !state.oscillators?.[3]) return;
+        const i = OSC4_INDEX;
+        if (state.phaseResetEnabled || !state.oscillators?.[i]) return;
         // Persistent path: swap classic → digital now that the worklet is ready
         try {
-            const old = state.oscillators[3];
+            const old = state.oscillators[i];
             const freq = old?.frequency?.value || 261.63;
             try { if (old?.started) old.stop(); } catch (_) { /* ignore */ }
             try { old?.disconnect(); } catch (_) { /* ignore */ }
             const osc = createOscSource(state.audioContext, {
-                oscIndex: 3,
-                wave: document.querySelector('.osc-type[data-osc="3"]')?.value || 'sawtooth',
+                oscIndex: i,
+                wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
                 frequency: freq,
             });
             osc.frequency.value = freq;
-            osc.connect(state.oscGains[3]);
+            osc.connect(state.oscGains[i]);
             osc.start();
             osc.started = true;
-            state.oscillators[3] = osc;
-            if (state.lfoGainOsc4Pitch) {
-                try { state.lfoGainOsc4Pitch.disconnect(); } catch (_) { /* ignore */ }
-                try { state.lfoGainOsc4Pitch.connect(osc.detune); } catch (_) { /* ignore */ }
+            state.oscillators[i] = osc;
+            const pitchLfo = [
+                state.lfoGainOsc1Pitch,
+                state.lfoGainOsc2Pitch,
+                state.lfoGainOsc3Pitch,
+                state.lfoGainOsc4Pitch,
+            ][i];
+            if (pitchLfo) {
+                try { pitchLfo.disconnect(); } catch (_) { /* ignore */ }
+                try { pitchLfo.connect(osc.detune); } catch (_) { /* ignore */ }
             }
         } catch (err) {
-            console.warn('OSC4 digital rebuild after worklet load failed:', err);
+            console.warn('OSC1 digital rebuild after worklet load failed:', err);
         }
     });
     

@@ -9,7 +9,7 @@ import {
 } from './control-mirror.js?v=74';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { updateLfoCutoffSafety } from './lfo-strip.js?v=15';
-import { drawFilterADSRVisualizer } from './visualizers.js?v=90';
+import { drawFilterADSRVisualizer } from './visualizers.js?v=92';
 
 let syncToggle = () => {};
 

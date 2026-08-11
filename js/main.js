@@ -1,19 +1,19 @@
 // Entry point: import order mirrors the original single-file script order.
-import { initAudio } from './audio-engine.js?v=129';
-import { startIdleMarquee } from './sequencer.js?v=190';
-import './controls.js?v=211';
+import { initAudio } from './audio-engine.js?v=134';
+import { startIdleMarquee } from './sequencer.js?v=227';
+import './controls.js?v=216';
 import './midi.js?v=79';
-import './visualizers.js?v=90';
-import { syncNoteVfdFromPeer } from './visualizers.js?v=90';
+import './visualizers.js?v=92';
+import { syncNoteVfdFromPeer } from './visualizers.js?v=92';
 import './mobile.js?v=73';
 import { refreshXYPad } from './xy-pad.js?v=75';
-import { initKeyboard } from './keyboard.js?v=153';
+import { initKeyboard } from './keyboard.js?v=158';
 import { initComputerKeyboard } from './computer-keyboard.js?v=150';
-import { initKeyboardKnobs, initDoubleClickReset } from './knobs.js?v=99';
+import { initKeyboardKnobs, initDoubleClickReset } from './knobs.js?v=100';
 import { initPitchBendStrip } from './pitch-bend.js?v=76';
 import { initLfoStrip, applyLfoStartupDefaults, updateLfoSmoothing } from './lfo-strip.js?v=15';
 import { initLfoRateKnob, initLfoRateControls, onLfoRateApplied } from './lfo-rate.js?v=7';
-import { initKeyboardSteps } from './keyboard-steps.js?v=92';
+import { initKeyboardSteps } from './keyboard-steps.js?v=93';
 import { initPatternShift } from './pattern-shift.js?v=93';
 import { initKeyboardOscillators, syncKeyboardOscillatorsFromMain } from './keyboard-oscillators.js?v=84';
 import { initKeyboardEffects, syncKeyboardEffectsFromMain } from './keyboard-effects.js?v=87';
@@ -26,7 +26,7 @@ import { initAutomation } from './automation.js?v=33';
 import { initParamStatus } from './param-status.js?v=4';
 import { initStepTuneRange } from './step-tune-range.js?v=2';
 import { initPatternBank } from './pattern-bank.js?v=7';
-import { initBerlin } from './berlin.js?v=27';
+import { initBerlin } from './berlin.js?v=29';
 
 onLfoRateApplied(() => updateLfoSmoothing());
 initLfoRateControls();
@@ -102,5 +102,8 @@ function syncKeyboardEffectsCollapsible() {
 }
 keyboardEffectsMq.addEventListener('change', syncKeyboardEffectsCollapsible);
 syncKeyboardEffectsCollapsible();
+
+// Synth opens expanded — sync mirrored knobs once layout is live
+syncAllKeyboardSynthFromMain();
 
 startIdleMarquee();

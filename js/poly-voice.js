@@ -10,8 +10,8 @@ import {
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=90';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=135';
+} from './visualizers.js?v=92';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=145';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=6';
 import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=13';
 import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=79';
@@ -916,10 +916,7 @@ export function syncPolyModeUI() {
         btn.disabled = locked;
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
-        const label = 'Poly Mode';
-        const front = btn.querySelector('.front');
-        if (front) front.textContent = label;
-        else btn.textContent = label;
+        btn.setAttribute('aria-label', on ? 'Polyphonic mode on' : 'Polyphonic mode');
 
         // Home: below 2nd Tuning (Chord Memory | Poly).
         // Ingy-6 on: Chord Memory far left, Poly centered, logo right.
@@ -1075,6 +1072,8 @@ export function setPolyMode(on) {
         // Restore Acid patch first so Poly snapshots the true pre-playground state
         forceAcidOffForPoly();
         document.dispatchEvent(new CustomEvent('ingysynth:exit-berlin'));
+        // Poly voices are classic OscillatorNodes — digital stays on OSC1 analog
+        document.dispatchEvent(new CustomEvent('ingysynth:digital-off'));
 
         if (!polySnapshot) {
             polySnapshot = {

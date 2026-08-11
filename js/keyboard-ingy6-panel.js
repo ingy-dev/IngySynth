@@ -3,7 +3,7 @@
 import { state } from './state.js?v=107';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { updateLfoCutoffSafety } from './lfo-strip.js?v=15';
-import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=90';
+import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=92';
 import { refreshFilterInputDrive } from './filter-drive.js?v=8';
 import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=79';
 

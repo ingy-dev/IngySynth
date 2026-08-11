@@ -2,7 +2,7 @@
 // Main Sequencer controls are source of truth; keyboard strip mirrors after apply.
 
 import { state } from './state.js?v=107';
-import { refreshStepTuneReadouts } from './sequencer.js?v=190';
+import { refreshStepTuneReadouts } from './sequencer.js?v=227';
 import {
     syncAllKeyboardStepButtonsFromMain,
     syncAllKeyboardStepFinesFromMain,

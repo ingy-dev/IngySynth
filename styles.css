@@ -1430,8 +1430,37 @@ html {
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
     }
-    .keyboard-osc-field[data-osc="3"] .osc4-engine-switch {
+    .keyboard-osc-field[data-osc="0"] .osc4-engine-switch {
         margin-bottom: 8px;
+    }
+    .osc4-plaititudes-logo {
+        display: none;
+        /* viewBox 360 × 64.11 */
+        width: min(120px, 90%);
+        aspect-ratio: 360 / 64.11;
+        height: auto;
+        margin: 0 auto 8px;
+        color: #00ff00;
+        background-color: currentColor;
+        -webkit-mask: url('SVG/plaititudes-logo.svg') center / 100% 100% no-repeat;
+        mask: url('SVG/plaititudes-logo.svg') center / 100% 100% no-repeat;
+        pointer-events: none;
+    }
+    body.osc4-wavetable .osc4-plaititudes-logo {
+        display: block;
+    }
+    .osc4-multi-model-body {
+        display: block;
+        /* viewBox 360 × 28.77 — same width as .osc4-plaititudes-logo */
+        width: min(120px, 90%);
+        aspect-ratio: 360 / 28.77;
+        height: auto;
+        margin: 16px auto 10px;
+        color: #00ff00;
+        background-color: currentColor;
+        -webkit-mask: url('SVG/multi-model-body.svg') center / 100% 100% no-repeat;
+        mask: url('SVG/multi-model-body.svg') center / 100% 100% no-repeat;
+        pointer-events: none;
     }
 
     .osc4-model-row {
@@ -1472,15 +1501,15 @@ html {
         outline: 1px solid #00ff00;
         outline-offset: 1px;
     }
-    .osc4-group .osc4-model-label {
+    .osc1-group .osc4-model-label {
         color: #aaa;
     }
-    .osc4-group .osc4-model-select {
+    .osc1-group .osc4-model-select {
         color: #ddd;
         background: #1a1a1a;
         border-color: #666;
     }
-    .osc4-group .osc4-model-select:focus-visible {
+    .osc1-group .osc4-model-select:focus-visible {
         outline-color: #aaa;
     }
 
@@ -1499,11 +1528,11 @@ html {
         letter-spacing: 0.02em;
         white-space: nowrap;
     }
-    .osc4-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-label,
-    .osc4-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-value {
+    .osc1-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-label,
+    .osc1-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-value {
         color: #aaa;
     }
-    .osc4-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-dial {
+    .osc1-group .osc4-tone-knob-row .keyboard-osc-knob .synth-knob-dial {
         border-color: #666;
     }
     .osc4-tone-knob.is-model-inactive {
@@ -1962,6 +1991,7 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
 .keyboard-section .keyboard-write-fieldset > legend,
 .keyboard-section .keyboard-arp-panel > legend,
 .keyboard-section .keyboard-mod-matrix > legend,
+.keyboard-section .keyboard-scale-fieldset > legend,
 .midi-fieldset > .collapsible-legend {
     --hex-h: 20px;
     --field-border: 1px;
@@ -2336,9 +2366,59 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
     overflow: visible;
 }
 .keyboard-arp-panel > legend .legend-hex,
-.keyboard-mod-matrix > legend .legend-hex {
+.keyboard-mod-matrix > legend .legend-hex,
+.keyboard-scale-fieldset > legend .legend-hex {
     /* Match panel top fill so the hex sits cleanly on the border */
     --hex-bg: #1a1a1a;
+}
+.keyboard-scale-fieldset {
+    /* Block (not flex) so the hex legend can sit on the border like other panels */
+    display: block;
+    position: relative;
+    width: max-content;
+    /* Match dropdown (12rem) + body horizontal padding */
+    min-width: calc(12rem + 20px);
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0;
+    border: 1px solid #00aa00;
+    border-radius: 5px;
+    background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.15);
+    box-sizing: border-box;
+    overflow: visible;
+}
+.keyboard-section .keyboard-scale-fieldset > legend {
+    /* Absolute center — margin:auto is unreliable on <legend> */
+    --hex-h: 20px;
+    --field-border: 1px;
+    position: absolute;
+    left: 50%;
+    top: calc(var(--hex-h) / -2 + var(--field-border) / 2);
+    transform: translateX(-50%);
+    margin: 0;
+    width: max-content;
+    float: unset;
+}
+.keyboard-scale-fieldset-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 10px 10px;
+    box-sizing: border-box;
+}
+.keyboard-scale-fieldset-body .keyboard-tuning-scale-row {
+    width: max-content;
+    max-width: 100%;
+    justify-content: center;
+}
+.keyboard-scale-fieldset-body .keyboard-scale-select {
+    width: auto;
+    min-width: 12rem;
+    max-width: 18rem;
 }
 .keyboard-arp-panel-body {
     display: flex;
@@ -2499,12 +2579,17 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
 }
 .keyboard-tuning-center {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     flex: 0 0 auto;
+    width: max-content;
+    max-width: 100%;
+    margin-inline: auto;
 }
 .keyboard-tuning-note {
-    margin: 0;
+    margin: 0 auto;
     width: fit-content;
     max-width: 100%;
     box-sizing: border-box;
@@ -3646,7 +3731,7 @@ body.acid-mode .berlin-step-ratch {
     color: #00aa00;
     font-size: 10px;
 }
-body.osc4-wavetable .keyboard-osc-field[data-osc="3"] .keyboard-osc-wave {
+body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     display: none;
 }
 
@@ -5032,6 +5117,10 @@ canvas.vfd-glass {
 .keyboard-acid-strip:has(> .keyboard-acid-strip-controls[hidden]) {
     display: none;
 }
+/* Thin green outline on dark keyboard chrome pushables (modes, play, write, automation, …) */
+.keyboard-section button.pushable[class*="keyboard-"] > .front {
+    box-shadow: inset 0 0 0 0.5px #00aa00;
+}
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle,
 #berlinToggle.pushable.keyboard-berlin-toggle,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle,
@@ -5082,13 +5171,93 @@ canvas.vfd-glass {
     opacity: 0.45;
     cursor: not-allowed;
 }
-/* Chord Mem: idle red label; learning = flashing green rec dot (same as before) */
+/* Mode logos: grey SVG when off; red Michroma "Exit" when on */
+#kbAcidStripToggle.pushable .kb-mode-off-label,
+#berlinToggle.pushable .kb-mode-off-label,
+#keyboardPolyToggle.pushable .kb-mode-off-label {
+    display: none;
+    font-family: 'Michroma', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    color: #ff0000;
+    white-space: nowrap;
+    pointer-events: none;
+}
+#kbAcidStripToggle.pushable:not(.off) .kb-mode-off-label,
+#berlinToggle.pushable:not(.off) .kb-mode-off-label,
+#keyboardPolyToggle.pushable:not(.off) .kb-mode-off-label {
+    display: block;
+}
+#kbAcidStripToggle.pushable:not(.off) .kb-acid-mode-label,
+#berlinToggle.pushable:not(.off) .kb-berlin-label,
+#keyboardPolyToggle.pushable:not(.off) .kb-poly-mode-label {
+    display: none;
+}
+/* Poly Mode: grey INGY-6 lockup when off */
+#keyboardPolyToggle.pushable.keyboard-poly-toggle .kb-poly-mode-label {
+    display: block;
+    /* viewBox 432 × 92.13 */
+    width: 92%;
+    max-width: 148px;
+    aspect-ratio: 432 / 92.13;
+    height: auto;
+    color: #aaa;
+    background-color: currentColor;
+    -webkit-mask: url('SVG/ingy-6-lockup.svg') center / 100% 100% no-repeat;
+    mask: url('SVG/ingy-6-lockup.svg') center / 100% 100% no-repeat;
+    pointer-events: none;
+}
+#keyboardPolyToggle.pushable.keyboard-poly-toggle:not(.off) .kb-poly-mode-label {
+    display: none;
+}
+/* Berlin Dream: grey lockup when off */
+#berlinToggle.pushable.keyboard-berlin-toggle .kb-berlin-label {
+    display: block;
+    /* viewBox 122.14 × 30.43 */
+    width: 92%;
+    max-width: 148px;
+    aspect-ratio: 122.14 / 30.43;
+    height: auto;
+    color: #aaa;
+    background-color: currentColor;
+    -webkit-mask: url('Berlin-Dream-Lockup.svg') center / 100% 100% no-repeat;
+    mask: url('Berlin-Dream-Lockup.svg') center / 100% 100% no-repeat;
+    pointer-events: none;
+}
+#berlinToggle.pushable.keyboard-berlin-toggle:not(.off) .kb-berlin-label {
+    display: none;
+}
+/* Acid Mode: grey lockup when off */
+#kbAcidStripToggle.pushable.keyboard-acid-strip-toggle .kb-acid-mode-label {
+    display: block;
+    /* viewBox 69.74 × 9.23 */
+    width: 88%;
+    max-width: 140px;
+    aspect-ratio: 69.74 / 9.23;
+    height: auto;
+    color: #aaa;
+    background-color: currentColor;
+    -webkit-mask: url('Acid%20Mode.svg') center / 100% 100% no-repeat;
+    mask: url('Acid%20Mode.svg') center / 100% 100% no-repeat;
+    pointer-events: none;
+}
+#kbAcidStripToggle.pushable.keyboard-acid-strip-toggle:not(.off) .kb-acid-mode-label {
+    display: none;
+}
+/* Chord Mem: grey SVG when idle; flashing green rec dot while learning */
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .kb-chord-mem-label {
     display: none;
-    color: #ff0000;
-    font-size: inherit;
-    letter-spacing: inherit;
-    white-space: nowrap;
+    /* viewBox 676.54 × 144 */
+    width: 92%;
+    max-width: 148px;
+    aspect-ratio: 676.54 / 144;
+    height: auto;
+    color: #aaa;
+    background-color: currentColor;
+    -webkit-mask: url('SVG/chord-memory.svg') center / 100% 100% no-repeat;
+    mask: url('SVG/chord-memory.svg') center / 100% 100% no-repeat;
+    pointer-events: none;
 }
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .kb-chord-mem-dot {
     display: none;
@@ -5101,7 +5270,7 @@ canvas.vfd-glass {
     opacity: var(--kb-rec-blink);
 }
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.off .kb-chord-mem-label {
-    display: inline;
+    display: block;
 }
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.off .kb-chord-mem-dot {
     display: none;
@@ -5549,7 +5718,8 @@ body.acid-osc-locked .osc-toggle[data-osc="3"],
 body.acid-osc-locked .osc-type[data-osc="1"],
 body.acid-osc-locked .osc-type[data-osc="2"],
 body.acid-osc-locked .osc-type[data-osc="3"],
-body.acid-osc-locked #noiseToggle {
+body.acid-osc-locked #noiseToggle,
+body.acid-osc-locked .osc4-engine-switch {
     opacity: 0.38;
     pointer-events: none;
 }
@@ -5568,6 +5738,7 @@ body.poly-mode .osc-toggle[data-osc="3"],
 body.poly-mode .osc-type[data-osc="2"],
 body.poly-mode .osc-type[data-osc="3"],
 body.poly-mode #noiseToggle,
+body.poly-mode .osc4-engine-switch,
 body.poly-mode .keyboard-effects-ringmod-field,
 body.poly-mode #ringModToggle,
 body.poly-mode #kbRingModToggle,

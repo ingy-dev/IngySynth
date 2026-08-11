@@ -4,33 +4,38 @@ import {
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=129';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=8';
+} from './audio-engine.js?v=134';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=10';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { clearAccentSweep } from './acid-env.js?v=6';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=190';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=90';
+import { clearAccentSweep } from './acid-env.js?v=8';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=227';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=92';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=74';
 import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown } from './midi.js?v=79';
-import { applyScaleState } from './keyboard.js?v=152';
+import { applyScaleState } from './keyboard.js?v=158';
 import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=92';
-import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=135';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=99';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=145';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=100';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=15';
 import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=7';
 import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=6';
-import { setPolyMode, applyPolyOscPan } from './poly-voice.js?v=28';
+import { setPolyMode, applyPolyOscPan } from './poly-voice.js?v=34';
 import {
     ensurePlaitsWorklet,
     createOscSource,
     applyOsc4MorphToLive,
     fadeStopOsc,
     OSC4_INDEX,
-} from './osc-source.js?v=34';
+} from './osc-source.js?v=66';
 
 function syncAcidModeUi() {
     syncAcidStripUi();
 }
+
+/** Wired in wireControls — forces OSC1 digital engine on/off (Acid needs analog). */
+let applyDigitalEngine = async (want) => {
+    state.osc4Wavetable = !!want;
+};
 
 export function setAcidMode(next) {
     const on = !!next;
@@ -44,6 +49,8 @@ export function setAcidMode(next) {
     }
     if (on) {
         document.dispatchEvent(new CustomEvent('ingysynth:exit-berlin'));
+        // Acid needs analog saw/square on OSC1 — drop digital engine
+        void applyDigitalEngine(false);
     }
     state.acidMode = on;
     syncAcidModeUi();
@@ -115,6 +122,10 @@ if (!globalThis.__ingysynthAcidToggleWired) {
     });
 }
 syncAcidModeUi();
+
+document.addEventListener('ingysynth:digital-off', () => {
+    void applyDigitalEngine(false);
+});
 
 export function wireControls() {
     // Capture native steps before automation can set step="any"
@@ -681,23 +692,61 @@ export function wireControls() {
 
     /** Which Plaits-style tone knobs are live for each digital model. */
     const OSC4_MODEL_TONES = {
-        wavetable: { harmonics: false, timbre: true, morph: true },
+        wavetable: { harmonics: true, timbre: true, morph: true },
         fm: { harmonics: true, timbre: true, morph: true },
+        waveshaper: { harmonics: true, timbre: true, morph: true },
+        modal: { harmonics: true, timbre: true, morph: true },
+        string: { harmonics: true, timbre: true, morph: true },
+        bass_drum: { harmonics: true, timbre: true, morph: true },
+        snare: { harmonics: true, timbre: true, morph: true },
+        hihat: { harmonics: true, timbre: true, morph: true },
     };
 
-    /** Per-model knob captions (Plaits manual meanings). BANK dropdown replaces WT harmonics. */
+    /** Per-model knob captions (Plaits manual meanings). */
     const OSC4_MODEL_LABELS = {
         wavetable: {
             harmonics: 'HARMONICS',
-            timbre: 'ROW',
-            morph: 'COLUMN',
+            timbre: 'TIMBRE',
+            morph: 'MORPH',
         },
         fm: {
             harmonics: 'RATIO',
             timbre: 'INDEX',
             morph: 'FEEDBACK',
         },
+        waveshaper: {
+            harmonics: 'WAVE',
+            timbre: 'FOLDER',
+            morph: 'ASYMM',
+        },
+        modal: {
+            harmonics: 'INHARM',
+            timbre: 'BRIGHT',
+            morph: 'DECAY',
+        },
+        string: {
+            harmonics: 'INHARM',
+            timbre: 'BRIGHT',
+            morph: 'DECAY',
+        },
+        bass_drum: {
+            harmonics: 'DRIVE',
+            timbre: 'TONE',
+            morph: 'DECAY',
+        },
+        snare: {
+            harmonics: 'TONE/N',
+            timbre: 'TONE',
+            morph: 'DECAY',
+        },
+        hihat: {
+            harmonics: 'METAL',
+            timbre: 'COLOR',
+            morph: 'DECAY',
+        },
     };
+
+    const OSC4_MODELS = new Set(Object.keys(OSC4_MODEL_TONES));
 
     function syncOsc4WavetableUi() {
         const on = !!state.osc4Wavetable;
@@ -708,9 +757,9 @@ export function wireControls() {
             btn.classList.toggle('off', !active);
             btn.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
-        const waveGroup = document.querySelector('.keyboard-osc-wave[data-osc="3"]');
+        const waveGroup = document.querySelector(`.keyboard-osc-wave[data-osc="${OSC4_INDEX}"]`);
         waveGroup?.classList.toggle('is-wavetable-hidden', on);
-        const typeSelect = document.querySelector('.osc-type[data-osc="3"]');
+        const typeSelect = document.querySelector(`.osc-type[data-osc="${OSC4_INDEX}"]`);
         if (typeSelect) typeSelect.disabled = on;
         document.querySelectorAll('.osc4-digital-params').forEach((el) => {
             el.hidden = !on;
@@ -718,12 +767,14 @@ export function wireControls() {
         document.querySelectorAll('.osc4-wt-params').forEach((el) => {
             el.hidden = !on;
         });
-        const model = state.osc4Model || 'wavetable';
+        const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
+        state.osc4Model = model;
         ['osc4Model', 'kbOsc4Model'].forEach((id) => {
             const sel = document.getElementById(id);
             if (sel && sel.value !== model) sel.value = model;
         });
-        const bank = String(Math.max(0, Math.min(3, Math.round(Number(state.osc4Bank) || 0))));
+        const bankNum = Number(state.osc4Bank);
+        const bank = String(Number.isFinite(bankNum) ? Math.max(-1, Math.min(3, bankNum)) : -1);
         const showBank = on && model === 'wavetable';
         document.querySelectorAll('.osc4-bank-row').forEach((el) => {
             el.hidden = !showBank;
@@ -734,7 +785,11 @@ export function wireControls() {
         });
 
         // Grey out inactive knobs + swap captions to the active model's meanings
-        const activeTones = OSC4_MODEL_TONES[model] || OSC4_MODEL_TONES.wavetable;
+        const activeTones = { ...(OSC4_MODEL_TONES[model] || OSC4_MODEL_TONES.wavetable) };
+        // Wavetable: HARMONICS only live while BANK is on Scan (-1)
+        if (model === 'wavetable' && Number(bank) >= 0) {
+            activeTones.harmonics = false;
+        }
         const labels = OSC4_MODEL_LABELS[model] || OSC4_MODEL_LABELS.wavetable;
         document.querySelectorAll('.osc4-tone-knob[data-osc4-tone]').forEach((knob) => {
             const tone = knob.dataset.osc4Tone;
@@ -755,7 +810,8 @@ export function wireControls() {
     }
 
     function setOsc4Bank(next) {
-        const bank = Math.max(0, Math.min(3, Math.round(Number(next) || 0)));
+        const n = Number(next);
+        const bank = Number.isFinite(n) ? Math.max(-1, Math.min(3, Math.round(n))) : -1;
         if (state.osc4Bank === bank) {
             syncOsc4WavetableUi();
             return;
@@ -766,7 +822,7 @@ export function wireControls() {
     }
 
     function setOsc4Model(next) {
-        const model = next === 'fm' ? 'fm' : 'wavetable';
+        const model = OSC4_MODELS.has(next) ? next : 'wavetable';
         if (state.osc4Model === model) {
             syncOsc4WavetableUi();
             return;
@@ -805,7 +861,7 @@ export function wireControls() {
             for (const osc of state.activeOscillators) {
                 if (osc?.oscIndex === i) {
                     hadOsc4 = true;
-                    fadeStopOsc(osc, now + 0.02, { fadeSec: 0.018 });
+                    fadeStopOsc(osc, now + 0.02, { fadeSec: 0.018, hard: !!osc.isTriggered });
                 } else {
                     survivors.push(osc);
                 }
@@ -843,7 +899,7 @@ export function wireControls() {
                     );
                     voice.amp?.gain.exponentialRampToValueAtTime(0.00001, now + 0.04);
                 } catch (_) { /* ignore */ }
-                voice.oscs?.forEach(({ osc }) => fadeStopOsc(osc, now + 0.04, { fadeSec: 0.03 }));
+                voice.oscs?.forEach(({ osc }) => fadeStopOsc(osc, now + 0.04, { fadeSec: 0.03, hard: !!osc.isTriggered }));
             }
             state.berlinOscVoices = keep;
         }
@@ -853,13 +909,14 @@ export function wireControls() {
             const old = state.oscillators[i];
             const freq = old.frequency?.value || state.lastStepFreqs?.[i] || 261.63;
             try {
-                if (old.started) old.stop(now + 0.02);
+                if (old.isTriggered) old.stop(now + 0.02, { hard: true });
+                else if (old.started) old.stop(now + 0.02);
                 else if (typeof old.stop === 'function') old.stop(now + 0.02);
             } catch (_) { /* ignore */ }
-            try { fadeStopOsc(old, now + 0.02, { fadeSec: 0.018 }); } catch (_) { /* ignore */ }
+            try { fadeStopOsc(old, now + 0.02, { fadeSec: 0.018, hard: !!old.isTriggered }); } catch (_) { /* ignore */ }
             const osc = createOscSource(ctx, {
                 oscIndex: i,
-                wave: document.querySelector('.osc-type[data-osc="3"]')?.value || 'sawtooth',
+                wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
                 frequency: freq,
             });
             try { osc.frequency.value = freq; } catch (_) { /* ignore */ }
@@ -869,18 +926,26 @@ export function wireControls() {
                 osc.started = true;
             } catch (_) { /* ignore */ }
             state.oscillators[i] = osc;
-            if (state.lfoGainOsc4Pitch) {
-                try { state.lfoGainOsc4Pitch.disconnect(); } catch (_) { /* ignore */ }
-                try { state.lfoGainOsc4Pitch.connect(osc.detune); } catch (_) { /* ignore */ }
+            const pitchLfo = [
+                state.lfoGainOsc1Pitch,
+                state.lfoGainOsc2Pitch,
+                state.lfoGainOsc3Pitch,
+                state.lfoGainOsc4Pitch,
+            ][i];
+            if (pitchLfo) {
+                try { pitchLfo.disconnect(); } catch (_) { /* ignore */ }
+                try { pitchLfo.connect(osc.detune); } catch (_) { /* ignore */ }
             }
         }
     }
 
     async function setOsc4Wavetable(next) {
         const want = !!next;
+        // Acid Mode owns OSC1 as analog saw/square; Poly uses classic OSC1 voices
+        if (want && (state.acidMode || state.keyboardPoly)) return;
         if (want) {
             if (!state.audioContext) {
-                // Flag on; audio init will load the worklet and build the right OSC4 source
+                // Flag on; audio init will load the worklet and build the right digital source
                 state.osc4Wavetable = true;
                 syncOsc4WavetableUi();
                 return;
@@ -903,8 +968,11 @@ export function wireControls() {
         }
     }
 
+    applyDigitalEngine = setOsc4Wavetable;
+
     document.querySelectorAll('.osc4-engine-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
+            if ((state.acidMode || state.keyboardPoly) && btn.dataset.engine === 'digital') return;
             setOsc4Wavetable(btn.dataset.engine === 'digital');
         });
     });

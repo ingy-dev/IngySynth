@@ -1,8 +1,8 @@
 import { state } from './state.js?v=107';
 import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=74';
-import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=101';
-import { initAudio } from './audio-engine.js?v=129';
-import { updateNoteVisualizer } from './visualizers.js?v=90';
+import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=111';
+import { initAudio } from './audio-engine.js?v=134';
+import { updateNoteVisualizer } from './visualizers.js?v=92';
 import {
     refreshStepTuneReadouts,
     startArp,
@@ -12,7 +12,7 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=190';
+} from './sequencer.js?v=227';
 import { syncKeyboardStepsVisibilityWithKeyboard } from './keyboard-steps.js?v=92';
 import { refreshXYPad } from './xy-pad.js?v=75';
 import {
@@ -52,7 +52,7 @@ import {
     retunePolyVoices,
     hasPolyVoices,
     initPolyVoice,
-} from './poly-voice.js?v=28';
+} from './poly-voice.js?v=34';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];
@@ -834,16 +834,16 @@ export function applyScaleState(enabled, scaleId) {
         const front = mainToggle.querySelector('.front');
         if (front) front.textContent = enabled ? 'Scale: On' : 'Scale: Off';
     }
-    const syncToggle = (btn) => {
+    const syncToggle = (btn, { on = 'On', off = 'Off' } = {}) => {
         if (!btn) return;
         btn.classList.toggle('off', !enabled);
-        const label = enabled ? 'Scale: On' : 'Scale: Off';
+        const label = enabled ? on : off;
         const front = btn.querySelector('.front');
         if (front) front.textContent = label;
         else btn.textContent = label;
         btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
     };
-    syncToggle(kbToggle);
+    syncToggle(kbToggle, { on: 'Scale: On', off: 'Scale: Off' });
     syncToggle(patternToggle);
     syncToggle(xyToggle);
 

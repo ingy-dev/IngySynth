@@ -2,7 +2,7 @@
 // Plaits-style engines share one pooled AudioWorkletNode shell.
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
 export const OSC4_INDEX = 0;

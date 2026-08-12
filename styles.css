@@ -54,7 +54,7 @@ html {
         .header-grid {
             grid-template-columns: 1fr !important;
         }
-        .midi-buttons-container {
+        .midi-device-panels {
             flex-direction: column;
             gap: 10px;
         }
@@ -66,8 +66,9 @@ html {
             align-items: center !important;
             gap: 10px !important;
         }
-        #midiDeviceSelector, #midiOutputSelector {
-            flex-direction: column;
+        .midi-device-panels .midi-device-panel {
+            flex: 1 1 auto;
+            max-width: 100%;
         }
         /* Hide the original start/stop button on mobile */
         .section .sequencer-controls #startStop {
@@ -795,27 +796,159 @@ html {
         border-radius: 4px;
     }
     
-    /* Exception rule for MIDI selects */
-    #midiInputSelect, #midiOutputSelect, #midiOutputChannel, #midiBaseNote {
-        color: #fff;
-        border: 1px solid #00ff00;
+    /* MIDI selects use .midi-ctl-select chrome */
+    #midiInputSelect.midi-ctl-select,
+    #midiOutputSelect.midi-ctl-select,
+    #midiOutputChannel.midi-ctl-select,
+    #midiBaseNote.midi-ctl-select,
+    #bendRange.midi-ctl-select {
+        color: #00ffff;
+        border: 1px solid #00aaaa;
+        background: #111;
     }
     .control button.pushable {
         min-width: 80px;
         max-width: 120px;
     }
-    /* MIDI Mapping Styles */
-    #midiMapping.pushable {
-        background: linear-gradient(to bottom, #666, #333);
+    /* MIDI logo mode button — inside fieldset; green off / cyan on */
+    .midi-logo-toggle-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        margin: 8px auto 6px;
+        box-sizing: border-box;
     }
-    #midiMapping.pushable .front {
-        padding: 5px 10px;
-        background: linear-gradient(to bottom, #ccc, #999);
-        color: #000;
+    .midi-fieldset-home {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        max-width: none;
+        margin: 0 0 25px;
+        box-sizing: border-box;
     }
-    #midiMapping.active .front {
+    .midi-fieldset-home .midi-fieldset {
+        margin-bottom: 0;
+    }
+    .midi-fieldset-home .midi-fieldset[hidden] {
+        display: none !important;
+    }
+    #midiLogoToggle.pushable.keyboard-midi-logo-toggle {
+        background: rgba(0, 170, 0, 0.5);
+        box-shadow: 0 0 4px rgba(0, 255, 0, 0.55);
+        box-sizing: border-box;
+        width: 168px;
+        height: 44px;
+        flex: 0 0 auto;
+        margin: 0;
+        border-radius: 8px;
+        align-self: center;
+    }
+    #midiLogoToggle.pushable.keyboard-midi-logo-toggle .front {
+        box-sizing: border-box;
+        width: 168px;
+        height: 44px;
+        max-height: 44px;
+        padding: 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to bottom, #333, #000);
+        border-radius: 8px;
+        /* transform/transition inherited from button.pushable .front so hover/active press works */
+    }
+    #midiLogoToggle.pushable.keyboard-midi-logo-toggle .kb-midi-logo {
+        display: block;
+        /* viewBox 685.88 × 373.88 */
+        height: 22px;
+        width: calc(22px * 685.88 / 373.88);
+        flex: 0 0 auto;
+        color: #00ff00;
+        background-color: currentColor;
+        -webkit-mask: url('SVG/midi-logo.svg') center / 100% 100% no-repeat;
+        mask: url('SVG/midi-logo.svg') center / 100% 100% no-repeat;
+        pointer-events: none;
+    }
+    #midiLogoToggle.pushable.keyboard-midi-logo-toggle:not(.off) .kb-midi-logo,
+    #midiLogoToggle.pushable.keyboard-midi-logo-toggle.active .kb-midi-logo {
         color: #00ffff;
-        background: linear-gradient(to bottom, #ccc, #999);
+    }
+    #midiLogoToggle.pushable.keyboard-midi-logo-toggle:not(.off),
+    #midiLogoToggle.pushable.keyboard-midi-logo-toggle.active {
+        background: rgba(0, 255, 255, 0.45);
+        box-shadow: 0 0 4px rgba(0, 255, 255, 0.55);
+    }
+    /* MIDI Mapping — next to logo; text when off, cyan blink dot when on */
+    #midiMapping.pushable.keyboard-midi-action {
+        background: rgba(0, 170, 170, 0.5);
+        box-shadow: 0 0 4px rgba(0, 255, 255, 0.45);
+        box-sizing: border-box;
+        width: 168px;
+        height: 44px;
+        flex: 0 0 auto;
+        margin: 0;
+        border-radius: 8px;
+    }
+    #midiMapping.pushable.keyboard-midi-action[hidden] {
+        display: none !important;
+    }
+    #midiMapping.pushable.keyboard-midi-action .front {
+        box-sizing: border-box;
+        width: 168px;
+        height: 44px;
+        max-height: 44px;
+        padding: 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to bottom, #333, #000);
+        border-radius: 8px;
+        font-family: 'Michroma', sans-serif;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        line-height: 1.15;
+        text-align: center;
+        color: #00aaaa;
+        white-space: nowrap;
+    }
+    #midiMapping.pushable.keyboard-midi-action .midi-mapping-label {
+        display: none;
+        color: #00aaaa;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+    }
+    #midiMapping.pushable.keyboard-midi-action .midi-mapping-dot {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #00ffff;
+        box-shadow: 0 0 6px rgba(0, 255, 255, 0.65);
+        pointer-events: none;
+        opacity: var(--kb-rec-blink);
+    }
+    #midiMapping.pushable.keyboard-midi-action.off .midi-mapping-label {
+        display: inline;
+    }
+    #midiMapping.pushable.keyboard-midi-action.off .midi-mapping-dot {
+        display: none;
+    }
+    #midiMapping.pushable.keyboard-midi-action:not(.off) .midi-mapping-label,
+    #midiMapping.pushable.keyboard-midi-action.active .midi-mapping-label {
+        display: none;
+    }
+    #midiMapping.pushable.keyboard-midi-action:not(.off) .midi-mapping-dot,
+    #midiMapping.pushable.keyboard-midi-action.active .midi-mapping-dot {
+        display: block;
+    }
+    #midiMapping.pushable.keyboard-midi-action.active,
+    #midiMapping.pushable.keyboard-midi-action:not(.off) {
+        background: rgba(0, 255, 255, 0.45);
+        box-shadow: 0 0 4px rgba(0, 255, 255, 0.55);
     }
     .midi-highlight {
         box-shadow: 0 0 10px 5px rgba(0, 255, 255, 0.7);
@@ -863,40 +996,87 @@ html {
         outline: 2px dashed rgba(0, 255, 255, 0.5);
         cursor: pointer;
     }
-    /* Send MIDI Styles */
-    #sendMidi.pushable {
-        background: linear-gradient(to bottom, #666, #333);
+    /* MIDI Mapping / Send action buttons removed — logo toggle shows device panels */
+    .midi-device-panels {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: stretch;
+        gap: 12px;
+        width: 100%;
+        margin: 0 auto 4px;
+        box-sizing: border-box;
     }
-    #sendMidi.pushable .front {
-        padding: 5px 10px;
-        background: linear-gradient(to bottom, #ccc, #999);
-        color: #000;
+    .midi-device-panels[hidden] {
+        display: none !important;
     }
-    #sendMidi.active .front {
-        color: #00ff00;
-        background: linear-gradient(to bottom, #ccc, #999);
-    }
-    /* MIDI buttons container */
-    .midi-buttons-container {
+    .midi-device-panel {
         display: flex;
         flex-direction: column;
-        justify-content: center;
         align-items: center;
-        gap: 20px;
-        margin: 0 auto 10px;
+        justify-content: flex-start;
+        gap: 10px;
+        flex: 1 1 280px;
+        max-width: 420px;
+        margin: 0;
+        padding: 10px 12px;
+        box-sizing: border-box;
+        border: 1px solid rgba(0, 170, 170, 0.55);
+        border-radius: 5px;
+        background: rgba(0, 12, 12, 0.55);
+    }
+    .midi-device-panel[hidden] {
+        display: none !important;
+    }
+    .midi-ctl-row {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
         width: 100%;
-        max-width: 500px;
+    }
+    .midi-ctl-label {
+        font-family: 'Michroma', sans-serif;
+        font-size: 7px;
+        letter-spacing: 0.06em;
+        color: #00aaaa;
+        text-transform: uppercase;
+        line-height: 1;
+    }
+    .midi-ctl-select {
+        font-family: 'Michroma', sans-serif;
+        font-size: 8px;
+        color: #00ffff;
+        background: #111;
+        border: 1px solid #00aaaa;
+        border-radius: 3px;
+        padding: 4px 8px;
+        min-width: 7.5rem;
+        max-width: 100%;
+        width: auto;
+        box-sizing: border-box;
+        text-align: center;
+    }
+    .midi-ctl-select:focus-visible {
+        outline: 1px solid #00ffff;
+        outline-offset: 1px;
     }
     .midi-fieldset {
         width: 100%;
-        max-width: 960px;
-        margin: 0 auto 25px;
+        max-width: none;
+        margin: 0 0 25px;
         padding: 6px 6px 8px;
         border: 1px solid #00aa00;
         border-radius: 5px;
         box-sizing: border-box;
         overflow: visible;
-        background: rgba(0, 0, 0, 0.35);
+        background: rgba(0, 20, 0, 0.45);
+    }
+    .midi-fieldset.midi-section-on {
+        border-color: #00aaaa;
+        background: rgba(0, 20, 20, 0.45);
     }
     .midi-fieldset.collapsed {
         padding-bottom: 0;
@@ -1840,7 +2020,7 @@ body.keyboard-stage-mode .keyboard-stage-scope {
 .midi-fieldset-stage {
     width: 100%;
     max-width: none;
-    margin: 12px 0 0;
+    margin: 0 0 12px;
     box-sizing: border-box;
     align-self: stretch;
 }
@@ -1853,13 +2033,24 @@ body.keyboard-stage-mode .keyboard-stage-scope {
     border-radius: 5px;
     box-sizing: border-box;
     overflow: visible;
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 20, 0, 0.45);
+}
+.keyboard-section .midi-fieldset.midi-section-on {
+    border-color: #00aaaa;
+    background: rgba(0, 20, 20, 0.45);
 }
 .keyboard-section .midi-fieldset.collapsed {
     padding-bottom: 0;
 }
 .keyboard-section .midi-fieldset .legend-hex {
     --hex-bg: #050805;
+    --hex-stroke: #00aa00;
+    color: #00aa00;
+}
+.keyboard-section .midi-fieldset.midi-section-on .legend-hex {
+    --hex-bg: #050808;
+    --hex-stroke: #00aaaa;
+    color: #00aaaa;
 }
 body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
     background: #00aa00;
@@ -1979,6 +2170,13 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
 }
 .midi-fieldset .legend-hex {
     --hex-bg: #0a0a0a;
+    --hex-stroke: #00aa00;
+    color: #00aa00;
+}
+.midi-fieldset.midi-section-on .legend-hex {
+    --hex-bg: #0a0a0a;
+    --hex-stroke: #00aaaa;
+    color: #00aaaa;
 }
 /* Side points (50% height) sit on the fieldset border centerline */
 .keyboard-section .keyboard-controls-fieldset > .collapsible-legend,
@@ -2046,11 +2244,21 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
     -webkit-tap-highlight-color: transparent;
 }
 .keyboard-section .collapsible-toggle.legend-hex:hover,
-.keyboard-section .collapsible-toggle.legend-hex:focus-visible,
+.keyboard-section .collapsible-toggle.legend-hex:focus-visible {
+    --hex-stroke: #00ff00;
+    color: #00ff00;
+    outline: none;
+}
 .midi-fieldset .collapsible-toggle.legend-hex:hover,
 .midi-fieldset .collapsible-toggle.legend-hex:focus-visible {
     --hex-stroke: #00ff00;
     color: #00ff00;
+    outline: none;
+}
+.midi-fieldset.midi-section-on .collapsible-toggle.legend-hex:hover,
+.midi-fieldset.midi-section-on .collapsible-toggle.legend-hex:focus-visible {
+    --hex-stroke: #00ffff;
+    color: #00ffff;
     outline: none;
 }
 .keyboard-controls-body {
@@ -2652,7 +2860,7 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
 #kbAutomationUndo.pushable.keyboard-automation-btn,
 #kbAutomationRedo.pushable.keyboard-automation-btn,
 #kbAutomationClear.pushable.keyboard-automation-btn {
-    background: linear-gradient(to bottom, #1a1a1a, #000);
+    background: rgba(0, 170, 0, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -5117,15 +5325,16 @@ canvas.vfd-glass {
 .keyboard-acid-strip:has(> .keyboard-acid-strip-controls[hidden]) {
     display: none;
 }
-/* Thin green outline on dark keyboard chrome pushables (modes, play, write, automation, …) */
-.keyboard-section button.pushable[class*="keyboard-"] > .front {
-    box-shadow: inset 0 0 0 0.5px #00aa00;
+/* Green push-depth base on dark keyboard chrome pushables (modes, play, write, automation, …) */
+.keyboard-section button.pushable[class*="keyboard-"] {
+    background: rgba(0, 170, 0, 0.5);
+    box-shadow: 0 0 4px rgba(0, 255, 0, 0.55);
 }
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle,
 #berlinToggle.pushable.keyboard-berlin-toggle,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle,
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle {
-    background: linear-gradient(to bottom, #1a1a1a, #000);
+    background: rgba(0, 170, 0, 0.5);
     width: 168px;
     height: 44px;
     flex: 0 0 168px;
@@ -5883,7 +6092,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     gap: 8px;
 }
 .pushable.keyboard-pattern-octave-btn {
-    background: linear-gradient(to bottom, #1a1a1a, #000);
+    background: rgba(0, 170, 0, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -5939,7 +6148,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 /* Acc/On footprint + transport (Rev / write-nav) look */
 #kbPatternShiftBack.pushable.keyboard-pattern-shift-btn,
 #kbPatternShiftForward.pushable.keyboard-pattern-shift-btn {
-    background: linear-gradient(to bottom, #1a1a1a, #000);
+    background: rgba(0, 170, 0, 0.5);
     flex: 0 0 auto;
     width: 54px;
     height: auto;
@@ -6054,7 +6263,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     margin: 0 auto;
 }
 #kbStartStop.pushable.keyboard-start-stop {
-    background: linear-gradient(to bottom, #1a1a1a, #000);
+    background: rgba(0, 170, 0, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -6093,7 +6302,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     margin-left: 0;
 }
 #kbRev.pushable.keyboard-rev {
-    background: linear-gradient(to bottom, #1a1a1a, #000);
+    background: rgba(0, 170, 0, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -6162,7 +6371,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 #kbRest.pushable.keyboard-write-rest,
 #kbWriteAcc.pushable.keyboard-write-arm,
 #kbWriteSld.pushable.keyboard-write-arm {
-    background: linear-gradient(to bottom, #1a1a1a, #000);
+    background: rgba(0, 170, 0, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -7950,7 +8159,7 @@ body.poly-mode {
     align-items: stretch;
     min-width: 0;
     padding: 0 10px;
-    border-right: 1px solid rgba(0, 170, 0, 0.4);
+    border-right: 1px solid rgba(0, 170, 0, 0.5);
     box-sizing: border-box;
 }
 .ingy6-section:first-child {

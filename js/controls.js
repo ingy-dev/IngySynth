@@ -1,19 +1,19 @@
-import { state, OSC_COUNT } from './state.js?v=107';
+import { state, OSC_COUNT } from './state.js?v=109';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
 } from './audio-engine.js?v=134';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=10';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=12';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { clearAccentSweep } from './acid-env.js?v=8';
 import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=227';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=92';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=95';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=74';
 import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown } from './midi.js?v=79';
-import { applyScaleState } from './keyboard.js?v=158';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=92';
+import { applyScaleState } from './keyboard.js?v=160';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=95';
 import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=145';
 import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=100';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=15';
@@ -1294,58 +1294,96 @@ export function wireControls() {
         console.warn("WebMIDI is not supported in this browser.");
     }
 
-    const midiMappingButton = document.getElementById('midiMapping');
-    midiMappingButton.addEventListener('click', function() {
-        state.midiMappingMode = !state.midiMappingMode;
-        const front = this.querySelector('.front');
-        front.textContent = `MIDI Mapping: ${state.midiMappingMode ? 'On' : 'Off'}`;
-        const deviceSelector = document.getElementById('midiDeviceSelector');
-        if (state.midiMappingMode) {
-            this.classList.add('active');
+    function syncMidiMappingUi() {
+        const on = !!state.midiMappingMode;
+        const mappingBtn = document.getElementById('midiMapping');
+        if (mappingBtn) {
+            mappingBtn.classList.toggle('off', !on);
+            mappingBtn.classList.toggle('active', on);
+            mappingBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            mappingBtn.setAttribute('aria-label', on ? 'Disable MIDI mapping' : 'Enable MIDI mapping');
+        }
+        if (on) {
             document.body.classList.add('midi-mapping-active');
-            deviceSelector.style.display = 'flex';
             setupMappingListeners(true);
-            if (state.midiInputs.length === 0) {
-                alert('No MIDI inputs detected. Please connect a MIDI controller and refresh the page.');
-            }
         } else {
-            this.classList.remove('active');
             document.body.classList.remove('midi-mapping-active');
-            deviceSelector.style.display = 'none';
             setupMappingListeners(false);
             if (state.currentMappingControl) {
                 state.currentMappingControl.classList.remove('midi-highlight');
                 state.currentMappingControl = null;
             }
-            // Remove any persisting midi-mapped classes when exiting mapping mode
-            document.querySelectorAll('.midi-mapped').forEach(el => {
+            document.querySelectorAll('.midi-mapped').forEach((el) => {
                 el.classList.remove('midi-mapped');
             });
         }
+    }
+
+    function setMidiMappingMode(want, { alertIfEmpty = true } = {}) {
+        const next = !!want;
+        const changed = state.midiMappingMode !== next;
+        state.midiMappingMode = next;
+        syncMidiMappingUi();
+        if (changed && next && alertIfEmpty && state.midiInputs.length === 0) {
+            alert('No MIDI inputs detected. Please connect a MIDI controller and refresh the page.');
+        }
+    }
+
+    function syncMidiSectionUi() {
+        const on = !!state.midiSectionOpen;
+        const logoBtn = document.getElementById('midiLogoToggle');
+        const fieldset = document.getElementById('midiFieldset');
+        const devicePanels = document.getElementById('midiDevicePanels');
+        if (logoBtn) {
+            logoBtn.disabled = false;
+            logoBtn.classList.toggle('off', !on);
+            logoBtn.classList.toggle('active', on);
+            logoBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            logoBtn.setAttribute('aria-label', on ? 'Disable MIDI' : 'Enable MIDI');
+        }
+        if (fieldset) {
+            fieldset.hidden = false;
+            fieldset.setAttribute('aria-hidden', 'false');
+            fieldset.classList.toggle('midi-section-on', on);
+            fieldset.classList.toggle('midi-section-off', !on);
+        }
+        if (devicePanels) devicePanels.hidden = !on;
+        const mappingBtn = document.getElementById('midiMapping');
+        if (mappingBtn) mappingBtn.hidden = !on;
+        state.sendMidiEnabled = on;
+        if (on) {
+            populateMidiOutputDropdown();
+            const noInputs = state.midiInputs.length === 0;
+            const noOutputs = state.midiOutputs.length === 0;
+            const webMidiSupported = typeof navigator.requestMIDIAccess === 'function';
+            if (!webMidiSupported) {
+                alert('WebMIDI is not supported in this browser.');
+            } else if (noInputs && noOutputs) {
+                alert('No MIDI devices detected. Please connect a MIDI controller and refresh the page.');
+            } else if (noInputs) {
+                alert('No MIDI inputs detected. Please connect a MIDI controller and refresh the page.');
+            } else if (noOutputs) {
+                alert('No MIDI outputs detected. Please connect a MIDI device and refresh the page.');
+            }
+        } else if (state.midiMappingMode) {
+            setMidiMappingMode(false, { alertIfEmpty: false });
+        }
+    }
+
+    document.getElementById('midiLogoToggle')?.addEventListener('click', () => {
+        state.midiSectionOpen = !state.midiSectionOpen;
+        syncMidiSectionUi();
     });
+    document.getElementById('midiMapping')?.addEventListener('click', () => {
+        if (!state.midiSectionOpen) return;
+        setMidiMappingMode(!state.midiMappingMode);
+    });
+    syncMidiMappingUi();
+    syncMidiSectionUi();
 
     document.getElementById('midiInputSelect').addEventListener('change', function() {
         state.selectedMidiInput = this.value;
         console.log(`Selected MIDI input device: ${this.options[this.selectedIndex].text}`);
-    });
-
-    const sendMidiButton = document.getElementById('sendMidi');
-    sendMidiButton.addEventListener('click', function() {
-        state.sendMidiEnabled = !state.sendMidiEnabled;
-        const front = this.querySelector('.front');
-        front.textContent = `Send MIDI: ${state.sendMidiEnabled ? 'On' : 'Off'}`;
-        const outputSelector = document.getElementById('midiOutputSelector');
-        if (state.sendMidiEnabled) {
-            this.classList.add('active');
-            outputSelector.style.display = 'flex';
-            populateMidiOutputDropdown();
-            if (state.midiOutputs.length === 0) {
-                alert('No MIDI outputs detected. Please connect a MIDI device and refresh the page.');
-            }
-        } else {
-            this.classList.remove('active');
-            outputSelector.style.display = 'none';
-        }
     });
 
     document.getElementById('midiOutputSelect').addEventListener('change', function() {

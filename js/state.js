@@ -157,6 +157,7 @@ export const state = {
     midiInputs: [],
     midiOutputs: [],
     midiMappingMode: false,
+    midiSectionOpen: false,            // MIDI logo switch: arms MIDI section (green off / cyan on)
     currentMappingControl: null,
     midiMappings: {},
     lastMIDIValues: {},

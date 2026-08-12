@@ -1,4 +1,4 @@
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -9,7 +9,7 @@ import {
     getGlobalTune,
     semitonesToFrequency,
 } from './tuning.js?v=74';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=92';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=95';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { forceNoteOff } from './voice.js?v=111';
 import { getLfoRateHz } from './lfo-rate.js?v=7';

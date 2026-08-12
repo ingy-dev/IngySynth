@@ -2,14 +2,14 @@
 // On/Off mirrors the main panel #filterEnvToggle; Invert is fullscreen-only.
 // ADSR knobs are wired in knobs.js.
 
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 import {
     observeMainControl,
     syncToggleButtonFromMain,
 } from './control-mirror.js?v=74';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
 import { updateLfoCutoffSafety } from './lfo-strip.js?v=15';
-import { drawFilterADSRVisualizer } from './visualizers.js?v=92';
+import { drawFilterADSRVisualizer } from './visualizers.js?v=95';
 
 let syncToggle = () => {};
 

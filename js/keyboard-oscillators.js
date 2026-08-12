@@ -1,7 +1,7 @@
 // Compact oscillator controls in the keyboard Synthesizer panel.
 // Knobs drive .osc-tune / .osc-vol; pan uses a microtune-style slider mirroring .osc-pan.
 
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 import { bindKnob } from './knobs.js?v=100';
 import {
     observeMainControl,

@@ -1,4 +1,4 @@
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 
 /** Keep in sync with getLfoAmountAudio() in lfo-strip.js (avoid circular import). */
 function softKneeLfoAmount(a) {

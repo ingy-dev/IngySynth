@@ -1,4 +1,4 @@
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 import { refreshParamStatusIndicators } from './param-status.js?v=4';
 import {
     heldNoteDown,
@@ -7,7 +7,7 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=158';
+} from './keyboard.js?v=160';
 import { needsHeldNoteSet } from './held-notes.js?v=5';
 
 /** MIDI note number → cell semitone while held (for Chord arp / Chord Mem). */
@@ -343,7 +343,7 @@ function onMIDIMessage(message) {
 function setupMappingListeners(enable) {
     const mappableControls = [
         ...document.querySelectorAll('input[type="range"]'),
-        ...document.querySelectorAll('button.pushable:not(#midiMapping)')
+        ...document.querySelectorAll('button.pushable:not(#midiMapping):not(#midiLogoToggle)')
     ];
     mappableControls.forEach(control => {
         if (enable) {

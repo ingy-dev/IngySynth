@@ -1,12 +1,12 @@
 // Shift Pattern: rotate active step content left/right within stepCount.
 // Main Sequencer controls are source of truth; keyboard strip mirrors after apply.
 
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 import { refreshStepTuneReadouts } from './sequencer.js?v=227';
 import {
     syncAllKeyboardStepButtonsFromMain,
     syncAllKeyboardStepFinesFromMain,
-} from './keyboard-steps.js?v=92';
+} from './keyboard-steps.js?v=95';
 import { setWriteCursor } from './pattern-write.js?v=86';
 import { rotateAutomationLanes } from './automation.js?v=33';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';

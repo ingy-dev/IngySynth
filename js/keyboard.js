@@ -1,8 +1,8 @@
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=74';
 import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=111';
 import { initAudio } from './audio-engine.js?v=134';
-import { updateNoteVisualizer } from './visualizers.js?v=92';
+import { updateNoteVisualizer } from './visualizers.js?v=95';
 import {
     refreshStepTuneReadouts,
     startArp,
@@ -13,7 +13,7 @@ import {
     endScaleVfdPrompt,
     invalidateChordArpOrder,
 } from './sequencer.js?v=227';
-import { syncKeyboardStepsVisibilityWithKeyboard } from './keyboard-steps.js?v=92';
+import { syncKeyboardStepsVisibilityWithKeyboard } from './keyboard-steps.js?v=95';
 import { refreshXYPad } from './xy-pad.js?v=75';
 import {
     initPatternWrite,
@@ -646,12 +646,15 @@ function syncChromaticSpaceBarVisibility() {
 }
 
 function syncMidiFieldsetSlot(fullscreenOn) {
-    const midi = document.getElementById('midiFieldset');
     const home = document.getElementById('midiFieldsetHome');
     const stage = document.getElementById('midiFieldsetStage');
-    if (!midi || !home || !stage) return;
-    const target = fullscreenOn ? stage : home;
-    if (midi.parentElement !== target) target.appendChild(midi);
+    const anchor = document.getElementById('midiFieldsetAnchor');
+    if (!home || !stage || !anchor) return;
+    if (fullscreenOn) {
+        if (home.parentElement !== stage) stage.appendChild(home);
+    } else if (home.previousElementSibling !== anchor) {
+        anchor.after(home);
+    }
 }
 
 function syncFullscreenUI() {

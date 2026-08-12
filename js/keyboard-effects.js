@@ -2,7 +2,7 @@
 // Knobs are wired in knobs.js; chorus toggles, delay time, compressor,
 // ring mod, and distortion mirror the main panel.
 
-import { state } from './state.js?v=107';
+import { state } from './state.js?v=109';
 import { bindKnob, formatRangeValue } from './knobs.js?v=100';
 import {
     observeMainControl,

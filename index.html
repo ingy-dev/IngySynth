@@ -7,11 +7,96 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=313">
+    <link rel="stylesheet" href="styles.css?v=316">
 </head>
 <body>
     <div class="container">
         <h1>INGYSYNTH</h1>
+        <div id="midiFieldsetAnchor" hidden aria-hidden="true"></div>
+        <div id="midiFieldsetHome" class="midi-fieldset-home">
+        <fieldset class="midi-fieldset midi-section-off" id="midiFieldset" aria-hidden="false">
+            <legend class="collapsible-legend">
+                <span class="legend-hex">
+                    <span class="collapsible-label">MIDI In/Out</span>
+                </span>
+            </legend>
+            <div class="midi-fieldset-body">
+                <div class="midi-logo-toggle-row">
+                    <button id="midiLogoToggle" class="pushable off keyboard-midi-logo-toggle" type="button" aria-pressed="false" aria-label="Enable MIDI">
+                        <span class="front">
+                            <span class="kb-midi-logo" aria-hidden="true"></span>
+                        </span>
+                    </button>
+                    <button id="midiMapping" class="pushable off keyboard-midi-action midi-mapping" type="button" aria-pressed="false" aria-label="Enable MIDI mapping" hidden>
+                        <span class="front">
+                            <span class="midi-mapping-label">MIDI Mapping</span>
+                            <span class="midi-mapping-dot" aria-hidden="true"></span>
+                        </span>
+                    </button>
+                </div>
+                <div class="midi-device-panels" id="midiDevicePanels" hidden>
+                <div id="midiDeviceSelector" class="midi-device-panel">
+                    <div class="midi-ctl-row">
+                        <label class="midi-ctl-label" for="midiInputSelect">Input Device</label>
+                        <select id="midiInputSelect" class="midi-ctl-select" aria-label="MIDI input device">
+                            <option value="all">All Connected Devices</option>
+                            <!-- MIDI devices will be populated here -->
+                        </select>
+                    </div>
+                </div>
+                <div id="midiOutputSelector" class="midi-device-panel">
+                    <div class="midi-ctl-row">
+                        <label class="midi-ctl-label" for="midiOutputSelect">Output Device</label>
+                        <select id="midiOutputSelect" class="midi-ctl-select" aria-label="MIDI output device">
+                            <option value="none">Select MIDI Output...</option>
+                            <!-- MIDI output devices will be populated here -->
+                        </select>
+                    </div>
+                    <div class="midi-ctl-row">
+                        <label class="midi-ctl-label" for="midiOutputChannel">Channel</label>
+                        <select id="midiOutputChannel" class="midi-ctl-select" aria-label="MIDI output channel">
+                            <option value="1">Channel 1</option>
+                            <option value="2">Channel 2</option>
+                            <option value="3">Channel 3</option>
+                            <option value="4">Channel 4</option>
+                            <option value="5">Channel 5</option>
+                            <option value="6">Channel 6</option>
+                            <option value="7">Channel 7</option>
+                            <option value="8">Channel 8</option>
+                            <option value="9">Channel 9</option>
+                            <option value="10">Channel 10</option>
+                            <option value="11">Channel 11</option>
+                            <option value="12">Channel 12</option>
+                            <option value="13">Channel 13</option>
+                            <option value="14">Channel 14</option>
+                            <option value="15">Channel 15</option>
+                            <option value="16">Channel 16</option>
+                        </select>
+                    </div>
+                    <div class="midi-ctl-row">
+                        <label class="midi-ctl-label" for="midiBaseNote">Base Note</label>
+                        <select id="midiBaseNote" class="midi-ctl-select" aria-label="MIDI base note">
+                            <option value="36">C2</option>
+                            <option value="48">C3</option>
+                            <option value="60" selected>C4 (Middle C)</option>
+                            <option value="72">C5</option>
+                            <option value="84">C6</option>
+                        </select>
+                    </div>
+                    <div class="midi-ctl-row">
+                        <label class="midi-ctl-label" for="bendRange">Bend Range</label>
+                        <select id="bendRange" class="midi-ctl-select" aria-label="Pitch bend range">
+                            <option value="1">&plusmn;1 semitone</option>
+                            <option value="2" selected>&plusmn;2 semitones</option>
+                            <option value="12">&plusmn;12 semitones</option>
+                            <option value="24">&plusmn;24 semitones</option>
+                        </select>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </fieldset>
+        </div>
         <div class="header-grid">
             <div></div> <!-- Empty column to center oscilloscope -->
             <div class="oscilloscope-container">
@@ -74,86 +159,7 @@
             <div></div> <!-- Empty column to center oscilloscope -->
         </div>
 
-        <div id="midiFieldsetHome" class="midi-fieldset-home">
-        <fieldset class="midi-fieldset collapsible-fieldset collapsed" id="midiFieldset">
-            <legend class="collapsible-legend">
-                <button id="midiFieldsetToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="midiPanel">
-                    <span class="collapsible-label">MIDI In/Out</span>
-                    <span class="collapsible-arrow" aria-hidden="true"></span>
-                </button>
-            </legend>
-            <div id="midiPanel" class="midi-fieldset-body collapsible-panel hidden" hidden>
-                <div class="midi-buttons-container">
-                    <button id="midiMapping" class="pushable midi-mapping">
-                        <span class="front">MIDI Mapping: Off</span>
-                    </button>
-                    <button id="sendMidi" class="pushable send-midi">
-                        <span class="front">Send MIDI: Off</span>
-                    </button>
-                </div>
-                <div id="midiDeviceSelector" style="display: none; justify-content: center; margin-bottom: 15px;">
-                    <div style="background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);">
-                        <label for="midiInputSelect" style="margin-right: 10px; color: #00ffff;">MIDI Input Device:</label>
-                        <select id="midiInputSelect" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ffff; padding: 5px;">
-                            <option value="all">All Connected Devices</option>
-                            <!-- MIDI devices will be populated here -->
-                        </select>
-                    </div>
-                </div>
-                <div id="midiOutputSelector" style="display: none; justify-content: center; margin-bottom: 15px;">
-                    <div style="background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);">
-                        <label for="midiOutputSelect" style="margin-right: 10px; color: #00ff00;">MIDI Output Device:</label>
-                        <select id="midiOutputSelect" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ff00; padding: 5px;">
-                            <option value="none">Select MIDI Output...</option>
-                            <!-- MIDI output devices will be populated here -->
-                        </select>
-                        <div style="margin-top: 10px;">
-                            <label for="midiOutputChannel" style="margin-right: 10px; color: #00ff00;">MIDI Channel:</label>
-                            <select id="midiOutputChannel" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ff00; padding: 5px;">
-                                <option value="1">Channel 1</option>
-                                <option value="2">Channel 2</option>
-                                <option value="3">Channel 3</option>
-                                <option value="4">Channel 4</option>
-                                <option value="5">Channel 5</option>
-                                <option value="6">Channel 6</option>
-                                <option value="7">Channel 7</option>
-                                <option value="8">Channel 8</option>
-                                <option value="9">Channel 9</option>
-                                <option value="10">Channel 10</option>
-                                <option value="11">Channel 11</option>
-                                <option value="12">Channel 12</option>
-                                <option value="13">Channel 13</option>
-                                <option value="14">Channel 14</option>
-                                <option value="15">Channel 15</option>
-                                <option value="16">Channel 16</option>
-                            </select>
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <label for="midiBaseNote" style="margin-right: 10px; color: #00ff00;">Base Note:</label>
-                            <select id="midiBaseNote" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ff00; padding: 5px;">
-                                <option value="36">C2</option>
-                                <option value="48">C3</option>
-                                <option value="60" selected>C4 (Middle C)</option>
-                                <option value="72">C5</option>
-                                <option value="84">C6</option>
-                            </select>
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <label for="bendRange" style="margin-right: 10px; color: #00ff00;">Bend Range (fine tune):</label>
-                            <select id="bendRange" style="font-family: 'Michroma', sans-serif; background: #333; color: #fff; border: 1px solid #00ff00; padding: 5px;">
-                                <option value="1">&plusmn;1 semitone</option>
-                                <option value="2" selected>&plusmn;2 semitones</option>
-                                <option value="12">&plusmn;12 semitones</option>
-                                <option value="24">&plusmn;24 semitones</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </fieldset>
-        </div>
-        
-        <!-- Mobile Start/Stop button container -->
+                <!-- Mobile Start/Stop button container -->
         <div class="mobile-start-stop-container">
             <button id="mobileStartStop" class="pushable start">
                 <span class="front">Start</span>
@@ -168,6 +174,7 @@
                     </button>
                 </div>
                 <div class="keyboard-stage-scope" id="keyboardStageScope">
+                    <div id="midiFieldsetStage" class="midi-fieldset-stage"></div>
                     <div class="oscilloscope-container keyboard-stage-oscilloscope">
                         <canvas id="kbOscilloscope" height="200"></canvas>
 <div id="kb-logo-overlay" class="logo-overlay">
@@ -224,7 +231,6 @@
                 </div>
                                         <div class="oscilloscope-border"></div>
                     </div>
-                    <div id="midiFieldsetStage" class="midi-fieldset-stage"></div>
                 </div>
             </div>
             <div class="chromatic-keyboard-wrap">
@@ -2415,6 +2421,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=90"></script>
+    <script type="module" src="js/main.js?v=93"></script>
 </body>
 </html>

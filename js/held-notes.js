@@ -1,4 +1,4 @@
-import { state, OSC_COUNT } from './state.js?v=109';
+import { state, OSC_COUNT } from './state.js?v=113';
 
 /** Active held cell-semitones (insertion / press order preserved in pressOrder). */
 const held = new Set();
@@ -67,7 +67,7 @@ export function heldNoteCount() {
 export function needsHeldNoteSet() {
     if (state.isPlaying) return false;
     if (state.chordMemoryLearning) return true;
-    if (state.keyboardPoly) return true;
+    if (state.keyboardPoly || state.keyboardMultitudes) return true;
     return !!(state.keyboardArp && state.keyboardArpChord);
 }
 
@@ -164,4 +164,18 @@ export function intervalsFromHeldNotes(notes) {
         intervals[i] = Math.max(-12, Math.min(12, sorted[i] - root));
     }
     return intervals;
+}
+
+/**
+ * Alpha Juno-style stack for Ingy-6 / Multitudes: intervals from lowest note.
+ * Up to 6 voices; no ±12 clamp (octave stacks need +12 / +24).
+ */
+export function polyChordIntervalsFromNotes(notes, maxNotes = 6) {
+    const sorted = [...new Set(notes.filter(Number.isFinite))].sort((a, b) => a - b);
+    if (!sorted.length) return [];
+    const root = sorted[0];
+    const cap = Math.max(1, Math.min(maxNotes, sorted.length));
+    const out = [];
+    for (let i = 0; i < cap; i++) out.push(sorted[i] - root);
+    return out;
 }

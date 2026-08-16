@@ -3,16 +3,16 @@
 // the pattern loop wraps → punch out → playback on subsequent loops.
 // Rec off + existing lane → knob tweaks set a persistent offset (curve shape kept).
 
-import { state } from './state.js?v=109';
+import { state } from './state.js?v=113';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=74';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=76';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=84';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=75';
-import { ensureDisplayStep } from './knobs.js?v=100';
+import { ensureDisplayStep } from './knobs.js?v=113';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
-} from './param-status.js?v=4';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=29';
+} from './param-status.js?v=5';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=35';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */

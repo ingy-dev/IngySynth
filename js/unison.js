@@ -1,8 +1,9 @@
 // Global unison stacks for the phase-reset oscillator path.
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
-import { state } from './state.js?v=109';
-import { createOscSource, softStartVoiceGain, fadeStopOsc } from './osc-source.js?v=66';
+import { state } from './state.js?v=113';
+import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=5';
+import { createOscSource, softStartVoiceGain, fadeStopOsc } from './osc-source.js?v=86';
 
 const ALLOWED_VOICES = [3, 5, 7];
 
@@ -17,15 +18,13 @@ export function isUnisonActive() {
 
 export function getUnisonVoices() {
     if (!isUnisonActive()) return 1;
-    const el = document.getElementById('unisonVoices');
-    const n = el ? parseInt(el.value, 10) : state.unisonVoices;
+    const n = getNumber('unisonVoices', state.unisonVoices);
     return ALLOWED_VOICES.includes(n) ? n : 3;
 }
 
 export function getUnisonSpread() {
     if (!isUnisonActive()) return 0;
-    const el = document.getElementById('unisonDetune');
-    const n = el ? parseFloat(el.value) : state.unisonSpread;
+    const n = getNumber('unisonDetune', state.unisonSpread);
     if (!Number.isFinite(n)) return 0;
     return Math.max(0, Math.min(50, n));
 }
@@ -56,11 +55,9 @@ function lfoPitchGainFor(oscIndex) {
     ][oscIndex] || null;
 }
 
-/** Current OSC pan from the main slider (−1…1). */
+/** Current OSC pan from the store (−1…1). Canonical key is `osc-pan-N` (main `.osc-pan`). */
 export function readOscPanValue(oscIndex) {
-    const panEl = document.querySelector(`.osc-pan[data-osc="${oscIndex}"]`);
-    const pan = parseFloat(panEl?.value ?? '0');
-    return Number.isFinite(pan) ? Math.max(-1, Math.min(1, pan)) : 0;
+    return getOscPan(oscIndex, 0);
 }
 
 /**
@@ -76,8 +73,8 @@ export function spawnOscStack(oscIndex, baseFreq, startTime, {
 } = {}) {
     const n = getUnisonVoices();
     const spread = getUnisonSpread();
-    const wave = document.querySelector(`.osc-type[data-osc="${oscIndex}"]`)?.value || 'sawtooth';
-    const fullVol = parseFloat(document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`)?.value ?? '0.33');
+    const wave = getOscType(oscIndex);
+    const fullVol = getOscVol(oscIndex);
     const voiceVol = fullVol / n;
 
     state.lastStepFreqs[oscIndex] = baseFreq;
@@ -216,12 +213,18 @@ function setUnisonToggleUi(on) {
 
 /** Force Unison Off when Phase Reset is Off. Controls stay enabled so Unison can auto-enable Phase Reset. */
 export function syncUnisonControlsEnabled() {
+    // #region agent log
+    const _clearedByPhase = !state.phaseResetEnabled && state.unisonEnabled;
+    if (_clearedByPhase || state.keyboardMultitudes || state.keyboardPoly) {
+        fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e6a350'},body:JSON.stringify({sessionId:'e6a350',runId:'pre-fix',hypothesisId:'B',location:'unison.js:syncUnisonControlsEnabled',message:'syncUnisonControlsEnabled',data:{clearedByPhase:_clearedByPhase,unison:!!state.unisonEnabled,phaseReset:!!state.phaseResetEnabled,multitudes:!!state.keyboardMultitudes,poly:!!state.keyboardPoly},timestamp:Date.now()})}).catch(()=>{});
+    }
+    // #endregion
     if (!state.phaseResetEnabled && state.unisonEnabled) {
         state.unisonEnabled = false;
         setUnisonToggleUi(false);
     }
 
-    const poly = !!state.keyboardPoly;
+    const poly = !!(state.keyboardPoly || state.keyboardMultitudes);
     const group = document.querySelector('.unison-group');
     const kbGroup = document.getElementById('keyboardUnisonField');
     group?.classList.remove('unison-disabled');

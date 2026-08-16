@@ -4,28 +4,28 @@ overview: "Nine checkpoints to a stage-only UI, then a JS param store, then dele
 todos:
   - id: cp1-stage-default
     content: "CP1: CSS default stage; Off beside Start (not MIDI row); Off hides piano/spacebar only, XY stays; Fullscreen/Escape no-op including the flag; XY CSS not gated on is-fullscreen; hide columns without inert; full ?v= graph"
-    status: pending
+    status: completed
   - id: cp2-midi-learn
     content: "CP2: mapping pointerdown short-circuits drag (knobs, DIV, LFO rate, strips, Ingy-6, ADSR canvas, dial-reset); store canonical input not the dial; highlight visible host; selects are unmappable unless CC apply exists; in-session maps only"
-    status: pending
+    status: completed
   - id: cp3-drop-fullscreen
     content: "CP3: remove Fullscreen/Escape-exit/MIDI swap; keep speech and strip Escape; Off must not leave the stage; one ?v= per module"
-    status: pending
+    status: completed
   - id: cp4-param-facade
     content: "CP4 (later): js/params.js facade still synced to hidden DOM; set() must dispatch input for live AudioParams"
-    status: pending
+    status: completed
   - id: cp5-engine-reads
     content: "CP5 (later): engine reads params.get; writers still DOM; test cutoff ride while playing"
-    status: pending
+    status: completed
   - id: cp6-osc-store
     content: "CP6 (later): osc tune/vol/pan/wave/on keys; do not fork a third copy beside state.oscStates"
-    status: pending
+    status: completed
   - id: cp7-live-steps
     content: "CP7 (later): pattern.steps[] is live source; stop generating #steps"
-    status: pending
+    status: completed
   - id: cp8-widgets-write
-    content: "CP8 (later): knobs/buttons write the store; delete control-mirror click-through"
-    status: pending
+    content: "CP8: knobs/buttons write the store; delete control-mirror click-through"
+    status: completed
   - id: cp9-xy-midi-auto-delete
     content: "CP9 (later): catalogs, null-safe transport, then delete #synthContainer"
     status: pending
@@ -209,9 +209,9 @@ Engine **logic** stays untouched (import `?v=` strings excepted).
 
 ---
 
-## Checkpoint 8 — Widgets write the store (later)
+## Checkpoint 8 — Widgets write the store
 
-**Goal:** `bindKnob(dial, paramKey)`; buttons `params.set`. No `mainBtn.click()`. Delete [`js/control-mirror.js`](js/control-mirror.js). Stage / acid / MI share keys.
+**Goal:** `bindKnob(dial, paramKey)`; buttons `params.set` / `toggle`. No widget `mainBtn.click()`. `js/control-mirror.js` deleted. Stage / acid / MI share keys.
 
 **Smoke:** Cutoff from stage, acid, and MI is one value; all FX toggles; chorus I/II; delay select; LFO on/retrig/sync; filter env / acid (former `.click()` paths); double-click reset; Keyboard Off does not desync.
 

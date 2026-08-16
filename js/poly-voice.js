@@ -1,20 +1,32 @@
 // Kb-only 6-voice polyphonic playground (shared filter, per-voice amp).
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
-import { state, OSC_COUNT } from './state.js?v=109';
-import { semitonesToFrequency } from './tuning.js?v=74';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=78';
-import { refreshFilterInputDrive } from './filter-drive.js?v=12';
+import { state, OSC_COUNT } from './state.js?v=113';
+import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=5';
+import { semitonesToFrequency } from './tuning.js?v=77';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=80';
+import { refreshFilterInputDrive } from './filter-drive.js?v=20';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=95';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=145';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=6';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=13';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=79';
+} from './visualizers.js?v=98';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=154';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=11';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=18';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=80';
+import {
+    createOscSource,
+    fadeStopOsc,
+    softStartVoiceGain,
+    setOsc4MorphLiveHook,
+} from './osc-source.js?v=86';
+import {
+    isPolyChordMemoryOn,
+    getPolyChordIntervals,
+    clearPolyChordMemory,
+} from './chord-memory.js?v=15';
 
 /** Local bend helper — avoid circular import with pitch-bend.js. */
 function bentFrequency(baseFreq) {
@@ -35,6 +47,8 @@ let polyVoiceGeneration = 0;
 
 /** @type {Array<{
  *   semi: number|null,
+ *   finger: number|null,
+ *   chordInterval: number,
  *   age: number,
  *   ampEnv: GainNode|null,
  *   oscs: OscillatorNode[],
@@ -55,6 +69,8 @@ function ensureVoicePool() {
         if (dest) ampEnv.connect(dest);
         voices.push({
             semi: null,
+            finger: null,
+            chordInterval: 0,
             age: 0,
             ampEnv,
             oscs: [],
@@ -71,13 +87,11 @@ function scaleAdsrTime(seconds) {
 
 /** Like parseFloat, but keeps 0 (unlike `x || default`, which treats 0 as missing). */
 function readFloatParam(id, fallback) {
-    const raw = parseFloat(document.getElementById(id)?.value);
-    return Number.isFinite(raw) ? raw : fallback;
+    return getNumber(id, fallback);
 }
 
 function getPolyDetuneCents() {
-    const el = document.getElementById('unisonDetune');
-    const n = el ? parseFloat(el.value) : state.unisonSpread;
+    const n = getNumber('unisonDetune', state.unisonSpread);
     if (!Number.isFinite(n)) return 10;
     return Math.max(0, Math.min(50, n));
 }
@@ -110,9 +124,7 @@ function setOscVolUi(oscIndex, value) {
 }
 
 function readOscVol(oscIndex) {
-    const el = document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`);
-    const n = el ? parseFloat(el.value) : POLY_DEFAULT_OSC_VOL;
-    return Number.isFinite(n) ? n : POLY_DEFAULT_OSC_VOL;
+    return getOscVol(oscIndex, POLY_DEFAULT_OSC_VOL);
 }
 
 function setOscEnabled(oscIndex, enabled) {
@@ -124,8 +136,7 @@ function setOscEnabled(oscIndex, enabled) {
     state.oscStates[oscIndex] = want;
     syncOscToggleUi(oscIndex);
     if (state.audioContext && state.oscGains?.[oscIndex]) {
-        const volEl = document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`);
-        const volume = want && volEl ? parseFloat(volEl.value) : 0;
+        const volume = want ? getOscVol(oscIndex, POLY_DEFAULT_OSC_VOL) : 0;
         state.oscGains[oscIndex].gain.setValueAtTime(
             Number.isFinite(volume) ? volume : 0,
             state.audioContext.currentTime,
@@ -159,7 +170,7 @@ function setNoiseEnabled(enabled) {
     state.noiseState = want;
     syncNoiseUi();
     if (state.audioContext && state.noiseGain) {
-        const volume = want ? parseFloat(document.getElementById('noiseVol')?.value) || 0 : 0;
+        const volume = want ? getNumber('noiseVol', 0) : 0;
         state.noiseGain.gain.cancelScheduledValues(state.audioContext.currentTime);
         state.noiseGain.gain.setValueAtTime(volume, state.audioContext.currentTime);
     }
@@ -186,8 +197,7 @@ function setRingModEnabled(on) {
     state.ringModEnabled = !!on;
     if (!state.audioContext || !state.ringModDryGain || !state.ringModWetGain) return;
     if (state.ringModEnabled) {
-        const el = document.getElementById('ringMod');
-        const value = el ? parseFloat(el.value) : 0;
+        const value = getNumber('ringMod', 0);
         state.ringModDryGain.gain.setValueAtTime(1 - value, state.audioContext.currentTime);
         state.ringModWetGain.gain.setValueAtTime(value, state.audioContext.currentTime);
     } else {
@@ -208,10 +218,13 @@ function setRingModEnabled(on) {
         kb.setAttribute('aria-pressed', state.ringModEnabled ? 'true' : 'false');
     }
     const input = document.getElementById('ringMod');
-    if (input) input.disabled = !state.ringModEnabled || !!state.keyboardPoly;
+    if (input) input.disabled = !state.ringModEnabled || !!state.keyboardPoly || !!state.keyboardMultitudes;
 }
 
 function setClassicUnisonEnabled(on) {
+    // #region agent log
+    fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e6a350'},body:JSON.stringify({sessionId:'e6a350',runId:'post-fix',hypothesisId:'A',location:'poly-voice.js:setClassicUnisonEnabled',message:'setClassicUnisonEnabled',data:{want:!!on,before:!!state.unisonEnabled,multitudes:!!state.keyboardMultitudes,poly:!!state.keyboardPoly,phaseReset:!!state.phaseResetEnabled},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     state.unisonEnabled = !!on;
     const toggle = document.getElementById('unisonToggle');
     if (toggle) {
@@ -363,7 +376,7 @@ function ensurePolyNoiseSource() {
     if (!state.audioContext || !state.noiseBuffers?.white) return;
     if (state.noiseSource) return;
     try {
-        const type = document.getElementById('noiseType')?.value || 'white';
+        const type = getString('noiseType', 'white');
         const src = state.audioContext.createBufferSource();
         src.buffer = state.noiseBuffers[type] || state.noiseBuffers.white;
         src.loop = true;
@@ -456,7 +469,8 @@ function minValueSafe(v) {
 
 function polyFilterAdsrIds() {
     // Ingy 6 / Juno-60: one ADSR shapes amp + filter while Poly is on.
-    if (state.keyboardPoly) {
+    // Multitudes keeps filter env independent.
+    if (state.keyboardPoly && !state.keyboardMultitudes) {
         return { attack: 'attack', decay: 'decay', sustain: 'sustain', release: 'release' };
     }
     return {
@@ -511,6 +525,13 @@ function releaseSharedFilterIfIdle(now) {
 function stopVoiceOscs(voice, now) {
     voice.oscs.forEach((osc) => {
         try {
+            if (osc.isWavetable) {
+                fadeStopOsc(osc, now, { fadeSec: 0.03, hard: !!osc.isTriggered });
+                if (osc.panNode) {
+                    try { osc.panNode.disconnect(); } catch (_) { /* ignore */ }
+                }
+                return;
+            }
             if (osc.gainNode) {
                 osc.gainNode.gain.cancelScheduledValues(now);
                 osc.gainNode.gain.setValueAtTime(0.00001, now);
@@ -542,7 +563,7 @@ function silenceVoiceAmp(voice, now) {
 function triggerVoiceAmp(voice, now, { fromCurrent = false } = {}) {
     const g = voice.ampEnv.gain;
     // Ingy 6 VCA GATE: instant open (filter still uses shared ADSR)
-    if (state.keyboardPoly && state.polyVcaGate) {
+    if (state.keyboardPoly && state.polyVcaGate && !state.keyboardMultitudes) {
         g.cancelScheduledValues(now);
         g.setValueAtTime(1, now);
         voice.releasing = false;
@@ -567,7 +588,7 @@ function releaseVoiceAmp(voice, now) {
     const minValue = 0.00001;
     const g = voice.ampEnv.gain;
     // Ingy 6 VCA GATE: fast mute
-    const releaseTime = (state.keyboardPoly && state.polyVcaGate)
+    const releaseTime = (state.keyboardPoly && state.polyVcaGate && !state.keyboardMultitudes)
         ? 0.004
         : Math.max(0.02, readFloatParam('release', 0.3));
     g.cancelScheduledValues(now);
@@ -583,6 +604,8 @@ function releaseVoiceAmp(voice, now) {
         if (!voice.releasing) return;
         stopVoiceOscs(voice, state.audioContext.currentTime);
         voice.semi = null;
+        voice.finger = null;
+        voice.chordInterval = 0;
         voice.releasing = false;
     }, (releaseTime + 0.05) * 1000);
 }
@@ -591,53 +614,76 @@ function spawnVoiceOscs(voice, soundingSemi, cents, now) {
     stopVoiceOscs(voice, now);
     const dest = voice.ampEnv;
     let any = false;
+    const multitudes = !!state.keyboardMultitudes;
 
     for (let i = 0; i < POLY_OSC_MAX; i++) {
         if (!state.oscStates[i]) continue;
         any = true;
         const baseFreq = Math.max(20, semitonesToFrequency(soundingSemi, i));
         const freq = applyUnisonCents(bentFrequency(baseFreq), cents);
-        // Juno-60 sub (OSC2) is square-only
-        const wave = (i === 1)
+        const wave = (!multitudes && i === 1)
             ? 'square'
-            : (mainOscType(i)?.value || 'sawtooth');
-        let fullVol = parseFloat(
-            document.querySelector(`.osc-vol[data-osc="${i}"]`)?.value ?? String(POLY_DEFAULT_OSC_VOL),
-        );
-        if (!Number.isFinite(fullVol)) fullVol = POLY_DEFAULT_OSC_VOL;
-        // Ingy SUB fader = 0–100% of whatever OSC2 vol is currently set to
-        if (i === 1 && state.keyboardPoly) {
+            : getOscType(i);
+        let fullVol = getOscVol(i, POLY_DEFAULT_OSC_VOL);
+        if (i === 1 && state.keyboardPoly && !multitudes) {
             const subFader = parseFloat(
                 document.querySelector('#ingy6Panel .ingy6-fader[data-param="subOsc"] .ingy6-fader-input')?.value,
             );
             const pct = Number.isFinite(subFader) ? Math.max(0, Math.min(1, subFader / 10)) : 0;
             fullVol *= pct;
         }
-        const stackDiv = state.keyboardPolyUnison ? POLY_VOICE_COUNT : 1;
-        const voiceVol = fullVol / stackDiv;
+        const chordN = isPolyChordMemoryOn()
+            ? Math.max(1, getPolyChordIntervals().length)
+            : 1;
+        const uniDiv = (state.keyboardPolyUnison && state.keyboardPoly && !isPolyChordMemoryOn())
+            ? POLY_VOICE_COUNT
+            : 1;
+        const stackDiv = uniDiv * (chordN > 1 ? chordN : 1);
+        const voiceVol = Math.max(0.0001, fullVol / stackDiv);
 
-        const osc = state.audioContext.createOscillator();
-        osc.type = wave;
-        osc.frequency.value = freq;
-        osc.oscIndex = i;
-        osc.unisonCents = cents;
-        osc.polyBaseFreq = baseFreq;
-
-        const gain = state.audioContext.createGain();
-        gain.gain.value = 0;
+        const panValue = getOscPan(i);
         const panner = state.audioContext.createStereoPanner();
-        const panEl = document.querySelector(`.osc-pan[data-osc="${i}"]`);
-        const pan = parseFloat(panEl?.value ?? '0');
-        panner.pan.value = Number.isFinite(pan) ? Math.max(-1, Math.min(1, pan)) : 0;
-        osc.connect(gain);
-        gain.connect(panner);
+        panner.pan.value = panValue;
         panner.connect(dest);
-        osc.gainNode = gain;
-        osc.panNode = panner;
 
-        osc.start(now);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(voiceVol, now + 0.005);
+        let osc;
+        if (multitudes && i === 0) {
+            osc = createOscSource(state.audioContext, {
+                oscIndex: 0,
+                wave,
+                frequency: freq,
+            });
+            const gain = state.audioContext.createGain();
+            gain.gain.value = 0;
+            osc.connect(gain);
+            gain.connect(panner);
+            osc.gainNode = gain;
+            osc.panNode = panner;
+            osc.oscIndex = i;
+            osc.unisonCents = cents;
+            osc.polyBaseFreq = baseFreq;
+            if (typeof osc.start === 'function') osc.start(now);
+            softStartVoiceGain(gain.gain, voiceVol, now, {
+                wavetable: !!osc.isWavetable,
+                triggered: !!osc.isTriggered,
+            });
+        } else {
+            osc = state.audioContext.createOscillator();
+            osc.type = wave;
+            osc.frequency.value = freq;
+            osc.oscIndex = i;
+            osc.unisonCents = cents;
+            osc.polyBaseFreq = baseFreq;
+            const gain = state.audioContext.createGain();
+            gain.gain.value = 0;
+            osc.connect(gain);
+            gain.connect(panner);
+            osc.gainNode = gain;
+            osc.panNode = panner;
+            osc.start(now);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(voiceVol, now + 0.005);
+        }
 
         voice.oscs.push(osc);
         voice.baseFreqs.push(baseFreq);
@@ -666,15 +712,63 @@ function activePolyCount() {
 }
 
 export function isPolyMode() {
-    return !!state.keyboardPoly;
+    return !!(state.keyboardPoly || state.keyboardMultitudes);
+}
+
+/** True when Multitudes (or Ingy-6) owns the 6-voice playground. */
+export function isPolyPlayMode() {
+    return isPolyMode();
 }
 
 export function hasPolyVoices() {
     return voices.some((v) => v.semi != null);
 }
 
+function fingerOf(voice) {
+    return voice.finger != null ? voice.finger : voice.semi;
+}
+
 function findVoiceForSemi(semi) {
     return voices.find((v) => v.semi === semi && !v.releasing) || null;
+}
+
+function freeVoiceCount() {
+    return voices.filter((v) => v.semi == null).length;
+}
+
+function hardFreeFinger(finger) {
+    if (!state.audioContext || !Number.isFinite(finger)) return;
+    const now = state.audioContext.currentTime;
+    voices.forEach((v) => {
+        if (v.semi == null && v.finger == null) return;
+        if (fingerOf(v) !== finger) return;
+        silenceVoiceAmp(v, now);
+        stopVoiceOscs(v, now);
+        v.semi = null;
+        v.finger = null;
+        v.chordInterval = 0;
+        v.releasing = false;
+    });
+}
+
+function oldestOtherFinger(exceptFinger) {
+    const ages = new Map();
+    for (const v of voices) {
+        if (v.semi == null) continue;
+        const f = fingerOf(v);
+        if (f === exceptFinger) continue;
+        const prev = ages.get(f);
+        if (prev == null || v.age < prev) ages.set(f, v.age);
+    }
+    let best = null;
+    let bestAge = Infinity;
+    ages.forEach((age, f) => {
+        if (age < bestAge) {
+            bestAge = age;
+            best = f;
+        }
+    });
+    return best;
 }
 
 function allocVoice() {
@@ -701,10 +795,14 @@ function startSingleVoice(semi, sounding, cents) {
     }
 
     voice.semi = semi;
+    voice.finger = semi;
+    voice.chordInterval = 0;
     voice.age = ++allocAge;
     const ok = spawnVoiceOscs(voice, sounding, cents, now);
     if (!ok) {
         voice.semi = null;
+        voice.finger = null;
+        voice.chordInterval = 0;
         return;
     }
     openMasterEnvelope(now);
@@ -720,16 +818,17 @@ function startSingleVoice(semi, sounding, cents) {
 }
 
 function releaseSingleVoice(semi) {
-    const voice = findVoiceForSemi(semi);
-    if (!voice || !state.audioContext) return;
+    if (!state.audioContext) return;
+    const owned = voices.filter((v) => v.semi != null && !v.releasing && fingerOf(v) === semi);
+    if (!owned.length) return;
     const now = state.audioContext.currentTime;
-    releaseVoiceAmp(voice, now);
+    owned.forEach((voice) => releaseVoiceAmp(voice, now));
     if (activePolyCount() === 0) {
         state.keyboardVoiceActive = false;
         releaseSharedFilterIfIdle(now);
         releasePolyNoiseEnv(now);
         document.dispatchEvent(new CustomEvent('ingysynth:live-note-off'));
-        const release = parseFloat(document.getElementById('release')?.value ?? '0.5');
+        const release = getNumber('release', 0.5);
         showLogoOverlay(Math.max(1500, (release + 0.1) * 1000));
         if (!state.isPlaying && !state.isArping && !window.noteVisualizerPreviewActive) {
             clearNoteVisualizer();
@@ -752,10 +851,15 @@ function startUnisonStack(semi, sounding) {
         const voice = voices[k];
         const cents = unisonCents(k, POLY_VOICE_COUNT, spread);
         voice.semi = semi;
+        voice.finger = semi;
+        voice.chordInterval = 0;
         voice.age = ++allocAge;
         const ok = spawnVoiceOscs(voice, sounding, cents, now);
         if (ok) triggerVoiceAmp(voice, now, { fromCurrent: false });
-        else voice.semi = null;
+        else {
+            voice.semi = null;
+            voice.finger = null;
+        }
     }
     triggerSharedFilterEnvelope(now);
     triggerPolyNoiseEnv(now);
@@ -777,11 +881,54 @@ function releaseUnisonStack() {
     releaseSharedFilterIfIdle(now);
     releasePolyNoiseEnv(now);
     document.dispatchEvent(new CustomEvent('ingysynth:live-note-off'));
-    const release = parseFloat(document.getElementById('release')?.value ?? '0.5');
+    const release = getNumber('release', 0.5);
     showLogoOverlay(Math.max(1500, (release + 0.1) * 1000));
     if (!state.isPlaying && !state.isArping && !window.noteVisualizerPreviewActive) {
         clearNoteVisualizer();
     }
+}
+
+function startChordStack(finger, soundingRoot, intervals) {
+    ensureVoicePool();
+    hardFreeFinger(finger);
+    while (freeVoiceCount() < intervals.length) {
+        const steal = oldestOtherFinger(finger);
+        if (steal == null) break;
+        hardFreeFinger(steal);
+    }
+
+    const now = state.audioContext.currentTime;
+    openMasterEnvelope(now);
+    let any = false;
+    let shown = soundingRoot;
+    for (let i = 0; i < intervals.length; i++) {
+        const voice = voices.find((v) => v.semi == null);
+        if (!voice) break;
+        const iv = intervals[i];
+        const sounding = soundingRoot + iv;
+        voice.finger = finger;
+        voice.chordInterval = iv;
+        voice.semi = finger;
+        voice.age = ++allocAge;
+        const ok = spawnVoiceOscs(voice, sounding, 0, now);
+        if (!ok) {
+            voice.semi = null;
+            voice.finger = null;
+            voice.chordInterval = 0;
+            continue;
+        }
+        triggerVoiceAmp(voice, now, { fromCurrent: false });
+        any = true;
+        if (i === 0) shown = sounding;
+    }
+    if (!any) return;
+    triggerSharedFilterEnvelope(now);
+    triggerPolyNoiseEnv(now);
+    state.keyboardVoiceActive = true;
+    if (!state.isArping) {
+        state.playGeneration += 1;
+    }
+    updateNoteVisualizer(shown);
 }
 
 /**
@@ -789,7 +936,7 @@ function releaseUnisonStack() {
  * @param {number} soundingSemitones absolute semis from C4 (incl. global tune)
  */
 export function polyNoteOn(cellSemitone, soundingSemitones) {
-    if (!state.keyboardPoly || state.isPlaying) return;
+    if ((!state.keyboardPoly && !state.keyboardMultitudes) || state.isPlaying) return;
     if (!state.audioContext) return;
     if (state.audioContext.state === 'suspended') state.audioContext.resume();
 
@@ -797,7 +944,13 @@ export function polyNoteOn(cellSemitone, soundingSemitones) {
     hideLogoOverlay();
     document.dispatchEvent(new CustomEvent('ingysynth:live-note-on'));
 
-    if (state.keyboardPolyUnison) {
+    const chordIv = isPolyChordMemoryOn() ? getPolyChordIntervals() : [];
+    if (chordIv.length > 1) {
+        startChordStack(cellSemitone, soundingSemitones, chordIv);
+        return;
+    }
+
+    if (state.keyboardPolyUnison && state.keyboardPoly) {
         startUnisonStack(cellSemitone, soundingSemitones);
         return;
     }
@@ -807,9 +960,8 @@ export function polyNoteOn(cellSemitone, soundingSemitones) {
 }
 
 export function polyNoteOff(cellSemitone) {
-    if (!state.keyboardPoly || !state.audioContext) return;
-    if (state.keyboardPolyUnison) {
-        // Caller handles last-note retrigger; only release stack when appropriate
+    if ((!state.keyboardPoly && !state.keyboardMultitudes) || !state.audioContext) return;
+    if (state.keyboardPolyUnison && state.keyboardPoly && !isPolyChordMemoryOn()) {
         releaseUnisonStack();
         return;
     }
@@ -830,7 +982,7 @@ export function forcePolyAllOff({ silent = false } = {}) {
     if (!state.audioContext) return;
     const now = state.audioContext.currentTime;
     // Kill leftover seq/mono voices when poly owns the bus or we're idle
-    if (state.keyboardPoly || !state.isPlaying) {
+    if (state.keyboardPoly || state.keyboardMultitudes || !state.isPlaying) {
         killSharedMonoOscillators(now);
     }
     ensureVoicePool();
@@ -843,6 +995,8 @@ export function forcePolyAllOff({ silent = false } = {}) {
         silenceVoiceAmp(v, now);
         stopVoiceOscs(v, now);
         v.semi = null;
+        v.finger = null;
+        v.chordInterval = 0;
         v.releasing = false;
         v.age = 0;
     });
@@ -889,9 +1043,11 @@ export function retunePolyVoices(soundingForSemi) {
     const now = state.audioContext.currentTime;
     voices.forEach((voice) => {
         if (voice.semi == null) return;
-        const sounding = typeof soundingForSemi === 'function'
-            ? soundingForSemi(voice.semi)
-            : voice.semi;
+        const finger = voice.finger ?? voice.semi;
+        const root = typeof soundingForSemi === 'function'
+            ? soundingForSemi(finger)
+            : finger;
+        const sounding = root + (voice.chordInterval || 0);
         voice.oscs.forEach((osc) => {
             const baseFreq = Math.max(20, semitonesToFrequency(sounding, osc.oscIndex));
             osc.polyBaseFreq = baseFreq;
@@ -918,22 +1074,34 @@ export function syncPolyModeUI() {
         btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
         btn.setAttribute('aria-label', on ? 'Polyphonic mode on' : 'Polyphonic mode');
 
-        // Home: below 2nd Tuning (Chord Memory | Poly).
-        // Ingy-6 on: Chord Memory far left, Poly centered, logo right.
+        // Home: Chord Memory | Poly | Multitudes.
+        // Ingy-6 on: Chord Memory + Multitudes far left, Poly centered, logo right.
+        // Multitudes panel owns docking while Multitudes mode is on (Poly off).
         const home = document.getElementById('keyboardPolyToggleHome');
         const polySlot = document.getElementById('ingy6PolyToggleSlot');
         const chordSlot = document.getElementById('ingy6ChordMemSlot');
         const chordBtn = document.getElementById('keyboardChordMemToggle');
-        const polyTarget = on ? polySlot : home;
-        const chordTarget = on ? chordSlot : home;
-        if (polyTarget && btn.parentElement !== polyTarget) {
-            polyTarget.appendChild(btn);
+        const multBtn = document.getElementById('keyboardMultitudesToggle');
+        if (on) {
+            if (polySlot && btn.parentElement !== polySlot) {
+                polySlot.appendChild(btn);
+            }
+            if (chordSlot) {
+                if (chordBtn) chordSlot.appendChild(chordBtn);
+                if (multBtn) chordSlot.appendChild(multBtn);
+                // Chord Memory immediately left of Multitudes
+                if (chordBtn && multBtn) chordSlot.insertBefore(chordBtn, multBtn);
+            }
+            if (home) home.hidden = true;
+        } else if (!state.keyboardMultitudes && home) {
+            // Chord Memory | Poly | Multitudes
+            if (chordBtn) home.appendChild(chordBtn);
+            home.appendChild(btn);
+            if (multBtn) home.appendChild(multBtn);
+            home.hidden = false;
+        } else if (home) {
+            home.hidden = !!state.keyboardMultitudes;
         }
-        if (chordBtn && chordTarget && chordBtn.parentElement !== chordTarget) {
-            if (!on && home) home.insertBefore(chordBtn, btn);
-            else chordTarget.appendChild(chordBtn);
-        }
-        if (home) home.hidden = on;
     }
 
     if (!on) {
@@ -970,8 +1138,7 @@ export function togglePolyUnison() {
 }
 
 function readRangeValue(id, fallback = 0) {
-    const raw = parseFloat(document.getElementById(id)?.value);
-    return Number.isFinite(raw) ? raw : fallback;
+    return getNumber(id, fallback);
 }
 
 function setRangeValue(id, value) {
@@ -983,8 +1150,7 @@ function setRangeValue(id, value) {
 }
 
 function readOscTune(oscIndex) {
-    const el = document.querySelector(`.osc-tune[data-osc="${oscIndex}"]`);
-    const n = el ? parseInt(el.value, 10) : 0;
+    const n = Number(state.oscTunes[oscIndex]);
     return Number.isFinite(n) ? n : 0;
 }
 
@@ -1069,6 +1235,21 @@ export function setPolyMode(on) {
     }
 
     if (next) {
+        clearPolyChordMemory();
+        // Multitudes panel is UI-only mutex with Ingy-6 — unlock restores classic Unison/Ring first
+        if (state.keyboardMultitudes) {
+            syncMultitudesPolyLocks(false);
+            state.keyboardMultitudes = false;
+            document.body.classList.remove('multitudes-mode', 'multitudes-poly-lock');
+            const multPanel = document.getElementById('multitudesPanel');
+            if (multPanel) multPanel.hidden = true;
+            const multBtn = document.getElementById('keyboardMultitudesToggle');
+            if (multBtn) {
+                multBtn.classList.add('off');
+                multBtn.setAttribute('aria-pressed', 'false');
+                multBtn.setAttribute('aria-label', 'Multitudes Polyphonic Plaititudes');
+            }
+        }
         // Restore Acid patch first so Poly snapshots the true pre-playground state
         forceAcidOffForPoly();
         document.dispatchEvent(new CustomEvent('ingysynth:exit-berlin'));
@@ -1082,7 +1263,7 @@ export function setPolyMode(on) {
                 oscTunes: Array.from({ length: OSC_COUNT }, (_, i) => readOscTune(i)),
                 noiseState: !!state.noiseState,
                 noiseVol: readRangeValue('noiseVol', 0),
-                noiseType: document.getElementById('noiseType')?.value || 'white',
+                noiseType: getString('noiseType', 'white'),
                 unisonEnabled: !!state.unisonEnabled,
                 ringModEnabled: !!state.ringModEnabled,
                 filterAttack: readRangeValue('filterAttack', 0.1),
@@ -1094,7 +1275,7 @@ export function setPolyMode(on) {
                 chorusAmount: readRangeValue('chorusAmount', 0),
                 chorusI: chorusButtonOn('chorusI'),
                 chorusII: chorusButtonOn('chorusII'),
-                osc2Wave: mainOscType(1)?.value || 'sawtooth',
+                osc2Wave: getOscType(1),
             };
         }
         // Kill any leftover poly/mono/seq voice before poly owns the bus
@@ -1141,6 +1322,14 @@ export function setPolyMode(on) {
 
         state.keyboardPoly = true;
         state.keyboardPolyUnison = false;
+        // Chord stays off in Ingy-6 (classic OSC1 voices). Allowed in Multitudes.
+        if (state.osc4Model === 'chord') {
+            state.osc4Model = 'wavetable';
+            ['osc4Model', 'kbOsc4Model', 'miOsc4Model'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.value = 'wavetable';
+            });
+        }
         setPolyLockedUi(true);
         syncUnisonControlsEnabled();
         ensureVoicePool();
@@ -1154,6 +1343,7 @@ export function setPolyMode(on) {
     }
 
     // Exit — hard-kill voices before restoring patch
+    clearPolyChordMemory();
     forcePolyAllOff({ silent: true });
     stopPolyOwnedNoiseSource();
     state.keyboardPoly = false;
@@ -1213,6 +1403,76 @@ export function setPolyMode(on) {
     syncPolyModeUI();
 }
 
+/** Push morph/harmonics onto Multitudes/Ingy poly wavetable voices. */
+export function forEachPolyWavetableOsc(fn) {
+    if (typeof fn !== 'function') return;
+    voices.forEach((voice) => {
+        voice.oscs.forEach((osc) => {
+            if (osc?.isWavetable) fn(osc);
+        });
+    });
+}
+
+/** All live poly-pool oscillators (digital or analog) for volume / param updates. */
+export function forEachPolyOsc(fn) {
+    if (typeof fn !== 'function') return;
+    voices.forEach((voice) => {
+        voice.oscs.forEach((osc) => {
+            if (osc) fn(osc);
+        });
+    });
+}
+
+/** Arm the 6-voice pool for Multitudes (no Ingy-6 panel). */
+export function ensureMultitudesPolyReady() {
+    if (!state.audioContext) return;
+    ensureVoicePool();
+    forcePolyAllOff({ silent: true });
+    const now = state.audioContext.currentTime;
+    killSharedMonoOscillators(now);
+    if (state.envelope) {
+        state.envelope.gain.cancelScheduledValues(now);
+        state.envelope.gain.setValueAtTime(0, now);
+        state.envelopeHeld = false;
+    }
+    state.polyVcaGate = false;
+    state.keyboardPolyUnison = false;
+}
+
+/** @type {{ unisonEnabled: boolean, ringModEnabled: boolean } | null } */
+let multitudesLockSnapshot = null;
+
+/** Lock OSC3–4 / ring-mod style affordances while Multitudes owns the bus. */
+export function syncMultitudesPolyLocks(on) {
+    // #region agent log
+    fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e6a350'},body:JSON.stringify({sessionId:'e6a350',runId:'post-fix',hypothesisId:'A',location:'poly-voice.js:syncMultitudesPolyLocks',message:'syncMultitudesPolyLocks',data:{lockOn:!!on,unisonBefore:!!state.unisonEnabled,ringBefore:!!state.ringModEnabled,phaseReset:!!state.phaseResetEnabled,hasLockSnap:!!multitudesLockSnapshot},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    document.body.classList.toggle('multitudes-poly-lock', !!on);
+    if (on) {
+        if (!multitudesLockSnapshot) {
+            multitudesLockSnapshot = {
+                unisonEnabled: !!state.unisonEnabled,
+                ringModEnabled: !!state.ringModEnabled,
+            };
+        }
+        setClassicUnisonEnabled(false);
+        setRingModEnabled(false);
+    } else if (multitudesLockSnapshot) {
+        const snap = multitudesLockSnapshot;
+        multitudesLockSnapshot = null;
+        setClassicUnisonEnabled(!!snap.unisonEnabled);
+        setRingModEnabled(!!snap.ringModEnabled);
+    }
+    syncUnisonControlsEnabled();
+    // #region agent log
+    fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e6a350'},body:JSON.stringify({sessionId:'e6a350',runId:'post-fix',hypothesisId:'D',location:'poly-voice.js:syncMultitudesPolyLocks:after',message:'after Multitudes locks',data:{lockOn:!!on,unisonAfter:!!state.unisonEnabled,ringAfter:!!state.ringModEnabled,kbOff:document.getElementById('kbUnisonToggle')?.classList.contains('off'),mainOff:document.getElementById('unisonToggle')?.classList.contains('off'),hasLockSnap:!!multitudesLockSnapshot},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    const input = document.getElementById('ringMod');
+    if (input) {
+        input.disabled = !state.ringModEnabled || !!state.keyboardPoly || !!on;
+    }
+}
+
 export function togglePolyMode() {
     if (state.isPlaying || state.keyboardWrite) return;
     setPolyMode(!state.keyboardPoly);
@@ -1220,10 +1480,13 @@ export function togglePolyMode() {
 
 export function initPolyVoice() {
     bindAmpAdsrMirror();
+    setOsc4MorphLiveHook((touch) => {
+        forEachPolyWavetableOsc(touch);
+    });
     document.addEventListener('ingysynth:poly-noise-level', () => {
         syncPolyNoiseFromUi();
     });
-    // Sequencer drives Poly Arp via events (no sequencer→poly-voice import)
+    // Sequencer drives Poly/Multitudes Arp via events (no sequencer→poly-voice import)
     document.addEventListener('ingysynth:poly-arp-on', (e) => {
         const semi = e.detail?.cellSemitone;
         const sounding = e.detail?.sounding;

@@ -1,30 +1,32 @@
-import { state } from './state.js?v=109';
+import { state } from './state.js?v=113';
+import { getNumber, getString, getOscType, getOscVol } from './params.js?v=5';
 import {
     getStepTotalTune,
     getStepFineCents,
     getQuantizedStepTune,
-    stepToFrequency,
-    stepToMidiNote,
+    getStepTotalTuneFromRaw,
+    frequencyFromStepData,
+    midiNoteFromStepData,
     midiPitchBendValue,
     getGlobalTune,
     semitonesToFrequency,
-} from './tuning.js?v=74';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=95';
-import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { forceNoteOff } from './voice.js?v=111';
-import { getLfoRateHz } from './lfo-rate.js?v=7';
-import { bentFrequency } from './pitch-bend.js?v=76';
+} from './tuning.js?v=77';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=98';
+import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=80';
+import { forceNoteOff } from './voice.js?v=122';
+import { getLfoRateHz } from './lfo-rate.js?v=10';
+import { bentFrequency } from './pitch-bend.js?v=84';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=145';
-import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=66';
-import { notifyAutomationLoopAnchor } from './automation.js?v=33';
-import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=5';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=154';
+import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=86';
+import { notifyAutomationLoopAnchor } from './automation.js?v=35';
+import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=8';
 import {
     scheduleAcidAmpEnvelope,
     scheduleAcidFilterEnvelope,
     clearAccentSweep,
     acidVegDecaySec,
-} from './acid-env.js?v=8';
+} from './acid-env.js?v=10';
 import {
     isBerlinOn,
     berlinActiveRows,
@@ -44,8 +46,8 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=29';
-import { getPattern } from './pattern-bank.js?v=7';
+} from './berlin.js?v=35';
+import { getPattern, snapshotStepNeighborhood } from './pattern-bank.js?v=9';
 import {
     clampRatch,
     nextRatch,
@@ -53,7 +55,22 @@ import {
     syncRatchButton,
 } from './step-ratch.js?v=1';
 
-const stepsDiv = document.getElementById('steps');
+function ensureStepParamBus() {
+    let bus = document.getElementById('stepParamBus');
+    if (!bus) {
+        bus = document.createElement('div');
+        bus.id = 'stepParamBus';
+        bus.hidden = true;
+        bus.setAttribute('aria-hidden', 'true');
+        const host = document.getElementById('synthContainer') || document.body;
+        host.appendChild(bus);
+    }
+    return bus;
+}
+
+// Canonical step inputs for knobs / MIDI / write. Not `#steps` (CP7: that stays empty).
+// Classic play reads `pattern.steps[]`, snapshotted at schedule time.
+const stepsDiv = ensureStepParamBus();
 // Guard against duplicate ES module instances (?v= skew) appending a second bank of steps.
 if (stepsDiv && !globalThis.__ingySynthStepsBuilt) {
     globalThis.__ingySynthStepsBuilt = true;
@@ -116,41 +133,18 @@ if (!globalThis.__ingySynthStepFlagBound) {
     });
 }
 
-function isStepSlideOn(step) {
-    const button = document.querySelector(`.step-slide[data-step="${step}"]`);
-    return button ? !button.classList.contains('off') : false;
-}
-
-function isStepAccentOn(step) {
-    const button = document.querySelector(`.step-accent[data-step="${step}"]`);
-    return button ? !button.classList.contains('off') : false;
-}
-
-function getStepRatch(step) {
-    // TB-303 had no ratchet — Acid mode always plays as a single hit
-    if (state.acidMode) return 1;
-    return readRatchFromButton(document.querySelector(`.step-ratch[data-step="${step}"]`));
-}
-
-function isStepOn(step) {
-    const toggle = document.querySelector(`.step-toggle[data-step="${step}"]`);
-    return toggle.querySelector('.front').textContent === 'On';
-}
-
 function getSlideTime() {
-    return parseInt(document.getElementById('slideTime').value) / 1000;
+    return getNumber('slideTime') / 1000;
 }
 
 function getAccentAmount() {
-    const el = document.getElementById('accentAmount');
-    return el ? parseFloat(el.value) / 100 : 1;
+    return getNumber('accentAmount', 100) / 100;
 }
 
 /** Gate length as fraction of step (0.05–1). Default 0.9 matches prior hard-coded note length. */
 function getGateLength() {
-    const el = document.getElementById('gateLength');
-    const v = el ? parseFloat(el.value) : 90;
-    return Math.max(0.05, Math.min(1, (Number.isFinite(v) ? v : 90) / 100));
+    const v = getNumber('gateLength', 90);
+    return Math.max(0.05, Math.min(1, v / 100));
 }
 
 // Note preview shared by the tune and fine sliders
@@ -228,12 +222,11 @@ function syncMicrotuneUI() {
         toggle.setAttribute('aria-pressed', locked ? 'true' : 'false');
     }
 
-    const kbToggle = document.getElementById('kbMicrotuneLock');
-    if (kbToggle) {
+    document.querySelectorAll('#kbMicrotuneLock, #kbStepsMicrotuneLock').forEach(kbToggle => {
         kbToggle.textContent = locked ? 'Lock' : 'Full';
         kbToggle.classList.toggle('off', !locked);
         kbToggle.setAttribute('aria-pressed', locked ? 'true' : 'false');
-    }
+    });
 
     // Update slider step for future moves, but do not rewrite existing values.
     // Off-grid fine amounts stay until that step's slider is touched.
@@ -269,6 +262,7 @@ document.querySelectorAll('.step-fine').forEach(slider => {
 
 document.getElementById('microtuneLockToggle')?.addEventListener('click', toggleMicrotuneLock);
 document.getElementById('kbMicrotuneLock')?.addEventListener('click', toggleMicrotuneLock);
+document.getElementById('kbStepsMicrotuneLock')?.addEventListener('click', toggleMicrotuneLock);
 
 syncMicrotuneUI();
 
@@ -308,10 +302,10 @@ function scheduleStepFilterEnvelope({
     const amount = getFilterEnvAmount();
     if (amount === 0 || !state.filterEnvGain) return;
 
-    const attack = parseFloat(document.getElementById('filterAttack').value);
-    const decay = parseFloat(document.getElementById('filterDecay').value);
-    const sustain = parseFloat(document.getElementById('filterSustain').value);
-    const release = parseFloat(document.getElementById('filterRelease').value);
+    const attack = getNumber('filterAttack');
+    const decay = getNumber('filterDecay');
+    const sustain = getNumber('filterSustain');
+    const release = getNumber('filterRelease');
 
     const gainParam = state.filterEnvGain.gain;
     const now = state.audioContext.currentTime;
@@ -321,10 +315,10 @@ function scheduleStepFilterEnvelope({
     const minValue = 0.00001;
     const releaseTime = Math.max(0.005, release * 0.3);
 
-    const baseCutoff = Math.max(40, parseFloat(document.getElementById('cutoff').value));
+    const baseCutoff = Math.max(40, getNumber('cutoff', 1000));
     const { signedDepth: baseSignedDepth } = getFilterCutoffRange(baseCutoff, amount);
     const cutModHot = state.lfoState
-        && Math.abs(parseFloat(document.getElementById('cutoffMod')?.value) || 0) > 80
+        && Math.abs(getNumber('cutoffMod', 0)) > 80
         && (Number(state.lfoAmount) || 0) > 0.02;
 
     // Accent: temporarily boost filter-env depth for this step (≈2× at full amount)
@@ -373,7 +367,7 @@ function scheduleStepFilterEnvelope({
     const gateWindow = stepDuration * gateFrac;
     // High-Q: sweeping cutoff in 2ms rings the filter (pings every step).
     // Scale the attack floor with resonance so the sweep stays under the ring threshold.
-    const qNow = parseFloat(document.getElementById('resonance')?.value) || 0;
+    const qNow = getNumber('resonance', 0);
     const qFloor = Math.max(0, Math.min(1, (qNow - 6) / 14)) * 0.014;
     const minAttack = Math.max(cutModHot ? 0.01 : 0.002, qFloor);
     const safeAttackTime = Math.max(minAttack, scaleAdsrTime(attack));
@@ -462,10 +456,10 @@ function scheduleStepEnvelope({
         });
     }
 
-    const attack = parseFloat(document.getElementById('attack').value);
-    const decay = parseFloat(document.getElementById('decay').value);
-    const sustain = parseFloat(document.getElementById('sustain').value);
-    const release = parseFloat(document.getElementById('release').value);
+    const attack = getNumber('attack');
+    const decay = getNumber('decay');
+    const sustain = getNumber('sustain');
+    const release = getNumber('release');
 
     const now = state.audioContext.currentTime;
     const t0 = Math.max(now, startTime);
@@ -677,10 +671,10 @@ function scheduleFullNoteOnGain(gainParam, {
         return t0 + Math.max(stepDuration, vegSec * 3) + 0.08;
     }
 
-    const attack = parseFloat(document.getElementById('attack').value);
-    const decay = parseFloat(document.getElementById('decay').value);
-    const sustain = parseFloat(document.getElementById('sustain').value);
-    const release = parseFloat(document.getElementById('release').value);
+    const attack = getNumber('attack');
+    const decay = getNumber('decay');
+    const sustain = getNumber('sustain');
+    const release = getNumber('release');
     const stepEnd = t0 + stepDuration;
     const releaseTime = Math.max(0.005, release * 0.3);
     const ampPeak = (accentThisStep ? 1 + 0.5 * accentAmount : 1) * peakScale;
@@ -724,9 +718,9 @@ function scheduleFullNoteOnGain(gainParam, {
 }
 
 function ratchFilterSnapshot(accentThisStep, accentAmount) {
-    const cutoff = Math.max(40, parseFloat(document.getElementById('cutoff')?.value) || 1000);
-    const q = Math.max(0.0001, parseFloat(document.getElementById('resonance')?.value) || 1);
-    const highPass = Math.max(20, parseFloat(document.getElementById('highPass')?.value) || 20);
+    const cutoff = Math.max(40, getNumber('cutoff', 1000));
+    const q = Math.max(0.0001, getNumber('resonance', 1));
+    const highPass = Math.max(20, getNumber('highPass', 20));
     const hpQ = state.highPassFilter?.Q?.value ?? 0.7;
     // Mild accent bump so Acc still reads on independent voices
     const boost = accentThisStep ? 1 + 0.35 * accentAmount : 1;
@@ -783,8 +777,8 @@ function spawnRatchVoice({
     const oscCount = state.oscStates?.length || 0;
     for (let i = 0; i < oscCount; i++) {
         if (!state.oscStates[i]) continue;
-        const wave = document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth';
-        const vol = parseFloat(document.querySelector(`.osc-vol[data-osc="${i}"]`)?.value ?? '0.33');
+        const wave = getOscType(i);
+        const vol = getOscVol(i);
         if (!(vol > 0.0001)) continue;
 
         const fromHz = Math.max(20, bentFrequency(freqForOsc(i)));
@@ -825,10 +819,10 @@ function spawnRatchVoice({
     let noiseSource = null;
     let noiseGain = null;
     const noiseVol = state.noiseState
-        ? parseFloat(document.getElementById('noiseVol')?.value) || 0
+        ? getNumber('noiseVol', 0)
         : 0;
     if (noiseVol > 0.0001 && state.noiseBuffers) {
-        const noiseType = document.getElementById('noiseType')?.value || 'white';
+        const noiseType = getString('noiseType', 'white');
         const buf = state.noiseBuffers[noiseType] || state.noiseBuffers.white;
         if (buf) {
             noiseSource = ctx.createBufferSource();
@@ -995,8 +989,8 @@ function clearStopCleanup() {
 }
 
 function stopActiveVoices(now) {
-    const fadeOutTime = Math.max(0.15, parseFloat(document.getElementById('release').value));
-    const filterFadeOutTime = Math.max(0.15, parseFloat(document.getElementById('filterRelease').value));
+    const fadeOutTime = Math.max(0.15, getNumber('release'));
+    const filterFadeOutTime = Math.max(0.15, getNumber('filterRelease'));
     const generation = state.playGeneration;
 
     // Apply graceful fade-out to prevent clicks
@@ -1007,7 +1001,7 @@ function stopActiveVoices(now) {
     releaseBerlinOscVoices(now);
 
     if (state.filterEnvGain) {
-        const baseCutoff = Math.max(40, parseFloat(document.getElementById('cutoff').value));
+        const baseCutoff = Math.max(40, getNumber('cutoff', 1000));
         state.filterEnvGain.gain.cancelScheduledValues(now);
         state.filterEnvGain.gain.setValueAtTime(Math.max(0.00001, state.filterEnvGain.gain.value || 0.00001), now);
         state.filterEnvGain.gain.exponentialRampToValueAtTime(0.00001, now + filterFadeOutTime);
@@ -1076,6 +1070,8 @@ const IDLE_MARQUEE_TEXT = VFD_BRAND_SCROLL;
 const ARP_MARQUEE_TEXT = 'ArP ';
 const POLY_ARP_MARQUEE_TEXT = 'ArP PoLY ';
 const POLY_MARQUEE_TEXT = 'PoLY ';
+const MULTITUDES_ARP_MARQUEE_TEXT = 'ArP MuLT ';
+const MULTITUDES_MARQUEE_TEXT = 'MuLT ';
 const WRITE_MARQUEE_TEXT = ' WritE StEPS ';
 const SCALE_MARQUEE_TEXT = ' ScALE ';
 const IDLE_MARQUEE_MS = 320;
@@ -1123,11 +1119,17 @@ function idleMarqueeSource() {
     if (state.keyboardWrite && writeAwaitingFirstProgram) {
         return { text: WRITE_MARQUEE_TEXT, label: 'Write Steps', brand: false, cyan: true };
     }
+    if (state.keyboardMultitudes && state.keyboardArp) {
+        return { text: MULTITUDES_ARP_MARQUEE_TEXT, label: 'Multitudes Arp', brand: true, cyan: true };
+    }
     if (state.keyboardPoly && state.keyboardArp) {
         return { text: POLY_ARP_MARQUEE_TEXT, label: 'Poly Arp', brand: true, cyan: true };
     }
     if (state.keyboardArp) {
         return { text: ARP_MARQUEE_TEXT, label: 'Arp', brand: false, cyan: true };
+    }
+    if (state.keyboardMultitudes) {
+        return { text: MULTITUDES_MARQUEE_TEXT, label: 'Multitudes', brand: true, cyan: true };
     }
     if (state.keyboardPoly) {
         return { text: POLY_MARQUEE_TEXT, label: 'Poly', brand: true, cyan: true };
@@ -1352,7 +1354,7 @@ function togglePlay() {
         }
         clearAccentSweep(now);
         
-        state.currentStep = state.isReverse ? parseInt(document.getElementById('stepCount').value) - 1 : 0;
+        state.currentStep = state.isReverse ? getNumber('stepCount') - 1 : 0;
         state.nextStepTime = now + 0.1;
         state.lastStepSounded = false;
         state.envelopeHeld = false;
@@ -1430,8 +1432,8 @@ function scheduleNextStep() {
         return;
     }
 
-    const tempo = parseInt(document.getElementById('tempo').value);
-    const division = parseInt(document.getElementById('division').value);
+    const tempo = getNumber('tempo');
+    const division = getNumber('division');
     const bps = 60 / tempo;
     const stepDuration = bps * (4 / division);
     
@@ -1441,10 +1443,15 @@ function scheduleNextStep() {
     // Schedule notes in the next scheduling window
     while (state.nextStepTime < state.audioContext.currentTime + lookAheadTime) {
         // Schedule this step
-        playStep(state.currentStep, state.nextStepTime, stepDuration);
+        playStep(
+            state.currentStep,
+            state.nextStepTime,
+            stepDuration,
+            snapshotStepNeighborhood(state.currentStep, getNumber('stepCount', 8), state.isReverse),
+        );
 
         // Re-read: an armed bank switch can swap pattern length mid-window
-        const stepCount = parseInt(document.getElementById('stepCount').value) || 8;
+        const stepCount = getNumber('stepCount', 8);
 
         // Advance to next step
         if (state.isReverse) {
@@ -1542,7 +1549,7 @@ function disarmBerlinSharedAmpPath(atTime) {
     state.berlinSharedPathArmed = false;
 
     state.oscGains?.forEach((g, i) => {
-        const vol = parseFloat(document.querySelector(`.osc-vol[data-osc="${i}"]`)?.value ?? '0.33');
+        const vol = getOscVol(i);
         const on = !!state.oscStates?.[i];
         try {
             g.gain.cancelScheduledValues(t);
@@ -1551,7 +1558,7 @@ function disarmBerlinSharedAmpPath(atTime) {
     });
     if (state.noiseGain) {
         const nv = state.noiseState
-            ? (parseFloat(document.getElementById('noiseVol')?.value) || 0)
+            ? (getNumber('noiseVol', 0))
             : 0;
         try {
             state.noiseGain.gain.cancelScheduledValues(t);
@@ -1619,8 +1626,8 @@ function spawnBerlinOscVoice({
     if (!ctx || !dest) return;
     if (!state.oscStates?.[oscIndex]) return;
 
-    const wave = document.querySelector(`.osc-type[data-osc="${oscIndex}"]`)?.value || 'sawtooth';
-    const vol = parseFloat(document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`)?.value ?? '0.33');
+    const wave = getOscType(oscIndex);
+    const vol = getOscVol(oscIndex);
     if (!(vol > 0.0001)) return;
 
     armBerlinSharedAmpPath(startTime);
@@ -1837,7 +1844,7 @@ function fireBerlinRow(row, pattern, playhead, startTime, stepDuration, syncKeyb
 
 function scheduleBerlinSteps() {
     const ctx = state.audioContext;
-    const tempo = parseInt(document.getElementById('tempo').value) || 120;
+    const tempo = getNumber('tempo', 120);
     ensurePlayheads();
 
     // Automation follows the longest active row, time-wise
@@ -1942,9 +1949,9 @@ export function invalidateChordArpOrder() {
 function scheduleArpNextStep(generation) {
     if (!state.isArping || !state.audioContext || generation !== state.playGeneration) return;
 
-    const tempo = parseInt(document.getElementById('tempo').value);
-    const division = parseInt(document.getElementById('division').value);
-    const stepCount = parseInt(document.getElementById('stepCount').value);
+    const tempo = getNumber('tempo');
+    const division = getNumber('division');
+    const stepCount = getNumber('stepCount');
     const bps = 60 / tempo;
     const stepDuration = bps * (4 / division);
     // Keep lookahead under one step so a soft key-retune can't cancel
@@ -1955,14 +1962,19 @@ function scheduleArpNextStep(generation) {
         if (state.keyboardArpChord) {
             const semi = nextChordArpSemi();
             if (semi != null) {
-                if (state.keyboardPoly) {
+                if (state.keyboardPoly || state.keyboardMultitudes) {
                     playPolyArpNote(semi, state.nextStepTime, stepDuration);
                 } else {
                     playChordArpNote(semi, state.nextStepTime, stepDuration);
                 }
             }
         } else {
-            playStep(state.currentStep, state.nextStepTime, stepDuration);
+            playStep(
+                state.currentStep,
+                state.nextStepTime,
+                stepDuration,
+                snapshotStepNeighborhood(state.currentStep, stepCount, state.isReverse),
+            );
 
             if (state.isReverse) {
                 state.currentStep = (state.currentStep - 1 + stepCount) % stepCount;
@@ -2054,13 +2066,13 @@ function startArp() {
     }
 
     state.isArping = true;
-    state.currentStep = state.isReverse ? parseInt(document.getElementById('stepCount').value) - 1 : 0;
+    state.currentStep = state.isReverse ? getNumber('stepCount') - 1 : 0;
     state.nextStepTime = now + 0.05;
     state.lastStepSounded = false;
     state.envelopeHeld = false;
     state.filterEnvelopeHeld = false;
     state.arpLastPolySemi = null;
-    if (state.keyboardPoly) {
+    if (state.keyboardPoly || state.keyboardMultitudes) {
         // Event (not direct import) — avoids sequencer↔poly-voice circular init
         document.dispatchEvent(new CustomEvent('ingysynth:poly-arp-reset'));
     }
@@ -2100,7 +2112,7 @@ function stopArp() {
 function releasePolyArpNote() {
     const prev = state.arpLastPolySemi;
     state.arpLastPolySemi = null;
-    if (prev != null && state.keyboardPoly) {
+    if (prev != null && (state.keyboardPoly || state.keyboardMultitudes)) {
         document.dispatchEvent(new CustomEvent('ingysynth:poly-arp-off', {
             detail: { cellSemitone: prev, force: true },
         }));
@@ -2108,11 +2120,11 @@ function releasePolyArpNote() {
 }
 
 /**
- * Juno-style Poly Arp tick: one voice gated through the poly path.
+ * Juno-style Poly/Multitudes Arp tick: one voice gated through the poly path.
  * Uses custom events so sequencer never imports poly-voice (circular module graph).
  */
 function playPolyArpNote(cellSemitone, startTime, stepDuration) {
-    if (!state.isArping || state.isPlaying || !state.keyboardPoly) return;
+    if (!state.isArping || state.isPlaying || !(state.keyboardPoly || state.keyboardMultitudes)) return;
 
     document.querySelectorAll('.sequencer-step').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.keyboard-step').forEach(el => el.classList.remove('active'));
@@ -2134,7 +2146,7 @@ function playPolyArpNote(cellSemitone, startTime, stepDuration) {
     const gen = state.playGeneration;
 
     setTimeout(() => {
-        if (!state.isArping || gen !== state.playGeneration || !state.keyboardPoly) return;
+        if (!state.isArping || gen !== state.playGeneration || !(state.keyboardPoly || state.keyboardMultitudes)) return;
         const prev = state.arpLastPolySemi;
         if (prev != null && prev !== cellSemitone) {
             document.dispatchEvent(new CustomEvent('ingysynth:poly-arp-off', {
@@ -2219,7 +2231,7 @@ function playChordArpNote(cellSemitone, startTime, stepDuration) {
         });
     }
 
-    if (state.noiseState && parseFloat(document.getElementById('noiseVol').value) > 0) {
+    if (state.noiseState && getNumber('noiseVol') > 0) {
         if (state.noiseSource) {
             const noiseGainValue = state.noiseGain.gain.value;
             state.noiseGain.gain.cancelScheduledValues(startTime - 0.005);
@@ -2230,11 +2242,11 @@ function playChordArpNote(cellSemitone, startTime, stepDuration) {
             }, 5);
         }
         state.noiseSource = state.audioContext.createBufferSource();
-        const noiseType = document.getElementById('noiseType').value;
+        const noiseType = getString('noiseType', 'white');
         state.noiseSource.buffer = state.noiseBuffers[noiseType];
         state.noiseSource.loop = true;
         state.noiseSource.connect(state.noiseGain);
-        const targetNoiseVol = parseFloat(document.getElementById('noiseVol').value);
+        const targetNoiseVol = getNumber('noiseVol');
         state.noiseGain.gain.cancelScheduledValues(startTime - 0.003);
         state.noiseGain.gain.setValueAtTime(0, startTime - 0.003);
         state.noiseSource.start(startTime - 0.003);
@@ -2244,7 +2256,7 @@ function playChordArpNote(cellSemitone, startTime, stepDuration) {
     if (state.lfoState && state.lfoRetriggerState && state.lfo.started) {
         state.lfo.stop();
         state.lfo = state.audioContext.createOscillator();
-        state.lfo.type = document.getElementById('lfoWaveform').value;
+        state.lfo.type = getString('lfoWaveform', 'sine');
         state.lfo.frequency.value = getLfoRateHz();
         if (state.lfoSmooth) {
             state.lfo.connect(state.lfoSmooth);
@@ -2284,11 +2296,18 @@ function playChordArpNote(cellSemitone, startTime, stepDuration) {
     state.lastStepSounded = true;
 }
 
-function playStep(step, startTime, stepDuration) {
+function playStep(step, startTime, stepDuration, scheduled) {
     if (!state.isPlaying && !state.isArping) return;
 
+    const snap = scheduled || snapshotStepNeighborhood(step, getNumber('stepCount', 8), state.isReverse);
+    const data = snap.this;
+    const prevData = snap.prev;
+    const nextData = snap.next;
+    const freqThis = (i) => frequencyFromStepData(data, i);
+    const freqNext = (i) => frequencyFromStepData(nextData, i);
+
     // Anchor automation loop phase at the start of each pattern cycle
-    const stepsN = parseInt(document.getElementById('stepCount').value, 10) || 8;
+    const stepsN = getNumber('stepCount', 8);
     const isLoopStart = state.isReverse ? step === stepsN - 1 : step === 0;
     if (state.isPlaying && isLoopStart) {
         notifyAutomationLoopAnchor(startTime);
@@ -2298,11 +2317,10 @@ function playStep(step, startTime, stepDuration) {
 
     updateKeyboardStepDisplay(step);
 
-    document.querySelectorAll('.sequencer-step').forEach(step => step.classList.remove('active'));
+    document.querySelectorAll('.sequencer-step').forEach(stepEl => stepEl.classList.remove('active'));
     document.querySelectorAll('.keyboard-step').forEach(el => el.classList.remove('active'));
 
-    const toggle = document.querySelector(`.step-toggle[data-step="${step}"]`);
-    if (toggle.querySelector('.front').textContent === 'Off') {
+    if (data.on === false) {
         // Drum-machine model: an OFF step means "no new trigger", not "mute".
         // Self-enveloped drums (and their ratch voices) must keep ringing through
         // empty steps; the next note-on / ratch hit is what resets them.
@@ -2320,7 +2338,7 @@ function playStep(step, startTime, stepDuration) {
                 // don't treat this as a stuck slide note.
                 state.envelopeHeld = false;
             } else {
-                const release = parseFloat(document.getElementById('release').value);
+                const release = getNumber('release');
                 const releaseTime = Math.max(0.005, release * 0.3);
                 const t = Math.max(state.audioContext.currentTime, startTime);
                 state.envelope.gain.cancelScheduledValues(t);
@@ -2330,7 +2348,7 @@ function playStep(step, startTime, stepDuration) {
             }
         }
         if (state.filterEnvelopeHeld) {
-            const filterRelease = parseFloat(document.getElementById('filterRelease').value);
+            const filterRelease = getNumber('filterRelease');
             const filterReleaseTime = Math.max(0.005, filterRelease * 0.3);
             const t = Math.max(state.audioContext.currentTime, startTime);
             state.filterEnvGain.gain.cancelScheduledValues(t);
@@ -2344,7 +2362,7 @@ function playStep(step, startTime, stepDuration) {
     }
 
     const currentStepElement = document.querySelector(`.sequencer-step[data-step="${step}"]`);
-    currentStepElement.classList.add('active');
+    currentStepElement?.classList.add('active');
     const kbStep = document.querySelector(`.keyboard-step[data-step="${step}"]`);
     if (kbStep) kbStep.classList.add('active');
 
@@ -2352,19 +2370,12 @@ function playStep(step, startTime, stepDuration) {
     // - Prefer Sld on step N = glide into N+1 (accent OK on N with Acc+Sld).
     // - Also accept Sld on the destination (older UI habit) so slides still work.
     // - Sld+RATCH (2–8) = gliss-roll: pitch glides this→next during this step.
-    const stepCountVal = parseInt(document.getElementById('stepCount').value);
-    const nextStep = state.isReverse
-        ? (step - 1 + stepCountVal) % stepCountVal
-        : (step + 1) % stepCountVal;
-    const prevStep = state.isReverse
-        ? (step + 1) % stepCountVal
-        : (step - 1 + stepCountVal) % stepCountVal;
-    const slideFromPrev = isStepSlideOn(prevStep);
-    const slideOnThis = isStepSlideOn(step);
-    const slideOnNext = isStepOn(nextStep) && isStepSlideOn(nextStep);
-    const ratch = getStepRatch(step);
+    const slideFromPrev = !!prevData.slide;
+    const slideOnThis = !!data.slide;
+    const slideOnNext = nextData.on !== false && !!nextData.slide;
+    const ratch = state.acidMode ? 1 : clampRatch(data.ratch);
     const glissRoll = ratch > 1 && slideOnThis;
-    const prevWasGliss = slideFromPrev && getStepRatch(prevStep) > 1;
+    const prevWasGliss = slideFromPrev && clampRatch(prevData.ratch) > 1;
     // 303: arriving because previous step had Slide (not a finished gliss-roll)
     const isSlideContinuation = state.lastStepSounded && slideFromPrev && !prevWasGliss;
     // Compat: Sld only on destination (older habit) still pitch-glides — not gliss-roll source
@@ -2372,22 +2383,22 @@ function playStep(step, startTime, stepDuration) {
     // Pitch ramp (both continuation + dest-compat); gliss-roll uses outbound ramp instead
     const slideThisStep = (isSlideContinuation || isDestSlideCompat) && !glissRoll;
     // MIDI / pitch overlap: source Slide or next marked as slide dest (gliss already arrives)
-    const nextStepWillSlide = !glissRoll && isStepOn(nextStep) && (slideOnThis || slideOnNext);
+    const nextStepWillSlide = !glissRoll && nextData.on !== false && (slideOnThis || slideOnNext);
     // ACID envs: only true continuation skips retrigger; only source Slide holds into next
     const slideThisStepEnv = state.acidMode ? isSlideContinuation && !glissRoll : slideThisStep;
     const nextStepWillSlideEnv = state.acidMode
-        ? (!glissRoll && isStepOn(nextStep) && slideOnThis)
+        ? (!glissRoll && nextData.on !== false && slideOnThis)
         : nextStepWillSlide;
     const slideTime = getSlideTime();
     const accentAmount = getAccentAmount();
     // Accent on Acc+Sld source steps (303). Only blank when arriving via prev's Slide.
-    const accentThisStep = isStepAccentOn(step) && !isSlideContinuation;
+    const accentThisStep = !!data.accent && !isSlideContinuation;
     const hits = clampRatch(ratch);
     const subDur = stepDuration / hits;
 
     // Get note information for the visualizer
-    const totalTune = getStepTotalTune(step);
-    const fineCents = getStepFineCents(step);
+    const totalTune = getStepTotalTuneFromRaw(data.tune);
+    const fineCents = Math.round(Number(data.fine) || 0);
 
     // Only update the visualizer if we're not in preview mode
     if (!window.noteVisualizerPreviewActive) {
@@ -2397,8 +2408,8 @@ function playStep(step, startTime, stepDuration) {
 
     // Send MIDI if enabled (static ratch / gliss: repeated gates at this step's note)
     if (state.sendMidiEnabled && state.selectedMidiOutput) {
-        const safeNote = stepToMidiNote(step);
-        const nextNote = stepToMidiNote(nextStep);
+        const safeNote = midiNoteFromStepData(data);
+        const nextNote = midiNoteFromStepData(nextData);
         const bendRangeEl = document.getElementById('bendRange');
         const bendRange = bendRangeEl ? parseInt(bendRangeEl.value) : 2;
         const gateLen = getGateLength();
@@ -2435,8 +2446,8 @@ function playStep(step, startTime, stepDuration) {
             accentThisStep,
             accentAmount,
             glissRoll,
-            freqForOsc: (i) => stepToFrequency(step, i),
-            nextFreqForOsc: glissRoll ? (i) => stepToFrequency(nextStep, i) : null,
+            freqForOsc: freqThis,
+            nextFreqForOsc: glissRoll ? freqNext : null,
         });
         state.lastStepSounded = true;
         return;
@@ -2456,15 +2467,15 @@ function playStep(step, startTime, stepDuration) {
             state.activeOscillators.forEach((osc) => {
                 if (!osc.started) return;
                 const i = osc.oscIndex;
-                const fromBase = stepToFrequency(step, i);
-                const toBase = stepToFrequency(nextStep, i);
+                const fromBase = freqThis(i);
+                const toBase = freqNext(i);
                 ramp(osc, voiceTargetFreq(osc, fromBase), voiceTargetFreq(osc, toBase));
                 state.lastStepFreqs[i] = toBase;
             });
         } else {
             state.oscillators.forEach((osc, i) => {
-                const fromBase = stepToFrequency(step, i);
-                const toBase = stepToFrequency(nextStep, i);
+                const fromBase = freqThis(i);
+                const toBase = freqNext(i);
                 ramp(osc, bentFrequency(fromBase), bentFrequency(toBase));
                 state.lastStepFreqs[i] = toBase;
             });
@@ -2478,7 +2489,7 @@ function playStep(step, startTime, stepDuration) {
             if (!(slideThisStep && state.activeOscillators.length > 0)) {
                 for (let i = 0; i < state.oscStates.length; i++) {
                     if (!state.oscStates[i]) continue;
-                    firePhaseResetOscStack(i, stepToFrequency(step, i), startTime, {
+                    firePhaseResetOscStack(i, freqThis(i), startTime, {
                         oscStart: startTime,
                         gainRampStart: startTime,
                         gainRampEnd: startTime + 0.02,
@@ -2494,7 +2505,7 @@ function playStep(step, startTime, stepDuration) {
             if (state.activeOscillators.length === 0) {
                 for (let i = 0; i < state.oscStates.length; i++) {
                     if (!state.oscStates[i]) continue;
-                    const fromBase = state.lastStepFreqs[i] ?? stepToFrequency(step, i);
+                    const fromBase = state.lastStepFreqs[i] ?? freqThis(i);
                     spawnOscStack(i, fromBase, startTime, {
                         oscStart: startTime,
                         gainRampStart: startTime,
@@ -2504,7 +2515,7 @@ function playStep(step, startTime, stepDuration) {
             }
             state.activeOscillators.forEach((osc) => {
                 const i = osc.oscIndex;
-                const baseFreq = stepToFrequency(step, i);
+                const baseFreq = freqThis(i);
                 const freq = voiceTargetFreq(osc, baseFreq);
                 osc.frequency.cancelScheduledValues(startTime);
                 osc.frequency.setTargetAtTime(freq, startTime, slideTime / 3);
@@ -2513,7 +2524,7 @@ function playStep(step, startTime, stepDuration) {
         } else {
         for (let i = 0; i < state.oscStates.length; i++) {
             if (state.oscStates[i]) {
-                const baseFreq = stepToFrequency(step, i);
+                const baseFreq = freqThis(i);
                 firePhaseResetOscStack(i, baseFreq, startTime, {
                     oscStart: startTime,
                     gainRampStart: startTime,
@@ -2526,7 +2537,7 @@ function playStep(step, startTime, stepDuration) {
         scheduleGlissPitch();
     } else {
         state.oscillators.forEach((osc, i) => {
-            const baseFreq = stepToFrequency(step, i);
+            const baseFreq = freqThis(i);
             const freq = bentFrequency(baseFreq);
             if (slideThisStep) {
                 // Slide (303 RC slew): exponential approach from current pitch
@@ -2540,7 +2551,7 @@ function playStep(step, startTime, stepDuration) {
         });
     }
 
-    if (state.noiseState && parseFloat(document.getElementById('noiseVol').value) > 0) {
+    if (state.noiseState && getNumber('noiseVol') > 0) {
         if (state.noiseSource) {
             // Apply fade out before stopping
             const noiseGainValue = state.noiseGain.gain.value;
@@ -2556,13 +2567,13 @@ function playStep(step, startTime, stepDuration) {
         
         // Create and set up new noise source
         state.noiseSource = state.audioContext.createBufferSource();
-        const noiseType = document.getElementById('noiseType').value;
+        const noiseType = getString('noiseType', 'white');
         state.noiseSource.buffer = state.noiseBuffers[noiseType];
         state.noiseSource.loop = true;
         state.noiseSource.connect(state.noiseGain);
         
         // Start with zero gain and fade in
-        const targetNoiseVol = parseFloat(document.getElementById('noiseVol').value);
+        const targetNoiseVol = getNumber('noiseVol');
         state.noiseGain.gain.cancelScheduledValues(startTime - 0.003);
         state.noiseGain.gain.setValueAtTime(0, startTime - 0.003);
         state.noiseSource.start(startTime - 0.003);
@@ -2572,7 +2583,7 @@ function playStep(step, startTime, stepDuration) {
     if (state.lfoState && state.lfoRetriggerState && state.lfo.started) {
         state.lfo.stop();
         state.lfo = state.audioContext.createOscillator();
-        state.lfo.type = document.getElementById('lfoWaveform').value;
+        state.lfo.type = getString('lfoWaveform', 'sine');
         state.lfo.frequency.value = getLfoRateHz();
         // Reconnect into the smoothed LFO chain (smooth → master → depth gains)
         if (state.lfoSmooth) {

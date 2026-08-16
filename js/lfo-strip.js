@@ -1,9 +1,11 @@
 // Unipolar LFO amount strip on the keyboard play row (hardware mod-wheel style).
 // Latches on release; scales lfoMasterGain when LFO is On.
 
-import { state } from './state.js?v=109';
-import { getFilterCutoffRange, getFilterEnvAmount, refreshFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { getLfoRateHz } from './lfo-rate.js?v=7';
+import { state } from './state.js?v=113';
+import { beginMidiLearn } from './midi-learn.js?v=3';
+import { getFilterCutoffRange, getFilterEnvAmount, refreshFilterCutoffRange } from './filter-cutoff.js?v=80';
+import { getLfoRateHz } from './lfo-rate.js?v=10';
+import { notifyKey } from './params.js?v=5';
 
 const AMOUNT_RAMP = 0.08;
 /** Extra fade when opening from silence — avoids filter/pitch zipper clicks. */
@@ -220,6 +222,7 @@ export function setLfoEnabled(on, { ramp = AMOUNT_RAMP } = {}) {
         if (front) front.textContent = state.lfoState ? 'On' : 'Off';
         mainBtn.classList.toggle('off', !state.lfoState);
     }
+    notifyKey('lfoToggle');
     applyLfoMasterGain({ ramp });
     document.dispatchEvent(new CustomEvent('ingysynth:lfo-enabled', {
         detail: { enabled: state.lfoState },
@@ -265,6 +268,7 @@ export function initLfoStrip() {
     };
 
     el.addEventListener('pointerdown', (e) => {
+        if (beginMidiLearn(e, null, el)) return;
         if (e.button !== undefined && e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();

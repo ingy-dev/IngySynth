@@ -1,11 +1,13 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
-import { state } from './state.js?v=109';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=227';
+import { state } from './state.js?v=113';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=241';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
-import { bindKnob } from './knobs.js?v=100';
-import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=9';
-import { forceNoteOff } from './voice.js?v=111';
-import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=34';
+import { bindKnob } from './knobs.js?v=113';
+import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=15';
+import { forceNoteOff } from './voice.js?v=122';
+import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=60';
+import { getLiveStep, syncLiveStepFromDom } from './pattern-bank.js?v=9';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=19';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8
@@ -54,7 +56,9 @@ export function syncWriteFineKnob() {
     const valueEl = document.getElementById('kbWriteFineValue');
     if (!proxy) return;
     const fine = stepFineInput(state.writeStep);
-    const cents = fine ? (parseInt(fine.value, 10) || 0) : 0;
+    const cents = fine
+        ? (parseInt(fine.value, 10) || 0)
+        : Math.round(Number(getLiveStep(state.writeStep).fine) || 0);
     syncingWriteFineFromStep = true;
     proxy.value = String(cents);
     proxy.dispatchEvent(new Event('input', { bubbles: true }));
@@ -66,10 +70,14 @@ function applyWriteFineFromProxy() {
     if (syncingWriteFineFromStep || !state.keyboardWrite) return;
     const proxy = document.getElementById('kbWriteFineProxy');
     const valueEl = document.getElementById('kbWriteFineValue');
+    if (!proxy) return;
     const fine = stepFineInput(state.writeStep);
-    if (!proxy || !fine) return;
-    fine.value = proxy.value;
-    fine.dispatchEvent(new Event('input', { bubbles: true }));
+    if (fine) {
+        fine.value = proxy.value;
+        fine.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+        getLiveStep(state.writeStep).fine = Math.round(Number(proxy.value) || 0);
+    }
     if (valueEl) valueEl.textContent = formatCents(proxy.value);
 }
 
@@ -123,16 +131,14 @@ function syncWriteNavEnabled() {
 }
 
 function isStepOn(step) {
-    const toggle = document.querySelector(`.step-toggle[data-step="${step}"]`);
-    if (!toggle) return true;
-    const front = toggle.querySelector('.front');
-    return front ? front.textContent === 'On' : !toggle.classList.contains('off');
+    return getLiveStep(step).on !== false;
 }
 
 function isStepFlagOn(kind, step) {
-    const btn = document.querySelector(`.step-${kind}[data-step="${step}"]`);
-    if (!btn) return false;
-    return !btn.classList.contains('off');
+    const data = getLiveStep(step);
+    if (kind === 'accent') return !!data.accent;
+    if (kind === 'slide') return !!data.slide;
+    return false;
 }
 
 /** Write-toolbar Acc/Sld/Rst mirror the write-cursor step (not sticky arms). */
@@ -176,22 +182,35 @@ export function syncWriteCursorHighlight() {
 
 function setStepOn(step, on) {
     const toggle = document.querySelector(`.step-toggle[data-step="${step}"]`);
-    if (!toggle) return;
+    if (!toggle) {
+        getLiveStep(step).on = !!on;
+        return;
+    }
     const front = toggle.querySelector('.front');
     if (front) front.textContent = on ? 'On' : 'Off';
     toggle.classList.toggle('off', !on);
+    syncLiveStepFromDom(step);
 }
 
 function setStepFlag(kind, step, on) {
     const main = document.querySelector(`.step-${kind}[data-step="${step}"]`);
-    if (!main) return;
+    if (!main) {
+        const data = getLiveStep(step);
+        if (kind === 'accent') data.accent = !!on;
+        if (kind === 'slide') data.slide = !!on;
+        return;
+    }
     main.classList.toggle('off', !on);
+    syncLiveStepFromDom(step);
 }
 
 function setStepTune(step, semitones) {
     const slider = document.querySelector(`.step-tune[data-step="${step}"]`);
-    if (!slider) return;
     const clamped = Math.max(WRITE_TUNE_MIN, Math.min(WRITE_TUNE_MAX, Math.round(semitones)));
+    if (!slider) {
+        getLiveStep(step).tune = clamped;
+        return;
+    }
     slider.value = String(clamped);
     slider.dispatchEvent(new Event('input', { bubbles: true }));
 }
@@ -315,6 +334,11 @@ export function setWriteMode(on, { refreshKeyboard } = {}) {
             forceNoteOff();
             forcePolyAllOff();
             setPolyMode(false);
+        }
+        if (state.keyboardMultitudes) {
+            forceNoteOff();
+            forcePolyAllOff();
+            setMultitudesMode(false);
         }
         cancelChordMemoryLearn();
         syncChordMemUI();

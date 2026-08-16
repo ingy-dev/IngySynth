@@ -56,7 +56,14 @@ export const state = {
     osc4MorphX: 0.5,
     osc4MorphY: 0.5,
     osc4Harmonics: 0.5,
-    osc4Bank: -1, // -1 = Scan via HARMONICS; 0–3 = pinned
+    osc4Bank: -1, // -1 = Scan via HARMONICS; 0–3 = pinned (fm6: 0–2 Bass/Keys/Pads)
+    /** Plaits AUX path on the single OSC1 jack (0=OUT, 1=ALT/AUX). */
+    osc4Alt: false,
+    /** Plaits TRIG patched: true=Mode 2 (default), false=Mode 1 unpatched. */
+    osc4TrigPatched: true,
+    /** Voice USER bank active (factory MODEL blend off; pin LPC bank 5). */
+    osc4SpeechUserBank: false,
+    lastVelocity: 0.8, // 0–1; drives Plaits fm6 DX velocity
     plaitsWorkletReady: false,
     plaitsWorkletPromise: null,
     plaitsWorkletCtx: null,
@@ -138,12 +145,12 @@ export const state = {
     chordMemoryLearning: false,        // one-shot Chord Mem learn armed
     keyboardPoly: false,               // Kb-only 6-voice playground (Ingy 6 / Juno-60)
     keyboardPolyUnison: false,         // stack 6 voices on one note (Alpha Juno-style)
+    keyboardMultitudes: false,         // Multitudes: kb-only 6-voice Plaits poly
     polyVcaGate: false,                // Ingy 6 VCA: false=ENV ADSR, true=GATE
     polySubCeil: 0.1,                  // backup: Ingy SUB fader 10 = live OSC2 vol knob
     keyboardLatch: false,
     keyboardHeldSemitone: null,
     keyboardVisible: true,
-    keyboardFullscreen: true,
     keyboardStepsExpanded: true,
     keyboardVoiceActive: false,
     keyboardWrite: false,
@@ -159,6 +166,7 @@ export const state = {
     midiMappingMode: false,
     midiSectionOpen: false,            // MIDI logo switch: arms MIDI section (green off / cyan on)
     currentMappingControl: null,
+    currentMappingHost: null,
     midiMappings: {},
     lastMIDIValues: {},
     selectedMidiInput: 'all',

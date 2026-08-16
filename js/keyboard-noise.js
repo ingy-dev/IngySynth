@@ -1,46 +1,21 @@
 // Compact noise controls in the keyboard Synthesizer panel (column 2).
-// Type select and toggle mirror the main Noise panel; volume knob is wired in knobs.js.
+// Type select and toggle write params; volume knob is wired in knobs.js.
 
-import {
-    observeMainControl,
-    syncToggleButtonFromMain,
-} from './control-mirror.js?v=74';
+import { wireSelect, wireToggle } from './params.js?v=5';
 
 let syncToggle = () => {};
 let syncType = () => {};
 
 function wireNoiseToggle() {
     const kbBtn = document.getElementById('kbNoiseToggle');
-    const mainBtn = document.getElementById('noiseToggle');
-    if (!kbBtn || !mainBtn) return;
-
-    syncToggle = () => syncToggleButtonFromMain(kbBtn, mainBtn);
-    observeMainControl(mainBtn, syncToggle);
-
-    kbBtn.addEventListener('click', () => {
-        mainBtn.click();
-    });
+    if (!kbBtn) return;
+    syncToggle = wireToggle(kbBtn, 'noiseToggle', { syncLabel: true });
 }
 
 function wireNoiseTypeSelect() {
     const kbSelect = document.getElementById('kbNoiseTypeSelect');
-    const mainSelect = document.getElementById('noiseType');
-    if (!kbSelect || !mainSelect) return;
-
-    syncType = () => {
-        kbSelect.value = mainSelect.value;
-    };
-
-    syncType();
-
-    kbSelect.addEventListener('change', () => {
-        if (mainSelect.value !== kbSelect.value) {
-            mainSelect.value = kbSelect.value;
-            mainSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-    });
-
-    mainSelect.addEventListener('change', syncType);
+    if (!kbSelect) return;
+    syncType = wireSelect(kbSelect, 'noiseType');
 }
 
 export function syncKeyboardNoiseFromMain() {

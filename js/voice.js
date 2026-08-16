@@ -1,16 +1,17 @@
-import { state } from './state.js?v=109';
-import { semitonesToFrequency } from './tuning.js?v=74';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=78';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=95';
-import { bentFrequency } from './pitch-bend.js?v=76';
-import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=145';
-import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive } from './osc-source.js?v=66';
+import { state } from './state.js?v=113';
+import { getNumber } from './params.js?v=5';
+import { semitonesToFrequency } from './tuning.js?v=77';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=80';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=98';
+import { bentFrequency } from './pitch-bend.js?v=84';
+import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=154';
+import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=86';
 import {
     triggerAcidLiveAmp,
     triggerAcidLiveFilter,
     releaseAcidLiveEnvelopes,
     acidVegDecaySec,
-} from './acid-env.js?v=8';
+} from './acid-env.js?v=10';
 
 const RETUNE_RAMP = 0.012; // short glide — avoids zipper clicks on legato
 /** Above this amp level, a new noteOn reuses the voice instead of hard restarting. */
@@ -26,6 +27,21 @@ function ampEnvelopeLevel() {
 
 function hasLivePhaseResetOscs() {
     return !!state.phaseResetEnabled && state.activeOscillators.some(osc => osc.started);
+}
+
+/** Voice MODE 2 plays one LPC word per rising gate. Legato/retune must pulse it. */
+function pulseSpeechTrigger(now) {
+    if (state.osc4Model !== 'speech') return;
+    if (state.osc4TrigPatched === false) return;
+    const list = state.phaseResetEnabled
+        ? (state.activeOscillators || [])
+        : [state.oscillators?.[OSC4_INDEX]].filter(Boolean);
+    for (const osc of list) {
+        if (!osc?.isWavetable || typeof osc.retrigger !== 'function') continue;
+        if (state.phaseResetEnabled && osc.oscIndex !== OSC4_INDEX) continue;
+        const freq = Number(osc.frequency?.value);
+        osc.retrigger(now, Number.isFinite(freq) ? freq : null);
+    }
 }
 
 /**
@@ -69,21 +85,23 @@ function spawnLiveOscillators(semitones, now, { legato = false } = {}) {
     if (!state.phaseResetEnabled) {
         if (legato) {
             setLiveFrequencies(semitones, now, RETUNE_RAMP);
-            return;
+        } else {
+            state.oscillators.forEach((osc, i) => {
+                const baseFreq = semitonesToFrequency(semitones, i);
+                const freq = bentFrequency(baseFreq);
+                osc.frequency.cancelScheduledValues(now);
+                osc.frequency.setValueAtTime(freq, now);
+                state.lastStepFreqs[i] = baseFreq;
+            });
         }
-        state.oscillators.forEach((osc, i) => {
-            const baseFreq = semitonesToFrequency(semitones, i);
-            const freq = bentFrequency(baseFreq);
-            osc.frequency.cancelScheduledValues(now);
-            osc.frequency.setValueAtTime(freq, now);
-            state.lastStepFreqs[i] = baseFreq;
-        });
+        pulseSpeechTrigger(now);
         return;
     }
 
     // Fast re-press while prior oscs still alive: retune instead of stop+spawn (clicks)
     if (legato && hasLivePhaseResetOscs()) {
         setLiveFrequencies(semitones, now, RETUNE_RAMP);
+        pulseSpeechTrigger(now);
         return;
     }
 
@@ -105,9 +123,9 @@ function triggerLiveAmpEnvelope(now, { fromCurrent = false } = {}) {
         triggerAcidLiveAmp(now, { fromCurrent });
         return;
     }
-    const attack = parseFloat(document.getElementById('attack').value);
-    const decay = parseFloat(document.getElementById('decay').value);
-    const sustain = parseFloat(document.getElementById('sustain').value);
+    const attack = getNumber('attack');
+    const decay = getNumber('decay');
+    const sustain = getNumber('sustain');
     const darkOsc = hasDarkOscActive();
     const safeAttack = Math.max(
         darkOsc ? Math.max(0.008, wtAttackSecForFilter() * 0.55) : 0,
@@ -132,12 +150,12 @@ function triggerLiveFilterEnvelope(now, { fromCurrent = false } = {}) {
     }
     if (!state.filterEnvGain || getFilterEnvAmount() === 0) return;
 
-    const attack = parseFloat(document.getElementById('filterAttack').value);
-    const decay = parseFloat(document.getElementById('filterDecay').value);
-    const sustain = parseFloat(document.getElementById('filterSustain').value);
-    const baseCutoff = Math.max(40, parseFloat(document.getElementById('cutoff').value));
+    const attack = getNumber('filterAttack');
+    const decay = getNumber('filterDecay');
+    const sustain = getNumber('filterSustain');
+    const baseCutoff = Math.max(40, getNumber('cutoff', 1000));
     const cutModHot = state.lfoState
-        && Math.abs(parseFloat(document.getElementById('cutoffMod')?.value) || 0) > 80
+        && Math.abs(getNumber('cutoffMod', 0)) > 80
         && (Number(state.lfoAmount) || 0) > 0.02;
     const safeAttack = Math.max(cutModHot ? 0.01 : 0.002, scaleAdsrTime(attack));
     const safeDecay = scaleAdsrTime(decay);
@@ -177,8 +195,8 @@ function releaseLiveEnvelopes(now) {
         }
         return;
     }
-    const release = parseFloat(document.getElementById('release').value);
-    const filterRelease = parseFloat(document.getElementById('filterRelease').value);
+    const release = getNumber('release');
+    const filterRelease = getNumber('filterRelease');
     const releaseTime = Math.max(0.02, release);
     const filterReleaseTime = Math.max(0.02, filterRelease);
     const minValue = 0.00001;
@@ -189,7 +207,7 @@ function releaseLiveEnvelopes(now) {
     state.envelopeHeld = false;
 
     if (state.filterEnvGain) {
-        const baseCutoff = Math.max(40, parseFloat(document.getElementById('cutoff').value));
+        const baseCutoff = Math.max(40, getNumber('cutoff', 1000));
         state.filterEnvGain.gain.cancelScheduledValues(now);
         state.filterEnvGain.gain.setValueAtTime(
             Math.max(minValue, state.filterEnvGain.gain.value || minValue),
@@ -289,7 +307,7 @@ export function noteOff() {
     document.dispatchEvent(new CustomEvent('ingysynth:live-note-off'));
 
     // Match sequencer stop: keep scope visible through the release tail
-    const release = parseFloat(document.getElementById('release')?.value ?? '0.5');
+    const release = getNumber('release', 0.5);
     showLogoOverlay(Math.max(1500, (release + 0.1) * 1000));
 
     // Back to idle "Note" unless a knob preview is showing

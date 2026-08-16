@@ -1,10 +1,11 @@
-import { state, OSC_COUNT } from './state.js?v=109';
-import { wireControls } from './controls.js?v=219';
-import { getFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { updateLfoSmoothing } from './lfo-strip.js?v=15';
-import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=7';
-import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=12';
-import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX } from './osc-source.js?v=66';
+import { state, OSC_COUNT } from './state.js?v=113';
+import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=5';
+import { wireControls } from './controls.js?v=255';
+import { getFilterCutoffRange } from './filter-cutoff.js?v=80';
+import { updateLfoSmoothing } from './lfo-strip.js?v=17';
+import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=10';
+import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=20';
+import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX } from './osc-source.js?v=86';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;
@@ -107,13 +108,9 @@ function applyReverbSize(sizeNorm) {
 }
 
 function readReverbDecayDamp() {
-    const decayEl = document.getElementById('reverbDecay');
-    const dampEl = document.getElementById('reverbDamp');
-    const decay = decayEl ? parseFloat(decayEl.value) : 1.8;
-    const damp = dampEl ? parseFloat(dampEl.value) : 0.35;
     return {
-        decay: Number.isFinite(decay) ? decay : 1.8,
-        damp: Number.isFinite(damp) ? damp : 0.35,
+        decay: getNumber('reverbDecay', 1.8),
+        damp: getNumber('reverbDamp', 0.35),
     };
 }
 
@@ -184,7 +181,7 @@ function initAudio() {
             try { old?.disconnect(); } catch (_) { /* ignore */ }
             const osc = createOscSource(state.audioContext, {
                 oscIndex: i,
-                wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
+                wave: getOscType(i),
                 frequency: freq,
             });
             osc.frequency.value = freq;
@@ -225,7 +222,7 @@ function initAudio() {
 
     state.oscillators = Array(OSC_COUNT).fill().map((_, i) => createOscSource(state.audioContext, {
         oscIndex: i,
-        wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
+        wave: getOscType(i),
         frequency: 261.63,
     }));
     state.oscGains = Array(OSC_COUNT).fill().map(() => state.audioContext.createGain());
@@ -310,9 +307,7 @@ function initAudio() {
 
     // Per-OSC pan always feeds the shared ring-mod input (stereo preserved downstream).
     state.oscPanners.forEach((panner, i) => {
-        const panEl = document.querySelector(`.osc-pan[data-osc="${i}"]`);
-        const pan = parseFloat(panEl?.value ?? '0');
-        panner.pan.value = Number.isFinite(pan) ? Math.max(-1, Math.min(1, pan)) : 0;
+        panner.pan.value = getOscPan(i);
         panner.connect(ringModInput);
     });
     
@@ -431,8 +426,7 @@ function initAudio() {
     }
     state.reverbMultitap[state.reverbMultitap.length - 1].connect(state.reverbErGain);
 
-    const sizeEl = document.getElementById('reverbSize');
-    const initialSize = sizeEl ? parseFloat(sizeEl.value) : 0.45;
+    const initialSize = getNumber('reverbSize', 0.45);
     applyReverbSize(Number.isFinite(initialSize) ? initialSize : 0.45);
     const { decay, damp } = readReverbDecayDamp();
     renderReverbImpulse(decay, damp);
@@ -443,18 +437,18 @@ function initAudio() {
     state.analyser.connect(state.audioContext.destination);
 
     state.oscillators.forEach((osc, i) => {
-        osc.type = document.querySelector(`.osc-type[data-osc="${i}"]`).value;
+        osc.type = getOscType(i);
         osc.frequency.value = 261.63;
     });
     state.oscGains.forEach((gain, i) => {
-        gain.gain.value = state.oscStates[i] ? 0.33 : 0;
+        gain.gain.value = state.oscStates[i] ? getOscVol(i) : 0;
     });
     state.noiseGain.gain.value = 0;
     state.filter.type = 'lowpass';
     state.filter.frequency.value = 0;
     state.filter.Q.value = 1;
 
-    const initialCutoff = parseFloat(document.getElementById('cutoff').value);
+    const initialCutoff = getNumber('cutoff', 1000);
     const initialAmount = 0;
     const { baseFreq, signedDepth } = getFilterCutoffRange(initialCutoff, initialAmount);
     state.filterCutoffMin.offset.value = baseFreq;
@@ -500,7 +494,7 @@ function initAudio() {
     state.analyser.smoothingTimeConstant = 0.8;
 
     state.lfo = state.audioContext.createOscillator();
-    state.lfo.type = document.getElementById('lfoWaveform').value;
+    state.lfo.type = getString('lfoWaveform', 'sine');
     state.lfo.frequency.value = getLfoRateHz();
 
     // Soften discontinuous LFO waveforms (square/saw) before they hit AudioParams

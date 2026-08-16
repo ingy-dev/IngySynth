@@ -1,29 +1,19 @@
 // Filter envelope toggle in the keyboard Synthesizer panel (column 3).
-// On/Off mirrors the main panel #filterEnvToggle; Invert is fullscreen-only.
+// On/Off writes params; Invert is stage-only (state.filterEnvInvert).
 // ADSR knobs are wired in knobs.js.
 
-import { state } from './state.js?v=109';
-import {
-    observeMainControl,
-    syncToggleButtonFromMain,
-} from './control-mirror.js?v=74';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=15';
-import { drawFilterADSRVisualizer } from './visualizers.js?v=95';
+import { state } from './state.js?v=113';
+import { getNumber, wireToggle } from './params.js?v=5';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=80';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=17';
+import { drawFilterADSRVisualizer } from './visualizers.js?v=98';
 
 let syncToggle = () => {};
 
 function wireFilterEnvToggle() {
     const kbBtn = document.getElementById('kbFilterEnvToggle');
-    const mainBtn = document.getElementById('filterEnvToggle');
-    if (!kbBtn || !mainBtn) return;
-
-    syncToggle = () => syncToggleButtonFromMain(kbBtn, mainBtn);
-    observeMainControl(mainBtn, syncToggle);
-
-    kbBtn.addEventListener('click', () => {
-        mainBtn.click();
-    });
+    if (!kbBtn) return;
+    syncToggle = wireToggle(kbBtn, 'filterEnvToggle', { syncLabel: true });
 }
 
 function syncInvertButton() {
@@ -50,7 +40,7 @@ export function setFilterEnvInvert(on) {
     syncInvertButton();
     if (state.audioContext) {
         const now = state.audioContext.currentTime;
-        const cutoff = Math.max(40, parseFloat(document.getElementById('cutoff')?.value) || 1000);
+        const cutoff = Math.max(40, getNumber('cutoff', 1000));
         updateFilterCutoffRange(cutoff, now);
         updateLfoCutoffSafety();
     }

@@ -1,37 +1,40 @@
 // Compact oscillator controls in the keyboard Synthesizer panel.
-// Knobs drive .osc-tune / .osc-vol; pan uses a microtune-style slider mirroring .osc-pan.
+// Knobs write osc-tune-N / osc-vol-N; pan writes osc-pan-N.
 
-import { state } from './state.js?v=109';
-import { bindKnob } from './knobs.js?v=100';
+import { state } from './state.js?v=113';
+import { bindKnob } from './knobs.js?v=113';
 import {
-    observeMainControl,
-    syncToggleButtonFromMain,
-} from './control-mirror.js?v=74';
+    elementFor,
+    get,
+    getString,
+    set,
+    subscribe,
+    wireSelect,
+    wireToggle,
+} from './params.js?v=5';
 
 const OSC_COUNT = 4;
 
 const KNOB_BINDINGS = [
-    { dialId: 'kbOsc1TuneKnob', selector: '.osc-tune[data-osc="0"]', valueId: 'kbOsc1TuneValue' },
-    { dialId: 'kbOsc1VolKnob', selector: '.osc-vol[data-osc="0"]', valueId: 'kbOsc1VolValue' },
-    { dialId: 'kbOsc2TuneKnob', selector: '.osc-tune[data-osc="1"]', valueId: 'kbOsc2TuneValue' },
-    { dialId: 'kbOsc2VolKnob', selector: '.osc-vol[data-osc="1"]', valueId: 'kbOsc2VolValue' },
-    { dialId: 'kbOsc3TuneKnob', selector: '.osc-tune[data-osc="2"]', valueId: 'kbOsc3TuneValue' },
-    { dialId: 'kbOsc3VolKnob', selector: '.osc-vol[data-osc="2"]', valueId: 'kbOsc3VolValue' },
-    { dialId: 'kbOsc4TuneKnob', selector: '.osc-tune[data-osc="3"]', valueId: 'kbOsc4TuneValue' },
-    { dialId: 'kbOsc4VolKnob', selector: '.osc-vol[data-osc="3"]', valueId: 'kbOsc4VolValue' },
+    { dialId: 'kbOsc1TuneKnob', key: 'osc-tune-0', valueId: 'kbOsc1TuneValue' },
+    { dialId: 'kbOsc1VolKnob', key: 'osc-vol-0', valueId: 'kbOsc1VolValue' },
+    { dialId: 'kbOsc2TuneKnob', key: 'osc-tune-1', valueId: 'kbOsc2TuneValue' },
+    { dialId: 'kbOsc2VolKnob', key: 'osc-vol-1', valueId: 'kbOsc2VolValue' },
+    { dialId: 'kbOsc3TuneKnob', key: 'osc-tune-2', valueId: 'kbOsc3TuneValue' },
+    { dialId: 'kbOsc3VolKnob', key: 'osc-vol-2', valueId: 'kbOsc3VolValue' },
+    { dialId: 'kbOsc4TuneKnob', key: 'osc-tune-3', valueId: 'kbOsc4TuneValue' },
+    { dialId: 'kbOsc4VolKnob', key: 'osc-vol-3', valueId: 'kbOsc4VolValue' },
 ];
 
 const WAVEFORMS = [
     {
         value: 'sawtooth',
         label: 'Sawtooth',
-        // Moog: linear rise + instant vertical reset (not a symmetric triangle)
         svg: '<svg class="keyboard-osc-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 24,1 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>',
     },
     {
         value: 'square',
         label: 'Square',
-        // One cycle: low → high → low
         svg: '<svg class="keyboard-osc-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 6,11 6,2 18,2 18,11 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>',
     },
     {
@@ -42,7 +45,6 @@ const WAVEFORMS = [
     {
         value: 'triangle',
         label: 'Triangle',
-        // Moog: symmetric rise and fall — no vertical reset segments
         svg: '<svg class="keyboard-osc-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 12,1 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>',
     },
 ];
@@ -55,32 +57,14 @@ function formatOscPan(n) {
     return v < 0 ? `L${Math.abs(v)}` : `R${v}`;
 }
 
-function mainOscToggle(oscIndex) {
-    return document.querySelector(`.osc-toggle[data-osc="${oscIndex}"]`);
-}
-
-function mainOscType(oscIndex) {
-    return document.querySelector(`.osc-type[data-osc="${oscIndex}"]`);
-}
-
-function syncKbToggleFromMain(kbBtn, mainBtn) {
-    syncToggleButtonFromMain(kbBtn, mainBtn);
-}
-
-function syncKbWaveFromMain(waveGroup, mainSelect) {
-    if (!waveGroup || !mainSelect) return;
-    const value = mainSelect.value;
+function syncKbWaveFromStore(waveGroup, oscIndex) {
+    if (!waveGroup) return;
+    const value = getString(`osc-type-${oscIndex}`);
     waveGroup.querySelectorAll('.keyboard-osc-wave-btn').forEach((btn) => {
         const selected = btn.dataset.wave === value;
         btn.classList.toggle('active', selected);
         btn.setAttribute('aria-checked', selected ? 'true' : 'false');
     });
-}
-
-function setMainWave(typeMain, value) {
-    if (!typeMain || typeMain.value === value) return;
-    typeMain.value = value;
-    typeMain.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 function buildWavePicker(waveGroup) {
@@ -101,32 +85,25 @@ function buildWavePicker(waveGroup) {
 function wireOsc(i) {
     const kbToggle = document.querySelector(`.kb-osc-toggle[data-osc="${i}"]`);
     const waveGroup = document.querySelector(`.keyboard-osc-wave[data-osc="${i}"]`);
-    const toggleMain = mainOscToggle(i);
-    const typeMain = mainOscType(i);
 
     if (waveGroup && !waveGroup.querySelector('.keyboard-osc-wave-btn')) {
         buildWavePicker(waveGroup);
     }
 
-    const syncToggle = () => syncKbToggleFromMain(kbToggle, toggleMain);
-    const syncWave = () => syncKbWaveFromMain(waveGroup, typeMain);
-    syncFns.push(syncToggle, syncWave);
+    if (kbToggle) {
+        syncFns.push(wireToggle(kbToggle, `osc-toggle-${i}`, { syncLabel: true }));
+    }
 
-    observeMainControl(toggleMain, syncToggle);
+    const syncWave = () => syncKbWaveFromStore(waveGroup, i);
+    syncFns.push(syncWave);
     syncWave();
-
-    kbToggle?.addEventListener('click', () => {
-        toggleMain?.click();
-    });
 
     waveGroup?.querySelectorAll('.keyboard-osc-wave-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-            setMainWave(typeMain, btn.dataset.wave);
-            syncWave();
+            set(`osc-type-${i}`, btn.dataset.wave);
         });
     });
-
-    typeMain?.addEventListener('change', syncWave);
+    subscribe(`osc-type-${i}`, syncWave);
 }
 
 function formatDetuneCents(n) {
@@ -135,94 +112,66 @@ function formatDetuneCents(n) {
 
 function wireUnison() {
     const kbVoices = document.getElementById('kbUnisonVoices');
-    const mainVoices = document.getElementById('unisonVoices');
-    const mainDetune = document.getElementById('unisonDetune');
     const kbDetuneValue = document.getElementById('kbUnisonDetuneValue');
     const kbToggle = document.getElementById('kbUnisonToggle');
-    const mainToggle = document.getElementById('unisonToggle');
 
-    if (kbToggle && mainToggle) {
-        const syncToggle = () => syncToggleButtonFromMain(kbToggle, mainToggle);
-        syncFns.push(syncToggle);
-        observeMainControl(mainToggle, syncToggle);
-        syncToggle();
-
-        kbToggle.addEventListener('click', () => {
-            if (state.keyboardPoly) return;
-            mainToggle.click();
-        });
+    if (kbToggle) {
+        syncFns.push(wireToggle(kbToggle, 'unisonToggle', {
+            syncLabel: true,
+            beforeToggle: () => (state.keyboardPoly ? false : undefined),
+        }));
     }
 
-    if (kbVoices && mainVoices) {
-        const syncVoices = () => {
-            kbVoices.value = mainVoices.value;
-            kbVoices.disabled = mainVoices.disabled;
+    if (kbVoices) {
+        const syncVoices = wireSelect(kbVoices, 'unisonVoices');
+        const syncDisabled = () => {
+            const el = elementFor('unisonVoices');
+            kbVoices.disabled = el ? !!el.disabled : false;
         };
-        syncFns.push(syncVoices);
-        syncVoices();
-
-        kbVoices.addEventListener('change', () => {
-            if (mainVoices.value !== kbVoices.value) {
-                mainVoices.value = kbVoices.value;
-                mainVoices.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        });
-        mainVoices.addEventListener('change', syncVoices);
+        syncFns.push(syncVoices, syncDisabled);
+        subscribe('unisonToggle', syncDisabled);
+        syncDisabled();
     }
 
-    if (mainDetune) {
-        bindKnob(
-            document.getElementById('kbUnisonDetuneKnob'),
-            mainDetune,
-            null,
-        );
-        const syncDetuneLabel = () => {
-            if (kbDetuneValue) kbDetuneValue.textContent = formatDetuneCents(mainDetune.value);
-        };
-        syncFns.push(syncDetuneLabel);
-        syncDetuneLabel();
-        mainDetune.addEventListener('input', syncDetuneLabel);
-    }
+    bindKnob(
+        document.getElementById('kbUnisonDetuneKnob'),
+        'unisonDetune',
+        null,
+    );
+    const syncDetuneLabel = () => {
+        if (kbDetuneValue) kbDetuneValue.textContent = formatDetuneCents(get('unisonDetune'));
+    };
+    syncFns.push(syncDetuneLabel);
+    syncDetuneLabel();
+    subscribe('unisonDetune', syncDetuneLabel);
 }
 
 function wirePhaseReset() {
     const kbBtn = document.getElementById('kbPhaseResetToggle');
-    const mainBtn = document.getElementById('phaseResetToggle');
-    if (!kbBtn || !mainBtn) return;
-
-    const sync = () => syncToggleButtonFromMain(kbBtn, mainBtn);
-    syncFns.push(sync);
-    observeMainControl(mainBtn, sync);
-    sync();
-
-    kbBtn.addEventListener('click', () => {
-        mainBtn.click();
-    });
+    if (!kbBtn) return;
+    syncFns.push(wireToggle(kbBtn, 'phaseResetToggle', { syncLabel: true }));
 }
 
 function wirePanSliders() {
     for (let i = 0; i < OSC_COUNT; i++) {
-        const mainPan = document.querySelector(`.osc-pan[data-osc="${i}"]`);
+        const key = `osc-pan-${i}`;
         const kbPan = document.querySelector(`.kb-osc-pan[data-osc="${i}"]`);
         const kbVal = document.querySelector(`.kb-osc-pan-value[data-osc="${i}"]`);
-        if (!mainPan || !kbPan) continue;
+        if (!kbPan) continue;
 
-        const syncFromMain = () => {
-            kbPan.value = mainPan.value;
-            if (kbVal) kbVal.textContent = formatOscPan(mainPan.value);
+        const syncFromStore = () => {
+            const v = get(key);
+            if (v != null && String(kbPan.value) !== String(v)) kbPan.value = String(v);
+            if (kbVal) kbVal.textContent = formatOscPan(v);
         };
-        syncFns.push(syncFromMain);
-        syncFromMain();
+        syncFns.push(syncFromStore);
+        syncFromStore();
 
         kbPan.addEventListener('input', () => {
-            if (mainPan.value !== kbPan.value) {
-                mainPan.value = kbPan.value;
-                mainPan.dispatchEvent(new Event('input', { bubbles: true }));
-            } else if (kbVal) {
-                kbVal.textContent = formatOscPan(kbPan.value);
-            }
+            set(key, parseFloat(kbPan.value));
+            if (kbVal) kbVal.textContent = formatOscPan(get(key));
         });
-        mainPan.addEventListener('input', syncFromMain);
+        subscribe(key, syncFromStore);
     }
 }
 
@@ -231,10 +180,10 @@ export function syncKeyboardOscillatorsFromMain() {
 }
 
 export function initKeyboardOscillators() {
-    KNOB_BINDINGS.forEach(({ dialId, selector, valueId }) => {
+    KNOB_BINDINGS.forEach(({ dialId, key, valueId }) => {
         bindKnob(
             document.getElementById(dialId),
-            document.querySelector(selector),
+            key,
             document.getElementById(valueId),
         );
     });

@@ -1,7 +1,7 @@
 // Pattern bank: normal mode uses slots 0–7 (P1–P8). Berlin Dream uses all 8 lanes
 // (O1–O4 pitch + M1–M4 modulation). Dom step strip is a view of `editSlot`.
 
-import { state } from './state.js?v=109';
+import { state } from './state.js?v=113';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Total Berlin lanes (and bank array length). */
@@ -137,18 +137,75 @@ export function patternGate(pattern) {
 /** @type {null | { steps: object[], stepCount: number, division: number, reverse: boolean, amount: number, gate: number }} */
 let patternClipboard = null;
 
+export function cloneStep(s) {
+    const src = s || emptyStep();
+    return {
+        tune: Math.round(Number(src.tune) || 0),
+        fine: Math.round(Number(src.fine) || 0),
+        on: src.on !== false,
+        accent: !!src.accent,
+        slide: !!src.slide,
+        ratch: clampRatch(src.ratch),
+    };
+}
+
 function cloneSteps(steps) {
-    return Array.from({ length: STEP_SLOTS }, (_, i) => {
-        const s = steps?.[i] || emptyStep();
-        return {
-            tune: Math.round(Number(s.tune) || 0),
-            fine: Math.round(Number(s.fine) || 0),
-            on: s.on !== false,
-            accent: !!s.accent,
-            slide: !!s.slide,
-            ratch: clampRatch(s.ratch),
-        };
-    });
+    return Array.from({ length: STEP_SLOTS }, (_, i) => cloneStep(steps?.[i]));
+}
+
+/** Live step record for the strip's edit slot (what classic play reads). */
+export function getLiveStep(index) {
+    const pattern = getPattern(state.editSlot);
+    const i = Math.max(0, Math.min(STEP_SLOTS - 1, index | 0));
+    if (!pattern.steps[i]) pattern.steps[i] = emptyStep();
+    return pattern.steps[i];
+}
+
+export function snapshotStep(index) {
+    return cloneStep(getLiveStep(index));
+}
+
+/** Clone this/prev/next at schedule time so a bank edit cannot tear a playing step. */
+export function snapshotStepNeighborhood(step, stepCount, reverse) {
+    const n = Math.max(1, Math.min(STEP_SLOTS, Math.round(Number(stepCount)) || 8));
+    const s = ((Math.round(Number(step)) % n) + n) % n;
+    const next = reverse ? (s - 1 + n) % n : (s + 1) % n;
+    const prev = reverse ? (s + 1) % n : (s - 1 + n) % n;
+    return {
+        index: s,
+        nextIndex: next,
+        prevIndex: prev,
+        this: snapshotStep(s),
+        next: snapshotStep(next),
+        prev: snapshotStep(prev),
+    };
+}
+
+let applyingStepToDom = false;
+
+export function syncLiveStepFromDom(index) {
+    if (applyingStepToDom) return;
+    const i = Math.max(0, Math.min(STEP_SLOTS - 1, index | 0));
+    getPattern(state.editSlot).steps[i] = captureStepFromDom(i);
+}
+
+function bindLiveStepSync() {
+    if (globalThis.__ingySynthLiveStepSync) return;
+    globalThis.__ingySynthLiveStepSync = true;
+    const selector = '.step-tune, .step-fine, .step-accent, .step-slide, .step-ratch, .step-toggle';
+    const handle = (e) => {
+        if (applyingStepToDom) return;
+        const el = e.target instanceof Element ? e.target.closest(selector) : null;
+        if (!el || el.closest('.keyboard-step, .berlin-step')) return;
+        const i = parseInt(el.dataset.step, 10);
+        if (!Number.isFinite(i)) return;
+        syncLiveStepFromDom(i);
+    };
+    // Capture: run before slider `input` listeners so readouts see the store.
+    document.addEventListener('input', handle, true);
+    document.addEventListener('change', handle, true);
+    // Bubble: after On/Acc/Sld/Ratch click handlers have toggled the button.
+    document.addEventListener('click', handle);
 }
 
 export function hasPatternClipboard() {
@@ -258,6 +315,15 @@ export function captureStepFromDom(i) {
 }
 
 export function applyStepToDom(i, data) {
+    applyingStepToDom = true;
+    try {
+        applyStepToDomUnguarded(i, data);
+    } finally {
+        applyingStepToDom = false;
+    }
+}
+
+function applyStepToDomUnguarded(i, data) {
     const tune = tuneInput(i);
     const fine = fineInput(i);
     const accent = accentBtn(i);
@@ -325,12 +391,12 @@ export function flushDomToPattern(slot = state.editSlot) {
 }
 
 /** Paint a slot into the live step strip. */
-export function hydratePatternToDom(slot = state.editSlot) {
+export function hydratePatternToDom(slot = state.editSlot, { clock = true } = {}) {
     const pattern = getPattern(slot);
     for (let i = 0; i < STEP_SLOTS; i++) {
         applyStepToDom(i, pattern.steps[i] || emptyStep());
     }
-    writeClockToDom(pattern);
+    if (clock) writeClockToDom(pattern);
     document.dispatchEvent(new CustomEvent('ingysynth-kb-steps-sync'));
     return pattern;
 }
@@ -428,6 +494,7 @@ function clearEditSlot() {
 
 export function initPatternBank() {
     ensureBank();
+    bindLiveStepSync();
     // Slot 1 starts as whatever the page loaded with.
     flushDomToPattern(0);
     for (let i = 1; i < BANK_COUNT; i++) {

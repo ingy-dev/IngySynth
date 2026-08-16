@@ -58,6 +58,12 @@
       await ctx.audioWorklet.addModule(url.href);
       const tablesUrl = new URL('../js/worklets/plaits-wavetables.bin?v=1', window.location.href);
       const tables = await fetch(tablesUrl).then((r) => r.arrayBuffer());
+      const fmBanksUrl = new URL('../js/worklets/plaits-fm-banks.bin?v=1', window.location.href);
+      let fmBank = null;
+      try {
+        const all = await fetch(fmBanksUrl).then((r) => r.arrayBuffer());
+        fmBank = all.slice(0, 4096);
+      } catch (_) { /* optional */ }
       const node = new AudioWorkletNode(ctx, 'plaits-engine-processor', {
         numberOfInputs: 0,
         numberOfOutputs: 1,
@@ -70,9 +76,13 @@
           harmonics: opts.harmonics ?? 0.5,
           bank: opts.bank ?? -1,
           gate: 1,
+          velocity: 0.8,
         },
       });
       node.port.postMessage({ engine, tables: tables.slice(0) });
+      if (fmBank && engine === 'fm6') {
+        node.port.postMessage({ fmBank });
+      }
       const g = ctx.createGain();
       g.gain.value = opts.trim ?? 1;
       node.connect(g);
@@ -97,6 +107,7 @@
           ['wavetable', { bank: 3 }],
           ['wavetable', { bank: -1, harmonics: 0.2 }],
           ['fm', { harmonics: 0.5, morphX: 0.5, morphY: 0.5 }],
+          ['fm6', { harmonics: 0.0, morphX: 0.5, morphY: 0.5 }],
           ['waveshaper', {}],
           ['modal', {}],
           ['string', {}],

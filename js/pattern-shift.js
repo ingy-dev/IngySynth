@@ -1,73 +1,24 @@
 // Shift Pattern: rotate active step content left/right within stepCount.
-// Main Sequencer controls are source of truth; keyboard strip mirrors after apply.
+// `pattern.steps[]` is the source; hydrate paints the hidden bus + stage strip.
 
-import { state } from './state.js?v=109';
-import { refreshStepTuneReadouts } from './sequencer.js?v=227';
+import { state } from './state.js?v=113';
+import { refreshStepTuneReadouts } from './sequencer.js?v=241';
 import {
     syncAllKeyboardStepButtonsFromMain,
     syncAllKeyboardStepFinesFromMain,
-} from './keyboard-steps.js?v=95';
-import { setWriteCursor } from './pattern-write.js?v=86';
-import { rotateAutomationLanes } from './automation.js?v=33';
-import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
+} from './keyboard-steps.js?v=103';
+import { setWriteCursor } from './pattern-write.js?v=94';
+import { rotateAutomationLanes } from './automation.js?v=35';
+import {
+    cloneStep,
+    getPattern,
+    hydratePatternToDom,
+    STEP_SLOTS,
+} from './pattern-bank.js?v=9';
 
 function stepCount() {
     const el = document.getElementById('stepCount');
-    return Math.max(1, Math.min(32, parseInt(el?.value, 10) || 8));
-}
-
-function formatCentsLabel(cents) {
-    return `${cents > 0 ? '+' : ''}${cents}&cent;`;
-}
-
-function captureStep(i) {
-    const tune = document.querySelector(`.step-tune[data-step="${i}"]`);
-    const fine = document.querySelector(`.step-fine[data-step="${i}"]`);
-    const accent = document.querySelector(`.step-accent[data-step="${i}"]`);
-    const slide = document.querySelector(`.step-slide[data-step="${i}"]`);
-    const ratch = document.querySelector(`.step-ratch[data-step="${i}"]`);
-    const toggle = document.querySelector(`.step-toggle[data-step="${i}"]`);
-    const front = toggle?.querySelector('.front');
-    return {
-        tune: tune ? (parseInt(tune.value, 10) || 0) : 0,
-        fine: fine ? (parseInt(fine.value, 10) || 0) : 0,
-        accent: accent ? !accent.classList.contains('off') : false,
-        slide: slide ? !slide.classList.contains('off') : false,
-        on: front ? front.textContent.trim() === 'On' : true,
-        ratch: clampRatch(parseInt(ratch?.dataset?.ratch, 10) || 1),
-    };
-}
-
-function applyStep(i, data) {
-    const tune = document.querySelector(`.step-tune[data-step="${i}"]`);
-    const fine = document.querySelector(`.step-fine[data-step="${i}"]`);
-    const accent = document.querySelector(`.step-accent[data-step="${i}"]`);
-    const slide = document.querySelector(`.step-slide[data-step="${i}"]`);
-    const ratch = document.querySelector(`.step-ratch[data-step="${i}"]`);
-    const toggle = document.querySelector(`.step-toggle[data-step="${i}"]`);
-    const front = toggle?.querySelector('.front');
-
-    if (tune) {
-        // Widen first: manual knobs sit at ±24, Write Mode can program past it
-        const v = Math.round(Number(data.tune) || 0);
-        if (v < parseFloat(tune.min)) tune.min = String(v);
-        if (v > parseFloat(tune.max)) tune.max = String(v);
-        tune.value = String(v);
-        // Keep dial angles in sync; readout refresh runs once after rotate
-        tune.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    if (fine) {
-        // Set value without input — fine listener snaps under microtune lock
-        fine.value = String(data.fine);
-        if (fine.nextElementSibling) {
-            fine.nextElementSibling.innerHTML = formatCentsLabel(data.fine);
-        }
-    }
-    if (accent) accent.classList.toggle('off', !data.accent);
-    if (slide) slide.classList.toggle('off', !data.slide);
-    if (front) front.textContent = data.on ? 'On' : 'Off';
-    if (toggle) toggle.classList.toggle('off', !data.on);
-    syncRatchButton(ratch, data.ratch);
+    return Math.max(1, Math.min(STEP_SLOTS, parseInt(el?.value, 10) || 8));
 }
 
 /**
@@ -83,10 +34,13 @@ export function rotatePattern(delta) {
     d = ((d % n) + n) % n;
     if (!d) return;
 
-    const snap = Array.from({ length: n }, (_, i) => captureStep(i));
+    const pattern = getPattern(state.editSlot);
+    const snap = Array.from({ length: n }, (_, i) => cloneStep(pattern.steps[i]));
     for (let i = 0; i < n; i++) {
-        applyStep(i, snap[(i + d) % n]);
+        pattern.steps[i] = cloneStep(snap[(i + d) % n]);
     }
+    // Steps only — do not write stored clock (step count / reverse / division).
+    hydratePatternToDom(state.editSlot, { clock: false });
     rotateAutomationLanes(d);
 
     if (state.isPlaying || state.isArping) {

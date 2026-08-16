@@ -1,12 +1,9 @@
 // LFO shape / on-off / sync in the keyboard Mod Matrix.
 // RATE dial is mode-aware (Hz / Sync) — wired in lfo-rate.js.
 
-import {
-    observeMainControl,
-    syncToggleButtonFromMain,
-} from './control-mirror.js?v=74';
-import { setLfoSyncMode } from './lfo-rate.js?v=7';
-import { state } from './state.js?v=109';
+import { getString, set, subscribe, wireToggle } from './params.js?v=5';
+import { setLfoSyncMode } from './lfo-rate.js?v=10';
+import { state } from './state.js?v=113';
 
 const WAVEFORMS = [
     {
@@ -48,9 +45,9 @@ function buildWavePicker(waveGroup) {
     });
 }
 
-function syncKbWaveFromMain(waveGroup, mainSelect) {
-    if (!waveGroup || !mainSelect) return;
-    const value = mainSelect.value;
+function syncKbWaveFromMain(waveGroup) {
+    if (!waveGroup) return;
+    const value = getString('lfoWaveform');
     waveGroup.querySelectorAll('.keyboard-osc-wave-btn').forEach((btn) => {
         const selected = btn.dataset.wave === value;
         btn.classList.toggle('active', selected);
@@ -58,68 +55,40 @@ function syncKbWaveFromMain(waveGroup, mainSelect) {
     });
 }
 
-function setMainWave(mainSelect, value) {
-    if (!mainSelect || mainSelect.value === value) return;
-    mainSelect.value = value;
-    mainSelect.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
 function wireWave() {
     const waveGroup = document.getElementById('kbLfoWave');
-    const mainSelect = document.getElementById('lfoWaveform');
-    if (!waveGroup || !mainSelect) return;
+    if (!waveGroup) return;
 
     if (!waveGroup.querySelector('.keyboard-osc-wave-btn')) {
         buildWavePicker(waveGroup);
     }
 
-    const syncWave = () => syncKbWaveFromMain(waveGroup, mainSelect);
+    const syncWave = () => syncKbWaveFromMain(waveGroup);
     syncFns.push(syncWave);
     syncWave();
 
     waveGroup.querySelectorAll('.keyboard-osc-wave-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-            setMainWave(mainSelect, btn.dataset.wave);
+            set('lfoWaveform', btn.dataset.wave);
             syncWave();
         });
     });
 
-    mainSelect.addEventListener('change', syncWave);
+    subscribe('lfoWaveform', syncWave);
 }
 
-function wireToggle() {
+function wireToggleOn() {
     const kbBtn = document.getElementById('kbLfoToggle');
-    const mainBtn = document.getElementById('lfoToggle');
-    if (!kbBtn || !mainBtn) return;
-
-    const sync = () => syncToggleButtonFromMain(kbBtn, mainBtn);
+    if (!kbBtn) return;
+    const sync = wireToggle(kbBtn, 'lfoToggle', { syncLabel: true });
     syncFns.push(sync);
-    observeMainControl(mainBtn, sync);
-    document.addEventListener('ingysynth:lfo-enabled', sync);
-    sync();
-
-    kbBtn.addEventListener('click', () => {
-        mainBtn.click();
-    });
 }
 
 function wireRetrigger() {
     const kbBtn = document.getElementById('kbLfoRetrigger');
-    const mainBtn = document.getElementById('lfoRetrigger');
-    if (!kbBtn || !mainBtn) return;
-
-    const sync = () => {
-        const on = !mainBtn.classList.contains('off');
-        kbBtn.classList.toggle('off', !on);
-        kbBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    };
+    if (!kbBtn) return;
+    const sync = wireToggle(kbBtn, 'lfoRetrigger', { syncLabel: false });
     syncFns.push(sync);
-    observeMainControl(mainBtn, sync);
-    sync();
-
-    kbBtn.addEventListener('click', () => {
-        mainBtn.click();
-    });
 }
 
 function syncKbSyncButton() {
@@ -133,12 +102,10 @@ function syncKbSyncButton() {
 
 function wireSync() {
     const kbBtn = document.getElementById('kbLfoSync');
-    const mainBtn = document.getElementById('lfoSyncToggle');
     if (!kbBtn) return;
 
     const sync = () => syncKbSyncButton();
     syncFns.push(sync);
-    if (mainBtn) observeMainControl(mainBtn, sync);
     document.addEventListener('ingysynth:lfo-rate', sync);
     sync();
 
@@ -153,7 +120,7 @@ export function syncKeyboardLfoFromMain() {
 
 export function initKeyboardLfo() {
     wireWave();
-    wireToggle();
+    wireToggleOn();
     wireRetrigger();
     wireSync();
 }

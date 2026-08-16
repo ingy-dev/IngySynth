@@ -1,11 +1,13 @@
 // Ingy 6 panel (poly / Juno-60): fader chrome + wiring to main synth params.
 
-import { state } from './state.js?v=109';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=15';
-import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=95';
-import { refreshFilterInputDrive } from './filter-drive.js?v=12';
-import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=79';
+import { state } from './state.js?v=113';
+import { beginMidiLearn } from './midi-learn.js?v=3';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=80';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=17';
+import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=98';
+import { refreshFilterInputDrive } from './filter-drive.js?v=20';
+import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=80';
+import { elementFor, getNumber, set } from './params.js?v=5';
 
 const HPF_HZ = [20, 250, 700, 1400];
 
@@ -85,6 +87,22 @@ function wireFaderPointer(slot) {
     };
 
     const onPointerDown = (e) => {
+        const fader = slot.closest('.ingy6-fader') || slot;
+        const param = fader.dataset?.param;
+        const mainId = {
+            attack: 'attack',
+            decay: 'decay',
+            sustain: 'sustain',
+            release: 'release',
+            cutoff: 'cutoff',
+            resonance: 'resonance',
+            filterEnvAmount: 'filterEnvAmount',
+            highPass: 'highPass',
+            noise: 'noiseVol',
+            vcaLevel: 'volume',
+        }[param];
+        const canonical = (mainId && document.getElementById(mainId)) || input;
+        if (beginMidiLearn(e, canonical, fader)) return;
         if (input.disabled || !state.keyboardPoly) return;
         if (e.button != null && e.button !== 0) return;
         e.preventDefault();
@@ -281,15 +299,12 @@ function hzToHpfStep(hz) {
 }
 
 function setMainRange(id, value) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const next = String(value);
-    if (el.value === next) {
-        el.dispatchEvent(new Event('input', { bubbles: true }));
+    const n = typeof value === 'number' ? value : parseFloat(value);
+    if (Number.isFinite(n) && getNumber(id, NaN) === n) {
+        elementFor(id)?.dispatchEvent(new Event('input', { bubbles: true }));
         return;
     }
-    el.value = next;
-    el.dispatchEvent(new Event('input', { bubbles: true }));
+    set(id, value);
 }
 
 function readMainRange(id, fallback = 0) {
@@ -428,11 +443,7 @@ function applyNoiseLevel(fader0to10) {
     const level = faderToLinear(fader0to10, 0, 1);
     setMainRange('noiseVol', level);
     if (level > 0.001) {
-        const typeEl = document.getElementById('noiseType');
-        if (typeEl && typeEl.value !== 'white') {
-            typeEl.value = 'white';
-            typeEl.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        set('noiseType', 'white');
         ensureLiveNoiseSource();
         setNoiseEnabled(true);
     } else {

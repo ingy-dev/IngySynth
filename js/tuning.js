@@ -1,4 +1,6 @@
-import { state } from './state.js?v=109';
+import { state } from './state.js?v=113';
+import { getNumber } from './params.js?v=5';
+import { getLiveStep } from './pattern-bank.js?v=9';
 
 // Base reference frequency: C4.
 export const BASE_FREQ = 261.63;
@@ -19,8 +21,8 @@ export function semitonesToNoteName(semitones, cents = 0) {
 
 // Master Tune + Octave Switch + Semitone Switch (never scale-quantized).
 export function getGlobalTune() {
-    const masterTune = parseInt(document.getElementById('masterTune').value);
-    const octaveSwitch = parseInt(document.getElementById('octaveSwitch').value) * 12;
+    const masterTune = getNumber('masterTune');
+    const octaveSwitch = getNumber('octaveSwitch') * 12;
     const semitoneShift = calculateSemitoneShift();
     return masterTune + octaveSwitch + semitoneShift;
 }
@@ -122,17 +124,31 @@ export function quantizeToScale(semitones, degrees) {
 }
 
 // The step slider value after scale quantization (raw value when scale is off).
-export function getQuantizedStepTune(step) {
-    const raw = parseInt(document.querySelector(`.step-tune[data-step="${step}"]`).value);
+export function quantizeStepTune(raw) {
+    const n = Math.round(Number(raw) || 0);
     const scale = getActiveScale();
-    return scale ? quantizeToScale(raw, scale.degrees) : raw;
+    return scale ? quantizeToScale(n, scale.degrees) : n;
+}
+
+export function getQuantizedStepTune(step) {
+    return quantizeStepTune(getLiveStep(step).tune);
 }
 
 // Calculate current note shift from the semitone switch controls
 export function calculateSemitoneShift() {
-    const semitoneAmount = parseInt(document.getElementById('semitoneAmount').value);
-    const switchPosition = parseInt(document.getElementById('semitoneSwitch').value);
+    const semitoneAmount = getNumber('semitoneAmount');
+    const switchPosition = getNumber('semitoneSwitch');
     return switchPosition * semitoneAmount;
+}
+
+function keyboardTransposeOffset() {
+    return state.isArping
+        ? (state.arpTranspose || 0)
+        : (state.keyboardTranspose || 0);
+}
+
+export function getStepTotalTuneFromRaw(raw) {
+    return quantizeStepTune(raw) + getGlobalTune() + keyboardTransposeOffset();
 }
 
 // Total tune in semitones for a sequencer step (before per-osc detune).
@@ -141,35 +157,38 @@ export function calculateSemitoneShift() {
 // While arping: use temporary arpTranspose (KB-gated). Otherwise: sticky
 // keyboardTranspose from play-mode key presses.
 export function getStepTotalTune(step) {
-    const stepTune = getQuantizedStepTune(step);
-    const transpose = state.isArping
-        ? (state.arpTranspose || 0)
-        : (state.keyboardTranspose || 0);
-    return stepTune + getGlobalTune() + transpose;
+    return getStepTotalTuneFromRaw(getLiveStep(step).tune);
 }
 
 // Per-step microtuning offset in cents (-100..+100).
 // Lock mode snaps only when a fine slider is moved — stored values are used as-is.
 export function getStepFineCents(step) {
-    const fine = document.querySelector(`.step-fine[data-step="${step}"]`);
-    return fine ? parseInt(fine.value) : 0;
+    return Math.round(Number(getLiveStep(step).fine) || 0);
+}
+
+export function frequencyFromStepData(data, oscIndex) {
+    const totalTune = getStepTotalTuneFromRaw(data?.tune)
+        + (oscIndex !== undefined ? state.oscTunes[oscIndex] : 0)
+        + (Math.round(Number(data?.fine) || 0) / 100);
+    return BASE_FREQ * Math.pow(2, totalTune / 12);
+}
+
+export function midiNoteFromStepData(data) {
+    const midiNote = state.midiBaseNote + getStepTotalTuneFromRaw(data?.tune);
+    return Math.min(127, Math.max(0, midiNote));
 }
 
 // Frequency for a step and oscillator index, including the per-step cents
 // offset. This is the single seam where a future scale/tuning system
 // (EDO, Scala, just intonation) can plug in.
 export function stepToFrequency(step, oscIndex) {
-    const totalTune = getStepTotalTune(step)
-        + (oscIndex !== undefined ? state.oscTunes[oscIndex] : 0)
-        + getStepFineCents(step) / 100;
-    return BASE_FREQ * Math.pow(2, totalTune / 12);
+    return frequencyFromStepData(getLiveStep(step), oscIndex);
 }
 
 // MIDI note number for a step (clamped to 0-127). Cents ride separately on
 // pitch bend - see midiPitchBendValue.
 export function stepToMidiNote(step) {
-    const midiNote = state.midiBaseNote + getStepTotalTune(step);
-    return Math.min(127, Math.max(0, midiNote));
+    return midiNoteFromStepData(getLiveStep(step));
 }
 
 // 14-bit pitch bend value (0-16383, center 8192) for a cents offset given the

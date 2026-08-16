@@ -3,17 +3,89 @@
 <head>
     <link rel="stylesheet" href="https://use.typekit.net/cmx8gmo.css">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=316">
+    <link rel="stylesheet" href="styles.css?v=331">
 </head>
 <body>
     <div class="container">
-        <h1>INGYSYNTH</h1>
-        <div id="midiFieldsetAnchor" hidden aria-hidden="true"></div>
-        <div id="midiFieldsetHome" class="midi-fieldset-home">
+        <h1 class="sr-only">INGYSYNTH</h1>
+        <div class="header-grid" hidden aria-hidden="true">
+            <div></div> <!-- Empty column to center oscilloscope -->
+            <div class="oscilloscope-container">
+                <canvas id="oscilloscope" height="200"></canvas>
+                <div id="logo-overlay">
+                    <div class="glitch-container logo-flicker">
+                        <div class="glitch">
+                            <svg id="logo-svg" class="logo-flicker" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 102.88">
+                                <g id="c" data-name="Layer 1">
+                                    <g>
+                                        <polygon points="38.71 7.6 38.71 28.16 44.08 28.16 44.08 7.6 38.71 7.6 38.71 7.6" fill="lime"/>
+                                        <rect x="38.71" width="5.36" height="5.36" fill="lime"/>
+                                        <path d="M51.83,12.96h18.18v15.2h5.36v-14.08c0-3.58-2.91-6.48-6.48-6.48h-22.43v20.56h5.36v-15.2Z" fill="lime"/>
+                                        <path d="M106.66,30.38V7.6h-22.43c-3.58,0-6.48,2.91-6.48,6.48v7.6c0,3.58,2.91,6.48,6.48,6.48h15.27v-5.36h-16.39v-9.84h18.18v17.44h-23.54v5.36h22.39l6.52-5.38Z" fill="lime"/>
+                                        <path d="M47.43,53.27v5.36h22.43c3.58,0,6.48-2.91,6.48-6.48s-2.91-6.48-6.48-6.48h-18.03v-2.24h23.54v-5.36h-22.43c-3.61,0-6.48,2.91-6.48,6.48s2.87,6.48,6.48,6.48h18.03v2.24h-23.54Z" fill="lime"/>
+                                        <path d="M132.22,38.07h-30.66l-18.44,15.56v-15.56h-5.36s0,0,0,0v15.65s0,0,0,.01v4.43l-9.57,8.08h8.47l33.15-27.97v20.37h5.36v-15.2h18.18v15.2h5.37v-14.08c0-3.58-2.91-6.48-6.48-6.48Z" fill="lime"/>
+                                        <path d="M146.45,30.47h-5.36v21.68c0,3.58,2.91,6.48,6.48,6.48h22.43v-5.36h-23.54v-9.84h23.54v-5.36h-23.54v-7.6Z" fill="lime"/>
+                                        <polygon points="103.91 35.76 104.02 35.76 104.02 35.76 112.26 35.76 112.26 35.76 112.37 35.76 145.75 7.6 145.64 7.6 145.64 7.6 137.4 7.6 137.4 7.6 137.29 7.6 118.96 23.06 118.96 7.6 118.68 7.6 113.6 7.6 113.32 7.6 113.32 27.82 103.91 35.76" fill="lime"/>
+                                        <path d="M201.29,58.64v-14.08c0-3.58-2.91-6.48-6.48-6.48h-17.06v-7.6h-5.36v28.16h5.36v-15.2h18.18v15.2h5.37" fill="lime"/>
+                                        <polygon points="38.71 7.6 30.25 7.6 0 33.12 30.25 58.64 38.71 58.64 8.47 33.12 38.71 7.6" fill="lime"/>
+                                        <polygon points="201.29 58.64 209.75 58.64 240 33.12 209.75 7.6 201.29 7.6 231.53 33.12 201.29 58.64" fill="lime"/>
+                                        <g>
+                                            <path d="M50.81,81.98h-11.49v-2.75h12.06v-1.15h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M69.67,82.55c0,1.83-1.49,3.32-3.32,3.32h-11.49v-2.75h12.06v-1.14h-8.74c-1.83,0-3.32-1.49-3.32-3.32v-7.21h2.75v7.79h9.31v-7.79h2.75v11.11Z" fill="lime"/>
+                                            <path d="M85.7,81.98h-2.75v-7.79h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M101.73,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-11.11h2.75v3.89h12.06v2.75h-12.06v5.04h12.06v2.75Z" fill="lime"/>
+                                            <path d="M117.76,81.98h-2.75v-7.79h-9.31v7.79h-2.75v-14.43h2.75v3.89h8.74c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M133.79,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.15h12.06v2.75ZM131.04,75.34v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M146.5,81.98h-11.49v-2.75h12.06v-1.15h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M153.29,70.3h-2.75v-2.75h2.75v2.75ZM153.29,81.98h-2.75v-10.53h2.75v10.53Z" fill="lime"/>
+                                            <path d="M167.61,77.03l-11.45,2.19h13.24v2.75h-12.63c-1.56,0-2.82-1.26-2.82-2.82,0-1.37.99-2.52,2.29-2.77l11.45-2.19h-13.17v-2.75h12.56c1.56,0,2.82,1.26,2.82,2.82,0,1.37-.99,2.52-2.29,2.77Z" fill="lime"/>
+                                            <path d="M185.43,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.15h12.06v2.75ZM182.68,75.34v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M201.46,77.17h-2.75v-2.98h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v2.4Z" fill="lime"/>
+                                        </g>
+                                        <g>
+                                            <path d="M54.74,96.91l-1.14-.25c-.42,1.36-1.68,2.33-3.17,2.33h-8.26c-1.81,0-3.3-1.49-3.3-3.32v-.55c0-.78.27-1.51.73-2.08-.42-.48-.67-1.11-.67-1.79,0-1.55,1.24-2.79,2.79-2.79h12.04v2.75h-12.37l9.62,2.14v-.99h2.75v1.6l.99.21v2.75ZM51,96.24v-.15l-9.31-2.02v2.18h9.31Z" fill="lime"/>
+                                            <path d="M72.49,98.99h-11.49v-2.75h12.06v-1.14h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
+                                            <path d="M91.12,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM88.37,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M106.92,102.88h-2.75v-3.89h-8.74c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h11.49v14.43ZM104.17,96.24v-5.04h-9.31v5.04h9.31Z" fill="lime"/>
+                                            <path d="M122.72,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-7.21h2.75v7.79h9.31v-7.79h2.75v10.53Z" fill="lime"/>
+                                            <path d="M138.52,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM135.78,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M154.33,98.99h-2.75v-7.79h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
+                                            <path d="M170.13,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h11.49v2.75h-12.06v5.04h12.06v2.75Z" fill="lime"/>
+                                            <path d="M185.62,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM182.88,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
+                                            <path d="M201.43,94.18h-2.75v-2.98h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v2.4Z" fill="lime"/>
+                                        </g>
+                                    </g>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="scanlines"></div>
+                    <div class="vhs-static"></div>
+                    <!-- Add border to logo overlay -->
+                    <div class="oscilloscope-border logo-flicker"></div>
+                </div>
+                <!-- Add border to oscilloscope container -->
+                <div class="oscilloscope-border"></div>
+            </div>
+            <div></div> <!-- Empty column to center oscilloscope -->
+        </div>
+
+                <!-- Mobile Start/Stop button container -->
+        <div class="mobile-start-stop-container" hidden aria-hidden="true">
+            <button id="mobileStartStop" class="pushable start" hidden aria-hidden="true">
+                <span class="front">Start</span>
+            </button>
+        </div>
+
+        <div class="keyboard-section">
+            <div class="keyboard-toolbar">
+                <div class="keyboard-stage-scope" id="keyboardStageScope">
+                    <div id="midiFieldsetStage" class="midi-fieldset-stage">
+<div id="midiFieldsetHome" class="midi-fieldset-home">
         <fieldset class="midi-fieldset midi-section-off" id="midiFieldset" aria-hidden="false">
             <legend class="collapsible-legend">
                 <span class="legend-hex">
@@ -97,84 +169,7 @@
             </div>
         </fieldset>
         </div>
-        <div class="header-grid">
-            <div></div> <!-- Empty column to center oscilloscope -->
-            <div class="oscilloscope-container">
-                <canvas id="oscilloscope" height="200"></canvas>
-                <div id="logo-overlay">
-                    <div class="glitch-container logo-flicker">
-                        <div class="glitch">
-                            <svg id="logo-svg" class="logo-flicker" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 102.88">
-                                <g id="c" data-name="Layer 1">
-                                    <g>
-                                        <polygon points="38.71 7.6 38.71 28.16 44.08 28.16 44.08 7.6 38.71 7.6 38.71 7.6" fill="lime"/>
-                                        <rect x="38.71" width="5.36" height="5.36" fill="lime"/>
-                                        <path d="M51.83,12.96h18.18v15.2h5.36v-14.08c0-3.58-2.91-6.48-6.48-6.48h-22.43v20.56h5.36v-15.2Z" fill="lime"/>
-                                        <path d="M106.66,30.38V7.6h-22.43c-3.58,0-6.48,2.91-6.48,6.48v7.6c0,3.58,2.91,6.48,6.48,6.48h15.27v-5.36h-16.39v-9.84h18.18v17.44h-23.54v5.36h22.39l6.52-5.38Z" fill="lime"/>
-                                        <path d="M47.43,53.27v5.36h22.43c3.58,0,6.48-2.91,6.48-6.48s-2.91-6.48-6.48-6.48h-18.03v-2.24h23.54v-5.36h-22.43c-3.61,0-6.48,2.91-6.48,6.48s2.87,6.48,6.48,6.48h18.03v2.24h-23.54Z" fill="lime"/>
-                                        <path d="M132.22,38.07h-30.66l-18.44,15.56v-15.56h-5.36s0,0,0,0v15.65s0,0,0,.01v4.43l-9.57,8.08h8.47l33.15-27.97v20.37h5.36v-15.2h18.18v15.2h5.37v-14.08c0-3.58-2.91-6.48-6.48-6.48Z" fill="lime"/>
-                                        <path d="M146.45,30.47h-5.36v21.68c0,3.58,2.91,6.48,6.48,6.48h22.43v-5.36h-23.54v-9.84h23.54v-5.36h-23.54v-7.6Z" fill="lime"/>
-                                        <polygon points="103.91 35.76 104.02 35.76 104.02 35.76 112.26 35.76 112.26 35.76 112.37 35.76 145.75 7.6 145.64 7.6 145.64 7.6 137.4 7.6 137.4 7.6 137.29 7.6 118.96 23.06 118.96 7.6 118.68 7.6 113.6 7.6 113.32 7.6 113.32 27.82 103.91 35.76" fill="lime"/>
-                                        <path d="M201.29,58.64v-14.08c0-3.58-2.91-6.48-6.48-6.48h-17.06v-7.6h-5.36v28.16h5.36v-15.2h18.18v15.2h5.37" fill="lime"/>
-                                        <polygon points="38.71 7.6 30.25 7.6 0 33.12 30.25 58.64 38.71 58.64 8.47 33.12 38.71 7.6" fill="lime"/>
-                                        <polygon points="201.29 58.64 209.75 58.64 240 33.12 209.75 7.6 201.29 7.6 231.53 33.12 201.29 58.64" fill="lime"/>
-                                        <g>
-                                            <path d="M50.81,81.98h-11.49v-2.75h12.06v-1.15h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
-                                            <path d="M69.67,82.55c0,1.83-1.49,3.32-3.32,3.32h-11.49v-2.75h12.06v-1.14h-8.74c-1.83,0-3.32-1.49-3.32-3.32v-7.21h2.75v7.79h9.31v-7.79h2.75v11.11Z" fill="lime"/>
-                                            <path d="M85.7,81.98h-2.75v-7.79h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
-                                            <path d="M101.73,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-11.11h2.75v3.89h12.06v2.75h-12.06v5.04h12.06v2.75Z" fill="lime"/>
-                                            <path d="M117.76,81.98h-2.75v-7.79h-9.31v7.79h-2.75v-14.43h2.75v3.89h8.74c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
-                                            <path d="M133.79,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.15h12.06v2.75ZM131.04,75.34v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
-                                            <path d="M146.5,81.98h-11.49v-2.75h12.06v-1.15h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
-                                            <path d="M153.29,70.3h-2.75v-2.75h2.75v2.75ZM153.29,81.98h-2.75v-10.53h2.75v10.53Z" fill="lime"/>
-                                            <path d="M167.61,77.03l-11.45,2.19h13.24v2.75h-12.63c-1.56,0-2.82-1.26-2.82-2.82,0-1.37.99-2.52,2.29-2.77l11.45-2.19h-13.17v-2.75h12.56c1.56,0,2.82,1.26,2.82,2.82,0,1.37-.99,2.52-2.29,2.77Z" fill="lime"/>
-                                            <path d="M185.43,81.98h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.15h12.06v2.75ZM182.68,75.34v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
-                                            <path d="M201.46,77.17h-2.75v-2.98h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v2.4Z" fill="lime"/>
-                                        </g>
-                                        <g>
-                                            <path d="M54.74,96.91l-1.14-.25c-.42,1.36-1.68,2.33-3.17,2.33h-8.26c-1.81,0-3.3-1.49-3.3-3.32v-.55c0-.78.27-1.51.73-2.08-.42-.48-.67-1.11-.67-1.79,0-1.55,1.24-2.79,2.79-2.79h12.04v2.75h-12.37l9.62,2.14v-.99h2.75v1.6l.99.21v2.75ZM51,96.24v-.15l-9.31-2.02v2.18h9.31Z" fill="lime"/>
-                                            <path d="M72.49,98.99h-11.49v-2.75h12.06v-1.14h-9.24c-1.85,0-3.32-1.49-3.32-3.32s1.47-3.32,3.32-3.32h11.49v2.75h-12.06v1.15h9.24c1.83,0,3.32,1.49,3.32,3.32s-1.49,3.32-3.32,3.32Z" fill="lime"/>
-                                            <path d="M91.12,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM88.37,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
-                                            <path d="M106.92,102.88h-2.75v-3.89h-8.74c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h11.49v14.43ZM104.17,96.24v-5.04h-9.31v5.04h9.31Z" fill="lime"/>
-                                            <path d="M122.72,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-7.21h2.75v7.79h9.31v-7.79h2.75v10.53Z" fill="lime"/>
-                                            <path d="M138.52,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM135.78,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
-                                            <path d="M154.33,98.99h-2.75v-7.79h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v7.21Z" fill="lime"/>
-                                            <path d="M170.13,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h11.49v2.75h-12.06v5.04h12.06v2.75Z" fill="lime"/>
-                                            <path d="M185.62,98.99h-11.49c-1.83,0-3.32-1.49-3.32-3.32v-3.89c0-1.83,1.49-3.32,3.32-3.32h8.17c1.83,0,3.32,1.49,3.32,3.32v3.32h-12.06v1.14h12.06v2.75ZM182.88,92.35v-1.15h-9.31v1.15h9.31Z" fill="lime"/>
-                                            <path d="M201.43,94.18h-2.75v-2.98h-9.31v7.79h-2.75v-10.53h11.49c1.83,0,3.32,1.49,3.32,3.32v2.4Z" fill="lime"/>
-                                        </g>
-                                    </g>
-                                </g>
-                            </svg>
-                        </div>
                     </div>
-                    <div class="scanlines"></div>
-                    <div class="vhs-static"></div>
-                    <!-- Add border to logo overlay -->
-                    <div class="oscilloscope-border logo-flicker"></div>
-                </div>
-                <!-- Add border to oscilloscope container -->
-                <div class="oscilloscope-border"></div>
-            </div>
-            <div></div> <!-- Empty column to center oscilloscope -->
-        </div>
-
-                <!-- Mobile Start/Stop button container -->
-        <div class="mobile-start-stop-container">
-            <button id="mobileStartStop" class="pushable start">
-                <span class="front">Start</span>
-            </button>
-        </div>
-
-        <div class="keyboard-section">
-            <div class="keyboard-toolbar">
-                <div class="keyboard-toolbar-top">
-                    <button id="keyboardVisibilityToggle" class="pushable">
-                        <span class="front">Keyboard: On</span>
-                    </button>
-                </div>
-                <div class="keyboard-stage-scope" id="keyboardStageScope">
-                    <div id="midiFieldsetStage" class="midi-fieldset-stage"></div>
                     <div class="oscilloscope-container keyboard-stage-oscilloscope">
                         <canvas id="kbOscilloscope" height="200"></canvas>
 <div id="kb-logo-overlay" class="logo-overlay">
@@ -243,6 +238,9 @@
                             <button id="kbStartStop" class="pushable start keyboard-start-stop" type="button" aria-label="Start or stop sequencer">
                                 <span class="front"><span class="kb-transport-icon" aria-hidden="true"></span></span>
                             </button>
+                            </div>
+                            <div class="keyboard-perf-btn-slot">
+                            <button id="keyboardVisibilityToggle" class="kb-step-btn keyboard-toolbar-btn" type="button" aria-pressed="true" aria-label="Hide piano keyboard">Keys</button>
                             </div>
                             <div class="keyboard-perf-btn-slot">
                             <button id="kbRev" class="pushable off keyboard-rev" type="button" aria-label="Reverse sequencer" aria-pressed="false">
@@ -403,17 +401,6 @@
                                     <div class="keyboard-tuning-note note-vfd" id="kbPatternNoteVisualizer" aria-live="polite" aria-label="Current note" data-text="Note">
                                         <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
                                     </div>
-                                    <fieldset class="keyboard-scale-fieldset" aria-label="Scale">
-                                        <legend><span class="legend-hex">Scale</span></legend>
-                                        <div class="keyboard-scale-fieldset-body">
-                                            <div class="keyboard-tuning-scale-row" id="kbTuningScaleSelectRow" style="display: none;">
-                                                <select id="kbPatternScaleSelect" class="keyboard-scale-select" aria-label="Pattern scale">
-                                                    <!-- Populated to match sequencer scale list -->
-                                                </select>
-                                            </div>
-                                            <button id="kbPatternScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Off</button>
-                                        </div>
-                                    </fieldset>
                                 </div>
                                 <div class="keyboard-tuning-right">
                                     <div class="keyboard-pattern-octave" aria-label="Octave switch">
@@ -461,6 +448,17 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="keyboard-scale-fieldset" id="keyboardPatternScaleFieldset" aria-label="Scale">
+                        <legend><span class="legend-hex">Scale</span></legend>
+                        <div class="keyboard-scale-fieldset-body">
+                            <div class="keyboard-tuning-scale-row" id="kbTuningScaleSelectRow" style="display: none;">
+                                <select id="kbPatternScaleSelect" class="keyboard-scale-select" aria-label="Pattern scale">
+                                    <!-- Populated to match sequencer scale list -->
+                                </select>
+                            </div>
+                            <button id="kbPatternScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Off</button>
                         </div>
                     </fieldset>
                     <div class="keyboard-mode-toggle-row" aria-label="Mode toggles">
@@ -550,6 +548,11 @@
                                         <button type="button" id="patternBankCopy" class="kb-step-btn pattern-copy-btn" aria-label="Copy pattern">Copy</button>
                                         <button type="button" id="patternBankPaste" class="kb-step-btn pattern-paste-btn is-disabled" aria-label="Paste pattern" aria-disabled="true" disabled>Paste</button>
                                         <button type="button" id="patternBankClear" class="kb-step-btn pattern-clear-btn" aria-label="Clear pattern steps">Clear</button>
+                                    </div>
+                                    <div class="berlin-ctl keyboard-pattern-ctl keyboard-pattern-microtune-lock" data-param="microtuneLock">
+                                        <span class="berlin-ctl-label">µTUNE</span>
+                                        <button type="button" id="kbStepsMicrotuneLock" class="kb-step-btn kb-microtune-lock off"
+                                                aria-label="Microtune lock" aria-pressed="false">Full</button>
                                     </div>
                                 </div>
                             </fieldset>
@@ -766,8 +769,22 @@
                                         <span class="osc4-model-label">MODEL</span>
                                         <select id="kbOsc4Model" class="osc4-model-select" aria-label="Digital model">
                                             <option value="wavetable" selected>Wavetable</option>
+                                            <option value="va">Virtual Analog</option>
+                                            <option value="va_vcf">VA + Filter</option>
                                             <option value="fm">FM</option>
+                                            <option value="fm6">6-op FM</option>
                                             <option value="waveshaper">Waveshaper</option>
+                                            <option value="additive">Additive</option>
+                                            <option value="grain">Grain / Formant</option>
+                                            <option value="swarm">Swarm</option>
+                                            <option value="noise">Noise</option>
+                                            <option value="particle">Particle</option>
+                                            <option value="pd">Phase Distortion</option>
+                                            <option value="terrain">Wave Terrain</option>
+                                            <option value="string_machine">String Machine</option>
+                                            <option value="chiptune">Chiptune</option>
+                                            <option value="chord">Chord</option>
+                                            <option value="speech">Voice</option>
                                             <option value="modal">Modal</option>
                                             <option value="string">Pluck</option>
                                             <optgroup label="Drums">
@@ -776,6 +793,21 @@
                                                 <option value="hihat">Hi-Hat</option>
                                             </optgroup>
                                         </select>
+                                    </div>
+                                    <div class="osc4-model-row osc4-alt-mode-row">
+                                        <div class="osc4-alt-mode-switch" role="group" aria-label="ALT and MODE">
+                                            <button type="button" class="ingy6-switch-btn osc4-alt-btn off" data-osc4-alt="1" aria-pressed="false" title="ALT — Plaits AUX">ALT</button>
+                                            <button type="button" class="ingy6-switch-btn osc4-mode-btn" aria-pressed="true" title="MODE 2 — TRIG patched">MODE 2</button>
+                                        </div>
+                                    </div>
+                                    <div class="osc4-model-row osc4-speech-rec-row" hidden>
+                                        <fieldset class="osc4-voice-record-fieldset">
+                                            <legend>Voice Record</legend>
+                                            <div class="osc4-voice-record-switch" role="group" aria-label="Voice Record">
+                                                <button type="button" class="ingy6-switch-btn osc4-speech-rec-btn off" aria-pressed="false" title="Record a Voice user bank">REC</button>
+                                                <button type="button" class="ingy6-switch-btn osc4-speech-user-btn off" aria-pressed="false" title="Toggle USER bank / factory Voice" disabled>USER</button>
+                                            </div>
+                                        </fieldset>
                                     </div>
                                     <div class="osc4-model-row osc4-bank-row">
                                         <span class="osc4-model-label">BANK</span>
@@ -786,6 +818,10 @@
                                             <option value="2">C</option>
                                             <option value="3">D</option>
                                         </select>
+                                    </div>
+                                    <div class="osc4-model-row osc4-patch-name-row" hidden>
+                                        <span class="osc4-model-label">PATCH</span>
+                                        <span id="kbOsc4PatchName" class="osc4-patch-name" aria-live="polite">—</span>
                                     </div>
                                     <div class="keyboard-osc-knob-row osc4-tone-knob-row">
                                         <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="harmonics">
@@ -1307,7 +1343,7 @@
                             </div>
                         </div>
                     </fieldset>
-                    <fieldset class="keyboard-xy-fieldset collapsible-fieldset collapsed" id="keyboardXyFieldset" hidden>
+                    <fieldset class="keyboard-xy-fieldset collapsible-fieldset collapsed" id="keyboardXyFieldset">
                         <legend class="collapsible-legend">
                             <button id="keyboardXyToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardXyPanel">
                                 <span class="collapsible-label">XY Pad</span>
@@ -1359,17 +1395,6 @@
                                     <div class="keyboard-tuning-note note-vfd" id="kbXyNoteVisualizer" aria-live="polite" aria-label="Current note" data-text="Note">
                                         <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
                                     </div>
-                                    <fieldset class="keyboard-scale-fieldset" aria-label="Scale">
-                                        <legend><span class="legend-hex">Scale</span></legend>
-                                        <div class="keyboard-scale-fieldset-body">
-                                            <div class="keyboard-tuning-scale-row" id="kbXyScaleSelectRow" style="display: none;">
-                                                <select id="kbXyScaleSelect" class="keyboard-scale-select" aria-label="Keyboard scale">
-                                                    <!-- Populated to match sequencer scale list -->
-                                                </select>
-                                            </div>
-                                            <button id="kbXyScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Off</button>
-                                        </div>
-                                    </fieldset>
                                 </div>
                                 <div class="keyboard-tuning-right">
                                     <div class="keyboard-pattern-octave" aria-label="Octave switch">
@@ -1419,6 +1444,17 @@
                             </div>
                         </div>
                     </fieldset>
+                    <fieldset class="keyboard-scale-fieldset" id="keyboardXyScaleFieldset" aria-label="Scale">
+                        <legend><span class="legend-hex">Scale</span></legend>
+                        <div class="keyboard-scale-fieldset-body">
+                            <div class="keyboard-tuning-scale-row" id="kbXyScaleSelectRow" style="display: none;">
+                                <select id="kbXyScaleSelect" class="keyboard-scale-select" aria-label="Keyboard scale">
+                                    <!-- Populated to match sequencer scale list -->
+                                </select>
+                            </div>
+                            <button id="kbXyScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Off</button>
+                        </div>
+                    </fieldset>
                     <div id="keyboardPolyToggleHome" class="keyboard-mode-toggle-row keyboard-poly-toggle-row" aria-label="Mode toggles">
                         <button id="keyboardChordMemToggle" class="pushable off keyboard-chord-mem-toggle" type="button" aria-pressed="false" aria-label="Chord memory learn">
                             <span class="front">
@@ -1429,6 +1465,12 @@
                         <button id="keyboardPolyToggle" class="pushable off keyboard-poly-toggle" type="button" aria-pressed="false" aria-label="Polyphonic mode">
                             <span class="front">
                                 <span class="kb-poly-mode-label" aria-hidden="true"></span>
+                                <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
+                            </span>
+                        </button>
+                        <button id="keyboardMultitudesToggle" class="pushable off keyboard-multitudes-toggle" type="button" aria-pressed="false" aria-label="Multitudes Polyphonic Plaititudes">
+                            <span class="front">
+                                <span class="kb-multitudes-label" aria-hidden="true"></span>
                                 <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
                             </span>
                         </button>
@@ -1632,19 +1674,359 @@
                         </div>
                     </div>
 
-                    <fieldset class="keyboard-controls-fieldset collapsible-fieldset collapsed" id="keyboardControlsFieldset">
-                        <legend class="collapsible-legend">
-                            <button id="keyboardControlsToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardControlsPanel">
-                                <span class="collapsible-label">Keyboard Controls</span>
-                                <span class="collapsible-arrow" aria-hidden="true"></span>
-                            </button>
-                        </legend>
-                        <div id="keyboardControlsPanel" class="keyboard-controls-body collapsible-panel hidden" hidden>
-                            <div class="keyboard-controls-row">
-                                <button id="keyboardFullscreenToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Fullscreen</button>
+                    <!-- Multitudes (blank shell) — visible only in Multitudes mode; no synth wiring yet -->
+                    <div id="multitudesPanel" class="multitudes-panel" hidden aria-label="Multitudes">
+                        <div class="multitudes-panel-shell">
+                            <div class="multitudes-brand">
+                                <div id="multitudesBrandLeft" class="multitudes-brand-left"></div>
+                                <div id="multitudesToggleSlot" class="multitudes-brand-center"></div>
+                                <span class="multitudes-logo" aria-hidden="true"></span>
+                            </div>
+                            <!-- MI-style: hairline under switches, then module columns -->
+                            <div class="multitudes-rule" aria-hidden="true"></div>
+                            <div class="multitudes-sections" id="multitudesSections">
+                                <!-- Plaititudes -->
+                                <section class="multitudes-module" data-module="plaititudes" aria-label="Plaititudes">
+                                    <span class="mi-screw mi-screw--tl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--tr" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--bl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--br" aria-hidden="true"></span>
+                                    <header class="multitudes-module-header">
+                                        <span class="multitudes-module-name is-lockup" aria-hidden="true"></span>
+                                        <div class="multitudes-module-border" aria-hidden="true"></div>
+                                    </header>
+                                    <div class="multitudes-module-body">
+                                        <div class="mi-section">
+                                            <div class="mi-row mi-row--selects">
+                                                <label class="mi-field">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal">MODEL</span>
+                                                    <select id="miOsc4Model" class="mi-select" aria-label="Digital model"></select>
+                                                </label>
+                                                <label class="mi-field">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal">BANK</span>
+                                                    <select id="miOsc4Bank" class="mi-select" aria-label="Wavetable bank"></select>
+                                                </label>
+                                            </div>
+                                            <div class="mi-row mi-row--alt-mode">
+                                                <div class="osc4-alt-mode-switch mi-alt-mode-switch" role="group" aria-label="ALT and MODE">
+                                                    <button type="button" class="ingy6-switch-btn osc4-alt-btn off" data-osc4-alt="1" aria-pressed="false" title="ALT — Plaits AUX">ALT</button>
+                                                    <button type="button" class="ingy6-switch-btn osc4-mode-btn" aria-pressed="true" title="MODE 2 — TRIG patched">MODE 2</button>
+                                                </div>
+                                            </div>
+                                            <div class="mi-row mi-row--speech-rec osc4-speech-rec-row" hidden>
+                                                <fieldset class="osc4-voice-record-fieldset">
+                                                    <legend>Voice Record</legend>
+                                                    <div class="osc4-voice-record-switch" role="group" aria-label="Voice Record">
+                                                        <button type="button" class="ingy6-switch-btn osc4-speech-rec-btn off" aria-pressed="false" title="Record a Voice user bank">REC</button>
+                                                        <button type="button" class="ingy6-switch-btn osc4-speech-user-btn off" aria-pressed="false" title="Toggle USER bank / factory Voice" disabled>USER</button>
+                                                    </div>
+                                                </fieldset>
+                                            </div>
+                                            <div class="mi-row mi-row--patch" id="miOsc4PatchRow" hidden>
+                                                <span class="mi-knob-pill mi-knob-pill--teal">PATCH</span>
+                                                <span id="miOsc4PatchName" class="mi-patch-name" aria-live="polite">—</span>
+                                            </div>
+                                        </div>
+                                        <div class="mi-section">
+                                            <div class="mi-knob-row">
+                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal" data-mi-tone="harmonics">HARMONICS</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miHarmonicsKnob" role="slider" tabindex="0" aria-label="Harmonics"></div>
+                                                    </div>
+                                                    <span class="osc4-chord-name mi-chord-name" hidden aria-live="polite"></span>
+                                                </div>
+                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal" data-mi-tone="timbre">TIMBRE</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miTimbreKnob" role="slider" tabindex="0" aria-label="Timbre"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal" data-mi-tone="morph">MORPH</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miMorphKnob" role="slider" tabindex="0" aria-label="Morph"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mi-section">
+                                            <div class="mi-knob-row">
+                                                <div class="mi-knob mi-knob--lg mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">FREQUENCY</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miOsc1TuneKnob" role="slider" tabindex="0" aria-label="OSC 1 tune"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--lg mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">LEVEL</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miOsc1VolKnob" role="slider" tabindex="0" aria-label="OSC 1 level"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <!-- Analog OSC2 -->
+                                <section class="multitudes-module" data-module="analog" aria-label="Analog">
+                                    <span class="mi-screw mi-screw--tl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--tr" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--bl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--br" aria-hidden="true"></span>
+                                    <header class="multitudes-module-header">
+                                        <span class="multitudes-module-name">Analog</span>
+                                        <div class="multitudes-module-border" aria-hidden="true"></div>
+                                    </header>
+                                    <div class="multitudes-module-body">
+                                        <div class="mi-section">
+                                            <div class="mi-row mi-row--toggles">
+                                                <button type="button" id="miOsc2Toggle" class="mi-toggle off" aria-pressed="false">OSC 2</button>
+                                                <div class="mi-wave-group" role="group" aria-label="OSC 2 waveform">
+                                                    <button type="button" class="mi-wave-btn" data-wave="sawtooth" aria-pressed="false">SAW</button>
+                                                    <button type="button" class="mi-wave-btn" data-wave="square" aria-pressed="false">SQR</button>
+                                                    <button type="button" class="mi-wave-btn" data-wave="triangle" aria-pressed="false">TRI</button>
+                                                    <button type="button" class="mi-wave-btn" data-wave="sine" aria-pressed="false">SIN</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mi-section">
+                                            <div class="mi-knob-row">
+                                                <div class="mi-knob mi-knob--lg mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">TUNE</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miOsc2TuneKnob" role="slider" tabindex="0" aria-label="OSC 2 tune"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--lg mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">LEVEL</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miOsc2VolKnob" role="slider" tabindex="0" aria-label="OSC 2 level"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <!-- Filter + filter env -->
+                                <section class="multitudes-module" data-module="filter" aria-label="Filter">
+                                    <span class="mi-screw mi-screw--tl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--tr" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--bl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--br" aria-hidden="true"></span>
+                                    <header class="multitudes-module-header">
+                                        <span class="multitudes-module-name">Filter</span>
+                                        <div class="multitudes-module-border" aria-hidden="true"></div>
+                                    </header>
+                                    <div class="multitudes-module-body">
+                                        <div class="mi-section">
+                                            <div class="mi-knob-row mi-knob-row--center">
+                                                <div class="mi-knob mi-knob--xl mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">CUTOFF</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miCutoffKnob" role="slider" tabindex="0" aria-label="Cutoff"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mi-knob-row mi-knob-row--center">
+                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal">RES</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miResonanceKnob" role="slider" tabindex="0" aria-label="Resonance"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal">HP</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miHighPassKnob" role="slider" tabindex="0" aria-label="High pass"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mi-section">
+                                            <div class="mi-row mi-row--toggles">
+                                                <button type="button" id="miFilterEnvToggle" class="mi-toggle off" aria-pressed="false">ENV</button>
+                                                <div class="mi-knob mi-knob--sm mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">AMT</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miFilterEnvAmountKnob" role="slider" tabindex="0" aria-label="Filter env amount"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mi-knob-row mi-knob-row--adsr">
+                                                <div class="mi-knob mi-knob--sm mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">A</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miFilterAttackKnob" role="slider" tabindex="0" aria-label="Filter attack"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">D</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miFilterDecayKnob" role="slider" tabindex="0" aria-label="Filter decay"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">S</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miFilterSustainKnob" role="slider" tabindex="0" aria-label="Filter sustain"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">R</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miFilterReleaseKnob" role="slider" tabindex="0" aria-label="Filter release"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <!-- Amp + amp env -->
+                                <section class="multitudes-module" data-module="amp" aria-label="Amp">
+                                    <span class="mi-screw mi-screw--tl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--tr" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--bl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--br" aria-hidden="true"></span>
+                                    <header class="multitudes-module-header">
+                                        <span class="multitudes-module-name">Amp</span>
+                                        <div class="multitudes-module-border" aria-hidden="true"></div>
+                                    </header>
+                                    <div class="multitudes-module-body">
+                                        <div class="mi-section">
+                                            <div class="mi-knob-row">
+                                                <div class="mi-knob mi-knob--lg mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">LEVEL</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miVolumeKnob" role="slider" tabindex="0" aria-label="Volume"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mi-section">
+                                            <div class="mi-knob-row mi-knob-row--adsr">
+                                                <div class="mi-knob mi-knob--sm mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">A</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miAttackKnob" role="slider" tabindex="0" aria-label="Attack"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">D</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miDecayKnob" role="slider" tabindex="0" aria-label="Decay"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">S</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miSustainKnob" role="slider" tabindex="0" aria-label="Sustain"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">R</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miReleaseKnob" role="slider" tabindex="0" aria-label="Release"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <!-- Delay -->
+                                <section class="multitudes-module" data-module="delay" aria-label="Delay">
+                                    <span class="mi-screw mi-screw--tl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--tr" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--bl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--br" aria-hidden="true"></span>
+                                    <header class="multitudes-module-header">
+                                        <span class="multitudes-module-name">Delay</span>
+                                        <div class="multitudes-module-border" aria-hidden="true"></div>
+                                    </header>
+                                    <div class="multitudes-module-body">
+                                        <div class="mi-section">
+                                            <div class="mi-row mi-row--toggles">
+                                                <button type="button" id="miDelayToggle" class="mi-toggle off" aria-pressed="false">DELAY</button>
+                                            </div>
+                                        </div>
+                                        <div class="mi-section">
+                                            <div class="mi-row mi-row--selects">
+                                                <label class="mi-field">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal">TIME</span>
+                                                    <select id="miDelayTime" class="mi-select" aria-label="Delay time"></select>
+                                                </label>
+                                            </div>
+                                            <div class="mi-knob-row">
+                                                <div class="mi-knob mi-knob--lg mi-knob--teal">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal">BLEND</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miDelayAmountKnob" role="slider" tabindex="0" aria-label="Delay amount"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <!-- Reverb -->
+                                <section class="multitudes-module" data-module="reverb" aria-label="Reverb">
+                                    <span class="mi-screw mi-screw--tl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--tr" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--bl" aria-hidden="true"></span>
+                                    <span class="mi-screw mi-screw--br" aria-hidden="true"></span>
+                                    <header class="multitudes-module-header">
+                                        <span class="multitudes-module-name">Reverb</span>
+                                        <div class="multitudes-module-border" aria-hidden="true"></div>
+                                    </header>
+                                    <div class="multitudes-module-body">
+                                        <div class="mi-section">
+                                            <div class="mi-row mi-row--toggles">
+                                                <button type="button" id="miReverbToggle" class="mi-toggle off" aria-pressed="false">REVERB</button>
+                                            </div>
+                                        </div>
+                                        <div class="mi-section">
+                                            <div class="mi-knob-row">
+                                                <div class="mi-knob mi-knob--md mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">SIZE</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miReverbSizeKnob" role="slider" tabindex="0" aria-label="Reverb size"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--md mi-knob--magenta">
+                                                    <span class="mi-knob-pill mi-knob-pill--magenta">DECAY</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miReverbDecayKnob" role="slider" tabindex="0" aria-label="Reverb decay"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mi-knob-row">
+                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal">DAMP</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miReverbDampKnob" role="slider" tabindex="0" aria-label="Reverb damp"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--md mi-knob--white">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">BLEND</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miReverbAmountKnob" role="slider" tabindex="0" aria-label="Reverb amount"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                            <div class="multitudes-footer-brand" aria-hidden="true">
+                                <span class="multitudes-instruments-logo"></span>
                             </div>
                         </div>
-                    </fieldset>
+                    </div>
+
                 </div>
                 <div class="keyboard-play-row">
                     <div class="keyboard-play-bend-lfo">
@@ -1775,7 +2157,7 @@
             </div>
         </div>
 
-        <div class="swipe-dots" id="swipeDots" style="display: none;" aria-label="Page selector">
+        <div class="swipe-dots" id="swipeDots" hidden aria-hidden="true" aria-label="Page selector">
             <div class="swipe-arrow swipe-arrow-left touch-target" data-swipe-dir="left">&lt;</div>
             <div class="swipe-dot active" data-index="0"></div>
             <div class="swipe-dot" data-index="1"></div>
@@ -1784,7 +2166,7 @@
             <div class="swipe-arrow swipe-arrow-right touch-target" data-swipe-dir="right">&gt;</div>
         </div>
         
-        <div class="synth-container" id="synthContainer">
+        <div class="synth-container" id="synthContainer" hidden aria-hidden="true">
             <div class="section">
                 <h2>Sequencer</h2>
                 <div class="sequencer-controls">
@@ -1856,7 +2238,7 @@
                     </div>
                 </div>
                 <div id="steps">
-                    <!-- Steps will be generated by JavaScript -->
+                    <!-- CP7: empty. Canonical step inputs live on hidden #stepParamBus. -->
                 </div>
             </div>
             <div class="section">
@@ -1910,8 +2292,22 @@
                                 <span class="osc4-model-label">MODEL</span>
                                 <select id="osc4Model" class="osc4-model-select" aria-label="Digital model">
                                     <option value="wavetable" selected>Wavetable</option>
+                                    <option value="va">Virtual Analog</option>
+                                    <option value="va_vcf">VA + Filter</option>
                                     <option value="fm">FM</option>
+                                    <option value="fm6">6-op FM</option>
                                     <option value="waveshaper">Waveshaper</option>
+                                    <option value="additive">Additive</option>
+                                    <option value="grain">Grain / Formant</option>
+                                    <option value="swarm">Swarm</option>
+                                    <option value="noise">Noise</option>
+                                    <option value="particle">Particle</option>
+                                    <option value="pd">Phase Distortion</option>
+                                    <option value="terrain">Wave Terrain</option>
+                                    <option value="string_machine">String Machine</option>
+                                    <option value="chiptune">Chiptune</option>
+                                    <option value="chord">Chord</option>
+                                    <option value="speech">Voice</option>
                                     <option value="modal">Modal</option>
                                     <option value="string">Pluck</option>
                                     <optgroup label="Drums">
@@ -1920,6 +2316,21 @@
                                         <option value="hihat">Hi-Hat</option>
                                     </optgroup>
                                 </select>
+                            </div>
+                            <div class="osc4-model-row osc4-alt-mode-row">
+                                <div class="osc4-alt-mode-switch" role="group" aria-label="ALT and MODE">
+                                    <button type="button" class="ingy6-switch-btn osc4-alt-btn off" data-osc4-alt="1" aria-pressed="false" title="ALT — Plaits AUX">ALT</button>
+                                    <button type="button" class="ingy6-switch-btn osc4-mode-btn" aria-pressed="true" title="MODE 2 — TRIG patched">MODE 2</button>
+                                </div>
+                            </div>
+                            <div class="osc4-model-row osc4-speech-rec-row" hidden>
+                                <fieldset class="osc4-voice-record-fieldset">
+                                    <legend>Voice Record</legend>
+                                    <div class="osc4-voice-record-switch" role="group" aria-label="Voice Record">
+                                        <button type="button" class="ingy6-switch-btn osc4-speech-rec-btn off" aria-pressed="false" title="Record a Voice user bank">REC</button>
+                                        <button type="button" class="ingy6-switch-btn osc4-speech-user-btn off" aria-pressed="false" title="Toggle USER bank / factory Voice" disabled>USER</button>
+                                    </div>
+                                </fieldset>
                             </div>
                             <div class="osc4-model-row osc4-bank-row">
                                 <span class="osc4-model-label">BANK</span>
@@ -1930,6 +2341,10 @@
                                     <option value="2">C</option>
                                     <option value="3">D</option>
                                 </select>
+                            </div>
+                            <div class="osc4-model-row osc4-patch-name-row" hidden>
+                                <span class="osc4-model-label">PATCH</span>
+                                <span id="osc4PatchName" class="osc4-patch-name" aria-live="polite">—</span>
                             </div>
                             <div class="osc4-tone-knob-row">
                                 <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="harmonics">
@@ -2411,7 +2826,7 @@
             </div>
         </div>
 
-        <div class="swipe-dots" id="swipeDotsBottom" style="display: none;" aria-label="Page selector">
+        <div class="swipe-dots" id="swipeDotsBottom" hidden aria-hidden="true" aria-label="Page selector">
             <div class="swipe-arrow swipe-arrow-left touch-target" data-swipe-dir="left">&lt;</div>
             <div class="swipe-dot active" data-index="0"></div>
             <div class="swipe-dot" data-index="1"></div>
@@ -2421,6 +2836,52 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=93"></script>
+    <div id="speechRecModal" class="speech-rec-modal" hidden aria-hidden="true">
+        <div class="speech-rec-modal__backdrop" data-speech-rec-dismiss></div>
+        <div class="speech-rec-modal__panel" role="dialog" aria-modal="true" aria-labelledby="speechRecTitle">
+            <h2 id="speechRecTitle" class="speech-rec-modal__title">Add a Voice bank</h2>
+            <p class="speech-rec-modal__copy">
+                Speak the bank at a steady pace with at least half a second of silence
+                (or quiet room tone) between words.
+                Keep it short — LPC is Speak&nbsp;&amp;&nbsp;Spell, not a dictaphone.
+                Up to <strong>15 seconds</strong>, <strong>32 words</strong>, and
+                <strong>1,024 frames</strong>.
+                The mic never leaves this browser; only packed LPC frames are stored.
+            </p>
+            <p id="speechRecStatus" class="speech-rec-modal__status" aria-live="polite">Ready to record.</p>
+            <div class="speech-rec-modal__progress" hidden>
+                <div id="speechRecProgressBar" class="speech-rec-modal__bar" style="width:0%"></div>
+            </div>
+            <div id="speechRecReady" class="speech-rec-ready" hidden>
+                <div class="speech-rec-ready__title">Word bank ready</div>
+                <p id="speechRecReadyStats" class="speech-rec-ready__stats"></p>
+                <div class="speech-rec-budget">
+                    <div class="speech-rec-budget__row">
+                        <span id="speechRecFrameLabel" class="speech-rec-budget__count">0 / 1,024</span>
+                        <span id="speechRecFrameLeft" class="speech-rec-budget__left">1,024 left</span>
+                    </div>
+                    <div class="speech-rec-budget__track" aria-hidden="true">
+                        <div id="speechRecFrameBar" class="speech-rec-budget__bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="speech-rec-preview">
+                    <span class="speech-rec-preview__label">Preview whole bank</span>
+                    <div class="speech-rec-preview__btns" role="group" aria-label="Preview whole bank">
+                        <button type="button" id="speechRecPreviewSource" class="speech-rec-preview__btn" disabled>Source</button>
+                        <button type="button" id="speechRecPreviewNatural" class="speech-rec-preview__btn">Natural</button>
+                        <button type="button" id="speechRecPreviewFlat" class="speech-rec-preview__btn">Flat</button>
+                    </div>
+                </div>
+            </div>
+            <div class="speech-rec-modal__actions">
+                <button type="button" id="speechRecStartBtn" class="button button-primary">● Start recording</button>
+                <button type="button" id="speechRecStopBtn" class="button" hidden disabled>■ Stop</button>
+                <button type="button" id="speechRecClearBtn" class="button" hidden>Clear USER bank</button>
+                <button type="button" id="speechRecCloseBtn" class="button" data-speech-rec-dismiss>Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js?v=130"></script>
 </body>
 </html>

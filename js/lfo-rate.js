@@ -2,8 +2,10 @@
 // Classic #lfoSpeed / #lfoSyncDivision are source of truth; applyLfoRate() is
 // the single writer to state.lfo.frequency.
 
-import { state } from './state.js?v=109';
-import { ensureDisplayStep, formatRangeValue, resetInputToDefault } from './knobs.js?v=100';
+import { state } from './state.js?v=113';
+import { getNumber, set } from './params.js?v=5';
+import { ensureDisplayStep, formatRangeValue, resetInputToDefault } from './knobs.js?v=113';
+import { beginMidiLearn } from './midi-learn.js?v=3';
 
 /** Optional hook so applyLfoRate can refresh smoothing without a circular import. */
 let onRateApplied = null;
@@ -40,7 +42,7 @@ function clamp(n, min, max) {
 }
 
 export function getTempoBpm() {
-    const n = parseFloat(document.getElementById('tempo')?.value);
+    const n = getNumber('tempo', 120);
     return Number.isFinite(n) && n > 0 ? n : 120;
 }
 
@@ -51,8 +53,7 @@ export function syncBeatsToHz(tempo, beats) {
 }
 
 export function getSyncDivisionIndex() {
-    const el = document.getElementById('lfoSyncDivision');
-    const raw = el ? parseInt(el.value, 10) : state.lfoSyncDivisionIndex;
+    const raw = getNumber('lfoSyncDivision', state.lfoSyncDivisionIndex);
     const idx = Number.isFinite(raw) ? raw : LFO_SYNC_DEFAULT_INDEX;
     return clamp(idx, 0, LFO_SYNC_DIVISIONS.length - 1);
 }
@@ -67,7 +68,7 @@ export function getLfoRateHz() {
         const div = getSyncDivision();
         return Math.max(0.01, syncBeatsToHz(getTempoBpm(), div.beats));
     }
-    const hz = parseFloat(document.getElementById('lfoSpeed')?.value);
+    const hz = getNumber('lfoSpeed', 1);
     return Math.max(0.01, Number.isFinite(hz) ? hz : 1);
 }
 
@@ -75,7 +76,7 @@ export function formatLfoRateReadout() {
     if (state.lfoSync) {
         return getSyncDivision().label;
     }
-    const hz = parseFloat(document.getElementById('lfoSpeed')?.value);
+    const hz = getNumber('lfoSpeed', 1);
     const n = Number.isFinite(hz) ? hz : 1;
     return `${n} Hz`;
 }
@@ -240,8 +241,7 @@ export function initLfoRateKnob() {
     const writeHz = (norm) => {
         const next = hzNormToValue(hzInput, norm);
         if (parseFloat(hzInput.value) !== next) {
-            hzInput.value = String(next);
-            hzInput.dispatchEvent(new Event('input', { bubbles: true }));
+            set('lfoSpeed', next);
         }
         // Apply directly — don't wait for wireControls()'s input listener
         if (!state.lfoSync) applyLfoRate({ ramp: 0.02 });
@@ -250,8 +250,7 @@ export function initLfoRateKnob() {
     const writeSync = (index) => {
         const idx = clamp(Math.round(index), 0, LFO_SYNC_DIVISIONS.length - 1);
         if (parseInt(syncInput.value, 10) !== idx) {
-            syncInput.value = String(idx);
-            syncInput.dispatchEvent(new Event('input', { bubbles: true }));
+            set('lfoSyncDivision', idx);
         } else {
             syncDialVisual(dial);
         }
@@ -259,6 +258,8 @@ export function initLfoRateKnob() {
     };
 
     dial.addEventListener('pointerdown', (e) => {
+        const rateId = state.lfoSync ? 'lfoSyncDivision' : 'lfoSpeed';
+        if (beginMidiLearn(e, document.getElementById(rateId), dial.closest('.synth-knob') || dial)) return;
         if (e.button !== undefined && e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();

@@ -14,10 +14,30 @@ html {
 
     body {
         margin: 0;
-        padding: 20px;
-        background: url('https://img.freepik.com/free-vector/wood-vector-texture-template-pattern-seamless-material-hardwood-floor-natural-light-parquet-vector-illustration_1284-47074.jpg');
+        padding: 0;
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        background: #050805;
         font-family: 'Michroma', sans-serif;
         color: #fff;
+        overflow: hidden;
+        height: 100%;
+        height: 100dvh;
+    }
+    h1.sr-only,
+    .sr-only {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+        font-size: 1px !important;
+        letter-spacing: 0 !important;
+        color: transparent !important;
     }
     .container {
         max-width: 1200px;
@@ -35,7 +55,9 @@ html {
     /* Add responsive styles for mobile */
     @media (max-width: 768px) {
         body {
-            padding: 10px;
+            padding: 0;
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
         h1 {
             font-size: 26px;
@@ -996,6 +1018,40 @@ html {
         outline: 2px dashed rgba(0, 255, 255, 0.5);
         cursor: pointer;
     }
+    .midi-mapping-active .synth-knob:hover,
+    .midi-mapping-active .kb-step-btn:hover,
+    .midi-mapping-active .ingy6-fader:hover,
+    .midi-mapping-active .keyboard-pitch-bend:hover,
+    .midi-mapping-active .keyboard-lfo-strip:hover,
+    .midi-mapping-active .pushable:hover:not(#midiMapping):not(#midiLogoToggle),
+    .midi-mapping-active #kbAdsrVisualizer:hover,
+    .midi-mapping-active #kbFilterAdsrVisualizer:hover,
+    .midi-mapping-active #adsrVisualizer:hover,
+    .midi-mapping-active #filterAdsrVisualizer:hover {
+        outline: 2px dashed rgba(0, 255, 255, 0.5);
+        cursor: pointer;
+    }
+    .midi-unmappable {
+        box-shadow: 0 0 10px 5px rgba(255, 80, 80, 0.75);
+        border-radius: 5px;
+        transition: box-shadow 0.3s ease;
+        position: relative;
+        z-index: 2;
+    }
+    .midi-unmappable::after {
+        content: "Can't map";
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ff5050;
+        color: #000;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 10px;
+        white-space: nowrap;
+        z-index: 3;
+    }
     /* MIDI Mapping / Send action buttons removed — logo toggle shows device panels */
     .midi-device-panels {
         display: flex;
@@ -1613,6 +1669,126 @@ html {
     .keyboard-osc-field[data-osc="0"] .osc4-engine-switch {
         margin-bottom: 8px;
     }
+    .osc4-alt-mode-row {
+        justify-content: center;
+        margin: 2px 0 6px;
+    }
+    .osc4-speech-rec-row {
+        justify-content: center;
+        margin: 0 0 6px;
+    }
+    /* .osc4-model-row / .mi-row set display:flex and would override [hidden] */
+    .osc4-speech-rec-row[hidden],
+    .mi-row--speech-rec[hidden] {
+        display: none !important;
+    }
+    .osc4-voice-record-fieldset {
+        margin: 0;
+        padding: 4px 6px 6px;
+        border: 1px solid #3a3a3a;
+        border-radius: 4px;
+        min-width: 0;
+        width: fit-content;
+        max-width: 100%;
+    }
+    .osc4-voice-record-fieldset legend {
+        font-family: 'Michroma', sans-serif;
+        font-size: 6px;
+        letter-spacing: 0.06em;
+        color: #8a8a8a;
+        text-transform: none;
+        padding: 0 4px;
+        width: fit-content;
+        margin: 0 auto;
+    }
+    .osc4-voice-record-switch {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 4px;
+        align-items: center;
+        justify-content: center;
+    }
+    .osc4-speech-rec-row .osc4-speech-rec-btn,
+    .osc4-speech-rec-row .osc4-speech-user-btn {
+        flex: 0 0 auto;
+        min-width: 4.6em;
+        padding: 3px 8px;
+        font-size: 7px;
+        letter-spacing: 0.06em;
+        min-height: 0;
+        line-height: 1.1;
+    }
+    /* REC: red outline off, solid red on */
+    .osc4-speech-rec-btn.off,
+    .osc4-speech-rec-btn.off:hover,
+    .osc4-speech-rec-btn.off:focus-visible {
+        color: #c4453c;
+        border-color: #c4453c;
+        background: linear-gradient(to bottom, #1a1212 0%, #100808 100%);
+        box-shadow: inset 0 0 6px rgba(196, 69, 60, 0.2);
+    }
+    .osc4-speech-rec-btn:not(.off),
+    .osc4-speech-rec-btn:active {
+        color: #000;
+        border-color: #ff4a3c;
+        background: #e23a2e;
+        box-shadow: none;
+    }
+    .osc4-speech-rec-btn:not(.off):hover,
+    .osc4-speech-rec-btn:not(.off):focus-visible {
+        border-color: #ff6a5c;
+        background: #f0483c;
+    }
+    /* USER: green outline off, solid green when bank active */
+    .osc4-speech-user-btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+    .mi-row--speech-rec {
+        justify-content: center;
+        margin: 0 0 6px;
+    }
+    .osc4-alt-mode-switch {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        margin: 0 auto;
+    }
+    .osc4-alt-mode-switch .ingy6-switch-btn {
+        flex: 0 0 auto;
+        min-width: 0;
+        padding: 3px 6px;
+        font-size: 7px;
+        letter-spacing: 0.05em;
+        min-height: 0;
+        line-height: 1.1;
+    }
+    .osc4-alt-mode-switch .osc4-alt-btn {
+        margin-right: 4px;
+    }
+    .osc4-alt-mode-switch .osc4-mode-btn {
+        min-width: 4.6em;
+    }
+    .osc4-alt-mode-switch .ingy6-switch-btn.is-grey,
+    .osc4-alt-mode-switch .ingy6-switch-btn:disabled {
+        opacity: 0.35;
+        pointer-events: none;
+        cursor: default;
+    }
+    .mi-row--alt-mode {
+        display: flex;
+        justify-content: center;
+        margin: 6px 0 4px;
+    }
+    .mi-alt-mode-switch .ingy6-switch-btn {
+        font-size: 8px;
+        padding: 4px 8px;
+    }
     .osc4-plaititudes-logo {
         display: none;
         /* viewBox 360 × 64.11 */
@@ -1654,6 +1830,25 @@ html {
     }
     .osc4-bank-row {
         margin-bottom: 8px;
+    }
+    .osc4-patch-name-row {
+        margin-bottom: 8px;
+    }
+    .osc4-patch-name,
+    .mi-patch-name {
+        font-family: 'Michroma', sans-serif;
+        font-size: 9px;
+        letter-spacing: 0.04em;
+        color: #00ff00;
+        text-transform: uppercase;
+        line-height: 1.2;
+        min-height: 1em;
+    }
+    .mi-row--patch {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
     }
     .osc4-model-label {
         font-family: 'Michroma', sans-serif;
@@ -1722,6 +1917,10 @@ html {
     }
     .osc4-tone-knob.is-model-inactive .synth-knob-dial {
         cursor: default;
+    }
+    .osc4-tone-knob.has-chord-name .synth-knob-value {
+        letter-spacing: 0.02em;
+        font-size: 7px;
     }
 
     /* Unison Group Start */
@@ -1974,45 +2173,33 @@ html {
 
 /* --- Chromatic piano keyboard --- */
 .keyboard-section {
-    width: 100%;
-    max-width: 960px;
-    margin: 0 auto 20px;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 15px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    box-sizing: border-box;
-}
-body.keyboard-stage-mode {
-    overflow: hidden;
-}
-.keyboard-section.is-fullscreen {
     position: fixed;
     inset: 0;
     z-index: 9999;
     max-width: none;
     width: 100%;
     height: 100%;
+    height: 100dvh;
     margin: 0;
     border-radius: 0;
     overflow-x: hidden;
     overflow-y: auto;
     background: #050805;
     box-shadow: none;
+    padding: 15px;
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
+    box-sizing: border-box;
 }
-body.keyboard-stage-mode .keyboard-toolbar-top {
+.keyboard-toolbar-top {
     display: none;
 }
 .keyboard-stage-scope {
-    display: none;
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
     width: 100%;
     margin: 0 0 12px;
-}
-body.keyboard-stage-mode .keyboard-stage-scope {
-    display: flex;
 }
 .keyboard-stage-oscilloscope {
     margin-bottom: 0;
@@ -2023,6 +2210,9 @@ body.keyboard-stage-mode .keyboard-stage-scope {
     margin: 0 0 12px;
     box-sizing: border-box;
     align-self: stretch;
+}
+.midi-fieldset-stage .midi-fieldset-home {
+    margin-bottom: 0;
 }
 .keyboard-section .midi-fieldset {
     width: 100%;
@@ -2052,40 +2242,36 @@ body.keyboard-stage-mode .keyboard-stage-scope {
     --hex-stroke: #00aaaa;
     color: #00aaaa;
 }
-body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
+.keyboard-stage-oscilloscope .oscilloscope-border {
     background: #00aa00;
     background-image: none;
     -webkit-mask: url('internal-oscilloscope-border.svg') center / 100% 100% no-repeat;
     mask: url('internal-oscilloscope-border.svg') center / 100% 100% no-repeat;
 }
-.keyboard-section.is-fullscreen .chromatic-keyboard-wrap,
-.keyboard-section.is-fullscreen .chromatic-keyboard-panel {
+.keyboard-section .chromatic-keyboard-wrap,
+.keyboard-section .chromatic-keyboard-panel {
     min-width: 0;
     max-width: 100%;
 }
-.keyboard-section.is-fullscreen .chromatic-keyboard {
+.keyboard-section .chromatic-keyboard {
     height: 220px;
 }
-.keyboard-section.is-fullscreen .piano-key-label {
+.keyboard-section .piano-key-label {
     font-size: 11px;
     padding-bottom: 8px;
 }
-.keyboard-section.is-fullscreen .piano-key-black {
+.keyboard-section .piano-key-black {
     overflow: hidden;
 }
-.keyboard-section.is-fullscreen .piano-key-black .piano-key-label {
+.keyboard-section .piano-key-black .piano-key-label {
     font-size: 7px;
     padding-bottom: 3px;
     line-height: 1;
 }
-.keyboard-section.keyboard-off {
-    background: transparent;
-    box-shadow: none;
-    padding: 0;
-    margin-bottom: 12px;
-}
-.keyboard-section.keyboard-off .keyboard-toolbar {
-    margin-bottom: 0;
+.keyboard-section.keyboard-off #chromaticKeyboardPanel,
+.keyboard-section.keyboard-off #computerKeyboardPanel,
+.keyboard-section.keyboard-off #chromaticSpaceBarRow {
+    display: none !important;
 }
 .keyboard-toolbar {
     display: flex;
@@ -2093,11 +2279,6 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
     align-items: stretch;
     gap: 8px;
     margin-bottom: 12px;
-    width: 100%;
-}
-.keyboard-toolbar-top {
-    display: flex;
-    justify-content: center;
     width: 100%;
 }
 .keyboard-controls-fieldset > .collapsible-legend {
@@ -2210,7 +2391,7 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
     margin-left: 10px;
     margin-right: 0;
 }
-.keyboard-section.is-fullscreen .legend-hex {
+.keyboard-section .legend-hex {
     --hex-bg: #050805;
 }
 .keyboard-section .legend-hex::before,
@@ -2510,7 +2691,7 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
 .chromatic-spacebar-row[hidden] {
     display: none !important;
 }
-.keyboard-section.is-fullscreen .chromatic-spacebar-row {
+.keyboard-section .chromatic-spacebar-row {
     --ckb-key-size: 56px;
     --ckb-gap: 7px;
 }
@@ -2580,14 +2761,13 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
     --hex-bg: #1a1a1a;
 }
 .keyboard-scale-fieldset {
-    /* Block (not flex) so the hex legend can sit on the border like other panels */
+    /* Full-width sibling below Tuning — hex legend sits on the top border */
     display: block;
     position: relative;
-    width: max-content;
-    /* Match dropdown (12rem) + body horizontal padding */
-    min-width: calc(12rem + 20px);
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
-    margin: 0 auto;
+    margin: 0;
     padding: 0;
     border: 1px solid #00aa00;
     border-radius: 5px;
@@ -3030,9 +3210,12 @@ body.keyboard-stage-mode .keyboard-stage-oscilloscope .oscilloscope-border {
 }
 /* XY Pad collapsible — fullscreen keyboard only */
 .keyboard-xy-fieldset {
+    display: block;
+}
+.keyboard-xy-fieldset[hidden] {
     display: none;
 }
-.keyboard-section.is-fullscreen .keyboard-xy-fieldset:not([hidden]) {
+.keyboard-section .keyboard-xy-fieldset:not([hidden]) {
     display: block;
 }
 .keyboard-xy-panel {
@@ -5190,12 +5373,16 @@ canvas.vfd-glass {
     align-items: center;
     gap: 4px;
 }
-.keyboard-pattern-clipboard .kb-step-btn {
+.keyboard-pattern-clipboard .kb-step-btn,
+#kbStepsMicrotuneLock.kb-step-btn.kb-microtune-lock {
     flex: 0 0 auto;
     min-width: 34px;
     height: 18px;
     padding: 0 6px;
     font-size: 7px;
+}
+.keyboard-pattern-microtune-lock.berlin-ctl {
+    gap: 4px;
 }
 .keyboard-pattern-scale {
     display: flex;
@@ -5333,7 +5520,8 @@ canvas.vfd-glass {
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle,
 #berlinToggle.pushable.keyboard-berlin-toggle,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle,
-#keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle {
+#keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle,
+#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle {
     background: rgba(0, 170, 0, 0.5);
     width: 168px;
     height: 44px;
@@ -5343,7 +5531,8 @@ canvas.vfd-glass {
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle .front,
 #berlinToggle.pushable.keyboard-berlin-toggle .front,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle .front,
-#keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .front {
+#keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .front,
+#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .front {
     box-sizing: border-box;
     width: 168px;
     height: 44px;
@@ -5370,8 +5559,24 @@ canvas.vfd-glass {
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle.off .front,
 #berlinToggle.pushable.keyboard-berlin-toggle.off .front,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle.off .front,
-#keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.off .front {
+#keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.off .front,
+#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle.off .front {
     color: #ff0000;
+}
+/* Multitudes: grey lockup placeholder (unwired).
+ * Two-line SVG is taller at equal width — match INGY-6 / Chord Mem height instead. */
+#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .kb-multitudes-label {
+    display: block;
+    /* Peer logos: max-width 148px × aspect 92.13/432 ≈ 31.56px tall */
+    height: calc(148px * 92.13 / 432);
+    width: auto;
+    max-width: 92%;
+    aspect-ratio: 360 / 113.83;
+    color: #aaa;
+    background-color: currentColor;
+    -webkit-mask: url('SVG/multitudes-logo-lockup.svg') center / 100% 100% no-repeat;
+    mask: url('SVG/multitudes-logo-lockup.svg') center / 100% 100% no-repeat;
+    pointer-events: none;
 }
 #keyboardPolyToggle.pushable.keyboard-poly-toggle.is-locked,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle:disabled,
@@ -5383,7 +5588,8 @@ canvas.vfd-glass {
 /* Mode logos: grey SVG when off; red Michroma "Exit" when on */
 #kbAcidStripToggle.pushable .kb-mode-off-label,
 #berlinToggle.pushable .kb-mode-off-label,
-#keyboardPolyToggle.pushable .kb-mode-off-label {
+#keyboardPolyToggle.pushable .kb-mode-off-label,
+#keyboardMultitudesToggle.pushable .kb-mode-off-label {
     display: none;
     font-family: 'Michroma', sans-serif;
     font-size: 10px;
@@ -5395,12 +5601,14 @@ canvas.vfd-glass {
 }
 #kbAcidStripToggle.pushable:not(.off) .kb-mode-off-label,
 #berlinToggle.pushable:not(.off) .kb-mode-off-label,
-#keyboardPolyToggle.pushable:not(.off) .kb-mode-off-label {
+#keyboardPolyToggle.pushable:not(.off) .kb-mode-off-label,
+#keyboardMultitudesToggle.pushable:not(.off) .kb-mode-off-label {
     display: block;
 }
 #kbAcidStripToggle.pushable:not(.off) .kb-acid-mode-label,
 #berlinToggle.pushable:not(.off) .kb-berlin-label,
-#keyboardPolyToggle.pushable:not(.off) .kb-poly-mode-label {
+#keyboardPolyToggle.pushable:not(.off) .kb-poly-mode-label,
+#keyboardMultitudesToggle.pushable:not(.off) .kb-multitudes-label {
     display: none;
 }
 /* Poly Mode: grey INGY-6 lockup when off */
@@ -5491,6 +5699,14 @@ canvas.vfd-glass {
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle:not(.off) .kb-chord-mem-dot,
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.active .kb-chord-mem-dot {
     display: block;
+}
+/* Armed poly Chord Mem: solid green SVG, no rec dot */
+#keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.chord-mem-on:not(.active) .kb-chord-mem-label {
+    display: block;
+    color: #00ff00;
+}
+#keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.chord-mem-on:not(.active) .kb-chord-mem-dot {
+    display: none;
 }
 .keyboard-acid-strip-controls {
     width: 100%;
@@ -7123,19 +7339,20 @@ body.write-mode-on .keyboard-step {
     color: #ccffcc;
     font-weight: bold;
 }
-#keyboardVisibilityToggle.off .front {
+#keyboardVisibilityToggle.off {
     color: #ff0000;
 }
-#keyboardVisibilityToggle .front {
+#keyboardVisibilityToggle {
     font-size: 11px;
-    padding: 6px 10px;
+    min-width: 52px;
 }
 
 @media (max-width: 768px) {
     .keyboard-section {
         max-width: 100%;
-        margin-bottom: 15px;
+        margin-bottom: 0;
         padding: 10px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
     .chromatic-keyboard {
         height: 120px;
@@ -7522,6 +7739,7 @@ body.write-mode-on .keyboard-step {
     }
     #kbStartStop.pushable.keyboard-start-stop,
     #kbRev.pushable.keyboard-rev,
+    #keyboardVisibilityToggle.kb-step-btn,
     #kbWrite.pushable.keyboard-write,
     #kbWritePrev.pushable.keyboard-write-nav,
     #kbWriteNext.pushable.keyboard-write-nav,
@@ -7536,7 +7754,8 @@ body.write-mode-on .keyboard-step {
     #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle,
     #berlinToggle.pushable.keyboard-berlin-toggle,
     #keyboardPolyToggle.pushable.keyboard-poly-toggle,
-    #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle {
+    #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle,
+    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle {
         width: 132px;
         height: 36px;
         flex-basis: 132px;
@@ -7544,11 +7763,16 @@ body.write-mode-on .keyboard-step {
     #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle .front,
     #berlinToggle.pushable.keyboard-berlin-toggle .front,
     #keyboardPolyToggle.pushable.keyboard-poly-toggle .front,
-    #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .front {
+    #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .front,
+    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .front {
         width: 132px;
         height: 36px;
         padding: 0 8px;
         font-size: 8px;
+    }
+    /* Match peer logo height at ~92% of 132px front (~22.8px) */
+    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .kb-multitudes-label {
+        height: calc(132px * 0.92 * 92.13 / 432);
     }
     .acid-303-knob.synth-knob {
         width: 58px;
@@ -7803,7 +8027,7 @@ body.write-mode-on .keyboard-step {
         inset 0 0 0 1px rgba(0, 170, 0, 0.15),
         0 0 12px rgba(0, 170, 0, 0.12);
 }
-.keyboard-section.is-fullscreen .computer-keyboard-board {
+.keyboard-section .computer-keyboard-board {
     --ckb-key-size: 56px;
     --ckb-gap: 7px;
 }
@@ -8079,7 +8303,7 @@ body.poly-mode {
     box-sizing: border-box;
     color: #00ff00;
 }
-/* Chord Memory far left; Poly Mode centered; logo far right */
+/* Chord Memory + Multitudes far left; Poly Mode centered; logo far right */
 .ingy6-brand {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -8098,6 +8322,8 @@ body.poly-mode {
     display: flex;
     align-items: center;
     justify-content: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
     min-width: 0;
 }
 .ingy6-brand-center {
@@ -8762,4 +8988,675 @@ body.poly-mode {
     .ingy6-section-body {
         min-height: 128px;
     }
+}
+
+/* Multitudes poly: lock OSC 3–4 like Ingy-6 poly (no Ingy panel) */
+body.multitudes-poly-lock .keyboard-synth-panel .kb-osc-toggle[data-osc="2"],
+body.multitudes-poly-lock .keyboard-synth-panel .kb-osc-toggle[data-osc="3"],
+body.multitudes-poly-lock .keyboard-synth-panel .keyboard-osc-wave[data-osc="2"],
+body.multitudes-poly-lock .keyboard-synth-panel .keyboard-osc-wave[data-osc="3"],
+body.multitudes-poly-lock .osc-toggle[data-osc="2"],
+body.multitudes-poly-lock .osc-toggle[data-osc="3"],
+body.multitudes-poly-lock .osc-type[data-osc="2"],
+body.multitudes-poly-lock .osc-type[data-osc="3"],
+body.multitudes-poly-lock .keyboard-effects-ringmod-field,
+body.multitudes-poly-lock #ringModToggle,
+body.multitudes-poly-lock #kbRingModToggle,
+body.multitudes-poly-lock #kbRingModKnob,
+body.multitudes-poly-lock .unison-group #unisonToggle,
+body.multitudes-poly-lock .unison-group #unisonVoices,
+body.multitudes-poly-lock #kbUnisonToggle,
+body.multitudes-poly-lock #kbUnisonVoices {
+    opacity: 0.4;
+    pointer-events: none;
+}
+body.multitudes-mode {
+    overflow-x: hidden;
+}
+.multitudes-panel[hidden] {
+    display: none !important;
+}
+.multitudes-panel {
+    display: block;
+    box-sizing: border-box;
+    width: 100vw;
+    max-width: 100vw;
+    margin: 8px 0 14px;
+    margin-left: calc(50% - 50vw);
+    position: relative;
+    z-index: 2;
+    /* MI phosphor triad (sit next to Ingy green) */
+    --mi-phos-white: #e8ffe8;
+    --mi-phos-teal: #00e5c8;
+    --mi-phos-magenta: #ff3d9a;
+    --mi-face: #0c140c;
+    --mi-face-edge: rgba(0, 170, 0, 0.45);
+}
+@font-face {
+    font-family: 'DIN Pro';
+    src: url('DINPro-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'DIN Pro';
+    src: url('DINPro-Medium.otf') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'DIN Pro';
+    src: url('DINPro-Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+.multitudes-panel-shell {
+    --multitudes-logo-w: min(calc(46px * 360 / 113.83), 62vw);
+    /* Chevron strip ~half the title height, like Plaits/Braids/Rings */
+    --multitudes-border-h: 12px;
+    /* Module name lockups: left-aligned, half the header, height from SVG ratio */
+    --mi-lockup-w: 50%;
+    --mi-lockup-ratio: 435.78 / 64.11;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0;
+    border-top: 1px solid rgba(0, 170, 0, 0.65);
+    border-bottom: 1px solid rgba(0, 170, 0, 0.65);
+    background:
+        linear-gradient(to bottom, rgba(0, 40, 0, 0.4) 0%, transparent 18px),
+        linear-gradient(to bottom, #0a120a 0%, #050805 100%);
+    box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.06);
+}
+/* Hairline under switches — modules start immediately below */
+.multitudes-rule {
+    display: block;
+    width: 100%;
+    height: 0;
+    border: none;
+    border-top: 1px solid rgba(0, 170, 0, 0.55);
+    margin: 0;
+    pointer-events: none;
+}
+.multitudes-brand {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 10px;
+    width: 100%;
+    padding: 10px 14px 8px;
+    margin: 0;
+    min-height: 58px;
+    border-bottom: none;
+    box-sizing: border-box;
+    color: #00ff00;
+}
+.multitudes-brand-left {
+    grid-column: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+.multitudes-brand-center {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+.multitudes-logo {
+    grid-column: 3;
+    justify-self: end;
+    display: block;
+    /* viewBox 360 × 113.83 — match INGY-6 logo visual height (~38px) */
+    width: var(--multitudes-logo-w);
+    aspect-ratio: 360 / 113.83;
+    height: auto;
+    pointer-events: none;
+    background-color: currentColor;
+    -webkit-mask: url('SVG/multitudes-logo-lockup.svg') center / 100% 100% no-repeat;
+    mask: url('SVG/multitudes-logo-lockup.svg') center / 100% 100% no-repeat;
+}
+/* Module columns flush under the rule */
+.multitudes-sections {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0 4px 10px;
+    margin-top: 0;
+}
+.multitudes-module {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 268px;
+    margin: 0 2px;
+    padding: 0 0 14px;
+    box-sizing: border-box;
+    background: linear-gradient(to bottom, #101810 0%, var(--mi-face) 100%);
+    border: 1px solid var(--mi-face-edge);
+    border-top: none;
+    border-radius: 0 0 2px 2px;
+}
+.multitudes-module-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 0 0 auto;
+    /* Side inset clears corner screws; title sits in the header band */
+    padding: 14px 16px 0;
+    box-sizing: border-box;
+    container-type: inline-size;
+    container-name: mi-header;
+}
+.multitudes-module-name {
+    font-family: 'DIN Pro', 'Michroma', sans-serif;
+    font-weight: 400;
+    /* Cap height matches a 50% lockup at --mi-lockup-ratio */
+    font-size: 14px;
+    font-size: calc(50cqi * 64.11 / 435.78);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    text-align: left;
+    color: #00ff00;
+    text-transform: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 0 8px;
+    box-sizing: border-box;
+}
+/* Shared lockup: add .is-lockup, then set --mi-lockup and --mi-lockup-ratio on the module */
+.multitudes-module-name.is-lockup {
+    display: block;
+    width: var(--mi-lockup-w);
+    aspect-ratio: var(--mi-lockup-ratio);
+    height: auto;
+    margin: 0 0 8px;
+    padding: 0;
+    overflow: hidden;
+    text-overflow: unset;
+    font-size: 0;
+    line-height: 0;
+    background-color: currentColor;
+    -webkit-mask: var(--mi-lockup) left center / 100% 100% no-repeat;
+    mask: var(--mi-lockup) left center / 100% 100% no-repeat;
+}
+.multitudes-module[data-module="plaititudes"] {
+    --mi-lockup: url('SVG/plaititudes-logo-logomark.svg');
+    --mi-lockup-ratio: 435.78 / 64.11;
+}
+/* Plaits-style chevron border — tile under each module name */
+.multitudes-module-border {
+    display: block;
+    align-self: stretch;
+    width: 100%;
+    height: var(--multitudes-border-h);
+    margin: 0 0 10px;
+    background-color: transparent;
+    background-image: url('SVG/multitudes-border.svg');
+    background-size: calc(var(--multitudes-border-h) * 283.84 / 18.79) var(--multitudes-border-h);
+    background-repeat: repeat-x;
+    background-position: center;
+    pointer-events: none;
+}
+.mi-screw {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 35% 30%, #555 0%, #222 45%, #000 100%);
+    box-shadow: inset 0 0 0 1px #111, 0 0 0 1px rgba(0, 255, 0, 0.12);
+    pointer-events: none;
+    z-index: 1;
+}
+.mi-screw--tl { top: 5px; left: 5px; }
+.mi-screw--tr { top: 5px; right: 5px; }
+.mi-screw--bl { bottom: 5px; left: 5px; }
+.mi-screw--br { bottom: 5px; right: 5px; }
+.multitudes-module-body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 8px;
+    box-sizing: border-box;
+}
+.multitudes-footer-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px 14px 14px;
+    box-sizing: border-box;
+    color: #00ff00;
+}
+.multitudes-instruments-logo {
+    display: block;
+    /* viewBox 393.21 × 35.78 — wide wordmark, ~18px tall */
+    width: min(calc(18px * 393.21 / 35.78), 72vw);
+    aspect-ratio: 393.21 / 35.78;
+    height: auto;
+    pointer-events: none;
+    background-color: currentColor;
+    -webkit-mask: url('SVG/ingysynth-instruments.svg') center / 100% 100% no-repeat;
+    mask: url('SVG/ingysynth-instruments.svg') center / 100% 100% no-repeat;
+}
+/* MI silk: solid inset rules between control groups (not full module width) */
+.mi-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 8px 0;
+}
+.mi-section + .mi-section {
+    position: relative;
+    margin-top: 2px;
+    padding-top: 12px;
+}
+.mi-section + .mi-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: rgba(0, 170, 0, 0.55);
+    pointer-events: none;
+}
+.mi-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.mi-row--selects {
+    flex-direction: column;
+    align-items: stretch;
+}
+.mi-field {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.mi-select {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-family: 'DIN Pro', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: #00ff00;
+    background: #050805;
+    border: 1px solid rgba(0, 170, 0, 0.55);
+    border-radius: 3px;
+    padding: 4px 6px;
+}
+.mi-toggle,
+.mi-wave-btn {
+    font-family: 'DIN Pro', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #ff3d9a;
+    background: linear-gradient(to bottom, #222, #050505);
+    border: 1px solid rgba(0, 170, 0, 0.45);
+    border-radius: 3px;
+    padding: 5px 8px;
+    cursor: pointer;
+}
+.mi-toggle:not(.off),
+.mi-wave-btn[aria-pressed="true"] {
+    color: #050805;
+    background: var(--mi-phos-teal);
+    border-color: var(--mi-phos-teal);
+}
+.mi-wave-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    justify-content: center;
+}
+.mi-knob-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 8px;
+}
+.mi-knob-row--center {
+    justify-content: center;
+}
+.mi-knob {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    --mi-knob-size: 44px;
+    --mi-cap: var(--mi-phos-white);
+}
+.mi-knob--xl { --mi-knob-size: 64px; }
+.mi-knob--lg { --mi-knob-size: 52px; }
+.mi-knob--md { --mi-knob-size: 40px; }
+.mi-knob--sm { --mi-knob-size: 30px; }
+.mi-knob--white { --mi-cap: var(--mi-phos-white); }
+.mi-knob--teal { --mi-cap: var(--mi-phos-teal); }
+.mi-knob--magenta { --mi-cap: var(--mi-phos-magenta); }
+.mi-knob-pill {
+    font-family: 'DIN Pro', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.mi-knob-pill--white {
+    color: #050805;
+    background: var(--mi-phos-white);
+}
+.mi-knob-pill--teal {
+    color: #041210;
+    background: var(--mi-phos-teal);
+}
+.mi-knob-pill--magenta {
+    color: #fff;
+    background: var(--mi-phos-magenta);
+}
+.mi-chord-name {
+    font-family: 'DIN Pro', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    color: var(--mi-phos-teal);
+    min-height: 8px;
+    text-align: center;
+    white-space: nowrap;
+}
+.mi-chord-name[hidden] {
+    display: none;
+}
+.mi-knob.has-chord-name {
+    gap: 3px;
+}
+.mi-knob-dial-wrap {
+    width: var(--mi-knob-size);
+    height: var(--mi-knob-size);
+    flex: 0 0 var(--mi-knob-size);
+    position: relative;
+    --knob-angle: -135deg;
+}
+.mi-knob-dial {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-sizing: border-box;
+    background:
+        radial-gradient(circle at 50% 50%, #2a2a2a 0%, #0a0a0a 70%),
+        #111;
+    border: 2px solid #1a1a1a;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.55);
+    position: relative;
+    cursor: ns-resize;
+    touch-action: none;
+    outline: none;
+}
+.mi-knob-dial::before {
+    /* colored inner disc */
+    content: '';
+    position: absolute;
+    inset: 18%;
+    border-radius: 50%;
+    background: var(--mi-cap);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--mi-cap) 55%, transparent);
+}
+.mi-knob-dial::after {
+    /* pointer tick: rotates around knob center */
+    content: '';
+    position: absolute;
+    left: calc(50% - 1px);
+    bottom: 50%;
+    width: 2px;
+    height: 42%;
+    border-radius: 1px;
+    background: #0a0a0a;
+    transform-origin: bottom center;
+    transform: rotate(var(--knob-angle, -135deg));
+    z-index: 2;
+    pointer-events: none;
+}
+.mi-knob-dial.active {
+    box-shadow: 0 0 0 1px var(--mi-cap), 0 0 8px color-mix(in srgb, var(--mi-cap) 40%, transparent);
+}
+@media (max-width: 900px) {
+    .multitudes-panel-shell {
+        --multitudes-logo-w: min(calc(32px * 360 / 113.83), 72vw);
+        --multitudes-border-h: 10px;
+    }
+    .multitudes-brand {
+        min-height: 40px;
+        padding-top: 8px;
+        padding-bottom: 6px;
+    }
+    .multitudes-module-header {
+        padding: 12px 14px 0;
+    }
+    .multitudes-module-name {
+        padding-bottom: 6px;
+    }
+    .multitudes-module-name.is-lockup {
+        margin-bottom: 6px;
+    }
+    .multitudes-sections {
+        display: flex;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 6px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .multitudes-module {
+        flex: 0 0 168px;
+        min-height: 240px;
+    }
+    .multitudes-footer-brand {
+        padding: 10px 10px 12px;
+    }
+    .multitudes-instruments-logo {
+        width: min(calc(14px * 393.21 / 35.78), 88vw);
+    }
+}
+
+/* Voice REC / USER bank modal */
+.speech-rec-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.speech-rec-modal[hidden] {
+    display: none !important;
+}
+.speech-rec-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+.speech-rec-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: min(480px, 100%);
+    max-height: min(92vh, 640px);
+    overflow: auto;
+    background: #111;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 18px 18px 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.speech-rec-modal__title {
+    margin: 0 0 10px;
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+}
+.speech-rec-modal__copy {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: #ccc;
+}
+.speech-rec-modal__status {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    color: #9fd;
+    min-height: 1.2em;
+}
+.speech-rec-modal__progress {
+    height: 8px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0 0 14px;
+}
+.speech-rec-modal__bar {
+    height: 100%;
+    background: linear-gradient(90deg, #2a8, #4db);
+    transition: width 0.15s linear;
+}
+.speech-rec-ready {
+    background: #14261a;
+    border: 1px solid #3a7a4a;
+    border-radius: 8px;
+    padding: 12px 12px 10px;
+    margin: 0 0 14px;
+}
+.speech-rec-ready[hidden] {
+    display: none !important;
+}
+.speech-rec-ready__title {
+    margin: 0 0 4px;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8d8;
+}
+.speech-rec-ready__stats {
+    margin: 0 0 10px;
+    font-size: 0.82rem;
+    color: #d8ead8;
+    line-height: 1.4;
+}
+.speech-rec-budget {
+    margin: 0 0 10px;
+}
+.speech-rec-budget__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: #bbb;
+    margin: 0 0 4px;
+}
+.speech-rec-budget__count {
+    font-variant-numeric: tabular-nums;
+}
+.speech-rec-budget__left {
+    color: #9ab;
+}
+.speech-rec-budget__track {
+    height: 8px;
+    background: #0c0c0c;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+.speech-rec-budget__bar {
+    height: 100%;
+    width: 0;
+    background: #c4453c;
+    transition: width 0.2s ease;
+}
+.speech-rec-budget__bar.is-hot {
+    background: #e8a020;
+}
+.speech-rec-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.speech-rec-preview__label {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9aa;
+}
+.speech-rec-preview__btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.speech-rec-preview__btn {
+    font-size: 0.78rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #1c1c1c;
+    color: #eee;
+    cursor: pointer;
+}
+.speech-rec-preview__btn.is-on {
+    background: #a22;
+    border-color: #c44;
+}
+.speech-rec-preview__btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.speech-rec-modal__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.speech-rec-modal__actions .button {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #222;
+    color: #eee;
+    cursor: pointer;
+}
+.speech-rec-modal__actions .button-primary {
+    background: #a22;
+    border-color: #c44;
+}
+.speech-rec-modal__actions .button:disabled {
+    opacity: 0.45;
+    cursor: default;
 }

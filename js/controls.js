@@ -1,32 +1,40 @@
-import { state, OSC_COUNT } from './state.js?v=109';
+import { state, OSC_COUNT } from './state.js?v=113';
+import { getOscType, getOscVol } from './params.js?v=5';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=134';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=12';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { clearAccentSweep } from './acid-env.js?v=8';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=227';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=95';
-import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=74';
-import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown } from './midi.js?v=79';
-import { applyScaleState } from './keyboard.js?v=160';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=95';
-import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=145';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=100';
-import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=15';
-import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=7';
-import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=6';
-import { setPolyMode, applyPolyOscPan } from './poly-voice.js?v=34';
+} from './audio-engine.js?v=146';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=20';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=80';
+import { clearAccentSweep } from './acid-env.js?v=10';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=241';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=98';
+import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=77';
+import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=87';
+import { applyScaleState } from './keyboard.js?v=181';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=103';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=154';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=113';
+import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=17';
+import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=10';
+import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=11';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, forEachPolyOsc } from './poly-voice.js?v=60';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=19';
 import {
     ensurePlaitsWorklet,
     createOscSource,
     applyOsc4MorphToLive,
+    applyOsc4AltModeToLive,
+    applyLiveOscVolume,
     fadeStopOsc,
     OSC4_INDEX,
-} from './osc-source.js?v=66';
+    applyFm6BankToLive,
+    readFm6PatchName,
+    fm6PresetFromHarmonics,
+} from './osc-source.js?v=86';
+import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=11';
 
 function syncAcidModeUi() {
     syncAcidStripUi();
@@ -43,9 +51,12 @@ export function setAcidMode(next) {
         syncAcidModeUi();
         return;
     }
-    // Acid ↔ Poly ↔ Berlin mutex: hand the voice back before Acid locks OSCs
+    // Acid ↔ Poly ↔ Multitudes ↔ Berlin mutex: hand the voice back before Acid locks OSCs
     if (on && state.keyboardPoly) {
         setPolyMode(false);
+    }
+    if (on && state.keyboardMultitudes) {
+        setMultitudesMode(false);
     }
     if (on) {
         document.dispatchEvent(new CustomEvent('ingysynth:exit-berlin'));
@@ -126,6 +137,9 @@ syncAcidModeUi();
 document.addEventListener('ingysynth:digital-off', () => {
     void applyDigitalEngine(false);
 });
+document.addEventListener('ingysynth:digital-on', () => {
+    void applyDigitalEngine(true);
+});
 
 export function wireControls() {
     // Capture native steps before automation can set step="any"
@@ -200,9 +214,12 @@ export function wireControls() {
                 } else {
                     this.classList.remove('off');
                 }
-                const volEl = document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`);
-                const volume = state.oscStates[oscIndex] && volEl ? parseFloat(volEl.value) : 0;
-                state.oscGains[oscIndex].gain.setValueAtTime(volume, state.audioContext.currentTime);
+                const volume = state.oscStates[oscIndex] ? getOscVol(oscIndex) : 0;
+                const polyExtra = [];
+                forEachPolyOsc((osc) => {
+                    if (osc?.oscIndex === oscIndex) polyExtra.push(osc);
+                });
+                applyLiveOscVolume(oscIndex, volume, polyExtra);
                 refreshFilterInputDrive();
             }
         });
@@ -213,9 +230,12 @@ export function wireControls() {
         slider.addEventListener('input', function () {
             const oscIndex = parseInt(this.dataset.osc);
             this.nextElementSibling.textContent = formatRangeValue(this);
-            if (state.oscStates[oscIndex]) {
-                state.oscGains[oscIndex].gain.setValueAtTime(this.value, state.audioContext.currentTime);
-            }
+            if (!state.audioContext || !Number.isFinite(oscIndex)) return;
+            const polyExtra = [];
+            forEachPolyOsc((osc) => {
+                if (osc?.oscIndex === oscIndex) polyExtra.push(osc);
+            });
+            applyLiveOscVolume(oscIndex, this.value, polyExtra);
             refreshFilterInputDrive();
         });
     });
@@ -335,12 +355,6 @@ export function wireControls() {
         }
     });
 
-    document.getElementById('stepCount').addEventListener('input', function () {
-        updateDisplay(this, 'stepCountValue');
-        updateStepVisibility(parseInt(this.value));
-        previewStepsOnVfd(this.value);
-    });
-
     // Bank slot loads set state.isReverse directly and ask for a UI catch-up
     document.addEventListener('ingysynth:reverse-sync', syncReverseButtons);
 
@@ -365,7 +379,7 @@ export function wireControls() {
     });
 
     function applyRingModEnabled(on) {
-        if (state.keyboardPoly && on) return; // Poly locks ring mod off
+        if ((state.keyboardPoly || state.keyboardMultitudes) && on) return; // Poly/Multitudes lock ring mod off
         state.ringModEnabled = !!on;
         if (!state.audioContext || !state.ringModDryGain || !state.ringModWetGain) return;
         if (state.ringModEnabled) {
@@ -694,12 +708,26 @@ export function wireControls() {
     const OSC4_MODEL_TONES = {
         wavetable: { harmonics: true, timbre: true, morph: true },
         fm: { harmonics: true, timbre: true, morph: true },
+        fm6: { harmonics: true, timbre: true, morph: true },
         waveshaper: { harmonics: true, timbre: true, morph: true },
         modal: { harmonics: true, timbre: true, morph: true },
         string: { harmonics: true, timbre: true, morph: true },
         bass_drum: { harmonics: true, timbre: true, morph: true },
         snare: { harmonics: true, timbre: true, morph: true },
         hihat: { harmonics: true, timbre: true, morph: true },
+        va: { harmonics: true, timbre: true, morph: true },
+        va_vcf: { harmonics: true, timbre: true, morph: true },
+        additive: { harmonics: true, timbre: true, morph: true },
+        grain: { harmonics: true, timbre: true, morph: true },
+        swarm: { harmonics: true, timbre: true, morph: true },
+        noise: { harmonics: true, timbre: true, morph: true },
+        particle: { harmonics: true, timbre: true, morph: true },
+        pd: { harmonics: true, timbre: true, morph: true },
+        terrain: { harmonics: true, timbre: true, morph: true },
+        string_machine: { harmonics: true, timbre: true, morph: true },
+        chiptune: { harmonics: true, timbre: true, morph: true },
+        chord: { harmonics: true, timbre: true, morph: true },
+        speech: { harmonics: true, timbre: true, morph: true },
     };
 
     /** Per-model knob captions (Plaits manual meanings). */
@@ -713,6 +741,11 @@ export function wireControls() {
             harmonics: 'RATIO',
             timbre: 'INDEX',
             morph: 'FEEDBACK',
+        },
+        fm6: {
+            harmonics: 'PRESET',
+            timbre: 'MOD',
+            morph: 'TIME',
         },
         waveshaper: {
             harmonics: 'WAVE',
@@ -744,9 +777,214 @@ export function wireControls() {
             timbre: 'COLOR',
             morph: 'DECAY',
         },
+        va: {
+            harmonics: 'DETUNE',
+            timbre: 'SQUARE',
+            morph: 'SAW',
+        },
+        va_vcf: {
+            harmonics: 'RESO',
+            timbre: 'CUTOFF',
+            morph: 'WAVE',
+        },
+        additive: {
+            harmonics: 'BUMPS',
+            timbre: 'INDEX',
+            morph: 'SHAPE',
+        },
+        grain: {
+            harmonics: 'RATIO',
+            timbre: 'FORMANT',
+            morph: 'WINDOW',
+        },
+        swarm: {
+            harmonics: 'SPREAD',
+            timbre: 'DENSITY',
+            morph: 'DURATION',
+        },
+        noise: {
+            harmonics: 'MODE',
+            timbre: 'CLOCK',
+            morph: 'RESO',
+        },
+        particle: {
+            harmonics: 'RANDOM',
+            timbre: 'DENSITY',
+            morph: 'TYPE',
+        },
+        pd: {
+            harmonics: 'FREQ',
+            timbre: 'AMOUNT',
+            morph: 'ASYMM',
+        },
+        terrain: {
+            harmonics: 'TERRAIN',
+            timbre: 'RADIUS',
+            morph: 'OFFSET',
+        },
+        string_machine: {
+            harmonics: 'CHORD',
+            timbre: 'CHORUS',
+            morph: 'WAVE',
+        },
+        chiptune: {
+            harmonics: 'CHORD',
+            timbre: 'ARP',
+            morph: 'PW',
+        },
+        chord: {
+            harmonics: 'CHORD',
+            timbre: 'INV/SPREAD',
+            morph: 'WAVE',
+        },
+        speech: {
+            harmonics: 'MODEL',
+            timbre: 'FORMANT',
+            morph: 'SPEECH',
+        },
     };
 
+    /** Models that must not run under Ingy-6 poly. Chord is allowed in Multitudes. */
+    const OSC4_MONO_ONLY_MODELS = new Set(['chord']);
+
+    const FM6_BANK_OPTIONS = [
+        { value: '0', label: 'Bass' },
+        { value: '1', label: 'Keys' },
+        { value: '2', label: 'Pads' },
+    ];
+    const WT_BANK_OPTIONS = [
+        { value: '-1', label: 'Scan (Harmonics)' },
+        { value: '0', label: 'A' },
+        { value: '1', label: 'B' },
+        { value: '2', label: 'C' },
+        { value: '3', label: 'D' },
+    ];
+
     const OSC4_MODELS = new Set(Object.keys(OSC4_MODEL_TONES));
+
+    /** Plaits chord table, CCW→CW. Index matches worklet xChordIndex. */
+    const OSC4_CHORD_NAME_MODELS = new Set(['chord', 'chiptune', 'string_machine']);
+
+    function syncOsc4ChordNameUi() {
+        const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
+        const show = !!state.osc4Wavetable && OSC4_CHORD_NAME_MODELS.has(model);
+        const harmEl = document.getElementById('osc4Harmonics');
+        const h = harmEl ? parseFloat(harmEl.value) : state.osc4Harmonics;
+        const name = chordNameFromHarmonics(h);
+        document.querySelectorAll('.osc4-chord-name').forEach((el) => {
+            el.hidden = !show;
+            if (show) el.textContent = name;
+        });
+        document.querySelectorAll('.osc4-tone-knob[data-osc4-tone="harmonics"]').forEach((knob) => {
+            knob.classList.toggle('has-chord-name', show);
+        });
+        document.getElementById('miHarmonicsKnob')?.closest('.mi-knob')
+            ?.classList.toggle('has-chord-name', show);
+        if (show) {
+            ['kbOsc4HarmonicsValue', 'osc4HarmonicsKnobValue'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = name;
+            });
+        }
+        const caption = (OSC4_MODEL_LABELS[model] || OSC4_MODEL_LABELS.wavetable).harmonics;
+        ['kbOsc4HarmonicsKnob', 'osc4HarmonicsKnob', 'miHarmonicsKnob'].forEach((id) => {
+            const dial = document.getElementById(id);
+            if (!dial) return;
+            if (show) dial.setAttribute('aria-valuetext', name);
+            else dial.removeAttribute('aria-valuetext');
+            dial.setAttribute('aria-label', show ? `${caption} ${name}` : caption);
+        });
+    }
+
+    /** Models where ALT (AUX) is a meaningful alternate path — not grey. */
+    const OSC4_ALT_ACTIVE = new Set([
+        'additive', 'grain', 'swarm', 'pd', 'noise', 'particle', 'va', 'va_vcf',
+        'waveshaper', 'fm', 'chiptune', 'terrain', 'bass_drum', 'snare', 'hihat',
+        'speech',
+    ]);
+    /** Models where MODE 1/2 (TRIG unpatched/patched) changes behavior. */
+    const OSC4_MODE_ACTIVE = new Set([
+        'chiptune', 'fm6', 'swarm', 'string', 'modal', 'bass_drum', 'speech',
+    ]);
+    const OSC4_MODE_LABELS = {
+        chiptune: { m1: 'CHORD', m2: 'ARP' },
+        fm6: { m1: 'DRONE', m2: 'TRIG' },
+        swarm: { m1: 'CLOUD', m2: 'BURST' },
+        string: { m1: 'DUST', m2: 'STRIKE' },
+        modal: { m1: 'DUST', m2: 'STRIKE' },
+        bass_drum: { m1: 'DRONE', m2: 'HIT' },
+        speech: { m1: 'MORPH', m2: 'TRIG' },
+    };
+
+    function syncOsc4AltModeUi() {
+        const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
+        const altActive = OSC4_ALT_ACTIVE.has(model);
+        const modeActive = OSC4_MODE_ACTIVE.has(model);
+        if (!altActive && state.osc4Alt) {
+            state.osc4Alt = false;
+            applyOsc4AltModeToLive();
+        }
+        const labels = OSC4_MODE_LABELS[model] || { m1: 'MODE 1', m2: 'MODE 2' };
+        const altOn = !!state.osc4Alt;
+        const mode2 = state.osc4TrigPatched !== false;
+        document.querySelectorAll('.osc4-alt-btn').forEach((btn) => {
+            btn.classList.toggle('off', !altOn);
+            btn.classList.toggle('is-grey', !altActive);
+            btn.disabled = !altActive;
+            btn.setAttribute('aria-pressed', altOn && altActive ? 'true' : 'false');
+            btn.title = altActive
+                ? (altOn ? 'ALT on — Plaits AUX' : 'ALT off — Plaits OUT')
+                : 'ALT unavailable for this model';
+        });
+        const modeLabel = mode2 ? labels.m2 : labels.m1;
+        const modeTitle = modeActive
+            ? (mode2
+                ? `Mode 2 — ${labels.m2} (TRIG patched). Click to cycle.`
+                : `Mode 1 — ${labels.m1} (TRIG unpatched). Click to cycle.`)
+            : 'MODE unused for this model';
+        document.querySelectorAll('.osc4-mode-btn').forEach((btn) => {
+            btn.textContent = modeActive ? `MODE: ${modeLabel}` : 'MODE';
+            btn.title = modeTitle;
+            btn.classList.toggle('off', !modeActive);
+            btn.classList.toggle('is-grey', !modeActive);
+            btn.disabled = !modeActive;
+            btn.setAttribute('aria-pressed', modeActive ? 'true' : 'false');
+            btn.dataset.osc4Mode = mode2 ? '2' : '1';
+        });
+        syncSpeechRecUi();
+    }
+
+    function fillBankSelect(sel, options, value) {
+        if (!sel) return;
+        const cur = String(value);
+        sel.innerHTML = '';
+        options.forEach(({ value: v, label }) => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = label;
+            sel.appendChild(opt);
+        });
+        const ok = options.some((o) => o.value === cur);
+        sel.value = ok ? cur : options[0].value;
+    }
+
+    function syncFm6PatchNameUi() {
+        const model = state.osc4Model;
+        const show = !!state.osc4Wavetable && model === 'fm6';
+        document.querySelectorAll('.osc4-patch-name-row').forEach((el) => {
+            el.hidden = !show;
+        });
+        const miRow = document.getElementById('miOsc4PatchRow');
+        if (miRow) miRow.hidden = !show;
+        if (!show) return;
+        const bank = Math.max(0, Math.min(2, Number(state.osc4Bank) || 0));
+        const preset = fm6PresetFromHarmonics(state.osc4Harmonics);
+        const name = readFm6PatchName(bank, preset) || '—';
+        ['osc4PatchName', 'kbOsc4PatchName', 'miOsc4PatchName'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = name;
+        });
+    }
 
     function syncOsc4WavetableUi() {
         const on = !!state.osc4Wavetable;
@@ -769,19 +1007,37 @@ export function wireControls() {
         });
         const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
         state.osc4Model = model;
-        ['osc4Model', 'kbOsc4Model'].forEach((id) => {
+        ['osc4Model', 'kbOsc4Model', 'miOsc4Model'].forEach((id) => {
             const sel = document.getElementById(id);
+            if (!sel) return;
             if (sel && sel.value !== model) sel.value = model;
+            // Chord unavailable under Ingy-6 poly (classic OSC1). Allowed in Multitudes.
+            const chordOpt = sel.querySelector('option[value="chord"]');
+            if (chordOpt) {
+                const blocked = !!(state.keyboardPoly && !state.keyboardMultitudes);
+                chordOpt.disabled = blocked;
+                if (blocked && sel.value === 'chord') sel.value = 'wavetable';
+            }
         });
-        const bankNum = Number(state.osc4Bank);
-        const bank = String(Number.isFinite(bankNum) ? Math.max(-1, Math.min(3, bankNum)) : -1);
-        const showBank = on && model === 'wavetable';
+
+        const isFm6 = model === 'fm6';
+        let bankNum = Number(state.osc4Bank);
+        if (isFm6) {
+            if (!Number.isFinite(bankNum) || bankNum < 0 || bankNum > 2) bankNum = 0;
+            state.osc4Bank = bankNum;
+        } else {
+            bankNum = Number.isFinite(bankNum) ? Math.max(-1, Math.min(3, bankNum)) : -1;
+            state.osc4Bank = bankNum;
+        }
+        const bank = String(bankNum);
+        const showBank = on && (model === 'wavetable' || isFm6);
         document.querySelectorAll('.osc4-bank-row').forEach((el) => {
             el.hidden = !showBank;
         });
-        ['osc4Bank', 'kbOsc4Bank'].forEach((id) => {
+        ['osc4Bank', 'kbOsc4Bank', 'miOsc4Bank'].forEach((id) => {
             const sel = document.getElementById(id);
-            if (sel && sel.value !== bank) sel.value = bank;
+            if (!sel) return;
+            fillBankSelect(sel, isFm6 ? FM6_BANK_OPTIONS : WT_BANK_OPTIONS, bank);
         });
 
         // Grey out inactive knobs + swap captions to the active model's meanings
@@ -790,7 +1046,14 @@ export function wireControls() {
         if (model === 'wavetable' && Number(bank) >= 0) {
             activeTones.harmonics = false;
         }
-        const labels = OSC4_MODEL_LABELS[model] || OSC4_MODEL_LABELS.wavetable;
+        // Voice USER bank pins LPC words — factory MODEL (HARMONICS) is off
+        if (model === 'speech' && state.osc4SpeechUserBank) {
+            activeTones.harmonics = false;
+        }
+        const labels = { ...(OSC4_MODEL_LABELS[model] || OSC4_MODEL_LABELS.wavetable) };
+        if (model === 'speech' && state.osc4SpeechUserBank) {
+            labels.harmonics = 'USER';
+        }
         document.querySelectorAll('.osc4-tone-knob[data-osc4-tone]').forEach((knob) => {
             const tone = knob.dataset.osc4Tone;
             const active = !!activeTones[tone];
@@ -805,36 +1068,71 @@ export function wireControls() {
                 dial.tabIndex = active ? 0 : -1;
             }
         });
+        // Multitudes MI pills
+        document.querySelectorAll('#multitudesPanel [data-mi-tone]').forEach((pill) => {
+            const tone = pill.dataset.miTone;
+            pill.textContent = labels[tone] || tone.toUpperCase();
+        });
         const harmInput = document.getElementById('osc4Harmonics');
         if (harmInput) harmInput.disabled = !activeTones.harmonics;
+        syncFm6PatchNameUi();
+        syncOsc4AltModeUi();
+        syncOsc4ChordNameUi();
     }
 
     function setOsc4Bank(next) {
+        const model = state.osc4Model;
         const n = Number(next);
-        const bank = Number.isFinite(n) ? Math.max(-1, Math.min(3, Math.round(n))) : -1;
+        let bank;
+        if (model === 'fm6') {
+            bank = Number.isFinite(n) ? Math.max(0, Math.min(2, Math.round(n))) : 0;
+        } else {
+            bank = Number.isFinite(n) ? Math.max(-1, Math.min(3, Math.round(n))) : -1;
+        }
         if (state.osc4Bank === bank) {
             syncOsc4WavetableUi();
             return;
         }
         state.osc4Bank = bank;
+        if (model === 'fm6') applyFm6BankToLive(bank);
         syncOsc4WavetableUi();
         applyOsc4MorphToLive();
     }
 
     function setOsc4Model(next) {
-        const model = OSC4_MODELS.has(next) ? next : 'wavetable';
+        let model = OSC4_MODELS.has(next) ? next : 'wavetable';
+        // Chord is blocked in Ingy-6 only; Multitudes can run it on OSC1.
+        if (OSC4_MONO_ONLY_MODELS.has(model) && state.keyboardPoly && !state.keyboardMultitudes) {
+            model = 'wavetable';
+        }
         if (state.osc4Model === model) {
             syncOsc4WavetableUi();
             return;
         }
         state.osc4Model = model;
+        if (model === 'fm6') {
+            // Default to Bass bank when entering 6-op
+            if (state.osc4Bank < 0 || state.osc4Bank > 2) state.osc4Bank = 0;
+            applyFm6BankToLive(state.osc4Bank);
+        }
         syncOsc4WavetableUi();
         // Worklet engines share the same node; tell live voices which model to run.
         const now = state.audioContext?.currentTime ?? 0;
+        const polyMode = !!(state.keyboardMultitudes || state.keyboardPoly);
         const touch = (osc) => {
             if (!osc?.isWavetable || !osc._worklet) return;
             try {
-                osc._worklet.port.postMessage({ engine: model });
+                osc._worklet.port.postMessage({
+                    engine: model,
+                    polyMode,
+                    alt: !!state.osc4Alt,
+                    trigPatched: state.osc4TrigPatched !== false,
+                });
+                const nowT = state.audioContext?.currentTime ?? 0;
+                const altP = osc._worklet.parameters?.get('alt');
+                if (altP) altP.setValueAtTime(state.osc4Alt ? 1 : 0, nowT);
+                const trigP = osc._worklet.parameters?.get('trigPatched');
+                if (trigP) trigP.setValueAtTime(state.osc4TrigPatched === false ? 0 : 1, nowT);
             } catch (_) { /* ignore */ }
             void now;
         };
@@ -845,6 +1143,7 @@ export function wireControls() {
                 voice?.oscs?.forEach(({ osc }) => touch(osc));
             });
         }
+        forEachPolyWavetableOsc(touch);
     }
 
     function rebuildOsc4EngineSources() {
@@ -916,7 +1215,7 @@ export function wireControls() {
             try { fadeStopOsc(old, now + 0.02, { fadeSec: 0.018, hard: !!old.isTriggered }); } catch (_) { /* ignore */ }
             const osc = createOscSource(ctx, {
                 oscIndex: i,
-                wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
+                wave: getOscType(i),
                 frequency: freq,
             });
             try { osc.frequency.value = freq; } catch (_) { /* ignore */ }
@@ -943,6 +1242,8 @@ export function wireControls() {
         const want = !!next;
         // Acid Mode owns OSC1 as analog saw/square; Poly uses classic OSC1 voices
         if (want && (state.acidMode || state.keyboardPoly)) return;
+        // Multitudes requires Plaits on OSC1
+        if (!want && state.keyboardMultitudes) return;
         if (want) {
             if (!state.audioContext) {
                 // Flag on; audio init will load the worklet and build the right digital source
@@ -973,7 +1274,27 @@ export function wireControls() {
     document.querySelectorAll('.osc4-engine-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
             if ((state.acidMode || state.keyboardPoly) && btn.dataset.engine === 'digital') return;
+            if (state.keyboardMultitudes && btn.dataset.engine !== 'digital') return;
             setOsc4Wavetable(btn.dataset.engine === 'digital');
+        });
+    });
+    document.querySelectorAll('.osc4-alt-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
+            if (!OSC4_ALT_ACTIVE.has(model)) return;
+            state.osc4Alt = !state.osc4Alt;
+            syncOsc4AltModeUi();
+            applyOsc4AltModeToLive();
+        });
+    });
+    document.querySelectorAll('.osc4-mode-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
+            if (!OSC4_MODE_ACTIVE.has(model)) return;
+            // Cycle Mode 1 ↔ Mode 2 (same pattern as ARP Range)
+            state.osc4TrigPatched = state.osc4TrigPatched === false;
+            syncOsc4AltModeUi();
+            applyOsc4AltModeToLive();
         });
     });
     ['osc4Model', 'kbOsc4Model'].forEach((id) => {
@@ -1011,14 +1332,17 @@ export function wireControls() {
             ['kbOsc4TimbreValue', 'osc4TimbreKnobValue', x],
             ['kbOsc4MorphValue', 'osc4MorphKnobValue', y],
         ];
-        pairs.forEach(([a, b, input]) => {
+        const chordNames = !!state.osc4Wavetable && OSC4_CHORD_NAME_MODELS.has(state.osc4Model);
+        pairs.forEach(([a, b, input], i) => {
             if (!input) return;
+            if (i === 0 && chordNames) return;
             const text = formatTone01(input.value);
             const elA = document.getElementById(a);
             const elB = document.getElementById(b);
             if (elA) elA.textContent = text;
             if (elB) elB.textContent = text;
         });
+        if (chordNames) syncOsc4ChordNameUi();
     }
 
     ['osc4Harmonics', 'osc4MorphX', 'osc4MorphY'].forEach((id) => {
@@ -1027,11 +1351,18 @@ export function wireControls() {
         el.addEventListener('input', () => {
             syncOsc4ToneValueLabels();
             applyOsc4MorphToLive();
+            if (id === 'osc4Harmonics') {
+                syncFm6PatchNameUi();
+                syncOsc4ChordNameUi();
+            }
         });
     });
     syncOsc4ToneValueLabels();
+    syncOsc4ChordNameUi();
 
     syncOsc4WavetableUi();
+    setSpeechUserBankUiHook(() => syncOsc4WavetableUi());
+    initSpeechRecUi();
 
     document.getElementById('lfoWaveform').addEventListener('change', function () {
         if (!state.lfo || !state.audioContext) return;
@@ -1181,7 +1512,7 @@ export function wireControls() {
             state.oscillators = Array(OSC_COUNT).fill().map((_, i) => {
                 const osc = createOscSource(state.audioContext, {
                     oscIndex: i,
-                    wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
+                    wave: getOscType(i),
                     frequency: 261.63,
                 });
                 osc.frequency.value = 261.63;
@@ -1212,7 +1543,7 @@ export function wireControls() {
             });
             state.oscillators = Array(OSC_COUNT).fill().map((_, i) => createOscSource(state.audioContext, {
                 oscIndex: i,
-                wave: document.querySelector(`.osc-type[data-osc="${i}"]`)?.value || 'sawtooth',
+                wave: getOscType(i),
                 frequency: 261.63,
             }));
             state.activeOscillators.forEach(osc => {
@@ -1261,7 +1592,7 @@ export function wireControls() {
 
     if (unisonToggle) {
         unisonToggle.addEventListener('click', function () {
-            if (!state.audioContext || state.keyboardPoly) return;
+            if (!state.audioContext || state.keyboardPoly || state.keyboardMultitudes) return;
             setUnisonEnabled(!state.unisonEnabled);
         });
         setUnisonEnabled(false);
@@ -1310,8 +1641,9 @@ export function wireControls() {
             document.body.classList.remove('midi-mapping-active');
             setupMappingListeners(false);
             if (state.currentMappingControl) {
-                state.currentMappingControl.classList.remove('midi-highlight');
+                clearMappingHighlight();
                 state.currentMappingControl = null;
+                state.currentMappingHost = null;
             }
             document.querySelectorAll('.midi-mapped').forEach((el) => {
                 el.classList.remove('midi-mapped');
@@ -1578,6 +1910,12 @@ function updateStepVisibility(stepCount) {
     });
     updateKeyboardStepVisibility(stepCount);
 }
+
+document.getElementById('stepCount').addEventListener('input', function () {
+    updateDisplay(this, 'stepCountValue');
+    updateStepVisibility(parseInt(this.value, 10));
+    previewStepsOnVfd(this.value);
+});
 
 document.getElementById('tempo').addEventListener('input', function () {
     updateDisplay(this, 'tempoValue');

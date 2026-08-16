@@ -1,5 +1,5 @@
-import { state } from './state.js?v=109';
-import { refreshParamStatusIndicators } from './param-status.js?v=4';
+import { state } from './state.js?v=113';
+import { refreshParamStatusIndicators } from './param-status.js?v=5';
 import {
     heldNoteDown,
     heldNoteUp,
@@ -7,8 +7,13 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=160';
-import { needsHeldNoteSet } from './held-notes.js?v=5';
+} from './keyboard.js?v=181';
+import { needsHeldNoteSet } from './held-notes.js?v=8';
+import {
+    midiControlId,
+    clearMappingHighlight,
+    setupMappingPointerCapture,
+} from './midi-learn.js?v=3';
 
 /** MIDI note number → cell semitone while held (for Chord arp / Chord Mem). */
 const midiHeldNotes = new Map();
@@ -130,56 +135,22 @@ function onMIDIMessage(message) {
     const type = status & 0xF0;
     if (state.midiMappingMode && state.currentMappingControl) {
         if (type === 0xB0) {
-            // Define the cc variable
             const cc = data1;
-            
-            // Create a more specific controlId that includes the element type
-            let controlId = state.currentMappingControl.id;
-            
-            // For step controls, create a more specific ID format
-            if (state.currentMappingControl.dataset && state.currentMappingControl.dataset.step !== undefined) {
-                const stepNum = state.currentMappingControl.dataset.step;
-                if (state.currentMappingControl.tagName === 'INPUT' && state.currentMappingControl.type === 'range') {
-                    controlId = state.currentMappingControl.classList.contains('step-fine')
-                        ? `step-fine-${stepNum}`
-                        : `step-slider-${stepNum}`;
-                } else if (state.currentMappingControl.tagName === 'BUTTON') {
-                    controlId = state.currentMappingControl.classList.contains('step-slide')
-                        ? `step-slide-${stepNum}`
-                        : state.currentMappingControl.classList.contains('step-accent')
-                            ? `step-accent-${stepNum}`
-                            : `step-toggle-${stepNum}`;
-                }
-            } else if (state.currentMappingControl.dataset && state.currentMappingControl.dataset.osc !== undefined) {
-                const oscNum = state.currentMappingControl.dataset.osc;
-                // Create specific IDs for different oscillator controls
-                if (state.currentMappingControl.classList.contains('osc-tune')) {
-                    controlId = `osc-tune-${oscNum}`;
-                } else if (state.currentMappingControl.classList.contains('osc-vol')) {
-                    controlId = `osc-vol-${oscNum}`;
-                } else if (state.currentMappingControl.classList.contains('osc-toggle')) {
-                    controlId = `osc-toggle-${oscNum}`;
-                } else if (state.currentMappingControl.classList.contains('osc-type')) {
-                    controlId = `osc-type-${oscNum}`;
-                } else {
-                    controlId = `osc-${oscNum}`;
-                }
-            }
-            
-            state.midiMappings[controlId] = { 
-                type: "cc", 
-                cc: cc, 
+            const controlId = midiControlId(state.currentMappingControl);
+            const visual = state.currentMappingHost || state.currentMappingControl;
+
+            state.midiMappings[controlId] = {
+                type: "cc",
+                cc: cc,
                 channel: channel,
-                element: state.currentMappingControl // Store reference to the actual element
+                element: state.currentMappingControl,
             };
             state.lastMIDIValues[`cc-${cc}-${channel}`] = data2;
-            state.currentMappingControl.classList.remove('midi-highlight');
-            
-            // Store a reference to the mapped control element
-            const mappedControl = state.currentMappingControl;
+            visual.classList.remove('midi-highlight');
+            const mappedControl = visual;
             state.currentMappingControl = null;
-            
-            // Add mapped class and remove it after 2 seconds
+            state.currentMappingHost = null;
+
             mappedControl.classList.add('midi-mapped');
             setTimeout(() => {
                 mappedControl.classList.remove('midi-mapped');
@@ -189,33 +160,20 @@ function onMIDIMessage(message) {
             console.log(`Mapped CC ${cc} on channel ${channel} to ${controlId}`);
         } else if (type === 0x90 && data2 > 0) {
             const note = data1;
-            let controlId = state.currentMappingControl.id;
-            
-            // For step controls, create a more specific ID format
-            if (state.currentMappingControl.dataset && state.currentMappingControl.dataset.step !== undefined) {
-                const stepNum = state.currentMappingControl.dataset.step;
-                if (state.currentMappingControl.tagName === 'BUTTON') {
-                    controlId = state.currentMappingControl.classList.contains('step-slide')
-                        ? `step-slide-${stepNum}`
-                        : state.currentMappingControl.classList.contains('step-accent')
-                            ? `step-accent-${stepNum}`
-                            : `step-toggle-${stepNum}`;
-                }
-            }
-            
-            state.midiMappings[controlId] = { 
-                type: "note", 
-                note: note, 
+            const controlId = midiControlId(state.currentMappingControl);
+            const visual = state.currentMappingHost || state.currentMappingControl;
+
+            state.midiMappings[controlId] = {
+                type: "note",
+                note: note,
                 channel: channel,
-                element: state.currentMappingControl // Store reference to the actual element
+                element: state.currentMappingControl,
             };
-            state.currentMappingControl.classList.remove('midi-highlight');
-            
-            // Store a reference to the mapped control element
-            const mappedControl = state.currentMappingControl;
+            visual.classList.remove('midi-highlight');
+            const mappedControl = visual;
             state.currentMappingControl = null;
-            
-            // Add mapped class and remove it after 2 seconds
+            state.currentMappingHost = null;
+
             mappedControl.classList.add('midi-mapped');
             setTimeout(() => {
                 mappedControl.classList.remove('midi-mapped');
@@ -282,7 +240,7 @@ function onMIDIMessage(message) {
                         const max = parseFloat(control.max) || 127;
                         const scaledValue = min + (value / 127) * (max - min);
                         control.value = scaledValue;
-                        control.dispatchEvent(new Event('input'));
+                        control.dispatchEvent(new Event('input', { bubbles: true }));
                         
                         // Update display value if it's a step slider
                         if (control.classList.contains('step-tune') || control.classList.contains('step-fine')) {
@@ -299,6 +257,9 @@ function onMIDIMessage(message) {
         const note = data1;
         const velocity = data2;
         const isNoteOn = type === 0x90 && velocity > 0;
+        if (isNoteOn) {
+            state.lastVelocity = Math.max(0.05, Math.min(1, velocity / 127));
+        }
 
         // Chord arp / Chord Mem learn: play notes into the held-note set
         if (handleMidiHeldNote(note, isNoteOn)) {
@@ -341,64 +302,11 @@ function onMIDIMessage(message) {
 }
 
 function setupMappingListeners(enable) {
-    const mappableControls = [
-        ...document.querySelectorAll('input[type="range"]'),
-        ...document.querySelectorAll('button.pushable:not(#midiMapping):not(#midiLogoToggle)')
-    ];
-    mappableControls.forEach(control => {
-        if (enable) {
-            control.addEventListener('click', onControlClick);
-        } else {
-            control.removeEventListener('click', onControlClick);
-        }
-    });
-}
-
-function onControlClick(event) {
-    if (!state.midiMappingMode) return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (state.currentMappingControl) {
-        state.currentMappingControl.classList.remove('midi-highlight');
-    }
-    state.currentMappingControl = this;
-    this.classList.add('midi-highlight');
-    
-    // Create a more specific controlId for logging
-    let controlId = this.id;
-    if (this.dataset && this.dataset.step !== undefined) {
-        if (this.tagName === 'INPUT' && this.type === 'range') {
-            controlId = this.classList.contains('step-fine')
-                ? `step-fine-${this.dataset.step}`
-                : `step-slider-${this.dataset.step}`;
-        } else if (this.tagName === 'BUTTON') {
-            controlId = this.classList.contains('step-slide')
-                ? `step-slide-${this.dataset.step}`
-                : this.classList.contains('step-accent')
-                    ? `step-accent-${this.dataset.step}`
-                    : `step-toggle-${this.dataset.step}`;
-        }
-    } else if (this.dataset && this.dataset.osc !== undefined) {
-        const oscNum = this.dataset.osc;
-        // Create specific IDs for different oscillator controls
-        if (this.classList.contains('osc-tune')) {
-            controlId = `osc-tune-${oscNum}`;
-        } else if (this.classList.contains('osc-vol')) {
-            controlId = `osc-vol-${oscNum}`;
-        } else if (this.classList.contains('osc-toggle')) {
-            controlId = `osc-toggle-${oscNum}`;
-        } else if (this.classList.contains('osc-type')) {
-            controlId = `osc-type-${oscNum}`;
-        } else {
-            controlId = `osc-${oscNum}`;
-        }
-    }
-    
-    console.log(`Ready to map MIDI control to ${controlId}`);
+    setupMappingPointerCapture(!!enable);
 }
 
 document.addEventListener('ingysynth:sequencer-start', () => {
     midiHeldNotes.clear();
 });
 
-export { onMIDISuccess, onMIDIFailure, onMIDIMessage, setupMappingListeners, populateMidiOutputDropdown };
+export { onMIDISuccess, onMIDIFailure, onMIDIMessage, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight };

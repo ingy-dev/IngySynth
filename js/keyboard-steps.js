@@ -2,58 +2,44 @@
 // Each step mirrors the Sequencer section: semitone knob → .step-tune,
 // tiny microtune → .step-fine, Acc/Sld/On → accent/slide/toggle.
 
-import { state } from './state.js?v=109';
-import { getQuantizedStepTune } from './tuning.js?v=74';
-import { bindKnob } from './knobs.js?v=100';
+import { state } from './state.js?v=113';
+import { getQuantizedStepTune } from './tuning.js?v=77';
+import { bindKnob } from './knobs.js?v=113';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
 import {
-    observeMainControl,
-    syncClassButtonFromMain,
-    syncToggleButtonFromMain,
-} from './control-mirror.js?v=74';
+    click,
+    elementFor,
+    get,
+    set,
+    subscribe,
+    toggle,
+} from './params.js?v=5';
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=86';
-import { readRatchFromButton, syncRatchButton, nextRatch } from './step-ratch.js?v=1';
+} from './pattern-write.js?v=94';
+import { readRatchFromButton, syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;
-
-function mainAccent(step) {
-    return document.querySelector(`.step-accent[data-step="${step}"]`);
-}
-
-function mainSlide(step) {
-    return document.querySelector(`.step-slide[data-step="${step}"]`);
-}
-
-function mainToggle(step) {
-    return document.querySelector(`.step-toggle[data-step="${step}"]`);
-}
-
-function mainRatch(step) {
-    return document.querySelector(`.step-ratch[data-step="${step}"]`);
-}
-
-function mainTune(step) {
-    return document.querySelector(`.step-tune[data-step="${step}"]`);
-}
-
-function mainFine(step) {
-    return document.querySelector(`.step-fine[data-step="${step}"]`);
-}
 
 function formatKbCents(cents) {
     const n = Math.round(Number(cents) || 0);
     return `${n > 0 ? '+' : ''}${n}¢`;
 }
 
-function syncKbButtonFromMain(kbBtn, mainBtn) {
-    syncClassButtonFromMain(kbBtn, mainBtn);
+function syncKbButtonFromKey(kbBtn, key) {
+    if (!kbBtn) return;
+    const on = !!get(key);
+    kbBtn.classList.toggle('off', !on);
+    kbBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
 }
 
-function syncKbToggleFromMain(kbBtn, mainBtn) {
-    syncToggleButtonFromMain(kbBtn, mainBtn);
+function syncKbToggleFromKey(kbBtn, key) {
+    if (!kbBtn) return;
+    const on = !!get(key);
+    kbBtn.classList.toggle('off', !on);
+    kbBtn.textContent = on ? 'On' : 'Off';
+    kbBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
 }
 
 function refreshKbStepTuneValue(step) {
@@ -62,13 +48,14 @@ function refreshKbStepTuneValue(step) {
 }
 
 export function syncKeyboardStepFineFromMain(step) {
-    const fineMain = mainFine(step);
+    const fineMain = elementFor(`step-fine-${step}`);
     const kbFine = document.querySelector(`.kb-step-fine[data-step="${step}"]`);
     const kbFineVal = document.querySelector(`.kb-step-fine-value[data-step="${step}"]`);
-    if (!fineMain || !kbFine) return;
-    kbFine.value = fineMain.value;
-    kbFine.step = fineMain.step || '1';
-    if (kbFineVal) kbFineVal.textContent = formatKbCents(fineMain.value);
+    if (!kbFine) return;
+    const v = get(`step-fine-${step}`);
+    if (v != null) kbFine.value = String(v);
+    if (fineMain) kbFine.step = fineMain.step || '1';
+    if (kbFineVal) kbFineVal.textContent = formatKbCents(kbFine.value);
 }
 
 export function syncAllKeyboardStepFinesFromMain() {
@@ -87,18 +74,11 @@ export function syncKeyboardStepButtonsFromMain(step) {
     const kbSld = document.querySelector(`.kb-step-slide[data-step="${step}"]`);
     const kbOn = document.querySelector(`.kb-step-toggle[data-step="${step}"]`);
     const kbRatch = document.querySelector(`.kb-step-ratch[data-step="${step}"]`);
-    const accMain = mainAccent(step);
-    const sldMain = mainSlide(step);
-    const toggleMain = mainToggle(step);
-    const ratchMain = mainRatch(step);
 
-    syncKbButtonFromMain(kbAcc, accMain);
-    syncKbButtonFromMain(kbSld, sldMain);
-    syncKbToggleFromMain(kbOn, toggleMain);
-    syncKbRatchFromMain(kbRatch, ratchMain);
-
-    if (kbAcc) kbAcc.setAttribute('aria-pressed', kbAcc.classList.contains('off') ? 'false' : 'true');
-    if (kbSld) kbSld.setAttribute('aria-pressed', kbSld.classList.contains('off') ? 'false' : 'true');
+    syncKbButtonFromKey(kbAcc, `step-accent-${step}`);
+    syncKbButtonFromKey(kbSld, `step-slide-${step}`);
+    syncKbToggleFromKey(kbOn, `step-toggle-${step}`);
+    syncKbRatchFromMain(kbRatch, elementFor(`step-ratch-${step}`));
 }
 
 export function syncAllKeyboardStepButtonsFromMain() {
@@ -145,7 +125,7 @@ function syncStepsCollapseUI() {
 export function syncKeyboardStepsVisibilityWithKeyboard() {
     const fieldset = document.getElementById('keyboardStepsFieldset');
     if (!fieldset) return;
-    fieldset.style.display = state.keyboardVisible ? '' : 'none';
+    fieldset.style.display = '';
 }
 
 function buildStep(i) {
@@ -188,82 +168,69 @@ function buildStep(i) {
 }
 
 function wireStep(i) {
-    const tuneInput = mainTune(i);
     const dial = document.getElementById(`kbStepTuneDial${i}`);
     const valueEl = document.querySelector(`.kb-step-tune-value[data-step="${i}"]`);
-    if (tuneInput && dial) {
-        bindKnob(dial, tuneInput, null);
-        // Show scale-quantized readout (matches Sequencer section)
+    if (dial) {
+        bindKnob(dial, `step-slider-${i}`, null);
         const updateValue = () => {
             if (valueEl) valueEl.textContent = String(getQuantizedStepTune(i));
         };
-        tuneInput.addEventListener('input', updateValue);
+        elementFor(`step-slider-${i}`)?.addEventListener('input', updateValue);
+        subscribe(`step-slider-${i}`, updateValue);
         updateValue();
     }
 
-    const fineMain = mainFine(i);
     const kbFine = document.querySelector(`.kb-step-fine[data-step="${i}"]`);
-    if (fineMain && kbFine) {
-        const syncFromMain = () => syncKeyboardStepFineFromMain(i);
+    if (kbFine) {
+        const syncFromStore = () => syncKeyboardStepFineFromMain(i);
         kbFine.addEventListener('input', () => {
             if (state.keyboardWrite && i !== state.writeStep) {
                 setWriteCursor(i);
             }
-            fineMain.value = kbFine.value;
-            fineMain.dispatchEvent(new Event('input', { bubbles: true }));
-            // Main may snap under microtune lock — pull snapped value back
-            syncFromMain();
+            set(`step-fine-${i}`, parseFloat(kbFine.value));
+            syncFromStore();
             if (state.keyboardWrite) syncWriteToolbarFromStep();
         });
-        fineMain.addEventListener('input', syncFromMain);
-        syncFromMain();
+        subscribe(`step-fine-${i}`, syncFromStore);
+        syncFromStore();
     }
 
     const kbAcc = document.querySelector(`.kb-step-accent[data-step="${i}"]`);
     const kbSld = document.querySelector(`.kb-step-slide[data-step="${i}"]`);
     const kbOn = document.querySelector(`.kb-step-toggle[data-step="${i}"]`);
     const kbRatch = document.querySelector(`.kb-step-ratch[data-step="${i}"]`);
-    const accMain = mainAccent(i);
-    const sldMain = mainSlide(i);
-    const toggleMain = mainToggle(i);
-    const ratchMain = mainRatch(i);
 
-    syncKbButtonFromMain(kbAcc, accMain);
-    syncKbButtonFromMain(kbSld, sldMain);
-    syncKbToggleFromMain(kbOn, toggleMain);
-    syncKbRatchFromMain(kbRatch, ratchMain);
-    if (kbAcc) kbAcc.setAttribute('aria-pressed', kbAcc.classList.contains('off') ? 'false' : 'true');
-    if (kbSld) kbSld.setAttribute('aria-pressed', kbSld.classList.contains('off') ? 'false' : 'true');
+    syncKeyboardStepButtonsFromMain(i);
+
+    const seekIfWrite = () => {
+        if (state.keyboardWrite && i !== state.writeStep) setWriteCursor(i);
+    };
 
     kbAcc?.addEventListener('click', (e) => {
         if (state.keyboardWrite) {
             e.preventDefault();
             e.stopPropagation();
-            if (i !== state.writeStep) setWriteCursor(i);
-            accMain?.click();
-            syncKeyboardStepButtonsFromMain(i);
+            seekIfWrite();
+            toggle(`step-accent-${i}`);
             syncWriteToolbarFromStep();
             return;
         }
-        accMain?.click();
+        toggle(`step-accent-${i}`);
     });
     kbSld?.addEventListener('click', (e) => {
         if (state.keyboardWrite) {
             e.preventDefault();
             e.stopPropagation();
-            if (i !== state.writeStep) setWriteCursor(i);
-            sldMain?.click();
-            syncKeyboardStepButtonsFromMain(i);
+            seekIfWrite();
+            toggle(`step-slide-${i}`);
             syncWriteToolbarFromStep();
             return;
         }
-        sldMain?.click();
+        toggle(`step-slide-${i}`);
     });
-    kbOn?.addEventListener('click', (e) => {
-        if (state.keyboardWrite && i !== state.writeStep) {
-            setWriteCursor(i);
-        }
-        toggleMain?.click();
+    kbOn?.addEventListener('click', () => {
+        seekIfWrite();
+        toggle(`step-toggle-${i}`);
         if (state.keyboardWrite) syncWriteToolbarFromStep();
     });
     kbRatch?.addEventListener('click', (e) => {
@@ -271,32 +238,22 @@ function wireStep(i) {
         if (state.keyboardWrite) {
             e.preventDefault();
             e.stopPropagation();
-            if (i !== state.writeStep) setWriteCursor(i);
-            if (ratchMain) syncRatchButton(ratchMain, nextRatch(readRatchFromButton(ratchMain)));
-            syncKeyboardStepButtonsFromMain(i);
+            seekIfWrite();
+            click(`step-ratch-${i}`);
             syncWriteToolbarFromStep();
             return;
         }
-        ratchMain?.click();
+        click(`step-ratch-${i}`);
     });
 
-    // Keep buttons in sync when toggled from the Sequencer section (or anywhere)
-    observeMainControl(accMain, () => {
-        syncKbButtonFromMain(kbAcc, accMain);
+    const afterFlag = () => {
+        syncKeyboardStepButtonsFromMain(i);
         if (state.keyboardWrite && i === state.writeStep) syncWriteToolbarFromStep();
-    });
-    observeMainControl(sldMain, () => {
-        syncKbButtonFromMain(kbSld, sldMain);
-        if (state.keyboardWrite && i === state.writeStep) syncWriteToolbarFromStep();
-    });
-    observeMainControl(toggleMain, () => {
-        syncKbToggleFromMain(kbOn, toggleMain);
-        if (state.keyboardWrite && i === state.writeStep) syncWriteToolbarFromStep();
-    });
-    observeMainControl(ratchMain, () => {
-        syncKbRatchFromMain(kbRatch, ratchMain);
-        if (state.keyboardWrite && i === state.writeStep) syncWriteToolbarFromStep();
-    });
+    };
+    subscribe(`step-accent-${i}`, afterFlag);
+    subscribe(`step-slide-${i}`, afterFlag);
+    subscribe(`step-toggle-${i}`, afterFlag);
+    subscribe(`step-ratch-${i}`, afterFlag);
 }
 
 export function initKeyboardSteps() {

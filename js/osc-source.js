@@ -2,7 +2,8 @@
 // Plaits-style engines share one pooled AudioWorkletNode shell.
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
-import { state } from './state.js?v=109';
+import { state } from './state.js?v=113';
+import { getNumber, getOscType } from './params.js?v=5';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
 export const OSC4_INDEX = 0;
@@ -20,18 +21,32 @@ export const PLAITS_PROCESSOR = 'plaits-engine-processor';
  */
 export const ENGINE_TRIM = {
     wavetable: 0.82,
-    fm: 0.78,
+    fm: 0.68,
+    fm6: 1.0,
     waveshaper: 0.72,
     modal: 0.95,
     string: 0.88,
-    bass_drum: 1.0,
+    bass_drum: 0.92,
     snare: 0.85,
     hihat: 0.7,
+    va: 0.75,
+    va_vcf: 0.7,
+    additive: 0.85,
+    grain: 0.95,
+    swarm: 0.7,
+    noise: 0.65,
+    particle: 0.7,
+    pd: 0.72,
+    terrain: 0.8,
+    string_machine: 0.75,
+    chiptune: 0.62,
+    chord: 0.7,
+    speech: 0.75,
 };
 
 /** Engines that ring after gate-off (trigger/exciter model). */
 export const TRIGGERED_ENGINES = new Set([
-    'modal', 'string', 'bass_drum', 'snare', 'hihat',
+    'modal', 'string', 'bass_drum', 'snare', 'hihat', 'fm6',
 ]);
 
 export const ENGINE_TAIL_SEC = {
@@ -40,6 +55,7 @@ export const ENGINE_TAIL_SEC = {
     bass_drum: 2.5,
     snare: 2.5,
     hihat: 2.0,
+    fm6: 8,
 };
 
 export const DRUM_ENGINES = new Set(['bass_drum', 'snare', 'hihat']);
@@ -86,7 +102,7 @@ export function hasDarkOscActive() {
     for (let i = 0; i < (state.oscStates?.length || 0); i++) {
         if (!state.oscStates[i]) continue;
         if (i === OSC4_INDEX && state.osc4Wavetable) continue;
-        const wave = document.querySelector(`.osc-type[data-osc="${i}"]`)?.value;
+        const wave = getOscType(i);
         if (wave === 'sine' || wave === 'triangle') return true;
     }
     return false;
@@ -94,8 +110,8 @@ export function hasDarkOscActive() {
 
 /** How hard the shared filter will ping a WT onset (0..1). */
 export function wtFilterClickRisk() {
-    const cutoff = parseFloat(document.getElementById('cutoff')?.value);
-    const q = parseFloat(document.getElementById('resonance')?.value);
+    const cutoff = getNumber('cutoff', 1000);
+    const q = getNumber('resonance', 1);
     const c = Number.isFinite(cutoff) ? cutoff : 1000;
     const res = Number.isFinite(q) ? q : 1;
     const bright = Math.max(0, Math.min(1, (c - 1200) / 8800));
@@ -231,11 +247,64 @@ let plaitsTablesPromise = null;
 /** Waveshaper / fold / stiffness LUTs. */
 let plaitsWsBuffer = null;
 let plaitsWsPromise = null;
+/** Emilie Plaits 1.2 FM banks: 3 × 32 × 128 packed DX7 voices. */
+let plaitsFmBanksBuffer = null;
+let plaitsFmBanksPromise = null;
+/** Active 6-op bank index 0–2 (Bass / Keys / Pads). */
+let plaitsFmBankIndex = 0;
+/** Stock Plaits speech ROM (excitation + LPC word banks). */
+let plaitsSpeechBuffer = null;
+let plaitsSpeechPromise = null;
+/** Optional USER LPC bank bytes (appended as banks[5] in the worklet). */
+let plaitsSpeechUserBank = null;
+
+const SPEECH_USER_STORAGE_KEY = 'ingysynth.speechUserBank.v1';
+const SPEECH_USER_ACTIVE_KEY = 'ingysynth.speechUserBankActive.v1';
+
+function u8ToBase64(bytes) {
+    let s = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+        s += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(s);
+}
+
+function base64ToU8(b64) {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+}
+
+function restoreSpeechUserBankFromStorage() {
+    try {
+        const b64 = localStorage.getItem(SPEECH_USER_STORAGE_KEY);
+        if (b64) {
+            plaitsSpeechUserBank = base64ToU8(b64);
+        }
+        const active = localStorage.getItem(SPEECH_USER_ACTIVE_KEY);
+        state.osc4SpeechUserBank = active === '1' && !!(plaitsSpeechUserBank && plaitsSpeechUserBank.length);
+    } catch (_) {
+        plaitsSpeechUserBank = null;
+        state.osc4SpeechUserBank = false;
+    }
+}
+
+// Hydrate USER bank flag early so REC/USER button is correct before worklet load.
+restoreSpeechUserBankFromStorage();
 
 const PLAITS_TABLES_URL = () =>
     new URL(`js/worklets/plaits-wavetables.bin?v=2`, window.location.href).href;
 const PLAITS_WS_URL = () =>
     new URL(`js/worklets/plaits-waveshaper.bin?v=1`, window.location.href).href;
+const PLAITS_FM_BANKS_URL = () =>
+    new URL(`js/worklets/plaits-fm-banks.bin?v=1`, window.location.href).href;
+const PLAITS_SPEECH_URL = () =>
+    new URL(`js/worklets/plaits-speech.bin?v=1`, window.location.href).href;
+
+const FM6_BANK_BYTES = 4096;
+const FM6_PATCH_BYTES = 128;
 
 function loadPlaitsTables() {
     if (plaitsTablesBuffer) return Promise.resolve(plaitsTablesBuffer);
@@ -281,6 +350,172 @@ function loadPlaitsWaveshaper() {
     return plaitsWsPromise;
 }
 
+function loadPlaitsFmBanks() {
+    if (plaitsFmBanksBuffer) return Promise.resolve(plaitsFmBanksBuffer);
+    if (plaitsFmBanksPromise) return plaitsFmBanksPromise;
+    plaitsFmBanksPromise = fetch(PLAITS_FM_BANKS_URL())
+        .then((r) => {
+            if (!r.ok) throw new Error(`fm-banks HTTP ${r.status}`);
+            return r.arrayBuffer();
+        })
+        .then((buf) => {
+            if (buf.byteLength < FM6_BANK_BYTES * 3) {
+                throw new Error(`fm-banks too small: ${buf.byteLength}`);
+            }
+            plaitsFmBanksBuffer = buf;
+            return buf;
+        })
+        .catch((err) => {
+            console.warn('Plaits FM banks failed to load:', err);
+            plaitsFmBanksPromise = null;
+            return null;
+        });
+    return plaitsFmBanksPromise;
+}
+
+function loadPlaitsSpeech() {
+    if (plaitsSpeechBuffer) return Promise.resolve(plaitsSpeechBuffer);
+    if (plaitsSpeechPromise) return plaitsSpeechPromise;
+    plaitsSpeechPromise = fetch(PLAITS_SPEECH_URL())
+        .then((r) => {
+            if (!r.ok) throw new Error(`speech ROM HTTP ${r.status}`);
+            return r.arrayBuffer();
+        })
+        .then((buf) => {
+            if (buf.byteLength < 16) {
+                throw new Error(`speech ROM too small: ${buf.byteLength}`);
+            }
+            plaitsSpeechBuffer = buf;
+            restoreSpeechUserBankFromStorage();
+            return buf;
+        })
+        .catch((err) => {
+            console.warn('Plaits speech ROM failed to load:', err);
+            plaitsSpeechPromise = null;
+            return null;
+        });
+    return plaitsSpeechPromise;
+}
+
+function persistSpeechUserBank() {
+    try {
+        if (plaitsSpeechUserBank && plaitsSpeechUserBank.length) {
+            localStorage.setItem(SPEECH_USER_STORAGE_KEY, u8ToBase64(plaitsSpeechUserBank));
+        } else {
+            localStorage.removeItem(SPEECH_USER_STORAGE_KEY);
+        }
+        localStorage.setItem(SPEECH_USER_ACTIVE_KEY, state.osc4SpeechUserBank ? '1' : '0');
+    } catch (err) {
+        console.warn('Could not persist Voice USER bank:', err);
+    }
+}
+
+export function getSpeechUserBankBytes() {
+    return plaitsSpeechUserBank;
+}
+
+export function hasSpeechUserBank() {
+    return !!(plaitsSpeechUserBank && plaitsSpeechUserBank.length);
+}
+
+function postSpeechUserBankToNode(node) {
+    if (!node?.port) return;
+    try {
+        if (plaitsSpeechUserBank && plaitsSpeechUserBank.length) {
+            node.port.postMessage({
+                userBank: plaitsSpeechUserBank.slice(0).buffer,
+                userBankActive: !!state.osc4SpeechUserBank,
+            });
+        } else {
+            node.port.postMessage({ userBank: null, userBankActive: false });
+        }
+    } catch (_) { /* ignore */ }
+}
+
+/** Push USER bank (or clear) into every pooled + live digital worklet. */
+export function applySpeechUserBankToLive({
+    bytes = plaitsSpeechUserBank,
+    active = state.osc4SpeechUserBank,
+    persist = true,
+} = {}) {
+    if (bytes && bytes.length) {
+        plaitsSpeechUserBank = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+        state.osc4SpeechUserBank = !!active;
+    } else {
+        plaitsSpeechUserBank = null;
+        state.osc4SpeechUserBank = false;
+    }
+    if (persist) persistSpeechUserBank();
+
+    wtPool.forEach((slot) => postSpeechUserBankToNode(slot?.node));
+
+    const touch = (osc) => {
+        if (!osc?.isWavetable || !osc._worklet) return;
+        postSpeechUserBankToNode(osc._worklet);
+    };
+    if (Array.isArray(state.activeOscillators)) state.activeOscillators.forEach(touch);
+    if (state.oscillators?.[OSC4_INDEX]) touch(state.oscillators[OSC4_INDEX]);
+    if (Array.isArray(state.berlinOscVoices)) {
+        state.berlinOscVoices.forEach((voice) => {
+            voice?.oscs?.forEach(({ osc }) => touch(osc));
+        });
+    }
+    try { osc4MorphLiveHook?.(touch); } catch (_) { /* ignore */ }
+}
+
+export function clearSpeechUserBank() {
+    applySpeechUserBankToLive({ bytes: null, active: false, persist: true });
+}
+
+/** Keep packed bytes; toggle whether Voice pins the USER bank vs factory MODEL. */
+export function setSpeechUserBankActive(active) {
+    if (!plaitsSpeechUserBank || !plaitsSpeechUserBank.length) {
+        state.osc4SpeechUserBank = false;
+        applySpeechUserBankToLive({ bytes: null, active: false, persist: true });
+        return false;
+    }
+    applySpeechUserBankToLive({
+        bytes: plaitsSpeechUserBank,
+        active: !!active,
+        persist: true,
+    });
+    return !!state.osc4SpeechUserBank;
+}
+
+/** Slice of factory ROM for bank 0–2 (4096 bytes). */
+export function getFm6BankBytes(bankIndex = plaitsFmBankIndex) {
+    if (!plaitsFmBanksBuffer) return null;
+    const i = Math.max(0, Math.min(2, bankIndex | 0));
+    return plaitsFmBanksBuffer.slice(i * FM6_BANK_BYTES, (i + 1) * FM6_BANK_BYTES);
+}
+
+/** 10-char DX patch name from packed voice bytes. */
+export function readFm6PatchName(bankIndex, patchIndex) {
+    const bank = getFm6BankBytes(bankIndex);
+    if (!bank) return '';
+    const p = Math.max(0, Math.min(31, patchIndex | 0));
+    const bytes = new Uint8Array(bank, p * FM6_PATCH_BYTES + 118, 10);
+    let s = '';
+    for (let i = 0; i < 10; i++) {
+        const c = bytes[i] & 0x7f;
+        if (c >= 32 && c < 127) s += String.fromCharCode(c);
+    }
+    return s.trim();
+}
+
+/** Preset index 0–31 from harmonics knob (matches worklet quantizer). */
+export function fm6PresetFromHarmonics(harmonics = state.osc4Harmonics) {
+    const h = Number.isFinite(harmonics) ? Math.max(0, Math.min(1, harmonics)) : 0.5;
+    let idx = Math.floor(h * 1.02 * 32);
+    if (idx > 31) idx = 31;
+    if (idx < 0) idx = 0;
+    return idx;
+}
+
+export function getFm6BankIndex() {
+    return plaitsFmBankIndex;
+}
+
 function injectPlaitsAssets(node) {
     if (!node) return;
     try {
@@ -290,9 +525,30 @@ function injectPlaitsAssets(node) {
         if (plaitsWsBuffer) {
             node.port.postMessage({ waveshaper: plaitsWsBuffer.slice(0) });
         }
+        const fmBank = getFm6BankBytes(plaitsFmBankIndex);
+        if (fmBank) {
+            node.port.postMessage({ fmBank: fmBank.slice(0) });
+        }
+        if (plaitsSpeechBuffer) {
+            node.port.postMessage({ speech: plaitsSpeechBuffer.slice(0) });
+        }
+        postSpeechUserBankToNode(node);
     } catch (err) {
         console.warn('Failed to inject Plaits assets into worklet:', err);
     }
+}
+
+/** Push current FM6 bank into every pooled worklet (+ optional live voices). */
+export function applyFm6BankToLive(bankIndex = plaitsFmBankIndex) {
+    plaitsFmBankIndex = Math.max(0, Math.min(2, bankIndex | 0));
+    const bank = getFm6BankBytes(plaitsFmBankIndex);
+    if (!bank) return;
+    wtPool.forEach((slot) => {
+        if (!slot?.node?.port) return;
+        try {
+            slot.node.port.postMessage({ fmBank: bank.slice(0) });
+        } catch (_) { /* ignore */ }
+    });
 }
 
 export function isOsc4Wavetable() {
@@ -300,10 +556,8 @@ export function isOsc4Wavetable() {
 }
 
 export function readOsc4Morph() {
-    const xEl = document.getElementById('osc4MorphX');
-    const yEl = document.getElementById('osc4MorphY');
-    const x = xEl ? parseFloat(xEl.value) : state.osc4MorphX;
-    const y = yEl ? parseFloat(yEl.value) : state.osc4MorphY;
+    const x = getNumber('osc4MorphX', state.osc4MorphX);
+    const y = getNumber('osc4MorphY', state.osc4MorphY);
     return {
         x: Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0.5,
         y: Number.isFinite(y) ? Math.max(0, Math.min(1, y)) : 0.5,
@@ -311,8 +565,7 @@ export function readOsc4Morph() {
 }
 
 export function readOsc4Harmonics() {
-    const el = document.getElementById('osc4Harmonics');
-    const v = el ? parseFloat(el.value) : state.osc4Harmonics;
+    const v = getNumber('osc4Harmonics', state.osc4Harmonics);
     return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.5;
 }
 
@@ -339,11 +592,13 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
     }
 
     state.plaitsWorkletCtx = ctx;
-    const url = new URL(`js/worklets/plaits-engine-processor.js?v=23`, window.location.href).href;
+    const url = new URL(`js/worklets/plaits-engine-processor.js?v=37`, window.location.href).href;
     state.plaitsWorkletPromise = Promise.all([
         ctx.audioWorklet.addModule(url),
         loadPlaitsTables(),
         loadPlaitsWaveshaper(),
+        loadPlaitsFmBanks(),
+        loadPlaitsSpeech(),
     ])
         .then(([, tables]) => {
             if (!tables) {
@@ -369,9 +624,7 @@ function acquirePoolSlot(ctx) {
         if (wtPool.length >= WT_POOL_MAX) {
             // Prefer idle non-ringing; never steal a ringing physical-model voice
             slot = wtPool.find((s) => !s.inUse && !s.ringing);
-            if (!slot) {
-                slot = wtPool.find((s) => !s.inUse);
-            }
+            if (!slot) slot = wtPool.find((s) => !s.inUse);
             if (!slot) {
                 slot = wtPool[0];
                 try {
@@ -401,7 +654,6 @@ function acquirePoolSlot(ctx) {
             });
             injectPlaitsAssets(node);
             slot = { ctx, node, inUse: false, gen: 0, tablesSent: true, ringing: false };
-            // Silence / ring-end from triggered engines
             node.port.onmessage = (ev) => {
                 const msg = ev.data;
                 if (msg?.silent) {
@@ -454,6 +706,18 @@ function createWavetableProxy(ctx, frequency) {
 
     const bankRaw = Number(state.osc4Bank);
     const bank = Number.isFinite(bankRaw) ? Math.max(-1, Math.min(3, bankRaw)) : -1;
+    if (model === 'fm6') {
+        const fmBank = Math.max(0, Math.min(2, bank >= 0 ? bank : 0));
+        if (fmBank !== plaitsFmBankIndex) {
+            applyFm6BankToLive(fmBank);
+        } else {
+            // Ensure this node has the bank (fresh pool slot)
+            try {
+                const bytes = getFm6BankBytes(fmBank);
+                if (bytes) node.port.postMessage({ fmBank: bytes.slice(0) });
+            } catch (_) { /* ignore */ }
+        }
+    }
 
     try {
         gateParam.cancelScheduledValues(now);
@@ -464,8 +728,23 @@ function createWavetableProxy(ctx, frequency) {
         morphYParam.setValueAtTime(y, now);
         if (harmonicsParam) harmonicsParam.setValueAtTime(harmonics, now);
         node.parameters.get('bank').setValueAtTime(bank, now);
+        const velParam = node.parameters.get('velocity');
+        if (velParam) {
+            const vel = Number.isFinite(state.lastVelocity) ? state.lastVelocity : 0.8;
+            velParam.setValueAtTime(Math.max(0, Math.min(1, vel)), now);
+        }
+        const altParam = node.parameters.get('alt');
+        if (altParam) altParam.setValueAtTime(state.osc4Alt ? 1 : 0, now);
+        const trigParam = node.parameters.get('trigPatched');
+        if (trigParam) trigParam.setValueAtTime(state.osc4TrigPatched === false ? 0 : 1, now);
         // Idle reset only — note-on phase reset is edge-triggered in the worklet
-        node.port.postMessage({ reset: true, engine: model });
+        node.port.postMessage({
+            reset: true,
+            engine: model,
+            polyMode: !!(state.keyboardMultitudes || state.keyboardPoly),
+            alt: !!state.osc4Alt,
+            trigPatched: state.osc4TrigPatched !== false,
+        });
     } catch (_) { /* ignore */ }
 
     const outGain = ctx.createGain();
@@ -694,6 +973,86 @@ export function createOscSource(ctx, {
     return osc;
 }
 
+/** Optional live-morph hook for poly/other voice pools (avoids circular imports). */
+let osc4MorphLiveHook = null;
+export function setOsc4MorphLiveHook(fn) {
+    osc4MorphLiveHook = typeof fn === 'function' ? fn : null;
+}
+
+/** Push ALT / TRIG-patched (Mode) onto all live digital voices. */
+export function applyOsc4AltModeToLive() {
+    const now = state.audioContext?.currentTime ?? 0;
+    const alt = !!state.osc4Alt;
+    const trigPatched = state.osc4TrigPatched !== false;
+    const touch = (osc) => {
+        if (!osc?.isWavetable || !osc._worklet) return;
+        try {
+            const altP = osc._worklet.parameters?.get('alt');
+            if (altP) altP.setValueAtTime(alt ? 1 : 0, now);
+            const trigP = osc._worklet.parameters?.get('trigPatched');
+            if (trigP) trigP.setValueAtTime(trigPatched ? 1 : 0, now);
+            osc._worklet.port.postMessage({ alt, trigPatched });
+        } catch (_) { /* ignore */ }
+    };
+    if (Array.isArray(state.activeOscillators)) state.activeOscillators.forEach(touch);
+    if (state.oscillators?.[OSC4_INDEX]) touch(state.oscillators[OSC4_INDEX]);
+    if (Array.isArray(state.berlinOscVoices)) {
+        state.berlinOscVoices.forEach((voice) => {
+            voice?.oscs?.forEach(({ osc }) => touch(osc));
+        });
+    }
+    try {
+        // poly-voice registers this hook to reach Multitudes / Ingy-6 voices
+        osc4MorphLiveHook?.(touch);
+    } catch (_) { /* ignore */ }
+}
+
+/**
+ * Live OSC volume: shared oscGains + per-voice gainNodes for phase-reset /
+ * Multitudes / poly digital stacks (oscGains alone does not move those).
+ * Pass `extraOscs` for poly-pool voices (avoids circular import with poly-voice).
+ */
+export function applyLiveOscVolume(oscIndex, volRaw, extraOscs = null) {
+    if (!state.audioContext) return;
+    const oscIndexN = Number(oscIndex);
+    if (!Number.isFinite(oscIndexN)) return;
+    const vol = Math.max(0, Math.min(1, Number(volRaw) || 0));
+    const now = state.audioContext.currentTime;
+    const on = !!state.oscStates?.[oscIndexN];
+    const level = on ? vol : 0;
+
+    if (state.oscGains?.[oscIndexN]) {
+        try {
+            state.oscGains[oscIndexN].gain.setValueAtTime(level, now);
+        } catch (_) { /* ignore */ }
+    }
+
+    const list = [];
+    const push = (osc) => {
+        if (!osc || osc.oscIndex !== oscIndexN || !osc.gainNode) return;
+        list.push(osc);
+    };
+    if (Array.isArray(state.activeOscillators)) state.activeOscillators.forEach(push);
+    if (Array.isArray(state.berlinOscVoices)) {
+        state.berlinOscVoices.forEach((voice) => {
+            if (voice?.oscIndex !== oscIndexN) return;
+            voice?.oscs?.forEach(({ osc }) => push(osc));
+        });
+    }
+    if (Array.isArray(extraOscs)) extraOscs.forEach(push);
+
+    const n = Math.max(1, list.length || 1);
+    const voiceVol = level / n;
+    list.forEach((osc) => {
+        try {
+            const g = osc.gainNode.gain;
+            g.cancelScheduledValues(now);
+            g.setValueAtTime(Math.max(0.00001, g.value || 0.00001), now);
+            g.linearRampToValueAtTime(Math.max(0.00001, voiceVol), now + 0.012);
+        } catch (_) { /* ignore */ }
+    });
+}
+
 /** Push current OSC1 digital tone params onto all live digital voices. */
 export function applyOsc4MorphToLive() {
     const { x, y } = readOsc4Morph();
@@ -701,8 +1060,7 @@ export function applyOsc4MorphToLive() {
     state.osc4MorphX = x;
     state.osc4MorphY = y;
     state.osc4Harmonics = harmonics;
-    const bankEl = document.getElementById('osc4Bank');
-    const bankFromUi = bankEl ? parseInt(bankEl.value, 10) : state.osc4Bank;
+    const bankFromUi = getNumber('osc4Bank', state.osc4Bank);
     // -1 = Scan (Harmonics); 0–3 = pinned bank
     const bank = Number.isFinite(bankFromUi)
         ? Math.max(-1, Math.min(3, bankFromUi))
@@ -740,4 +1098,7 @@ export function applyOsc4MorphToLive() {
             voice?.oscs?.forEach(({ osc }) => touch(osc));
         });
     }
+    try {
+        osc4MorphLiveHook?.(touch);
+    } catch (_) { /* ignore */ }
 }

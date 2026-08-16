@@ -1,7 +1,8 @@
 // Persistent corner dots: magenta (automation, top-left), cyan (MIDI map,
 // top-right), phosphor (Berlin Dream-960 destination, bottom-right).
 
-import { state } from './state.js?v=109';
+import { state } from './state.js?v=113';
+import { stageButtonHostsForKey } from './midi-learn.js?v=3';
 
 /** @type {(key: string) => boolean} */
 let hasAutomationLaneFn = () => false;
@@ -22,7 +23,7 @@ function addHost(list, el) {
 function hostFromMappedElement(el) {
     if (!el || !(el instanceof Element)) return null;
     return el.closest?.(
-        '.synth-knob, .control, .keyboard-pitch-bend, .keyboard-lfo-strip, .keyboard-master-tune, .pushable'
+        '.synth-knob, .ingy6-fader, .control, .keyboard-pitch-bend, .keyboard-lfo-strip, .keyboard-master-tune, .kb-step-btn, .pushable, canvas'
     ) || el;
 }
 
@@ -71,6 +72,8 @@ function hostsForKey(key) {
             addHost(hosts, byId.closest('.control') || byId.closest('.synth-knob') || byId);
         }
     }
+
+    stageButtonHostsForKey(key).forEach((el) => addHost(hosts, el));
 
     const mapping = state.midiMappings?.[key];
     if (mapping?.element) {

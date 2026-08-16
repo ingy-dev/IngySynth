@@ -1,12 +1,13 @@
 // ACID mode: TB-303-style AD envelopes + accent sweep (Robin Whittle MEG/VEG).
 // When Off, callers keep the normal ADSR path untouched.
 
-import { state } from './state.js?v=109';
+import { state } from './state.js?v=113';
+import { getNumber } from './params.js?v=5';
 import {
     getFilterEnvAmount,
     getFilterCutoffRange,
     updateFilterCutoffRange,
-} from './filter-cutoff.js?v=78';
+} from './filter-cutoff.js?v=80';
 
 const MIN = 0.00001;
 const ACCENT_MEG_SEC = 0.2; // fixed MEG decay on accent (~200 ms)
@@ -28,14 +29,14 @@ const ACCENT_ENV_DEPTH = 1.35;
 /** Map filter Decay knob (0–2) → MEG decay seconds (~0.2–2 s). */
 export function acidMegDecaySec(accentThisStep) {
     if (accentThisStep) return ACCENT_MEG_SEC;
-    const raw = parseFloat(document.getElementById('filterDecay')?.value);
+    const raw = getNumber('filterDecay', 0.3);
     const v = Number.isFinite(raw) ? raw : 0.3;
     return 0.2 + (Math.max(0, Math.min(2, v)) / 2) * 1.8;
 }
 
 /** Map amp Decay knob (0–2) → VEG decay seconds (~0.5–3.5 s). */
 export function acidVegDecaySec() {
-    const raw = parseFloat(document.getElementById('decay')?.value);
+    const raw = getNumber('decay', 0.5);
     const v = Number.isFinite(raw) ? raw : 0.5;
     return 0.5 + (Math.max(0, Math.min(2, v)) / 2) * 3.0;
 }
@@ -46,20 +47,18 @@ function decayTau(sec) {
 }
 
 function getAccentAmount() {
-    const el = document.getElementById('accentAmount');
-    return el ? Math.max(0, Math.min(1, parseFloat(el.value) / 100)) : 1;
+    return Math.max(0, Math.min(1, getNumber('accentAmount', 100) / 100));
 }
 
 function resonanceNorm() {
-    const el = document.getElementById('resonance');
-    const max = el ? parseFloat(el.max) || 20 : 20;
-    const v = el ? parseFloat(el.value) : 1;
-    return Math.max(0, Math.min(1, (Number.isFinite(v) ? v : 1) / max));
+    const max = 20;
+    const v = getNumber('resonance', 1);
+    return Math.max(0, Math.min(1, v / max));
 }
 
 function cutModHot() {
     return state.lfoState
-        && Math.abs(parseFloat(document.getElementById('cutoffMod')?.value) || 0) > 80
+        && Math.abs(getNumber('cutoffMod', 0)) > 80
         && (Number(state.lfoAmount) || 0) > 0.02;
 }
 
@@ -147,7 +146,7 @@ function applyAccentEnvDepthBoost(t0, accentAmount, stepDuration) {
     const amount = getFilterEnvAmount();
     if (amount === 0) return;
 
-    const baseCutoff = Math.max(40, parseFloat(document.getElementById('cutoff').value));
+    const baseCutoff = Math.max(40, getNumber('cutoff', 1000));
     const { signedDepth: baseSignedDepth } = getFilterCutoffRange(baseCutoff, amount);
     const boostedDepth = baseSignedDepth * (1 + ACCENT_ENV_DEPTH * amt);
     const depthParam = state.filterEnvDepth.gain;
@@ -183,7 +182,7 @@ export function scheduleAcidFilterEnvelope({
     const now = state.audioContext.currentTime;
     const t0 = Math.max(now, startTime);
     const gainParam = state.filterEnvGain.gain;
-    const baseCutoff = Math.max(40, parseFloat(document.getElementById('cutoff').value));
+    const baseCutoff = Math.max(40, getNumber('cutoff', 1000));
     updateFilterCutoffRange(baseCutoff, t0, 0.012);
 
     if (accentThisStep) {
@@ -273,7 +272,7 @@ export function triggerAcidLiveAmp(now, { fromCurrent = false } = {}) {
 
 export function triggerAcidLiveFilter(now, { fromCurrent = false } = {}) {
     if (!state.filterEnvGain || getFilterEnvAmount() === 0) return;
-    const baseCutoff = Math.max(40, parseFloat(document.getElementById('cutoff').value));
+    const baseCutoff = Math.max(40, getNumber('cutoff', 1000));
     updateFilterCutoffRange(baseCutoff, now, 0.012);
     softRetriggerGain(
         state.filterEnvGain.gain,

@@ -2,8 +2,9 @@
 // pad + mild pre-limit → LP → post soft-clip → makeup.
 // Chord intervals also soft-scale Q (biquad rails at high Q + multi-pitch).
 
-import { state, OSC_COUNT } from './state.js?v=109';
-import { OSC4_INDEX } from './osc-source.js?v=66';
+import { state, OSC_COUNT } from './state.js?v=113';
+import { getNumber, getOscVol } from './params.js?v=5';
+import { OSC4_INDEX } from './osc-source.js?v=86';
 
 /** Soft-clip / peak-limit curve (drive↑ = more compression of peaks). */
 export function makeFilterInputCurve(drive = 2.0) {
@@ -48,8 +49,8 @@ export function chordSpreadFactor() {
 export function applyFilterResonance(rampTime = 0.03) {
     if (!state.audioContext || !state.filter) return;
 
-    const ui = parseFloat(document.getElementById('resonance')?.value);
-    const cutoff = parseFloat(document.getElementById('cutoff')?.value) || 1000;
+    const ui = getNumber('resonance', NaN);
+    const cutoff = getNumber('cutoff', 1000);
     let q = Number.isFinite(ui) ? ui : 1;
     if (cutoff < 200) q = Math.min(5, q);
 
@@ -82,11 +83,11 @@ export function refreshFilterInputDrive(rampTime = 0.04) {
     for (let i = 0; i < OSC_COUNT; i++) {
         if (!state.oscStates[i]) continue;
         active += 1;
-        const v = parseFloat(document.querySelector(`.osc-vol[data-osc="${i}"]`)?.value ?? '0.33');
+        const v = getOscVol(i);
         if (Number.isFinite(v) && v > 0) sum += v;
     }
     if (state.noiseState) {
-        const nv = parseFloat(document.getElementById('noiseVol')?.value || '0');
+        const nv = getNumber('noiseVol', 0);
         if (Number.isFinite(nv) && nv > 0) sum += nv;
     }
 
@@ -100,17 +101,18 @@ export function refreshFilterInputDrive(rampTime = 0.04) {
     if (active >= 2 && spread > 1.08) {
         pad = Math.min(pad, 0.22);
     }
-    // Mild WT-only trim (same family as bright) — click fixes are architectural now
+    // Digital OSC1 still needs a bit of headroom (bright spectra), but do not
+    // pin pad so hard that the OSC1 volume knob stops moving the bus.
     const dark = !!(state.osc4Wavetable && state.oscStates[OSC4_INDEX]);
-    if (dark) {
-        pad = Math.min(pad, active >= 2 ? 0.18 : 0.28);
+    if (dark && active >= 2) {
+        pad = Math.min(pad, 0.22);
     }
     // Shared makeup formula for bright and dark — restores level parity
     const makeup = Math.max(1.15, Math.min(3.8, 0.72 / pad));
 
     // Same soft-clip character; tiny WT ease only
     if (state.filterSoftClip) {
-        const drive = dark ? 2.25 : 2.45;
+        const drive = dark ? 2.35 : 2.45;
         try { state.filterSoftClip.curve = makeFilterInputCurve(drive); } catch (_) { /* ignore */ }
     }
 

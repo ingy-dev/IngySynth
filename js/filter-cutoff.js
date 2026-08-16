@@ -1,4 +1,5 @@
-import { state } from './state.js?v=109';
+import { state } from './state.js?v=113';
+import { getNumber } from './params.js?v=5';
 
 /** Keep in sync with getLfoAmountAudio() in lfo-strip.js (avoid circular import). */
 function softKneeLfoAmount(a) {
@@ -11,7 +12,7 @@ function softKneeLfoAmount(a) {
  */
 export function getCutoffLfoPeakDemand() {
     if (!state.lfoState) return 0;
-    const modAbs = Math.abs(parseFloat(document.getElementById('cutoffMod')?.value) || 0);
+    const modAbs = Math.abs(getNumber('cutoffMod', 0));
     if (modAbs < 1) return 0;
     const audioAmt = softKneeLfoAmount(state.lfoAmount);
     if (audioAmt < 0.01) return 0;
@@ -21,7 +22,7 @@ export function getCutoffLfoPeakDemand() {
 
 export function getFilterEnvAmount() {
     if (!state.filterEnvState) return 0;
-    const v = parseFloat(document.getElementById('filterEnvAmount')?.value);
+    const v = getNumber('filterEnvAmount', NaN);
     return Number.isFinite(v) ? Math.max(0, Math.min(1, v / 100)) : 1;
 }
 
@@ -74,6 +75,6 @@ export function updateFilterCutoffRange(baseCutoff, now, rampTime = 0.03) {
 /** Re-apply floor/depth from current cutoff + LFO (call when CUT mod / strip / On change). */
 export function refreshFilterCutoffRange(rampTime = 0.05) {
     if (!state.audioContext) return;
-    const cutoff = Math.max(40, parseFloat(document.getElementById('cutoff')?.value) || 1000);
+    const cutoff = Math.max(40, getNumber('cutoff', 1000));
     updateFilterCutoffRange(cutoff, state.audioContext.currentTime, rampTime);
 }

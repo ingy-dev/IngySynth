@@ -1,6 +1,7 @@
-import { state } from './state.js?v=109';
-import { calculateSemitoneShift, semitonesToNoteName } from './tuning.js?v=74';
+import { state } from './state.js?v=113';
+import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=77';
 import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=2';
+import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=3';
 
 const NOTE_VFD_HOSTS = ['noteVisualizer', 'kbPatternNoteVisualizer', 'kbXyNoteVisualizer'];
 const NOTE_VFD_IDLE_TEXT = 'Note';
@@ -139,6 +140,19 @@ const ADSR_SUSTAIN_TIME = 0.5;
 const ADSR_HIT_RADIUS = 14;
 /** Floor so AD segments stay visible when knobs are at 0. */
 const ADSR_SEG_FLOOR = 0.02;
+
+const AMP_ADSR_IDS = {
+    attackId: 'attack',
+    decayId: 'decay',
+    sustainId: 'sustain',
+    releaseId: 'release',
+};
+const FILTER_ADSR_IDS = {
+    attackId: 'filterAttack',
+    decayId: 'filterDecay',
+    sustainId: 'filterSustain',
+    releaseId: 'filterRelease',
+};
 
 function readAdsrParams(ids) {
     const attackEl = document.getElementById(ids.attackId);
@@ -365,6 +379,55 @@ function paintADSRVisualizer(options = {}) {
     });
 }
 
+function adsrCanvasPoint(canvas, e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / Math.max(1, rect.width);
+    const sy = canvas.height / Math.max(1, rect.height);
+    return {
+        x: (e.clientX - rect.left) * sx,
+        y: (e.clientY - rect.top) * sy,
+    };
+}
+
+function hitAdsrKey(canvas, e, ids, invert) {
+    const params = readAdsrParams(ids);
+    if (!params) return { params: null, key: null, pt: null };
+    const pt = adsrCanvasPoint(canvas, e);
+    const layout = getAdsrLayout(canvas.width, canvas.height, params, !!invert);
+    let best = null;
+    let bestDist = ADSR_HIT_RADIUS;
+    Object.values(layout.points).forEach((p) => {
+        const d = Math.hypot(pt.x - p.x, pt.y - p.y);
+        if (d <= bestDist) {
+            bestDist = d;
+            best = p.key;
+        }
+    });
+    return { params, key: best, pt };
+}
+
+function idsForAdsrCanvas(canvas) {
+    if (!canvas) return null;
+    if (canvas.id === 'adsrVisualizer' || canvas.id === 'kbAdsrVisualizer') return AMP_ADSR_IDS;
+    if (canvas.id === 'filterAdsrVisualizer' || canvas.id === 'kbFilterAdsrVisualizer') {
+        return FILTER_ADSR_IDS;
+    }
+    return null;
+}
+
+function resolveAdsrMapping(canvas, e) {
+    const ids = idsForAdsrCanvas(canvas);
+    if (!ids) return null;
+    const invert = canvas.id === 'filterAdsrVisualizer' || canvas.id === 'kbFilterAdsrVisualizer'
+        ? !!state.filterEnvInvert
+        : false;
+    const { params, key } = hitAdsrKey(canvas, e, ids, invert);
+    if (!params || !key) return { unmappable: true, host: canvas };
+    const el = params[`${key}El`];
+    if (!el) return { unmappable: true, host: canvas };
+    return { canonical: el, host: canvas };
+}
+
 /** Invisible hit-targets on envelope corners — appearance unchanged. */
 function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter = false } = {}) {
     const canvas = document.getElementById(canvasId);
@@ -374,16 +437,6 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
 
     let dragKey = null;
     let pointerId = null;
-
-    const canvasPoint = (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const sx = canvas.width / Math.max(1, rect.width);
-        const sy = canvas.height / Math.max(1, rect.height);
-        return {
-            x: (e.clientX - rect.left) * sx,
-            y: (e.clientY - rect.top) * sy,
-        };
-    };
 
     const hitTest = (pt) => {
         const params = readAdsrParams(ids);
@@ -456,30 +509,36 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
 
     canvas.addEventListener('pointerdown', (e) => {
         if (e.button != null && e.button !== 0) return;
-        const key = hitTest(canvasPoint(e));
+        if (state.midiMappingMode) {
+            const { params, key } = hitAdsrKey(canvas, e, ids, !!getInvert());
+            const el = key && params ? params[`${key}El`] : null;
+            beginMidiLearn(e, el, canvas);
+            return;
+        }
+        const key = hitTest(adsrCanvasPoint(canvas, e));
         if (!key) return;
         e.preventDefault();
         dragKey = key;
         pointerId = e.pointerId;
         try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
         setCursor('grabbing');
-        applyDrag(canvasPoint(e));
+        applyDrag(adsrCanvasPoint(canvas, e));
     });
 
     canvas.addEventListener('pointermove', (e) => {
         if (dragKey && pointerId === e.pointerId) {
             e.preventDefault();
-            applyDrag(canvasPoint(e));
+            applyDrag(adsrCanvasPoint(canvas, e));
             return;
         }
-        setCursor(hitTest(canvasPoint(e)) ? 'grab' : '');
+        setCursor(hitTest(adsrCanvasPoint(canvas, e)) ? 'grab' : '');
     });
 
     const endDrag = (e) => {
         if (pointerId !== null && e.pointerId !== pointerId) return;
         dragKey = null;
         pointerId = null;
-        setCursor(hitTest(canvasPoint(e)) ? 'grab' : '');
+        setCursor(hitTest(adsrCanvasPoint(canvas, e)) ? 'grab' : '');
     };
 
     canvas.addEventListener('pointerup', endDrag);
@@ -488,29 +547,18 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
 }
 
 function initAdsrCanvasDragging() {
-    const ampIds = {
-        attackId: 'attack',
-        decayId: 'decay',
-        sustainId: 'sustain',
-        releaseId: 'release',
-    };
-    const filterIds = {
-        attackId: 'filterAttack',
-        decayId: 'filterDecay',
-        sustainId: 'filterSustain',
-        releaseId: 'filterRelease',
-    };
     const filterInvert = () => !!state.filterEnvInvert;
-    bindAdsrCanvasDrag('adsrVisualizer', ampIds, { isFilter: false });
-    bindAdsrCanvasDrag('kbAdsrVisualizer', ampIds, { isFilter: false });
-    bindAdsrCanvasDrag('filterAdsrVisualizer', filterIds, {
+    bindAdsrCanvasDrag('adsrVisualizer', AMP_ADSR_IDS, { isFilter: false });
+    bindAdsrCanvasDrag('kbAdsrVisualizer', AMP_ADSR_IDS, { isFilter: false });
+    bindAdsrCanvasDrag('filterAdsrVisualizer', FILTER_ADSR_IDS, {
         getInvert: filterInvert,
         isFilter: true,
     });
-    bindAdsrCanvasDrag('kbFilterAdsrVisualizer', filterIds, {
+    bindAdsrCanvasDrag('kbFilterAdsrVisualizer', FILTER_ADSR_IDS, {
         getInvert: filterInvert,
         isFilter: true,
     });
+    registerAdsrMappingResolver(resolveAdsrMapping);
 }
 
 function drawADSRVisualizer(options = {}) {
@@ -554,31 +602,19 @@ if (document.readyState === 'loading') {
 
 document.getElementById('masterTune')?.addEventListener('input', function () {
     if ((state.isPlaying || state.isArping) && !window.noteVisualizerPreviewActive) {
-        const currentStepTune = parseInt(document.querySelector(`.step-tune[data-step="${state.currentStep}"]`)?.value || 0);
-        const masterTune = parseInt(document.getElementById('masterTune').value);
-        const octaveSwitch = parseInt(document.getElementById('octaveSwitch').value) * 12;
-        const semitoneShift = calculateSemitoneShift();
-        updateNoteVisualizer(currentStepTune + masterTune + octaveSwitch + semitoneShift);
+        updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
     }
 });
 
 document.getElementById('octaveSwitch')?.addEventListener('input', function () {
     if ((state.isPlaying || state.isArping) && !window.noteVisualizerPreviewActive) {
-        const currentStepTune = parseInt(document.querySelector(`.step-tune[data-step="${state.currentStep}"]`)?.value || 0);
-        const masterTune = parseInt(document.getElementById('masterTune').value);
-        const octaveSwitch = parseInt(document.getElementById('octaveSwitch').value) * 12;
-        const semitoneShift = calculateSemitoneShift();
-        updateNoteVisualizer(currentStepTune + masterTune + octaveSwitch + semitoneShift);
+        updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
     }
 });
 
 document.getElementById('semitoneSwitch')?.addEventListener('input', function () {
     if ((state.isPlaying || state.isArping) && !window.noteVisualizerPreviewActive) {
-        const currentStepTune = parseInt(document.querySelector(`.step-tune[data-step="${state.currentStep}"]`)?.value || 0);
-        const masterTune = parseInt(document.getElementById('masterTune').value);
-        const octaveSwitch = parseInt(document.getElementById('octaveSwitch').value) * 12;
-        const semitoneShift = calculateSemitoneShift();
-        updateNoteVisualizer(currentStepTune + masterTune + octaveSwitch + semitoneShift);
+        updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
     }
 });
 

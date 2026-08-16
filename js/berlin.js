@@ -1,14 +1,15 @@
 // Berlin Dream-960: eight lanes on one tempo — O1–O4 pitch+amp, M1–M4 filter CV.
 // Acid and Poly are mutually exclusive with it.
 
-import { state } from './state.js?v=109';
-import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=74';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=95';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=78';
-import { setPolyMode } from './poly-voice.js?v=34';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=6';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=100';
-import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=4';
+import { state } from './state.js?v=113';
+import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=77';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=98';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=80';
+import { setPolyMode } from './poly-voice.js?v=60';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=19';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=11';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=113';
+import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=5';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
@@ -28,7 +29,7 @@ import {
     clearPatternSteps,
     flashCopiedToast,
     syncPatternClipboardUi,
-} from './pattern-bank.js?v=7';
+} from './pattern-bank.js?v=9';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
@@ -970,6 +971,7 @@ function setBerlinLockedUi(on) {
     document.body.classList.toggle('berlin-mode', !!on);
     [
         'keyboardPolyToggle',
+        'keyboardMultitudesToggle',
         'kbWrite',
         'kbRev',
         'patternShiftBack',
@@ -1011,6 +1013,7 @@ export function setBerlinMode(on) {
         // Acid and Poly own the voice in ways Berlin lanes cannot share.
         forceAcidOffForPoly();
         if (state.keyboardPoly) setPolyMode(false);
+        if (state.keyboardMultitudes) setMultitudesMode(false);
         // The single strip is a view of the edit slot — bank it before hiding.
         flushDomToPattern(state.editSlot);
         state.pendingEditSlot = null;

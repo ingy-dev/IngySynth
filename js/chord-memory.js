@@ -1,13 +1,19 @@
-import { state, OSC_COUNT } from './state.js?v=109';
+import { state, OSC_COUNT } from './state.js?v=113';
 import {
     clearHeldNotes,
     intervalsFromHeldNotes,
-} from './held-notes.js?v=5';
-import { refreshFilterInputDrive } from './filter-drive.js?v=12';
-import { setPolyMode } from './poly-voice.js?v=34';
+    polyChordIntervalsFromNotes,
+} from './held-notes.js?v=8';
+import { refreshFilterInputDrive } from './filter-drive.js?v=20';
 
 /** Notes heard during the current Learn gesture (survives staggered key-ups). */
 let learnSessionNotes = [];
+
+/** Ingy-6 / Multitudes: one-finger stack through the 6-voice pool. */
+let polyChordOn = false;
+let polyChordIntervals = [];
+
+const POLY_CHORD_MAX = 6;
 
 function setOscTuneUI(oscIndex, value) {
     const clamped = Math.max(-12, Math.min(12, Math.round(Number(value) || 0)));
@@ -65,19 +71,38 @@ export function applyChordMemoryIntervals(intervals) {
     }
 }
 
+export function isPolyChordMemoryOn() {
+    return !!polyChordOn && polyChordIntervals.length > 0;
+}
+
+export function getPolyChordIntervals() {
+    return polyChordOn ? [...polyChordIntervals] : [];
+}
+
+export function clearPolyChordMemory() {
+    polyChordOn = false;
+    polyChordIntervals = [];
+    syncChordMemUI();
+}
+
 export function syncChordMemUI() {
     const btn = document.getElementById('keyboardChordMemToggle');
     if (!btn) return;
     const learning = !!state.chordMemoryLearning;
+    const armed = isPolyChordMemoryOn() && !learning;
     const locked = !!(state.isPlaying || state.keyboardWrite);
-    // Idle = red "Chord Mem"; learning = flashing green rec dot
-    btn.classList.toggle('off', !learning);
+    // Idle = grey SVG; learning = flashing green rec dot; armed = solid green SVG
+    btn.classList.toggle('off', !learning && !armed);
     btn.classList.toggle('active', learning);
+    btn.classList.toggle('chord-mem-on', armed);
     btn.classList.toggle('is-locked', locked);
     btn.disabled = locked;
-    btn.setAttribute('aria-pressed', learning ? 'true' : 'false');
+    btn.setAttribute('aria-pressed', (learning || armed) ? 'true' : 'false');
     btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
-    btn.setAttribute('aria-label', learning ? 'Chord memory learning' : 'Chord memory learn');
+    btn.setAttribute(
+        'aria-label',
+        learning ? 'Chord memory learning' : armed ? 'Chord memory on' : 'Chord memory learn',
+    );
 }
 
 export function clearLearnSession() {
@@ -109,6 +134,8 @@ export function cancelChordMemoryLearn() {
 
 export function beginChordMemoryLearn() {
     if (state.isPlaying || state.keyboardWrite) return;
+    polyChordOn = false;
+    polyChordIntervals = [];
     state.chordMemoryLearning = true;
     clearLearnSession();
     clearHeldNotes();
@@ -121,21 +148,38 @@ export function toggleChordMemoryLearn() {
         cancelChordMemoryLearn();
         return;
     }
+    if (isPolyChordMemoryOn()) {
+        clearPolyChordMemory();
+        return;
+    }
     beginChordMemoryLearn();
+}
+
+function isPolyStyleMode() {
+    return !!(state.keyboardPoly || state.keyboardMultitudes);
 }
 
 /**
  * Commit Learn from the session peak chord (not the last remaining key).
- * Writes oscTunes and auto-offs Chord Mem.
- * A 4-note chord automatically enables OSC 4.
+ * Master: writes oscTunes and auto-offs Chord Mem. 4-note chord enables OSC 4.
+ * Ingy-6 / Multitudes: stay in mode, arm one-finger stack, solid green SVG.
  */
 export function commitChordMemoryFromNotes(notes) {
     if (!state.chordMemoryLearning || state.isPlaying) return false;
     const source = (notes?.length ? notes : learnSessionNotes);
     if (!source.length) return false;
 
-    // Leave poly playground first so osc On/Off restore, then Chord Mem writes tunes
-    if (state.keyboardPoly) setPolyMode(false);
+    if (isPolyStyleMode()) {
+        const intervals = polyChordIntervalsFromNotes(source, POLY_CHORD_MAX);
+        if (!intervals.length) return false;
+        polyChordIntervals = intervals;
+        polyChordOn = true;
+        state.chordMemoryLearning = false;
+        clearLearnSession();
+        clearHeldNotes();
+        syncChordMemUI();
+        return true;
+    }
 
     const uniqueCount = new Set(source.filter(Number.isFinite)).size;
     const intervals = intervalsFromHeldNotes(source);

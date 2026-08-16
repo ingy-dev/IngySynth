@@ -3,7 +3,10 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=227';
+import { previewStepsOnVfd } from './sequencer.js?v=241';
+import { state } from './state.js?v=113';
+import { beginMidiLearn } from './midi-learn.js?v=3';
+import { elementFor, keyFromElement, set } from './params.js?v=5';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -116,6 +119,7 @@ function attachDialReset(dial, onReset) {
     if (!dial || typeof onReset !== 'function') return;
 
     dial.addEventListener('dblclick', (e) => {
+        if (state.midiMappingMode) return;
         e.preventDefault();
         e.stopPropagation();
         onReset();
@@ -129,6 +133,7 @@ function attachDialReset(dial, onReset) {
     let moved = false;
 
     dial.addEventListener('pointerdown', (e) => {
+        if (state.midiMappingMode) return;
         if (e.button !== undefined && e.button !== 0) return;
         downX = e.clientX;
         downY = e.clientY;
@@ -143,6 +148,7 @@ function attachDialReset(dial, onReset) {
     }, true);
 
     dial.addEventListener('pointerup', (e) => {
+        if (state.midiMappingMode) return;
         if (e.button !== undefined && e.button !== 0) return;
         if (moved) {
             lastTapAt = 0;
@@ -185,9 +191,30 @@ function displayStepDecimals(step) {
     return dot < 0 ? 0 : Math.min(6, s.length - dot - 1);
 }
 
+const OSC4_CHORD_NAMES = [
+    'OCT', '5TH', 'SUS4', 'MIN', 'MIN7', 'MIN9', 'MIN11', '6ADD9', 'MAJ9', 'MAJ7', 'MAJ',
+];
+
+export function chordNameFromHarmonics(h) {
+    const n = OSC4_CHORD_NAMES.length;
+    const v = Math.max(0, Math.min(1, Number(h) || 0));
+    const i = Math.floor(v * 1.02 * n);
+    return OSC4_CHORD_NAMES[Math.max(0, Math.min(n - 1, i))];
+}
+
+function osc4ChordReadout(input) {
+    if (input?.id !== 'osc4Harmonics') return null;
+    if (!state.osc4Wavetable) return null;
+    const model = state.osc4Model;
+    if (model !== 'chord' && model !== 'chiptune' && model !== 'string_machine') return null;
+    return chordNameFromHarmonics(input.value);
+}
+
 /** Readout string from native step (display only; input keeps full precision). */
 export function formatRangeValue(input) {
     if (!input) return '';
+    const chord = osc4ChordReadout(input);
+    if (chord) return chord;
     ensureDisplayStep(input);
     const n = parseFloat(input.value);
     if (!Number.isFinite(n)) return String(input.value ?? '');
@@ -230,7 +257,7 @@ function setKnobAngle(dial, norm) {
     const angle = ANGLE_MIN + n * (ANGLE_MAX - ANGLE_MIN);
     dial.style.setProperty('--knob-angle', `${angle}deg`);
     dial.style.setProperty('--knob-norm', String(n));
-    const wrap = dial.closest?.('.synth-knob-dial-wrap');
+    const wrap = dial.closest?.('.synth-knob-dial-wrap, .mi-knob-dial-wrap');
     if (wrap) {
         wrap.style.setProperty('--knob-angle', `${angle}deg`);
         wrap.style.setProperty('--knob-norm', String(n));
@@ -258,14 +285,24 @@ export function refreshKnobDial(dial, input, valueEl = null) {
     syncDialFromInput(dial, input, valueEl);
 }
 
-function writeInputFromNorm(input, norm) {
+function writeInputFromNorm(input, norm, key) {
     const next = normToValue(input, norm);
     if (parseFloat(input.value) === next) return;
+    if (key) {
+        set(key, next);
+        return;
+    }
     input.value = String(next);
     input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-export function bindKnob(dial, input, valueEl, { onInteract } = {}) {
+/**
+ * @param {HTMLElement | null} dial
+ * @param {string | HTMLInputElement | null} inputOrKey canonical param key or range element
+ */
+export function bindKnob(dial, inputOrKey, valueEl, { onInteract } = {}) {
+    const key = typeof inputOrKey === 'string' ? inputOrKey : keyFromElement(inputOrKey);
+    const input = typeof inputOrKey === 'string' ? elementFor(inputOrKey) : inputOrKey;
     if (!dial || !input) return;
 
     ensureDisplayStep(input);
@@ -281,6 +318,7 @@ export function bindKnob(dial, input, valueEl, { onInteract } = {}) {
     };
 
     const onPointerDown = (e) => {
+        if (beginMidiLearn(e, input, dial.closest('.synth-knob') || dial)) return;
         if (e.button !== undefined && e.button !== 0) return;
         if (input.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         e.preventDefault();
@@ -303,7 +341,7 @@ export function bindKnob(dial, input, valueEl, { onInteract } = {}) {
         const deltaY = startY - e.clientY; // up = increase
         const norm = clamp(startNorm + deltaY / DRAG_PIXELS, 0, 1);
         setKnobAngle(dial, norm);
-        writeInputFromNorm(input, norm);
+        writeInputFromNorm(input, norm, key);
         dial.setAttribute('aria-valuetext', formatRangeValue(input));
         syncValueDisplay(valueEl, input);
         notify();
@@ -350,7 +388,7 @@ export function bindKnob(dial, input, valueEl, { onInteract } = {}) {
             return;
         }
         setKnobAngle(dial, norm);
-        writeInputFromNorm(input, norm);
+        writeInputFromNorm(input, norm, key);
         dial.setAttribute('aria-valuetext', formatRangeValue(input));
         syncValueDisplay(valueEl, input);
         notify();
@@ -388,8 +426,12 @@ function setSteppedIndex(dial, control, steps, index, eventName = 'change') {
     dial.setAttribute('aria-valuenow', String(idx));
     dial.setAttribute('aria-valuetext', step.label);
     if (String(control.value) !== step.value) {
-        control.value = step.value;
-        control.dispatchEvent(new Event(eventName, { bubbles: true }));
+        const key = keyFromElement(control) || control.id;
+        if (key) set(key, step.value);
+        else {
+            control.value = step.value;
+            control.dispatchEvent(new Event(eventName, { bubbles: true }));
+        }
     }
 }
 
@@ -407,6 +449,7 @@ function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
     const perStepPixels = STEPPED_DRAG_PIXELS / Math.max(1, steps.length - 1);
 
     const onPointerDown = (e) => {
+        if (beginMidiLearn(e, control, dial.closest('.synth-knob') || dial)) return;
         if (e.button !== undefined && e.button !== 0) return;
         if (control.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         e.preventDefault();
@@ -497,7 +540,7 @@ export function initKeyboardKnobs() {
             : {};
         bindKnob(
             document.getElementById(dialId),
-            document.getElementById(inputId),
+            inputId,
             valueId ? document.getElementById(valueId) : null,
             opts,
         );

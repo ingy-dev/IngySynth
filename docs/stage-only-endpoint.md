@@ -6,7 +6,7 @@ todos:
     content: "CP1: CSS default stage; Off beside Start (not MIDI row); Off hides piano/spacebar only, XY stays; Fullscreen/Escape no-op including the flag; XY CSS not gated on is-fullscreen; hide columns without inert; full ?v= graph"
     status: pending
   - id: cp2-midi-learn
-    content: "CP2: mapping pointerdown short-circuits drag; store canonical input not the dial; highlight visible host; selects need a CC apply path or are unmappable; in-session maps only"
+    content: "CP2: mapping pointerdown short-circuits drag (knobs, DIV, LFO rate, strips, Ingy-6, ADSR canvas, dial-reset); store canonical input not the dial; highlight visible host; selects are unmappable unless CC apply exists; in-session maps only"
     status: pending
   - id: cp3-drop-fullscreen
     content: "CP3: remove Fullscreen/Escape-exit/MIDI swap; keep speech and strip Escape; Off must not leave the stage; one ?v= per module"
@@ -44,9 +44,9 @@ isProject: false
 - After checkpoint 3, play the instrument in real use before checkpoint 4.
 - **Normalize the entire `?v=` import graph before any other JS change.** Live skew: `knobs.js` 100\|106\|111, `midi.js` 83\|85, `berlin.js` 33\|34, `pitch-bend.js` 81\|82, `keyboard-acid-strip.js` 9\|10. Import-string-only edits in engine files are allowed for this step; do not change engine logic.
 - Do not use `inert` on the param bus. Use `hidden` + `aria-hidden`. Verify `.click()` on hidden `#filterEnvToggle` in Chrome, Safari, and Firefox.
-- **Never put Keyboard Off inside `#keyboardControlsFieldset` or the MIDI logo row.** Controls is collapsed; MIDI lives in `#midiFieldsetHome` until JS moves it, so Off in that row can sit **under** the fixed stage on first paint. Put Off next to `#kbStartStop` (already inside `.keyboard-section`).
+- **Never put Keyboard Off inside `#keyboardControlsFieldset`, the MIDI logo row, or `.keyboard-toolbar-top`.** Controls is collapsed. MIDI lives in `#midiFieldsetHome` until JS moves it, so Off in that row can sit **under** the fixed stage on first paint. `.keyboard-toolbar-top` is already `display: none` in `keyboard-stage-mode` (`styles.css` ~2146) — Off is **already invisible in today’s fullscreen**. Put Off next to `#kbStartStop` in `.keyboard-tempo-div-row` (inside `.keyboard-section` in the **HTML**, not after `initKeyboard`).
 - **Off hides piano + computer-keys + chromatic spacebar only.** Transport, synth knobs, steps, MIDI, and **XY stay**. Do not also say “XY follows keyboard visibility.”
-- Tests that can **false-pass:** inspector `#steps` × 32; `.click()` matrix; “Start works” via hidden `#startStop`; map-select highlight with no CC apply; Fullscreen/Escape with CSS locked but `state.keyboardFullscreen` still gating XY/spacebar.
+- Tests that can **false-pass:** inspector `#steps` × 32; `.click()` matrix; “Start works” via hidden `#startStop`; map-select highlight with no CC apply; Fullscreen/Escape with CSS locked but `state.keyboardFullscreen` still gating XY/spacebar; Off present in the DOM but still inside `.keyboard-toolbar-top`; MIDI present in the DOM but still in `#midiFieldsetHome` (under the overlay until JS).
 
 ```mermaid
 flowchart LR
@@ -63,7 +63,7 @@ flowchart LR
   cp1 --> cp2 --> cp3 --> gate --> cp4 --> cp5 --> cp6 --> cp7 --> cp8 --> cp9
 ```
 
-Reviews: [first](e894934f-ab43-45d6-bf11-c583f14eb016), [second](662c3a5a-6e06-4a38-8045-134b8375d682), [third](3fbc585c-030e-450a-89ba-9a6966dfee17) (Off in MIDI row under the stage at first paint; Off vs XY contradiction; XY CSS requires `.is-fullscreen`; Fullscreen no-op must include the flag; missed `pitch-bend`/`acid-strip` `?v=`). Corrections inlined.
+Reviews: [first](e894934f-ab43-45d6-bf11-c583f14eb016), [second](662c3a5a-6e06-4a38-8045-134b8375d682), [third](3fbc585c-030e-450a-89ba-9a6966dfee17). Fourth: bindSteppedKnob / LFO RATE / `.is-fullscreen` CSS / sr-only `h1`. Fifth: MIDI in `#midiFieldsetStage` in HTML; rewrite `.keyboard-off`; pitch-bend + LFO-amount + dial-reset. Sixth: Off is already hidden in fullscreen (`.keyboard-toolbar-top { display: none }`); CP1 steps 2+3 and 2+4 are pairs (do not ship one without the other); selects are not in `setupMappingListeners`; Ingy-6 faders + ADSR canvas need the same mapping short-circuit as knobs.
 
 ---
 
@@ -97,14 +97,15 @@ Reviews: [first](e894934f-ab43-45d6-bf11-c583f14eb016), [second](662c3a5a-6e06-4
 
 **Do, in this order:**
 
-1. **Normalize every `?v=` import to one version per file** (grep the whole `js/` graph, including `pitch-bend.js` and `keyboard-acid-strip.js`). Import-string-only changes in engine files are allowed here; no engine logic.
-2. **Change Keyboard Off semantics first.** `syncVisibilityUI` currently `display:none`s `.keyboard-filter-knobs` (contains `#kbStartStop`), pitch bend, and `#keyboardControlsFieldset`, plus steps via `syncKeyboardStepsVisibilityWithKeyboard`. Off must hide **only** the piano, computer-keys board, and chromatic spacebar. Leave transport, synth knobs, steps, MIDI, XY, pitch bend. Stop calling `setKeyboardFullscreen(false)`.
-3. **Move `#keyboardVisibilityToggle` next to `#kbStartStop`** (inside `.keyboard-section` from first paint). Do **not** put it in Keyboard Controls, `.keyboard-toolbar-top`, or the MIDI logo row (`#midiFieldsetHome` is outside the stage until JS relocates it).
-4. **Default the stage in CSS/HTML.** `body { background: #050805; padding: 0; overflow: hidden }` and drop the wood URL in the **same** CSS change. Make `.keyboard-section` use current fullscreen rules (`position: fixed; inset: 0; overflow-y: auto; …`) as default — keep **internal** `overflow-y: auto` so tall panels still scroll under a clipped body. Put `keyboard-stage-mode` / `is-fullscreen` on the markup. Override `.keyboard-section.keyboard-off { background: transparent }`. **One title rule:** keep a single visually hidden / `sr-only` `h1` (add that CSS; it does not exist today). Do not also `hidden`+`aria-hidden` that `h1`. Rewrite `.keyboard-xy-fieldset { display: none }` so XY is not gated on `.is-fullscreen` (`styles.css` ~3174). Optional: `100dvh` + safe-area for iOS.
-5. **Hide, do not inert, the bus:** `.header-grid`, `#mobileStartStop`, swipe dots, `#synthContainer` → `hidden` + `aria-hidden`. Do not hide the sr-only `h1`. Parent `hidden` does **not** remove `#steps`. `#mobileStartStop` `hidden` is safe; **deleting** it is not (`togglePlay` has no `?.`).
-6. **Lock Fullscreen and Escape as true no-ops in CP1** — not CSS/slots only. Clicks/Escape must not flip `state.keyboardFullscreen` (that flag still feeds XY/spacebar until ungated). Or remove those listeners now. Dead Fullscreen button in collapsed Controls until CP3 is fine.
-7. Ungate JS: `whiteKeyPx()` always 52; spacebar follows keyboard visibility (Off hides it); XY stays unless its own `[hidden]`; MIDI always in stage slot.
-8. **Disable [`js/mobile.js`](js/mobile.js) swipe and the document `ArrowLeft/Right` `preventDefault`** (≤768px).
+1. **Normalize every `?v=` import to one version per file** (grep the whole `js/` graph, including `pitch-bend.js` and `keyboard-acid-strip.js`). This is not cosmetic: `main.js` side-effect-imports `midi.js?v=85` while `controls.js` uses `?v=83` (two MIDI module instances); `berlin.js` 33 vs 34 and `keyboard-acid-strip.js` 9 vs 10 fork live audio helpers. Import-string-only changes in engine files are allowed here; no engine logic.
+2. **Change Keyboard Off semantics first.** `syncVisibilityUI` currently `display:none`s `.keyboard-filter-knobs` (contains `#kbStartStop`), pitch bend, and `#keyboardControlsFieldset`, plus steps via `syncKeyboardStepsVisibilityWithKeyboard`. Off must hide **only** the piano, computer-keys board, and chromatic spacebar. Leave transport, synth knobs, steps, MIDI, XY, pitch bend. Stop calling `setKeyboardFullscreen(false)` (that also runs `syncMidiFieldsetSlot(false)` and teleports MIDI back under the overlay).
+3. **Move `#keyboardVisibilityToggle` next to `#kbStartStop` in the HTML** (`.keyboard-tempo-div-row`). That row is already Start, Rev, Tempo, DIV, STEPS, DISP — use a compact `kb-step-btn`, not a wide `.pushable`, and smoke **phone wrap**. **Do not leave it inside `.keyboard-toolbar-top`** — `body.keyboard-stage-mode .keyboard-toolbar-top { display: none }` (`styles.css` ~2146). Do **not** put it in Keyboard Controls or the MIDI logo row. **Pair with step 2:** moving Off into `.keyboard-filter-knobs` while Off still `display:none`s that row makes Off hide itself.
+4. **Put `#midiFieldsetHome` inside `#midiFieldsetStage` in the HTML** (not an empty slot filled after `initKeyboard`). Today it sits above `.keyboard-section`; a CSS-default fixed stage covers it until JS runs — first paint has no MIDI. **Pair with step 2:** HTML-stage MIDI + leftover Off→exit-fullscreen still teleports MIDI under the overlay.
+5. **Default the stage in CSS/HTML.** `body { background: #050805; padding: 0; overflow: hidden }` and drop the wood URL in the **same** CSS change. Make `.keyboard-section` use current fullscreen rules (`position: fixed; inset: 0; overflow-y: auto; …`) as default. Put `keyboard-stage-mode` / `is-fullscreen` on the markup. **Rewrite `.keyboard-section.keyboard-off`** (`styles.css` ~2224): it currently sets `background: transparent; padding: 0` because Off used to dump you onto wood with knobs hidden. If Off keeps transport/knobs, that rule will crush remaining chrome. Hide piano/ckb/spacebar only. **One title rule:** sr-only `h1` (add the CSS). Lift **all** `.is-fullscreen` rules: piano (~2204), `.legend-hex` (~2356), spacebar (~2656), computer-keys board (~7987), XY (~3174). Bump `styles.css?v=` and `js/main.js?v=` in [`index.html`](index.html). Optional: `100dvh` + safe-area.
+6. **Hide, do not inert, the bus:** `.header-grid`, `#mobileStartStop`, swipe dots, `#synthContainer` → `hidden` + `aria-hidden`. Do not hide the sr-only `h1`.
+7. **Lock Fullscreen and Escape as true no-ops in CP1** — including `state.keyboardFullscreen`. Dead Fullscreen button in collapsed Controls until CP3 is fine.
+8. Ungate JS: `whiteKeyPx()` always 52; spacebar follows keyboard visibility (Off hides it); XY stays unless its own `[hidden]`; MIDI always in stage slot (and already there in HTML).
+9. **Disable [`js/mobile.js`](js/mobile.js) swipe and the document `ArrowLeft/Right` `preventDefault`** (≤768px).
 
 Engine **logic** stays untouched (import `?v=` strings excepted).
 
@@ -113,8 +114,10 @@ Engine **logic** stays untouched (import `?v=` strings excepted).
 **Smoke:**
 
 - Boot + core play; first paint has no wood
-- Keyboard Off / On **without** expanding Keyboard Controls; Start and XY still visible while Off
+- Keyboard Off / On **without** expanding Keyboard Controls; Start and XY still visible while Off; Off must **not** zero stage padding (rewrite `.keyboard-off`); Off must **not** be a child of `.keyboard-toolbar-top`
 - Fullscreen **and Escape**: zero layout / MIDI-slot / XY / spacebar change
+- First paint: MIDI visible on the stage (not waiting for JS relocate)
+- Space with Off: still starts/stops (global Space in `controls.js` when `keyboardVisible` is false)
 - Programmatic click: Poly on (`filterEnvToggle.click()`), acid, chorus I, stage Acc/On
 - Phone: `#kbStartStop`; arrows adjust knobs, do not swipe
 - Tab: hidden column sliders not focused; stage dials are
@@ -137,9 +140,9 @@ Engine **logic** stays untouched (import `?v=` strings excepted).
 - Store `state.currentMappingControl` / map `element` as the **canonical range or button**, not the dial. CC apply only writes `input[type=range]` ([`js/midi.js`](js/midi.js) ~279). A dial in that slot = silent CC.
 - Highlight / `midi-mapped` on the visible `.synth-knob` or button. Today `.midi-mapping-active .control:hover` only styles main-column `.control` (`styles.css` ~995). Stage hosts will not show a learn affordance without new CSS. If the map `element` is a hidden range, both `midi-highlight` and `midi-mapped` are invisible.
 - Exclude `#keyboardVisibilityToggle` from `setupMappingListeners` if it stays `.pushable`.
-- Cover every `bindKnob` site, LFO rate, osc knobs, MI/acid/Berlin dials.
+- Cover every `bindKnob` site **and** `bindSteppedKnob` (DIV) **and** LFO RATE (`js/lfo-rate.js` ~261) **and** pitch-bend strip (`js/pitch-bend.js` ~116) **and** LFO amount strip (`js/lfo-strip.js` ~267) **and** Ingy-6 fader slots (`js/keyboard-ingy6-panel.js` ~87) **and** ADSR canvases (`js/visualizers.js` ~457). Strips/canvas/faders are not `.synth-knob`; decide a canonical key or mark unmappable — do not silently fail (learn must not also scrub). `attachDialReset` also listens `pointerdown` capture (`js/knobs.js` ~132); mapping mode must not double-tap-reset.
 - `.kb-step-btn`: map to the mirrored main pushable, or label unmappable — do not silently fail.
-- **Selects (`#delayTime`, noise type, unison voices):** CC apply has **no select branch**. Either add note/CC → option apply, or mark selects unmappable in CP2. Highlight-only is a false pass.
+- **Selects (`#delayTime` / `#kbDelayTimeSelect`, noise type, unison voices):** not in `setupMappingListeners` today (only `input[type=range]` and `button.pushable`). CC apply also has **no select branch**. Cheap CP2: mark unmappable. Do not add learn-highlight on a select that a CC cannot change.
 - Maps are in-memory only. No reload test.
 
 **Done when:** Mapping highlight is on the widget; a CC moves that **sound**; the knob does not scrub while learning.
@@ -156,7 +159,7 @@ Engine **logic** stays untouched (import `?v=` strings excepted).
 
 **Do:** Remove the Fullscreen button and leftover listeners. Collapse dual CSS **without** dropping `.keyboard-section { overflow-y: auto }`. Drop `WHITE_KEY_PX_NORMAL`. **Keep** Escape for speech-rec, pitch-bend center, LFO strip zero.
 
-**Done when:** Those product controls are gone. Off only hides the piano.
+**Done when:** Those product controls are gone. Off still hides **piano + computer-keys + spacebar only** (same as CP1), not the whole performance row.
 
 **Smoke:** Boot + core play. Escape does not change layout; speech modal still closes; bend/LFO-strip Escape still center/zero. No Fullscreen button. No wood flash. Off stays on `#050805` with Start still visible.
 
@@ -226,7 +229,7 @@ Engine **logic** stays untouched (import `?v=` strings excepted).
 4. ADSR canvases: kb IDs only, store-backed.
 5. Oscilloscope: `#kbOscilloscope` only (today both canvases are painted every frame).
 6. **Null-safe transport before delete:** [`js/sequencer.js`](js/sequencer.js) `togglePlay` does `mobileStartStopButton.querySelector('.front')` with **no** `?.` — deleting `#mobileStartStop` or `#startStop` throws on Start. Fix that first.
-7. Delete `#synthContainer`, header scope, `h1`, swipe dots, `#mobileStartStop`, [`js/mobile.js`](js/mobile.js). Remove facade DOM sync. `controls.js` must not attach to missing IDs.
+7. Delete `#synthContainer`, header scope, swipe dots, `#mobileStartStop`, [`js/mobile.js`](js/mobile.js). **Keep** the sr-only `h1`. Remove facade DOM sync. Null-safe [`js/controls.js`](js/controls.js) `mobileStartStopButton.addEventListener` (~151) as well as `togglePlay`. `controls.js` must not attach to missing classic IDs.
 8. Grep: zero duplicate `?v=` in the import graph.
 
 **Smoke after delete:** No null TypeError; inspector has no `#cutoff` / `#steps` / `#startStop`; full kit; old in-session maps if still open; XY list sane; automation playback; phone.

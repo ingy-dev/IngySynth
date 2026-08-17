@@ -3,10 +3,12 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=241';
-import { state } from './state.js?v=113';
-import { beginMidiLearn } from './midi-learn.js?v=3';
-import { elementFor, keyFromElement, set } from './params.js?v=5';
+import { previewStepsOnVfd } from './sequencer.js?v=247';
+import { state } from './state.js?v=114';
+import { beginMidiLearn } from './midi-learn.js?v=6';
+import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=8';
+import { getParam } from './param-catalog.js?v=1';
+import { stepTuneBounds } from './step-tune-range.js?v=9';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -88,25 +90,75 @@ function clamp(n, min, max) {
     return Math.min(max, Math.max(min, n));
 }
 
-function canResetInput(input) {
-    if (!input || input.disabled) return false;
-    const id = input.id || '';
-    if (id && RESET_EXCLUDE_IDS.has(id)) return false;
+function canResetKey(key) {
+    if (!key || RESET_EXCLUDE_IDS.has(key)) return false;
     return true;
 }
 
+function canResetInput(input) {
+    if (!input || input.disabled) return false;
+    const key = keyFromElement(input) || input.id || '';
+    if (key && RESET_EXCLUDE_IDS.has(key)) return false;
+    return true;
+}
+
+function currentParamValue(key, input) {
+    if (key) {
+        const n = getNumber(key, NaN);
+        if (Number.isFinite(n)) return n;
+        const v = get(key);
+        if (v != null && v !== '') return v;
+    }
+    if (input) {
+        const n = parseFloat(input.value);
+        if (Number.isFinite(n)) return n;
+        return input.value;
+    }
+    return 0;
+}
+
+function rangeBounds(key, input) {
+    if (key && key.startsWith('step-slider-')) {
+        return stepTuneBounds(getNumber(key, 0));
+    }
+    const spec = key ? getParam(key) : null;
+    if (spec?.type === 'range') {
+        return { min: spec.min, max: spec.max, step: spec.step || 1 };
+    }
+    if (input) {
+        return {
+            min: parseFloat(input.min),
+            max: parseFloat(input.max),
+            step: parseFloat(input.step) || parseFloat(input.dataset?.displayStep) || 1,
+        };
+    }
+    return { min: 0, max: 1, step: 0.01 };
+}
+
 /**
- * Snap a range/select back to its HTML initial value and notify listeners.
+ * Snap a range/select back to catalog default (or HTML defaultValue for Berlin).
  * @returns {boolean} true if value changed
  */
-export function resetInputToDefault(input, { eventName = 'input' } = {}) {
-    if (!canResetInput(input)) return false;
-    const next = input.defaultValue;
-    if (String(input.value) === String(next)) return false;
-    input.value = next;
-    input.dispatchEvent(new Event(eventName, { bubbles: true }));
+export function resetInputToDefault(input, { eventName = 'input', key: keyOpt } = {}) {
+    const key = keyOpt
+        || (typeof input === 'string' ? input : (input ? (keyFromElement(input) || input.id) : null));
+    const spec = key ? getParam(key) : null;
+    if (key && spec && spec.type !== 'ratch') {
+        if (!canResetKey(key)) return false;
+        const cur = currentParamValue(key, typeof input === 'string' ? null : input);
+        const next = spec.default;
+        if (spec.type === 'range' && parseFloat(cur) === next) return false;
+        if (spec.type !== 'range' && String(cur) === String(next)) return false;
+        return set(key, next);
+    }
+    const el = typeof input === 'string' ? null : input;
+    if (!canResetInput(el)) return false;
+    const next = el.defaultValue;
+    if (String(el.value) === String(next)) return false;
+    el.value = next;
+    el.dispatchEvent(new Event(eventName, { bubbles: true }));
     if (eventName !== 'change') {
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
     }
     return true;
 }
@@ -227,12 +279,25 @@ export function formatRangeValue(input) {
     return snapped.toFixed(decimals);
 }
 
+function valueToNormFromRange(min, max, value) {
+    if (max === min) return 0;
+    return clamp((value - min) / (max - min), 0, 1);
+}
+
 function valueToNorm(input) {
     const min = parseFloat(input.min);
     const max = parseFloat(input.max);
     const value = parseFloat(input.value);
-    if (max === min) return 0;
-    return clamp((value - min) / (max - min), 0, 1);
+    return valueToNormFromRange(min, max, value);
+}
+
+function normToValueFromRange(min, max, step, norm) {
+    const raw = min + clamp(norm, 0, 1) * (max - min);
+    if (step > 0 && Number.isFinite(step)) {
+        const snapped = Math.round((raw - min) / step) * step + min;
+        return clamp(snapped, min, max);
+    }
+    return raw;
 }
 
 function normToValue(input, norm) {
@@ -243,13 +308,24 @@ function normToValue(input, norm) {
     const step = (Number.isFinite(liveStep) && liveStep > 0)
         ? liveStep
         : (parseFloat(input.dataset.displayStep) || 1);
-    const raw = min + clamp(norm, 0, 1) * (max - min);
-    // Snap to step when step is meaningful
-    if (step > 0 && Number.isFinite(step)) {
-        const snapped = Math.round((raw - min) / step) * step + min;
-        return clamp(snapped, min, max);
+    return normToValueFromRange(min, max, step, norm);
+}
+
+function formatParamReadout(key, value, input) {
+    if (key === 'osc4Harmonics' && input) {
+        const chord = osc4ChordReadout(input);
+        if (chord) return chord;
     }
-    return raw;
+    const spec = key ? getParam(key) : null;
+    const n = typeof value === 'number' ? value : parseFloat(value);
+    const step = spec?.step || (input ? parseFloat(input.dataset?.displayStep || input.step) : 1) || 1;
+    const min = spec?.min ?? (input ? parseFloat(input.min) : 0);
+    const base = Number.isFinite(min) ? min : 0;
+    if (!Number.isFinite(n)) return String(value ?? '');
+    const snapped = Math.round((n - base) / step) * step + base;
+    const decimals = displayStepDecimals(step);
+    if (decimals <= 0) return String(Math.round(snapped));
+    return snapped.toFixed(decimals);
 }
 
 function setKnobAngle(dial, norm) {
@@ -285,15 +361,32 @@ export function refreshKnobDial(dial, input, valueEl = null) {
     syncDialFromInput(dial, input, valueEl);
 }
 
-function writeInputFromNorm(input, norm, key) {
-    const next = normToValue(input, norm);
-    if (parseFloat(input.value) === next) return;
+function writeFromNorm(key, input, norm) {
+    const { min, max, step } = rangeBounds(key, input);
+    const next = input && !key
+        ? normToValue(input, norm)
+        : normToValueFromRange(min, max, step, norm);
     if (key) {
         set(key, next);
-        return;
+        return next;
     }
-    input.value = String(next);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    if (input?.isConnected && parseFloat(input.value) !== next) {
+        input.value = String(next);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return next;
+}
+
+function syncDialFromKey(dial, key, input, valueEl) {
+    const { min, max } = rangeBounds(key, input);
+    const value = parseFloat(currentParamValue(key, input));
+    const norm = valueToNormFromRange(min, max, Number.isFinite(value) ? value : min);
+    setKnobAngle(dial, norm);
+    dial.setAttribute('aria-valuemin', String(min));
+    dial.setAttribute('aria-valuemax', String(max));
+    const text = formatParamReadout(key, Number.isFinite(value) ? value : min, input);
+    dial.setAttribute('aria-valuetext', text);
+    if (valueEl) valueEl.textContent = text;
 }
 
 /**
@@ -302,31 +395,45 @@ function writeInputFromNorm(input, norm, key) {
  */
 export function bindKnob(dial, inputOrKey, valueEl, { onInteract } = {}) {
     const key = typeof inputOrKey === 'string' ? inputOrKey : keyFromElement(inputOrKey);
-    const input = typeof inputOrKey === 'string' ? elementFor(inputOrKey) : inputOrKey;
-    if (!dial || !input) return;
+    const input = typeof inputOrKey === 'string'
+        ? connectedElementFor(inputOrKey)
+        : (inputOrKey && inputOrKey.isConnected ? inputOrKey : null);
+    if (!dial || (!key && !input)) return;
 
-    ensureDisplayStep(input);
-    syncDialFromInput(dial, input, valueEl);
+    if (key && key.startsWith('step-slider-') && input) {
+        const bounds = stepTuneBounds(getNumber(key, 0));
+        input.min = String(bounds.min);
+        input.max = String(bounds.max);
+    }
+
+    if (input) ensureDisplayStep(input);
+    if (key) syncDialFromKey(dial, key, input, valueEl);
+    else syncDialFromInput(dial, input, valueEl);
 
     let dragging = false;
     let startY = 0;
     let startNorm = 0;
     let activePointerId = null;
 
+    const liveInput = () => (key ? connectedElementFor(key) : (input?.isConnected ? input : null));
+
     const notify = () => {
-        if (typeof onInteract === 'function') onInteract(input.value);
+        if (typeof onInteract !== 'function') return;
+        onInteract(String(currentParamValue(key, liveInput())));
     };
 
     const onPointerDown = (e) => {
-        if (beginMidiLearn(e, input, dial.closest('.synth-knob') || dial)) return;
+        if (beginMidiLearn(e, key || input, dial.closest('.synth-knob') || dial)) return;
         if (e.button !== undefined && e.button !== 0) return;
-        if (input.disabled || dial.getAttribute('aria-disabled') === 'true') return;
+        const el = liveInput();
+        if (el?.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         e.preventDefault();
         e.stopPropagation();
         dragging = true;
         activePointerId = e.pointerId;
         startY = e.clientY;
-        startNorm = valueToNorm(input);
+        const { min, max } = rangeBounds(key, el);
+        startNorm = valueToNormFromRange(min, max, parseFloat(currentParamValue(key, el)));
         dial.classList.add('active');
         notify();
         try {
@@ -338,12 +445,14 @@ export function bindKnob(dial, inputOrKey, valueEl, { onInteract } = {}) {
         if (!dragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
         e.preventDefault();
         e.stopPropagation();
-        const deltaY = startY - e.clientY; // up = increase
+        const deltaY = startY - e.clientY;
         const norm = clamp(startNorm + deltaY / DRAG_PIXELS, 0, 1);
         setKnobAngle(dial, norm);
-        writeInputFromNorm(input, norm, key);
-        dial.setAttribute('aria-valuetext', formatRangeValue(input));
-        syncValueDisplay(valueEl, input);
+        const el = liveInput();
+        const next = writeFromNorm(key, el, norm);
+        const text = formatParamReadout(key, next, el);
+        dial.setAttribute('aria-valuetext', text);
+        if (valueEl) valueEl.textContent = text;
         notify();
     };
 
@@ -361,17 +470,24 @@ export function bindKnob(dial, inputOrKey, valueEl, { onInteract } = {}) {
     dial.addEventListener('pointercancel', endDrag);
     dial.addEventListener('lostpointercapture', endDrag);
 
-    // Keep knob in sync when Filter panel / XY pad / sequencer slider change
-    input.addEventListener('input', () => {
-        if (dragging) return;
-        syncDialFromInput(dial, input, valueEl);
-    });
+    if (key) {
+        subscribe(key, () => {
+            if (dragging) return;
+            syncDialFromKey(dial, key, liveInput(), valueEl);
+        });
+    } else if (input) {
+        input.addEventListener('input', () => {
+            if (dragging) return;
+            syncDialFromInput(dial, input, valueEl);
+        });
+    }
 
-    // Keyboard fine control when focused
     dial.addEventListener('keydown', (e) => {
-        if (input.disabled || dial.getAttribute('aria-disabled') === 'true') return;
+        if (liveInput()?.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         const stepNorm = e.shiftKey ? 0.05 : 0.01;
-        let norm = valueToNorm(input);
+        const el = liveInput();
+        const { min, max } = rangeBounds(key, el);
+        let norm = valueToNormFromRange(min, max, parseFloat(currentParamValue(key, el)));
         if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
             e.preventDefault();
             norm = clamp(norm + stepNorm, 0, 1);
@@ -388,28 +504,38 @@ export function bindKnob(dial, inputOrKey, valueEl, { onInteract } = {}) {
             return;
         }
         setKnobAngle(dial, norm);
-        writeInputFromNorm(input, norm, key);
-        dial.setAttribute('aria-valuetext', formatRangeValue(input));
-        syncValueDisplay(valueEl, input);
+        const next = writeFromNorm(key, el, norm);
+        const text = formatParamReadout(key, next, el);
+        dial.setAttribute('aria-valuetext', text);
+        if (valueEl) valueEl.textContent = text;
         notify();
     });
 
     attachDialReset(dial, () => {
-        if (!resetInputToDefault(input)) return;
-        syncDialFromInput(dial, input, valueEl);
+        if (key) {
+            if (!canResetKey(key)) return;
+            const spec = getParam(key);
+            if (!spec || spec.type === 'ratch') return;
+            if (!set(key, spec.default)) return;
+        } else if (!resetInputToDefault(input)) {
+            return;
+        }
+        const el = liveInput();
+        if (key) syncDialFromKey(dial, key, el, valueEl);
+        else if (el) syncDialFromInput(dial, el, valueEl);
         notify();
     });
 }
 
-function nearestSteppedIndex(control, steps) {
-    const exact = steps.findIndex((s) => s.value === String(control.value));
+function nearestSteppedIndexFromValue(value, steps) {
+    const exact = steps.findIndex((s) => s.value === String(value));
     if (exact >= 0) return exact;
-    const value = parseFloat(control.value);
-    if (!Number.isFinite(value) || steps.length === 0) return 0;
+    const n = parseFloat(value);
+    if (!Number.isFinite(n) || steps.length === 0) return 0;
     let best = 0;
     let bestDist = Infinity;
     steps.forEach((s, i) => {
-        const dist = Math.abs(parseFloat(s.value) - value);
+        const dist = Math.abs(parseFloat(s.value) - n);
         if (dist < bestDist) {
             bestDist = dist;
             best = i;
@@ -418,29 +544,30 @@ function nearestSteppedIndex(control, steps) {
     return best;
 }
 
-function setSteppedIndex(dial, control, steps, index, eventName = 'change') {
+function setSteppedIndex(dial, key, control, steps, index) {
     const idx = clamp(Math.round(index), 0, steps.length - 1);
     const step = steps[idx];
     const norm = steps.length === 1 ? 0 : idx / (steps.length - 1);
     setKnobAngle(dial, norm);
     dial.setAttribute('aria-valuenow', String(idx));
     dial.setAttribute('aria-valuetext', step.label);
-    if (String(control.value) !== step.value) {
-        const key = keyFromElement(control) || control.id;
+    const cur = key ? String(get(key) ?? '') : String(control?.value ?? '');
+    if (cur !== step.value) {
         if (key) set(key, step.value);
-        else {
+        else if (control?.isConnected) {
             control.value = step.value;
-            control.dispatchEvent(new Event(eventName, { bubbles: true }));
+            control.dispatchEvent(new Event('change', { bubbles: true }));
         }
     }
 }
 
-function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
+function bindSteppedKnob({ dialId, controlId, steps }) {
     const dial = document.getElementById(dialId);
-    const control = document.getElementById(controlId);
-    if (!dial || !control || !steps?.length) return;
+    const key = controlId;
+    const control = connectedElementFor(key);
+    if (!dial || !steps?.length) return;
 
-    setSteppedIndex(dial, control, steps, nearestSteppedIndex(control, steps), eventName);
+    setSteppedIndex(dial, key, control, steps, nearestSteppedIndexFromValue(get(key) ?? control?.value, steps));
 
     let dragging = false;
     let startY = 0;
@@ -449,15 +576,15 @@ function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
     const perStepPixels = STEPPED_DRAG_PIXELS / Math.max(1, steps.length - 1);
 
     const onPointerDown = (e) => {
-        if (beginMidiLearn(e, control, dial.closest('.synth-knob') || dial)) return;
+        if (beginMidiLearn(e, key, dial.closest('.synth-knob') || dial)) return;
         if (e.button !== undefined && e.button !== 0) return;
-        if (control.disabled || dial.getAttribute('aria-disabled') === 'true') return;
+        if (connectedElementFor(key)?.disabled || dial.getAttribute('aria-disabled') === 'true') return;
         e.preventDefault();
         e.stopPropagation();
         dragging = true;
         activePointerId = e.pointerId;
         startY = e.clientY;
-        startIndex = nearestSteppedIndex(control, steps);
+        startIndex = nearestSteppedIndexFromValue(get(key), steps);
         dial.classList.add('active');
         try {
             dial.setPointerCapture(e.pointerId);
@@ -468,8 +595,8 @@ function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
         if (!dragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
         e.preventDefault();
         e.stopPropagation();
-        const deltaY = startY - e.clientY; // up = increase
-        setSteppedIndex(dial, control, steps, startIndex + deltaY / perStepPixels, eventName);
+        const deltaY = startY - e.clientY;
+        setSteppedIndex(dial, key, connectedElementFor(key), steps, startIndex + deltaY / perStepPixels);
     };
 
     const endDrag = (e) => {
@@ -478,7 +605,7 @@ function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
         dragging = false;
         activePointerId = null;
         dial.classList.remove('active');
-        setSteppedIndex(dial, control, steps, nearestSteppedIndex(control, steps), eventName);
+        setSteppedIndex(dial, key, connectedElementFor(key), steps, nearestSteppedIndexFromValue(get(key), steps));
     };
 
     dial.addEventListener('pointerdown', onPointerDown);
@@ -487,16 +614,14 @@ function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
     dial.addEventListener('pointercancel', endDrag);
     dial.addEventListener('lostpointercapture', endDrag);
 
-    const syncFromControl = () => {
+    subscribe(key, () => {
         if (dragging) return;
-        setSteppedIndex(dial, control, steps, nearestSteppedIndex(control, steps), eventName);
-    };
-    control.addEventListener('change', syncFromControl);
-    control.addEventListener('input', syncFromControl);
+        setSteppedIndex(dial, key, connectedElementFor(key), steps, nearestSteppedIndexFromValue(get(key), steps));
+    });
 
     dial.addEventListener('keydown', (e) => {
-        if (control.disabled || dial.getAttribute('aria-disabled') === 'true') return;
-        let idx = nearestSteppedIndex(control, steps);
+        if (connectedElementFor(key)?.disabled || dial.getAttribute('aria-disabled') === 'true') return;
+        let idx = nearestSteppedIndexFromValue(get(key), steps);
         if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
             e.preventDefault();
             idx += 1;
@@ -512,13 +637,7 @@ function bindSteppedKnob({ dialId, controlId, steps, eventName = 'change' }) {
         } else {
             return;
         }
-        setSteppedIndex(dial, control, steps, idx, eventName);
-    });
-
-    attachDialReset(dial, () => {
-        if (!canResetInput(control)) return;
-        if (!resetInputToDefault(control, { eventName })) return;
-        setSteppedIndex(dial, control, steps, nearestSteppedIndex(control, steps), eventName);
+        setSteppedIndex(dial, key, connectedElementFor(key), steps, idx);
     });
 }
 

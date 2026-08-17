@@ -2,14 +2,14 @@
 // Knobs are wired in knobs.js; chorus, delay, compressor, ring, distortion
 // write params (same keys as acid / Multitudes).
 
-import { state } from './state.js?v=113';
-import { bindKnob, formatRangeValue } from './knobs.js?v=113';
+import { state } from './state.js?v=114';
+import { bindKnob, formatRangeValue } from './knobs.js?v=120';
 import {
     elementFor,
     subscribe,
     wireSelect,
     wireToggle,
-} from './params.js?v=5';
+} from './params.js?v=8';
 
 const syncFns = [];
 
@@ -21,8 +21,16 @@ function syncDialDisabled(dial, enabled) {
 }
 
 function inputEnabled(key) {
+    if (key === 'delayTime' || key === 'delayAmount') return !!state.delayEnabled;
+    if (key === 'reverbSize' || key === 'reverbDecay' || key === 'reverbDamp' || key === 'reverbAmount') {
+        return !!state.reverbEnabled;
+    }
+    if (key === 'compThreshold') return !!state.compressorEnabled;
+    if (key === 'distortion') return !!state.distortionEnabled;
+    if (key === 'bitDepth') return !!state.bitcrusherEnabled;
+    if (key === 'ringMod') return !!state.ringModEnabled;
     const el = elementFor(key);
-    return el ? !el.disabled : true;
+    return el ? !el.disabled : false;
 }
 
 function wireChorusToggle(kbId, key) {

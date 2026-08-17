@@ -1,32 +1,32 @@
 // Kb-only 6-voice polyphonic playground (shared filter, per-voice amp).
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
-import { state, OSC_COUNT } from './state.js?v=113';
-import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=5';
-import { semitonesToFrequency } from './tuning.js?v=77';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=80';
-import { refreshFilterInputDrive } from './filter-drive.js?v=20';
+import { state, OSC_COUNT } from './state.js?v=114';
+import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=8';
+import { semitonesToFrequency } from './tuning.js?v=79';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=82';
+import { refreshFilterInputDrive } from './filter-drive.js?v=24';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=98';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=154';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=11';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=18';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=80';
+} from './visualizers.js?v=100';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=158';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=25';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=86';
 import {
     createOscSource,
     fadeStopOsc,
     softStartVoiceGain,
     setOsc4MorphLiveHook,
-} from './osc-source.js?v=86';
+} from './osc-source.js?v=90';
 import {
     isPolyChordMemoryOn,
     getPolyChordIntervals,
     clearPolyChordMemory,
-} from './chord-memory.js?v=15';
+} from './chord-memory.js?v=19';
 
 /** Local bend helper — avoid circular import with pitch-bend.js. */
 function bentFrequency(baseFreq) {
@@ -106,18 +106,11 @@ function mainOscToggle(oscIndex) {
 
 function setOscVolUi(oscIndex, value) {
     const clamped = Math.max(0, Math.min(1, Number(value) || 0));
+    set(`osc-vol-${oscIndex}`, clamped);
     const main = document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`);
     if (main) {
-        main.value = String(clamped);
         const display = main.nextElementSibling;
-        if (display?.classList?.contains('osc-vol-value')) {
-            display.textContent = clamped.toFixed(2);
-        } else if (display) {
-            display.textContent = clamped.toFixed(2);
-        }
-        try {
-            main.dispatchEvent(new Event('input', { bubbles: true }));
-        } catch (_) { /* ignore */ }
+        if (display) display.textContent = clamped.toFixed(2);
     }
     const kbVal = document.getElementById(`kbOsc${oscIndex + 1}VolValue`);
     if (kbVal) kbVal.textContent = clamped.toFixed(2);
@@ -130,10 +123,12 @@ function readOscVol(oscIndex) {
 function setOscEnabled(oscIndex, enabled) {
     const want = !!enabled;
     if (!!state.oscStates[oscIndex] === want) {
+        set(`osc-toggle-${oscIndex}`, want);
         syncOscToggleUi(oscIndex);
         return;
     }
     state.oscStates[oscIndex] = want;
+    set(`osc-toggle-${oscIndex}`, want);
     syncOscToggleUi(oscIndex);
     if (state.audioContext && state.oscGains?.[oscIndex]) {
         const volume = want ? getOscVol(oscIndex, POLY_DEFAULT_OSC_VOL) : 0;
@@ -222,9 +217,6 @@ function setRingModEnabled(on) {
 }
 
 function setClassicUnisonEnabled(on) {
-    // #region agent log
-    fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e6a350'},body:JSON.stringify({sessionId:'e6a350',runId:'post-fix',hypothesisId:'A',location:'poly-voice.js:setClassicUnisonEnabled',message:'setClassicUnisonEnabled',data:{want:!!on,before:!!state.unisonEnabled,multitudes:!!state.keyboardMultitudes,poly:!!state.keyboardPoly,phaseReset:!!state.phaseResetEnabled},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     state.unisonEnabled = !!on;
     const toggle = document.getElementById('unisonToggle');
     if (toggle) {
@@ -1142,11 +1134,7 @@ function readRangeValue(id, fallback = 0) {
 }
 
 function setRangeValue(id, value) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const next = String(value);
-    if (el.value !== next) el.value = next;
-    el.dispatchEvent(new Event('input', { bubbles: true }));
+    set(id, value);
 }
 
 function readOscTune(oscIndex) {
@@ -1155,52 +1143,58 @@ function readOscTune(oscIndex) {
 }
 
 function setOscTuneUi(oscIndex, semis) {
-    const el = document.querySelector(`.osc-tune[data-osc="${oscIndex}"]`);
-    if (!el) return;
     const clamped = Math.max(-12, Math.min(12, Math.round(semis)));
-    if (parseInt(el.value, 10) === clamped) {
-        state.oscTunes[oscIndex] = clamped;
-        return;
-    }
-    el.value = String(clamped);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
+    if (state.oscTunes) state.oscTunes[oscIndex] = clamped;
+    set(`osc-tune-${oscIndex}`, clamped);
 }
 
 function chorusButtonOn(id) {
-    const el = document.getElementById(id);
-    return !!(el && !el.classList.contains('off'));
+    return !!get(id);
 }
 
 function setChorusButton(id, wantOn) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const isOn = !el.classList.contains('off');
-    if (isOn !== !!wantOn) el.click();
+    set(id, !!wantOn);
 }
 
 function setFilterEnvEnabled(wantOn) {
-    if (!!state.filterEnvState === !!wantOn) return;
-    document.getElementById('filterEnvToggle')?.click();
+    const want = !!wantOn;
+    set('filterEnvToggle', want);
+    if (!!state.filterEnvState === want) return;
+    state.filterEnvState = want;
+    syncKeyboardFilterEnvFromMain();
+    if (!state.audioContext) return;
+    const now = state.audioContext.currentTime;
+    const actualCutoff = Math.max(40, getNumber('cutoff', 1000));
+    updateFilterCutoffRange(actualCutoff, now);
+    if (!want && state.filterEnvGain) {
+        state.filterEnvGain.gain.cancelScheduledValues(now);
+        state.filterEnvGain.gain.setValueAtTime(0, now);
+        state.filterEnvelopeHeld = false;
+    }
 }
+
+const AMP_TO_FILTER = [
+    ['attack', 'filterAttack'],
+    ['decay', 'filterDecay'],
+    ['sustain', 'filterSustain'],
+    ['release', 'filterRelease'],
+];
 
 function mirrorAmpAdsrToFilter() {
-    setRangeValue('filterAttack', readRangeValue('attack', 0));
-    setRangeValue('filterDecay', readRangeValue('decay', 0.5));
-    setRangeValue('filterSustain', readRangeValue('sustain', 0.5));
-    setRangeValue('filterRelease', readRangeValue('release', 1));
-}
-
-function onAmpAdsrInputWhilePoly() {
-    if (!state.keyboardPoly) return;
-    mirrorAmpAdsrToFilter();
+    AMP_TO_FILTER.forEach(([ampKey, filterKey]) => {
+        set(filterKey, get(ampKey));
+    });
 }
 
 let ampAdsrMirrorBound = false;
 function bindAmpAdsrMirror() {
     if (ampAdsrMirrorBound) return;
     ampAdsrMirrorBound = true;
-    ['attack', 'decay', 'sustain', 'release'].forEach((id) => {
-        document.getElementById(id)?.addEventListener('input', onAmpAdsrInputWhilePoly);
+    AMP_TO_FILTER.forEach(([ampKey, filterKey]) => {
+        subscribe(ampKey, () => {
+            if (!state.keyboardPoly) return;
+            set(filterKey, get(ampKey));
+        });
     });
 }
 
@@ -1312,11 +1306,7 @@ export function setPolyMode(on) {
             state.filterEnvInvert = false;
             syncKeyboardFilterEnvFromMain();
         }
-        const noiseTypeEl = document.getElementById('noiseType');
-        if (noiseTypeEl && noiseTypeEl.value !== 'white') {
-            noiseTypeEl.value = 'white';
-            noiseTypeEl.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        set('noiseType', 'white');
         setRangeValue('chorusAmount', 1);
         mirrorAmpAdsrToFilter();
 
@@ -1367,11 +1357,7 @@ export function setPolyMode(on) {
             if (snap.oscTunes) setOscTuneUi(i, snap.oscTunes[i] ?? 0);
         }
         setRangeValue('noiseVol', snap.noiseVol ?? 0);
-        const noiseTypeEl = document.getElementById('noiseType');
-        if (noiseTypeEl && snap.noiseType && noiseTypeEl.value !== snap.noiseType) {
-            noiseTypeEl.value = snap.noiseType;
-            noiseTypeEl.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        if (snap.noiseType) set('noiseType', snap.noiseType);
         setNoiseEnabled(!!snap.noiseState);
         setClassicUnisonEnabled(!!snap.unisonEnabled);
         setRingModEnabled(!!snap.ringModEnabled);
@@ -1388,11 +1374,7 @@ export function setPolyMode(on) {
         setChorusButton('chorusI', !!snap.chorusI);
         setChorusButton('chorusII', !!snap.chorusII);
 
-        const osc2Type = mainOscType(1);
-        if (osc2Type && snap.osc2Wave && osc2Type.value !== snap.osc2Wave) {
-            osc2Type.value = snap.osc2Wave;
-            osc2Type.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        if (snap.osc2Wave) set('osc-type-1', snap.osc2Wave);
     }
     syncUnisonControlsEnabled();
     if (state.audioContext) {
@@ -1444,9 +1426,6 @@ let multitudesLockSnapshot = null;
 
 /** Lock OSC3–4 / ring-mod style affordances while Multitudes owns the bus. */
 export function syncMultitudesPolyLocks(on) {
-    // #region agent log
-    fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e6a350'},body:JSON.stringify({sessionId:'e6a350',runId:'post-fix',hypothesisId:'A',location:'poly-voice.js:syncMultitudesPolyLocks',message:'syncMultitudesPolyLocks',data:{lockOn:!!on,unisonBefore:!!state.unisonEnabled,ringBefore:!!state.ringModEnabled,phaseReset:!!state.phaseResetEnabled,hasLockSnap:!!multitudesLockSnapshot},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     document.body.classList.toggle('multitudes-poly-lock', !!on);
     if (on) {
         if (!multitudesLockSnapshot) {
@@ -1464,9 +1443,6 @@ export function syncMultitudesPolyLocks(on) {
         setRingModEnabled(!!snap.ringModEnabled);
     }
     syncUnisonControlsEnabled();
-    // #region agent log
-    fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e6a350'},body:JSON.stringify({sessionId:'e6a350',runId:'post-fix',hypothesisId:'D',location:'poly-voice.js:syncMultitudesPolyLocks:after',message:'after Multitudes locks',data:{lockOn:!!on,unisonAfter:!!state.unisonEnabled,ringAfter:!!state.ringModEnabled,kbOff:document.getElementById('kbUnisonToggle')?.classList.contains('off'),mainOff:document.getElementById('unisonToggle')?.classList.contains('off'),hasLockSnap:!!multitudesLockSnapshot},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const input = document.getElementById('ringMod');
     if (input) {
         input.disabled = !state.ringModEnabled || !!state.keyboardPoly || !!on;

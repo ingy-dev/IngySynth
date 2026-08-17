@@ -1,10 +1,11 @@
-import { state, OSC_COUNT } from './state.js?v=113';
+import { state, OSC_COUNT } from './state.js?v=114';
+import { getOscVol, set } from './params.js?v=8';
 import {
     clearHeldNotes,
     intervalsFromHeldNotes,
     polyChordIntervalsFromNotes,
 } from './held-notes.js?v=8';
-import { refreshFilterInputDrive } from './filter-drive.js?v=20';
+import { refreshFilterInputDrive } from './filter-drive.js?v=24';
 
 /** Notes heard during the current Learn gesture (survives staggered key-ups). */
 let learnSessionNotes = [];
@@ -17,17 +18,8 @@ const POLY_CHORD_MAX = 6;
 
 function setOscTuneUI(oscIndex, value) {
     const clamped = Math.max(-12, Math.min(12, Math.round(Number(value) || 0)));
-    state.oscTunes[oscIndex] = clamped;
-
-    const main = document.querySelector(`.osc-tune[data-osc="${oscIndex}"]`);
-    if (main) {
-        main.value = String(clamped);
-        const display = main.nextElementSibling;
-        if (display?.classList?.contains('osc-tune-value')) {
-            display.textContent = String(clamped);
-        }
-        main.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    if (state.oscTunes) state.oscTunes[oscIndex] = clamped;
+    set(`osc-tune-${oscIndex}`, clamped);
 
     const kbVal = document.getElementById(`kbOsc${oscIndex + 1}TuneValue`);
     if (kbVal) kbVal.textContent = String(clamped);
@@ -38,6 +30,7 @@ function enableOscillator(oscIndex) {
     if (state.oscStates[oscIndex]) return;
 
     state.oscStates[oscIndex] = true;
+    set(`osc-toggle-${oscIndex}`, true);
 
     const mainToggle = document.querySelector(`.osc-toggle[data-osc="${oscIndex}"]`);
     if (mainToggle) {
@@ -54,8 +47,7 @@ function enableOscillator(oscIndex) {
     }
 
     if (state.audioContext && state.oscGains[oscIndex]) {
-        const volEl = document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`);
-        const vol = parseFloat(volEl?.value ?? '0.33');
+        const vol = getOscVol(oscIndex);
         state.oscGains[oscIndex].gain.setValueAtTime(
             Number.isFinite(vol) ? vol : 0.33,
             state.audioContext.currentTime,

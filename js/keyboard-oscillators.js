@@ -1,8 +1,8 @@
 // Compact oscillator controls in the keyboard Synthesizer panel.
 // Knobs write osc-tune-N / osc-vol-N; pan writes osc-pan-N.
 
-import { state } from './state.js?v=113';
-import { bindKnob } from './knobs.js?v=113';
+import { state } from './state.js?v=114';
+import { bindKnob } from './knobs.js?v=120';
 import {
     elementFor,
     get,
@@ -11,7 +11,7 @@ import {
     subscribe,
     wireSelect,
     wireToggle,
-} from './params.js?v=5';
+} from './params.js?v=8';
 
 const OSC_COUNT = 4;
 

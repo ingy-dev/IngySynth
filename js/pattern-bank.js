@@ -1,8 +1,9 @@
 // Pattern bank: normal mode uses slots 0–7 (P1–P8). Berlin Dream uses all 8 lanes
 // (O1–O4 pitch + M1–M4 modulation). Dom step strip is a view of `editSlot`.
 
-import { state } from './state.js?v=113';
+import { state } from './state.js?v=114';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
+import { getNumber, getString, set } from './params.js?v=8';
 
 /** Total Berlin lanes (and bank array length). */
 export const PATTERN_COUNT = 8;
@@ -352,28 +353,36 @@ function applyStepToDomUnguarded(i, data) {
     syncRatchButton(ratchBtn(i), data.ratch);
 }
 
+function stepBusPresent() {
+    return !!tuneInput(0);
+}
+
 function readClockFromDom() {
     const stepsEl = document.getElementById('stepCount');
     const divEl = document.getElementById('division');
+    const stepCount = stepsEl
+        ? Math.max(1, Math.min(STEP_SLOTS, parseInt(stepsEl.value, 10) || 8))
+        : Math.max(1, Math.min(STEP_SLOTS, Math.round(getNumber('stepCount', 8)) || 8));
+    let division;
+    if (divEl) {
+        division = parseInt(divEl.value, 10) || 8;
+    } else {
+        const fromStr = parseInt(getString('division', '8'), 10);
+        const fromNum = getNumber('division', 8);
+        division = Number.isFinite(fromStr) && fromStr > 0
+            ? fromStr
+            : (Number.isFinite(fromNum) && fromNum > 0 ? fromNum : 8);
+    }
     return {
-        stepCount: Math.max(1, Math.min(STEP_SLOTS, parseInt(stepsEl?.value, 10) || 8)),
-        division: parseInt(divEl?.value, 10) || 8,
+        stepCount,
+        division,
         reverse: !!state.isReverse,
     };
 }
 
-function writeClockToDom(pattern) {
-    const stepsEl = document.getElementById('stepCount');
-    if (stepsEl && String(stepsEl.value) !== String(pattern.stepCount)) {
-        stepsEl.value = String(pattern.stepCount);
-        stepsEl.dispatchEvent(new Event('input', { bubbles: true }));
-        stepsEl.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-    const divEl = document.getElementById('division');
-    if (divEl && String(divEl.value) !== String(pattern.division)) {
-        divEl.value = String(pattern.division);
-        divEl.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+function writeClockToStore(pattern) {
+    set('stepCount', pattern.stepCount);
+    set('division', pattern.division);
     if (state.isReverse !== !!pattern.reverse) {
         state.isReverse = !!pattern.reverse;
         document.dispatchEvent(new CustomEvent('ingysynth:reverse-sync'));
@@ -383,8 +392,10 @@ function writeClockToDom(pattern) {
 /** Copy the live step strip into a slot (defaults to the current edit slot). */
 export function flushDomToPattern(slot = state.editSlot) {
     const pattern = getPattern(slot);
-    for (let i = 0; i < STEP_SLOTS; i++) {
-        pattern.steps[i] = captureStepFromDom(i);
+    if (stepBusPresent()) {
+        for (let i = 0; i < STEP_SLOTS; i++) {
+            pattern.steps[i] = captureStepFromDom(i);
+        }
     }
     Object.assign(pattern, readClockFromDom());
     return pattern;
@@ -393,10 +404,12 @@ export function flushDomToPattern(slot = state.editSlot) {
 /** Paint a slot into the live step strip. */
 export function hydratePatternToDom(slot = state.editSlot, { clock = true } = {}) {
     const pattern = getPattern(slot);
-    for (let i = 0; i < STEP_SLOTS; i++) {
-        applyStepToDom(i, pattern.steps[i] || emptyStep());
+    if (stepBusPresent()) {
+        for (let i = 0; i < STEP_SLOTS; i++) {
+            applyStepToDom(i, pattern.steps[i] || emptyStep());
+        }
     }
-    if (clock) writeClockToDom(pattern);
+    if (clock) writeClockToStore(pattern);
     document.dispatchEvent(new CustomEvent('ingysynth-kb-steps-sync'));
     return pattern;
 }

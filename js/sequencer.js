@@ -1,5 +1,5 @@
-import { state } from './state.js?v=113';
-import { getNumber, getString, getOscType, getOscVol } from './params.js?v=5';
+import { state } from './state.js?v=114';
+import { getNumber, getString, getOscType, getOscVol } from './params.js?v=8';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -10,23 +10,23 @@ import {
     midiPitchBendValue,
     getGlobalTune,
     semitonesToFrequency,
-} from './tuning.js?v=77';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=98';
-import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=80';
-import { forceNoteOff } from './voice.js?v=122';
-import { getLfoRateHz } from './lfo-rate.js?v=10';
-import { bentFrequency } from './pitch-bend.js?v=84';
+} from './tuning.js?v=79';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=100';
+import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=82';
+import { forceNoteOff } from './voice.js?v=128';
+import { getLfoRateHz } from './lfo-rate.js?v=16';
+import { bentFrequency } from './pitch-bend.js?v=90';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=154';
-import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=86';
-import { notifyAutomationLoopAnchor } from './automation.js?v=35';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=158';
+import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=90';
+import { notifyAutomationLoopAnchor } from './automation.js?v=42';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=8';
 import {
     scheduleAcidAmpEnvelope,
     scheduleAcidFilterEnvelope,
     clearAccentSweep,
     acidVegDecaySec,
-} from './acid-env.js?v=10';
+} from './acid-env.js?v=14';
 import {
     isBerlinOn,
     berlinActiveRows,
@@ -46,8 +46,8 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=35';
-import { getPattern, snapshotStepNeighborhood } from './pattern-bank.js?v=9';
+} from './berlin.js?v=41';
+import { getPattern, snapshotStepNeighborhood } from './pattern-bank.js?v=10';
 import {
     clampRatch,
     nextRatch,
@@ -449,6 +449,7 @@ function scheduleStepEnvelope({
     if (state.acidMode) {
         return scheduleAcidAmpEnvelope({
             startTime,
+            stepDuration,
             slideThisStep,
             nextStepWillSlide,
             accentThisStep,
@@ -668,6 +669,14 @@ function scheduleFullNoteOnGain(gainParam, {
         gainParam.setValueAtTime(minValue, t0);
         gainParam.linearRampToValueAtTime(peak, t0 + 0.003);
         gainParam.setTargetAtTime(minValue, t0 + 0.003, tau);
+        const gateFrac = getGateLength();
+        const dumpAt = Math.min(t0 + stepDuration - 0.005, Math.max(t0 + 0.012, t0 + stepDuration * gateFrac));
+        try {
+            if (typeof gainParam.cancelAndHoldAtTime === 'function') {
+                gainParam.cancelAndHoldAtTime(dumpAt);
+            }
+        } catch (_) { /* ignore */ }
+        gainParam.setTargetAtTime(minValue, dumpAt, Math.max(0.012, 0.12 / 3));
         return t0 + Math.max(stepDuration, vegSec * 3) + 0.08;
     }
 
@@ -1329,9 +1338,8 @@ function togglePlay() {
     const mobileStartStopButton = document.getElementById('mobileStartStop');
     const kbStartStopButton = document.getElementById('kbStartStop');
     const ckbSpaceButtons = document.querySelectorAll('.ckb-space');
-    const startStopFront = startStopButton.querySelector('.front');
-    const mobileStartStopFront = mobileStartStopButton.querySelector('.front');
-    const kbStartStopFront = kbStartStopButton?.querySelector('.front');
+    const startStopFront = startStopButton?.querySelector('.front');
+    const mobileStartStopFront = mobileStartStopButton?.querySelector('.front');
     
     if (state.isPlaying) {
         clearStepsPreviewTimer();
@@ -1367,15 +1375,15 @@ function togglePlay() {
         scheduleNextStep();
         
         // Update all start/stop buttons
-        startStopFront.textContent = 'Stop';
-        startStopButton.classList.remove('start');
-        startStopButton.classList.add('stop');
+        if (startStopFront) startStopFront.textContent = 'Stop';
+        startStopButton?.classList.remove('start');
+        startStopButton?.classList.add('stop');
         
-        mobileStartStopFront.textContent = 'Stop';
-        mobileStartStopButton.classList.remove('start');
-        mobileStartStopButton.classList.add('stop');
+        if (mobileStartStopFront) mobileStartStopFront.textContent = 'Stop';
+        mobileStartStopButton?.classList.remove('start');
+        mobileStartStopButton?.classList.add('stop');
 
-        if (kbStartStopButton && kbStartStopFront) {
+        if (kbStartStopButton) {
             kbStartStopButton.classList.remove('start');
             kbStartStopButton.classList.add('stop');
         }
@@ -1394,15 +1402,15 @@ function togglePlay() {
         document.dispatchEvent(new CustomEvent('ingysynth:sequencer-stop'));
         
         // Update all start/stop buttons
-        startStopFront.textContent = 'Start';
-        startStopButton.classList.remove('stop');
-        startStopButton.classList.add('start');
+        if (startStopFront) startStopFront.textContent = 'Start';
+        startStopButton?.classList.remove('stop');
+        startStopButton?.classList.add('start');
         
-        mobileStartStopFront.textContent = 'Start';
-        mobileStartStopButton.classList.remove('stop');
-        mobileStartStopButton.classList.add('start');
+        if (mobileStartStopFront) mobileStartStopFront.textContent = 'Start';
+        mobileStartStopButton?.classList.remove('stop');
+        mobileStartStopButton?.classList.add('start');
 
-        if (kbStartStopButton && kbStartStopFront) {
+        if (kbStartStopButton) {
             kbStartStopButton.classList.remove('stop');
             kbStartStopButton.classList.add('start');
         }

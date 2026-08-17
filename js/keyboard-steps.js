@@ -2,9 +2,9 @@
 // Each step mirrors the Sequencer section: semitone knob → .step-tune,
 // tiny microtune → .step-fine, Acc/Sld/On → accent/slide/toggle.
 
-import { state } from './state.js?v=113';
-import { getQuantizedStepTune } from './tuning.js?v=77';
-import { bindKnob } from './knobs.js?v=113';
+import { state } from './state.js?v=114';
+import { getQuantizedStepTune } from './tuning.js?v=79';
+import { bindKnob } from './knobs.js?v=120';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
 import {
     click,
@@ -13,11 +13,11 @@ import {
     set,
     subscribe,
     toggle,
-} from './params.js?v=5';
+} from './params.js?v=8';
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=94';
+} from './pattern-write.js?v=100';
 import { readRatchFromButton, syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;

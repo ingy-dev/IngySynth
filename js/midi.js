@@ -1,5 +1,5 @@
-import { state } from './state.js?v=113';
-import { refreshParamStatusIndicators } from './param-status.js?v=5';
+import { state } from './state.js?v=114';
+import { refreshParamStatusIndicators } from './param-status.js?v=7';
 import {
     heldNoteDown,
     heldNoteUp,
@@ -7,13 +7,15 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=181';
+} from './keyboard.js?v=188';
 import { needsHeldNoteSet } from './held-notes.js?v=8';
 import {
-    midiControlId,
+    catalogKeyFromLearn,
     clearMappingHighlight,
     setupMappingPointerCapture,
-} from './midi-learn.js?v=3';
+} from './midi-learn.js?v=6';
+import { click, set, toggle } from './params.js?v=8';
+import { getParam, isCatalogKey, scaleCcToCatalog } from './param-catalog.js?v=1';
 
 /** MIDI note number → cell semitone while held (for Chord arp / Chord Mem). */
 const midiHeldNotes = new Map();
@@ -126,6 +128,46 @@ function populateMidiOutputDropdown() {
     }
 }
 
+function resolveStoredMappingKey(controlId) {
+    if (isCatalogKey(controlId)) return controlId;
+    if (controlId.startsWith('ingy6-')) {
+        const mapped = {
+            attack: 'attack',
+            decay: 'decay',
+            sustain: 'sustain',
+            release: 'release',
+            cutoff: 'cutoff',
+            resonance: 'resonance',
+            filterEnvAmount: 'filterEnvAmount',
+            highPass: 'highPass',
+            noise: 'noiseVol',
+            vcaLevel: 'volume',
+        }[controlId.slice(6)];
+        if (mapped) return mapped;
+    }
+    return controlId;
+}
+
+function applyMappedCc(controlId, ccValue) {
+    const key = resolveStoredMappingKey(controlId);
+    const spec = getParam(key);
+    if (spec?.type === 'range') {
+        const scaled = scaleCcToCatalog(key, ccValue);
+        if (scaled != null) set(key, scaled);
+    }
+}
+
+function applyMappedNote(controlId) {
+    const key = resolveStoredMappingKey(controlId);
+    const spec = getParam(key);
+    if (spec?.type === 'ratch') {
+        click(key);
+        return;
+    }
+    if (spec?.type === 'button') {
+        toggle(key);
+    }
+}
 function onMIDIMessage(message) {
     if (state.selectedMidiInput !== 'all' && message.target.id !== state.selectedMidiInput) {
         return;
@@ -133,50 +175,52 @@ function onMIDIMessage(message) {
     const [status, data1, data2] = message.data;
     const channel = status & 0x0F;
     const type = status & 0xF0;
-    if (state.midiMappingMode && state.currentMappingControl) {
+    if (state.midiMappingMode && (state.currentMappingKey || state.currentMappingControl)) {
         if (type === 0xB0) {
             const cc = data1;
-            const controlId = midiControlId(state.currentMappingControl);
+            const controlId = state.currentMappingKey
+                || catalogKeyFromLearn(state.currentMappingControl, state.currentMappingHost);
             const visual = state.currentMappingHost || state.currentMappingControl;
 
             state.midiMappings[controlId] = {
                 type: "cc",
                 cc: cc,
                 channel: channel,
-                element: state.currentMappingControl,
             };
             state.lastMIDIValues[`cc-${cc}-${channel}`] = data2;
-            visual.classList.remove('midi-highlight');
+            visual?.classList.remove('midi-highlight');
             const mappedControl = visual;
             state.currentMappingControl = null;
             state.currentMappingHost = null;
+            state.currentMappingKey = null;
 
-            mappedControl.classList.add('midi-mapped');
+            mappedControl?.classList.add('midi-mapped');
             setTimeout(() => {
-                mappedControl.classList.remove('midi-mapped');
+                mappedControl?.classList.remove('midi-mapped');
             }, 2000);
             refreshParamStatusIndicators(controlId);
 
             console.log(`Mapped CC ${cc} on channel ${channel} to ${controlId}`);
         } else if (type === 0x90 && data2 > 0) {
             const note = data1;
-            const controlId = midiControlId(state.currentMappingControl);
+            const controlId = state.currentMappingKey
+                || catalogKeyFromLearn(state.currentMappingControl, state.currentMappingHost);
             const visual = state.currentMappingHost || state.currentMappingControl;
 
             state.midiMappings[controlId] = {
                 type: "note",
                 note: note,
                 channel: channel,
-                element: state.currentMappingControl,
             };
-            visual.classList.remove('midi-highlight');
+            visual?.classList.remove('midi-highlight');
             const mappedControl = visual;
             state.currentMappingControl = null;
             state.currentMappingHost = null;
+            state.currentMappingKey = null;
 
-            mappedControl.classList.add('midi-mapped');
+            mappedControl?.classList.add('midi-mapped');
             setTimeout(() => {
-                mappedControl.classList.remove('midi-mapped');
+                mappedControl?.classList.remove('midi-mapped');
             }, 2000);
             refreshParamStatusIndicators(controlId);
 
@@ -193,64 +237,7 @@ function onMIDIMessage(message) {
         
         Object.entries(state.midiMappings).forEach(([controlId, mapping]) => {
             if (mapping.type === "cc" && mapping.cc === cc && mapping.channel === channel) {
-                // Try using the stored element reference first
-                let control = mapping.element;
-                
-                // If the stored element is not available, try to find it by ID
-                if (!control) {
-                    // Handle step controls with their special ID format
-                    if (controlId.startsWith('step-slider-')) {
-                        const stepNum = controlId.split('-')[2];
-                        control = document.querySelector(`.step-tune[data-step="${stepNum}"]`);
-                    } else if (controlId.startsWith('step-fine-')) {
-                        const stepNum = controlId.split('-')[2];
-                        control = document.querySelector(`.step-fine[data-step="${stepNum}"]`);
-                    } else if (controlId.startsWith('step-slide-')) {
-                        const stepNum = controlId.split('-')[2];
-                        control = document.querySelector(`.step-slide[data-step="${stepNum}"]`);
-                    } else if (controlId.startsWith('step-accent-')) {
-                        const stepNum = controlId.split('-')[2];
-                        control = document.querySelector(`.step-accent[data-step="${stepNum}"]`);
-                    } else if (controlId.startsWith('step-toggle-')) {
-                        const stepNum = controlId.split('-')[2];
-                        control = document.querySelector(`.step-toggle[data-step="${stepNum}"]`);
-                    } else if (controlId.startsWith('osc-tune-')) {
-                        const oscNum = controlId.split('-')[2];
-                        control = document.querySelector(`.osc-tune[data-osc="${oscNum}"]`);
-                    } else if (controlId.startsWith('osc-vol-')) {
-                        const oscNum = controlId.split('-')[2];
-                        control = document.querySelector(`.osc-vol[data-osc="${oscNum}"]`);
-                    } else if (controlId.startsWith('osc-toggle-')) {
-                        const oscNum = controlId.split('-')[2];
-                        control = document.querySelector(`.osc-toggle[data-osc="${oscNum}"]`);
-                    } else if (controlId.startsWith('osc-type-')) {
-                        const oscNum = controlId.split('-')[2];
-                        control = document.querySelector(`.osc-type[data-osc="${oscNum}"]`);
-                    } else if (controlId.startsWith('osc-')) {
-                        const oscNum = controlId.split('-')[1];
-                        control = document.querySelector(`[data-osc="${oscNum}"]`);
-                    } else {
-                        control = document.getElementById(controlId);
-                    }
-                }
-                
-                if (control) {
-                    if (control.tagName === 'INPUT' && control.type === 'range') {
-                        const min = parseFloat(control.min) || 0;
-                        const max = parseFloat(control.max) || 127;
-                        const scaledValue = min + (value / 127) * (max - min);
-                        control.value = scaledValue;
-                        control.dispatchEvent(new Event('input', { bubbles: true }));
-                        
-                        // Update display value if it's a step slider
-                        if (control.classList.contains('step-tune') || control.classList.contains('step-fine')) {
-                            const valueDisplay = control.nextElementSibling;
-                            if (valueDisplay) {
-                                valueDisplay.textContent = Math.round(scaledValue);
-                            }
-                        }
-                    }
-                }
+                applyMappedCc(controlId, value);
             }
         });
     } else if (type === 0x90 || type === 0x80) {
@@ -268,36 +255,13 @@ function onMIDIMessage(message) {
             // Write mode + mono live play from MIDI keyboard
         }
 
-        Object.entries(state.midiMappings).forEach(([controlId, mapping]) => {
-            if (mapping.type === "note" && mapping.note === note && mapping.channel === channel) {
-                // Try using the stored element reference first
-                let button = mapping.element;
-                
-                // If the stored element is not available, try to find it by ID
-                if (!button) {
-                    // Handle step toggle buttons with their special ID format
-                    if (controlId.startsWith('step-toggle-')) {
-                        const stepNum = controlId.split('-')[2];
-                        button = document.querySelector(`.step-toggle[data-step="${stepNum}"]`);
-                    } else if (controlId.startsWith('step-slide-')) {
-                        const stepNum = controlId.split('-')[2];
-                        button = document.querySelector(`.step-slide[data-step="${stepNum}"]`);
-                    } else if (controlId.startsWith('step-accent-')) {
-                        const stepNum = controlId.split('-')[2];
-                        button = document.querySelector(`.step-accent[data-step="${stepNum}"]`);
-                    } else if (controlId.startsWith('osc-toggle-')) {
-                        const oscNum = controlId.split('-')[2];
-                        button = document.querySelector(`.osc-toggle[data-osc="${oscNum}"]`);
-                    } else {
-                        button = document.getElementById(controlId);
-                    }
+        if (isNoteOn) {
+            Object.entries(state.midiMappings).forEach(([controlId, mapping]) => {
+                if (mapping.type === "note" && mapping.note === note && mapping.channel === channel) {
+                    applyMappedNote(controlId);
                 }
-                
-                if (button && isNoteOn) {
-                    button.click();
-                }
-            }
-        });
+            });
+        }
     }
 }
 

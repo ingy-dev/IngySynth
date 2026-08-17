@@ -1,16 +1,16 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
-import { state } from './state.js?v=113';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=113';
-import { ensurePlaitsWorklet } from './osc-source.js?v=86';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=11';
+import { state } from './state.js?v=114';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=120';
+import { ensurePlaitsWorklet } from './osc-source.js?v=90';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
 import {
     forcePolyAllOff,
     ensureMultitudesPolyReady,
     syncMultitudesPolyLocks,
-} from './poly-voice.js?v=60';
-import { clearPolyChordMemory } from './chord-memory.js?v=15';
-import { getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=5';
+} from './poly-voice.js?v=66';
+import { clearPolyChordMemory } from './chord-memory.js?v=19';
+import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=8';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */
 const MULTITUDES_DEFAULT_OSC_VOL = 0.1;
@@ -73,78 +73,39 @@ function oscVolInput(index) {
 function oscTypeSelect(index) {
     return document.querySelector(`.osc-type[data-osc="${index}"]`);
 }
-function oscToggleBtn(index) {
-    return document.querySelector(`.osc-toggle[data-osc="${index}"]`);
-}
 
 function readOscVol(index) {
-    const n = parseFloat(oscVolInput(index)?.value);
-    return Number.isFinite(n) ? n : MULTITUDES_DEFAULT_OSC_VOL;
+    return getOscVol(index, MULTITUDES_DEFAULT_OSC_VOL);
 }
 
 function setOscVolUi(index, value) {
     const clamped = Math.max(0, Math.min(1, Number(value) || 0));
-    const main = oscVolInput(index);
-    if (main) {
-        main.value = String(clamped);
-        const display = main.nextElementSibling;
-        if (display?.classList?.contains('osc-vol-value')) {
-            display.textContent = clamped.toFixed(2);
-        } else if (display) {
-            display.textContent = clamped.toFixed(2);
-        }
-        try {
-            main.dispatchEvent(new Event('input', { bubbles: true }));
-        } catch (_) { /* ignore */ }
-    }
+    set(`osc-vol-${index}`, clamped);
     const kbVal = document.getElementById(`kbOsc${index + 1}VolValue`);
     if (kbVal) kbVal.textContent = clamped.toFixed(2);
     const miDial = document.getElementById(index === 0 ? 'miOsc1VolKnob' : 'miOsc2VolKnob');
+    const main = oscVolInput(index);
     if (miDial && main) refreshKnobDial(miDial, main);
 }
 
 function readOscTune(index) {
-    const n = parseInt(oscTuneInput(index)?.value, 10);
-    return Number.isFinite(n) ? n : 0;
+    return Math.round(getNumber(`osc-tune-${index}`, 0)) || 0;
 }
 
 function setOscTuneUi(index, semis) {
-    const el = oscTuneInput(index);
-    if (!el) return;
     const clamped = Math.max(-12, Math.min(12, Math.round(semis)));
     if (state.oscTunes) state.oscTunes[index] = clamped;
-    if (parseInt(el.value, 10) === clamped) {
-        const miDial = document.getElementById(index === 0 ? 'miOsc1TuneKnob' : 'miOsc2TuneKnob');
-        if (miDial) refreshKnobDial(miDial, el);
-        return;
-    }
-    el.value = String(clamped);
-    const display = el.nextElementSibling;
-    if (display?.classList?.contains('osc-tune-value')) {
-        display.textContent = String(clamped);
-    }
-    try {
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-    } catch (_) { /* ignore */ }
+    set(`osc-tune-${index}`, clamped);
     const kbVal = document.getElementById(`kbOsc${index + 1}TuneValue`);
     if (kbVal) kbVal.textContent = String(clamped);
+    const el = oscTuneInput(index);
     const miDial = document.getElementById(index === 0 ? 'miOsc1TuneKnob' : 'miOsc2TuneKnob');
-    if (miDial) refreshKnobDial(miDial, el);
+    if (miDial && el) refreshKnobDial(miDial, el);
 }
 
 function setOsc2WaveUi(wave) {
-    const sel = oscTypeSelect(1);
     const next = wave || MULTITUDES_DEFAULT_OSC2_WAVE;
-    if (!sel) return;
-    if (sel.value !== next) {
-        sel.value = next;
-        sel.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-    const kb = document.querySelector(`.keyboard-osc-wave[data-osc="1"]`);
-    if (kb && kb.value !== next) {
-        kb.value = next;
-        kb.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    set('osc-type-1', next);
     syncOsc2WaveUi();
 }
 
@@ -152,7 +113,7 @@ function applyMultitudesOscDefaults() {
     multitudesOscSnapshot = {
         osc0Vol: readOscVol(0),
         osc1Vol: readOscVol(1),
-        osc2Wave: oscTypeSelect(1)?.value || 'sawtooth',
+        osc2Wave: getString('osc-type-1', 'sawtooth'),
         osc2Tune: readOscTune(1),
     };
     setOscVolUi(0, MULTITUDES_DEFAULT_OSC_VOL);
@@ -252,14 +213,10 @@ export function setMultitudesMode(on) {
             state.oscStates[2] = false;
             state.oscStates[3] = false;
         }
-        const t0 = oscToggleBtn(0);
-        const t1 = oscToggleBtn(1);
-        if (t0?.classList.contains('off')) t0.click();
-        if (t1?.classList.contains('off')) t1.click();
-        for (let i = 2; i < 4; i++) {
-            const t = oscToggleBtn(i);
-            if (t && !t.classList.contains('off')) t.click();
-        }
+        set('osc-toggle-0', true);
+        set('osc-toggle-1', true);
+        set('osc-toggle-2', false);
+        set('osc-toggle-3', false);
         applyMultitudesOscDefaults();
         ensureMultitudesPolyReady();
         syncMultitudesPolyLocks(true);

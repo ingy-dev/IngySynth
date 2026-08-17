@@ -1,8 +1,8 @@
-import { state } from './state.js?v=113';
-import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=77';
-import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=122';
-import { initAudio } from './audio-engine.js?v=146';
-import { updateNoteVisualizer } from './visualizers.js?v=98';
+import { state } from './state.js?v=114';
+import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=79';
+import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=128';
+import { initAudio } from './audio-engine.js?v=152';
+import { updateNoteVisualizer } from './visualizers.js?v=100';
 import {
     refreshStepTuneReadouts,
     startArp,
@@ -12,13 +12,13 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=241';
-import { refreshXYPad } from './xy-pad.js?v=75';
+} from './sequencer.js?v=247';
+import { refreshXYPad } from './xy-pad.js?v=78';
 import {
     initPatternWrite,
     writeNote,
     setWriteMode,
-} from './pattern-write.js?v=94';
+} from './pattern-write.js?v=100';
 import {
     addHeldNote,
     removeHeldNote,
@@ -32,6 +32,7 @@ import {
     recordArpChordSessionNote,
     freezeArpChordSession,
 } from './held-notes.js?v=8';
+import { get, getString, set as setParam } from './params.js?v=8';
 import {
     toggleChordMemoryLearn,
     cancelChordMemoryLearn,
@@ -40,11 +41,11 @@ import {
     recordLearnNote,
     getLearnSessionNotes,
     isPolyChordMemoryOn,
-} from './chord-memory.js?v=15';
+} from './chord-memory.js?v=19';
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=19';
+} from './keyboard-multitudes-panel.js?v=25';
 import {
     togglePolyMode,
     togglePolyUnison,
@@ -56,7 +57,7 @@ import {
     retunePolyVoices,
     hasPolyVoices,
     initPolyVoice,
-} from './poly-voice.js?v=60';
+} from './poly-voice.js?v=66';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];
@@ -803,6 +804,16 @@ export function syncLiveModeControlsUI() {
 
 /** Keep sequencer + keyboard scale controls in sync, then refresh dependents. */
 export function applyScaleState(enabled, scaleId) {
+    const wasEnabled = !!get('scaleToggle');
+    if (enabled !== undefined && enabled !== null) {
+        setParam('scaleToggle', !!enabled);
+    }
+    if (scaleId) {
+        setParam('scaleSelect', scaleId);
+    }
+    const scaleOn = !!get('scaleToggle');
+    const selectedId = getString('scaleSelect');
+
     const mainToggle = document.getElementById('scaleToggle');
     const mainSelect = document.getElementById('scaleSelect');
     const mainSelectControl = document.getElementById('scaleSelectControl');
@@ -812,49 +823,44 @@ export function applyScaleState(enabled, scaleId) {
     const patternSelect = document.getElementById('kbPatternScaleSelect');
     const xyToggle = document.getElementById('kbXyScaleToggle');
     const xySelect = document.getElementById('kbXyScaleSelect');
-    const wasEnabled = mainToggle ? !mainToggle.classList.contains('off') : false;
 
     if (mainToggle) {
-        mainToggle.classList.toggle('off', !enabled);
+        mainToggle.classList.toggle('off', !scaleOn);
         const front = mainToggle.querySelector('.front');
-        if (front) front.textContent = enabled ? 'Scale: On' : 'Scale: Off';
+        if (front) front.textContent = scaleOn ? 'Scale: On' : 'Scale: Off';
     }
     const syncToggle = (btn, { on = 'On', off = 'Off' } = {}) => {
         if (!btn) return;
-        btn.classList.toggle('off', !enabled);
-        const label = enabled ? on : off;
+        btn.classList.toggle('off', !scaleOn);
+        const label = scaleOn ? on : off;
         const front = btn.querySelector('.front');
         if (front) front.textContent = label;
         else btn.textContent = label;
-        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        btn.setAttribute('aria-pressed', scaleOn ? 'true' : 'false');
     };
     syncToggle(kbToggle, { on: 'Scale: On', off: 'Scale: Off' });
     syncToggle(patternToggle);
     syncToggle(xyToggle);
 
-    if (scaleId !== undefined && scaleId !== null) {
-        if (mainSelect) mainSelect.value = scaleId;
-        if (kbSelect) kbSelect.value = scaleId;
-        if (patternSelect) patternSelect.value = scaleId;
-        if (xySelect) xySelect.value = scaleId;
-    } else if (mainSelect) {
-        if (kbSelect) kbSelect.value = mainSelect.value;
-        if (patternSelect) patternSelect.value = mainSelect.value;
-        if (xySelect) xySelect.value = mainSelect.value;
+    if (selectedId) {
+        if (mainSelect) mainSelect.value = selectedId;
+        if (kbSelect) kbSelect.value = selectedId;
+        if (patternSelect) patternSelect.value = selectedId;
+        if (xySelect) xySelect.value = selectedId;
     }
 
-    if (mainSelectControl) mainSelectControl.style.display = enabled ? '' : 'none';
+    if (mainSelectControl) mainSelectControl.style.display = scaleOn ? '' : 'none';
     const kbScaleRow = document.getElementById('keyboardScaleSelectRow');
-    if (kbScaleRow) kbScaleRow.style.display = enabled ? '' : 'none';
+    if (kbScaleRow) kbScaleRow.style.display = scaleOn ? '' : 'none';
     const tuningScaleRow = document.getElementById('kbTuningScaleSelectRow');
-    if (tuningScaleRow) tuningScaleRow.style.display = enabled ? '' : 'none';
+    if (tuningScaleRow) tuningScaleRow.style.display = scaleOn ? '' : 'none';
     const xyScaleRow = document.getElementById('kbXyScaleSelectRow');
-    if (xyScaleRow) xyScaleRow.style.display = enabled ? '' : 'none';
-    else if (patternSelect && !tuningScaleRow) patternSelect.style.display = enabled ? '' : 'none';
+    if (xyScaleRow) xyScaleRow.style.display = scaleOn ? '' : 'none';
+    else if (patternSelect && !tuningScaleRow) patternSelect.style.display = scaleOn ? '' : 'none';
 
-    if (enabled && !wasEnabled) {
+    if (scaleOn && !wasEnabled) {
         beginScaleVfdPrompt();
-    } else if (!enabled && wasEnabled) {
+    } else if (!scaleOn && wasEnabled) {
         endScaleVfdPrompt();
         refreshIdleVfd();
     }
@@ -887,9 +893,10 @@ function populateKeyboardScaleSelect() {
         document.getElementById('kbPatternScaleSelect'),
         document.getElementById('kbXyScaleSelect'),
     ];
+    const selectedId = getString('scaleSelect') || mainSelect?.value;
     selects.forEach((el) => {
         populateScaleSelect(el);
-        if (el && mainSelect?.value) el.value = mainSelect.value;
+        if (el && selectedId) el.value = selectedId;
     });
 }
 
@@ -931,20 +938,13 @@ function syncOctaveSwitchUi() {
 }
 
 function setOctaveSwitch(value) {
-    const main = document.getElementById('octaveSwitch');
-    if (!main) return;
-    const next = String(Math.max(-2, Math.min(2, parseInt(value, 10) || 0)));
-    const changed = main.value !== next;
-    if (changed) main.value = next;
-    const mainReadout = document.getElementById('octaveSwitchValue');
-    if (mainReadout) mainReadout.textContent = next;
+    const next = Math.max(-2, Math.min(2, parseInt(value, 10) || 0));
+    setParam('octaveSwitch', next);
     syncOctaveSwitchUi();
-    if (changed) main.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 function shiftOctaveSwitch(delta) {
-    const main = document.getElementById('octaveSwitch');
-    const cur = parseInt(main?.value, 10) || 0;
+    const cur = parseInt(String(get('octaveSwitch') ?? 0), 10) || 0;
     setOctaveSwitch(cur + delta);
 }
 
@@ -958,7 +958,6 @@ function clampSemiSwitch(n) {
 
 function syncSemitoneSwitchUi() {
     const main = document.getElementById('semitoneSwitch');
-    const amount = document.getElementById('semitoneAmount');
     const pos = clampSemiSwitch(main?.value);
     const label = String(pos);
     SEMI_SWITCH_IDS.forEach((id) => {
@@ -969,34 +968,22 @@ function syncSemitoneSwitchUi() {
         const el = document.getElementById(id);
         if (el) el.textContent = label;
     });
-    if (amount) {
-        SEMI_AMOUNT_IDS.forEach((id) => {
-            const el = document.getElementById(id);
-            if (el && el.value !== amount.value) el.value = amount.value;
-        });
-    }
+    const amountVal = getString('semitoneAmount', '7');
+    SEMI_AMOUNT_IDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && el.value !== amountVal) el.value = amountVal;
+    });
 }
 
 function setSemitoneSwitch(value) {
-    const main = document.getElementById('semitoneSwitch');
-    if (!main) return;
-    const next = String(clampSemiSwitch(value));
-    const changed = main.value !== next;
-    if (changed) main.value = next;
-    const mainReadout = document.getElementById('semitoneSwitchValue');
-    if (mainReadout) mainReadout.textContent = next;
+    setParam('semitoneSwitch', clampSemiSwitch(value));
     syncSemitoneSwitchUi();
-    if (changed) main.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 function setSemitoneAmount(value) {
-    const main = document.getElementById('semitoneAmount');
-    if (!main) return;
     const next = String(Math.max(0, Math.min(12, parseInt(value, 10) || 0)));
-    const changed = main.value !== next;
-    if (changed) main.value = next;
+    setParam('semitoneAmount', next);
     syncSemitoneSwitchUi();
-    if (changed) main.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 function initSemitoneMirrors() {
@@ -1016,12 +1003,11 @@ function initSemitoneMirrors() {
 }
 
 function syncKeyboardMasterTune() {
-    const main = document.getElementById('masterTune');
-    if (!main) return;
-    const label = formatMasterTuneValue(main.value);
+    const value = String(get('masterTune') ?? 0);
+    const label = formatMasterTuneValue(value);
     ['keyboardMasterTune', 'kbTuningMasterTune', 'kbXyTuningMasterTune'].forEach((id) => {
         const el = document.getElementById(id);
-        if (el && el.value !== main.value) el.value = main.value;
+        if (el && el.value !== value) el.value = value;
     });
     ['keyboardMasterTuneValue', 'kbTuningMasterTuneValue', 'kbXyTuningMasterTuneValue'].forEach((id) => {
         const el = document.getElementById(id);
@@ -1030,26 +1016,27 @@ function syncKeyboardMasterTune() {
 }
 
 function setMasterTuneFromKeyboard(value) {
-    const main = document.getElementById('masterTune');
-    if (!main) return;
-    const next = String(value);
+    const changed = setParam('masterTune', value);
+    const next = String(get('masterTune') ?? 0);
     const label = formatMasterTuneValue(next);
     ['keyboardMasterTuneValue', 'kbTuningMasterTuneValue', 'kbXyTuningMasterTuneValue'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.textContent = label;
     });
-    if (main.value === next) {
-        // Still mirror sibling sliders when value is unchanged
-        ['keyboardMasterTune', 'kbTuningMasterTune', 'kbXyTuningMasterTune'].forEach((id) => {
-            const el = document.getElementById(id);
-            if (el && el.value !== next) el.value = next;
-        });
-        return;
-    }
-    main.value = next;
+    ['keyboardMasterTune', 'kbTuningMasterTune', 'kbXyTuningMasterTune'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && el.value !== next) el.value = next;
+    });
     const readout = document.getElementById('masterTuneValue');
     if (readout) readout.textContent = next;
-    main.dispatchEvent(new Event('input', { bubbles: true }));
+    if (!changed) return;
+    refreshKeyboard();
+    notifyKeyboardPitchUi();
+    if (!state.isPlaying && hasPolyVoices()) {
+        retunePolyVoices((semi) => soundingSemitones(semi));
+    } else if (!state.isPlaying && state.keyboardVoiceActive && state.keyboardHeldSemitone !== null) {
+        noteOn(soundingSemitones(state.keyboardHeldSemitone));
+    }
 }
 
 function syncTransposeDimUI() {
@@ -1398,34 +1385,27 @@ export function initKeyboard() {
     });
 
     document.getElementById('keyboardScaleToggle')?.addEventListener('click', () => {
-        const enabled = document.getElementById('keyboardScaleToggle').classList.contains('off');
-        // currently off → turning on
-        applyScaleState(enabled, document.getElementById('keyboardScaleSelect')?.value);
+        applyScaleState(!get('scaleToggle'), getString('scaleSelect'));
     });
 
     document.getElementById('keyboardScaleSelect')?.addEventListener('change', function () {
-        const enabled = !document.getElementById('scaleToggle')?.classList.contains('off');
-        applyScaleState(enabled, this.value);
+        applyScaleState(!!get('scaleToggle'), this.value);
     });
 
     document.getElementById('kbPatternScaleToggle')?.addEventListener('click', () => {
-        const enabled = document.getElementById('kbPatternScaleToggle').classList.contains('off');
-        applyScaleState(enabled, document.getElementById('kbPatternScaleSelect')?.value);
+        applyScaleState(!get('scaleToggle'), getString('scaleSelect'));
     });
 
     document.getElementById('kbPatternScaleSelect')?.addEventListener('change', function () {
-        const enabled = !document.getElementById('scaleToggle')?.classList.contains('off');
-        applyScaleState(enabled, this.value);
+        applyScaleState(!!get('scaleToggle'), this.value);
     });
 
     document.getElementById('kbXyScaleToggle')?.addEventListener('click', () => {
-        const enabled = document.getElementById('kbXyScaleToggle').classList.contains('off');
-        applyScaleState(enabled, document.getElementById('kbXyScaleSelect')?.value);
+        applyScaleState(!get('scaleToggle'), getString('scaleSelect'));
     });
 
     document.getElementById('kbXyScaleSelect')?.addEventListener('change', function () {
-        const enabled = !document.getElementById('scaleToggle')?.classList.contains('off');
-        applyScaleState(enabled, this.value);
+        applyScaleState(!!get('scaleToggle'), this.value);
     });
 
     syncOctaveSwitchUi();
@@ -1461,9 +1441,13 @@ export function initKeyboard() {
     document.addEventListener('ingysynth:sequencer-start', () => onSequencerStart());
     document.addEventListener('ingysynth:sequencer-stop', () => onSequencerStop());
 
-    // Match keyboard scale UI to current sequencer scale state
-    const scaleOn = !document.getElementById('scaleToggle')?.classList.contains('off');
-    applyScaleState(scaleOn, document.getElementById('scaleSelect')?.value);
+    // Match keyboard scale UI to the param Map (catalog default is off)
+    applyScaleState(
+        !!get('scaleToggle'),
+        getString('scaleSelect')
+            || document.getElementById('scaleSelect')?.value
+            || document.getElementById('keyboardScaleSelect')?.value,
+    );
 
     initPatternWrite(refreshKeyboard);
     initPolyVoice();

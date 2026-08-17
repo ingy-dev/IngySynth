@@ -1,11 +1,11 @@
-import { state, OSC_COUNT } from './state.js?v=113';
-import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=5';
-import { wireControls } from './controls.js?v=255';
-import { getFilterCutoffRange } from './filter-cutoff.js?v=80';
-import { updateLfoSmoothing } from './lfo-strip.js?v=17';
-import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=10';
-import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=20';
-import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX } from './osc-source.js?v=86';
+import { state, OSC_COUNT } from './state.js?v=114';
+import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=8';
+import { wireControls } from './controls.js?v=261';
+import { getFilterCutoffRange } from './filter-cutoff.js?v=82';
+import { updateLfoSmoothing } from './lfo-strip.js?v=24';
+import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=16';
+import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=24';
+import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX } from './osc-source.js?v=90';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;

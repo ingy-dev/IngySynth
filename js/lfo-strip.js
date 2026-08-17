@@ -1,11 +1,11 @@
 // Unipolar LFO amount strip on the keyboard play row (hardware mod-wheel style).
 // Latches on release; scales lfoMasterGain when LFO is On.
 
-import { state } from './state.js?v=113';
-import { beginMidiLearn } from './midi-learn.js?v=3';
-import { getFilterCutoffRange, getFilterEnvAmount, refreshFilterCutoffRange } from './filter-cutoff.js?v=80';
-import { getLfoRateHz } from './lfo-rate.js?v=10';
-import { notifyKey } from './params.js?v=5';
+import { state } from './state.js?v=114';
+import { beginMidiLearn } from './midi-learn.js?v=6';
+import { getFilterCutoffRange, getFilterEnvAmount, refreshFilterCutoffRange } from './filter-cutoff.js?v=82';
+import { getLfoRateHz } from './lfo-rate.js?v=16';
+import { getNumber, getString, set } from './params.js?v=8';
 
 const AMOUNT_RAMP = 0.08;
 /** Extra fade when opening from silence — avoids filter/pitch zipper clicks. */
@@ -43,9 +43,8 @@ export function getLfoAmountAudio() {
 export function updateLfoSmoothing() {
     if (!state.audioContext) return;
     const now = state.audioContext.currentTime;
-    const waveEl = document.getElementById('lfoWaveform');
     const rate = Math.max(0.05, getLfoRateHz());
-    const type = state.lfo?.type || waveEl?.value || 'sine';
+    const type = state.lfo?.type || getString('lfoWaveform', 'sine');
 
     let smoothFc;
     if (type === 'square' || type === 'sawtooth') {
@@ -89,14 +88,11 @@ export function updateLfoSmoothing() {
 export function updateLfoCutoffSafety() {
     if (!state.lfoFilterPad || !state.audioContext) return;
 
-    const knob = Math.max(
-        20,
-        parseFloat(document.getElementById('cutoff')?.value) || 1000,
-    );
+    const knob = Math.max(20, getNumber('cutoff', 1000));
     const envAmt = getFilterEnvAmount();
     const { minFreq, maxFreq, depth } = getFilterCutoffRange(Math.max(40, knob), envAmt);
     const sustain = envAmt > 0
-        ? clamp(parseFloat(document.getElementById('filterSustain')?.value) || 0, 0, 1)
+        ? clamp(getNumber('filterSustain', 0), 0, 1)
         : 1;
     const inverted = envAmt > 0 && !!state.filterEnvInvert;
     // Normal: idle near min; invert: idle near max and sweeps down toward min.
@@ -110,7 +106,7 @@ export function updateLfoCutoffSafety() {
             : (minFreq * 0.6 + typicalHz * 0.4))
         : knob;
 
-    const modAbs = Math.abs(parseFloat(document.getElementById('cutoffMod')?.value) || 0);
+    const modAbs = Math.abs(getNumber('cutoffMod', 0));
     const amount = Math.max(getLfoAmountAudio(), 0.05);
     const floorHz = 90;
     const headroom = Math.max(30, safetyHz - floorHz);
@@ -144,11 +140,8 @@ export function updateLfoCutoffSafety() {
 export function updateLfoHighpassSafety() {
     if (!state.lfoHpPad || !state.audioContext) return;
 
-    const hpBase = Math.max(
-        20,
-        parseFloat(document.getElementById('highPass')?.value) || 20,
-    );
-    const modAbs = Math.abs(parseFloat(document.getElementById('highpassMod')?.value) || 0);
+    const hpBase = Math.max(20, getNumber('highPass', 20));
+    const modAbs = Math.abs(getNumber('highpassMod', 0));
     const amount = Math.max(getLfoAmountAudio(), 0.05);
     const floorHz = 22;
     const downRoom = Math.max(6, hpBase - floorHz);
@@ -222,7 +215,6 @@ export function setLfoEnabled(on, { ramp = AMOUNT_RAMP } = {}) {
         if (front) front.textContent = state.lfoState ? 'On' : 'Off';
         mainBtn.classList.toggle('off', !state.lfoState);
     }
-    notifyKey('lfoToggle');
     applyLfoMasterGain({ ramp });
     document.dispatchEvent(new CustomEvent('ingysynth:lfo-enabled', {
         detail: { enabled: state.lfoState },
@@ -232,7 +224,7 @@ export function setLfoEnabled(on, { ramp = AMOUNT_RAMP } = {}) {
 export function setLfoAmount(amount, { ramp = AMOUNT_RAMP, enableIfPositive = true, mode = 'ramp' } = {}) {
     state.lfoAmount = clamp(amount, 0, 1);
     if (enableIfPositive && state.lfoAmount > 0.001 && !state.lfoState) {
-        setLfoEnabled(true, { ramp });
+        set('lfoToggle', true);
         return;
     }
     applyLfoMasterGain({ ramp, mode });
@@ -340,12 +332,12 @@ export function applyLfoStartupDefaults() {
     const strip = document.getElementById('keyboardLfoStrip');
     if (strip) setStripVisual(strip, 0);
 
+    set('cutoffMod', LFO_STARTUP_CUTOFF_MOD);
+    set('lfoToggle', true);
     const cutoff = document.getElementById('cutoffMod');
     if (cutoff) {
-        cutoff.value = String(LFO_STARTUP_CUTOFF_MOD);
         const span = document.getElementById('cutoffModValue');
         if (span) span.textContent = String(LFO_STARTUP_CUTOFF_MOD);
-        cutoff.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     setLfoEnabled(true, { ramp: 0 });

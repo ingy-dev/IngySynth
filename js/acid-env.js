@@ -1,13 +1,13 @@
 // ACID mode: TB-303-style AD envelopes + accent sweep (Robin Whittle MEG/VEG).
 // When Off, callers keep the normal ADSR path untouched.
 
-import { state } from './state.js?v=113';
-import { getNumber } from './params.js?v=5';
+import { state } from './state.js?v=114';
+import { getNumber } from './params.js?v=8';
 import {
     getFilterEnvAmount,
     getFilterCutoffRange,
     updateFilterCutoffRange,
-} from './filter-cutoff.js?v=80';
+} from './filter-cutoff.js?v=82';
 
 const MIN = 0.00001;
 const ACCENT_MEG_SEC = 0.2; // fixed MEG decay on accent (~200 ms)
@@ -44,6 +44,28 @@ export function acidVegDecaySec() {
 function decayTau(sec) {
     // ~95% settle in `sec`
     return Math.max(0.012, sec / 3);
+}
+
+/** Sequencer GATE as a fraction of the step. Acid default is 100% (full step). */
+function acidGateFrac() {
+    const v = getNumber('gateLength', 100);
+    return Math.max(0.05, Math.min(1, v / 100));
+}
+
+/**
+ * Dump a VEG/MEG gain at GATE close. Slide hold skips this (gate stays open).
+ * Clamped so a full GATE still leaves a hair before the next step's retrigger.
+ */
+function scheduleGateDump(gainParam, t0, stepDuration) {
+    if (!gainParam || !(stepDuration > 0)) return;
+    const raw = t0 + stepDuration * acidGateFrac();
+    const dumpAt = Math.min(t0 + stepDuration - 0.005, Math.max(t0 + 0.012, raw));
+    try {
+        if (typeof gainParam.cancelAndHoldAtTime === 'function') {
+            gainParam.cancelAndHoldAtTime(dumpAt);
+        }
+    } catch (_) { /* ignore */ }
+    gainParam.setTargetAtTime(MIN, dumpAt, decayTau(SLIDE_END_RELEASE_SEC));
 }
 
 function getAccentAmount() {
@@ -215,7 +237,12 @@ export function scheduleAcidFilterEnvelope({
         decayTau(acidMegDecaySec(!!accentThisStep)),
     );
 
-    state.filterEnvelopeHeld = !!nextStepWillSlide;
+    if (!nextStepWillSlide) {
+        scheduleGateDump(gainParam, t0, stepDuration);
+        state.filterEnvelopeHeld = false;
+    } else {
+        state.filterEnvelopeHeld = true;
+    }
 }
 
 /**
@@ -224,6 +251,7 @@ export function scheduleAcidFilterEnvelope({
  */
 export function scheduleAcidAmpEnvelope({
     startTime,
+    stepDuration,
     slideThisStep,
     nextStepWillSlide,
     accentThisStep,
@@ -253,7 +281,13 @@ export function scheduleAcidAmpEnvelope({
     }
 
     const attack = softRetriggerGain(g, t0, peak, 0.003, tau);
-    state.envelopeHeld = !!nextStepWillSlide;
+    if (!nextStepWillSlide) {
+        // GATE chops the VCA; Decay still shapes the fall during the gate window
+        scheduleGateDump(g, t0, stepDuration);
+        state.envelopeHeld = false;
+    } else {
+        state.envelopeHeld = true;
+    }
     return attack;
 }
 

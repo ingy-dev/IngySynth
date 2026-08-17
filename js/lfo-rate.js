@@ -1,11 +1,12 @@
 // Ableton-style LFO rate: free-running Hz or tempo-synced beat divisions.
-// Classic #lfoSpeed / #lfoSyncDivision are source of truth; applyLfoRate() is
-// the single writer to state.lfo.frequency.
+// params.lfoSpeed / lfoSyncDivision are source of truth; applyLfoRate() is
+// the single writer to state.lfo.frequency. state.lfoSync stays the mode flag.
 
-import { state } from './state.js?v=113';
-import { getNumber, set } from './params.js?v=5';
-import { ensureDisplayStep, formatRangeValue, resetInputToDefault } from './knobs.js?v=113';
-import { beginMidiLearn } from './midi-learn.js?v=3';
+import { state } from './state.js?v=114';
+import { getNumber, set, subscribe, toggle } from './params.js?v=8';
+import { getParam } from './param-catalog.js?v=1';
+import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=120';
+import { beginMidiLearn } from './midi-learn.js?v=6';
 
 /** Optional hook so applyLfoRate can refresh smoothing without a circular import. */
 let onRateApplied = null;
@@ -179,18 +180,24 @@ function setKnobAngle(dial, norm) {
     dial.style.setProperty('--knob-angle', `${angle}deg`);
 }
 
-function hzValueToNorm(input) {
-    const min = parseFloat(input.min) || 0.1;
-    const max = parseFloat(input.max) || 20;
-    const v = parseFloat(input.value);
-    if (!(max > min)) return 0;
-    return clamp(((Number.isFinite(v) ? v : min) - min) / (max - min), 0, 1);
+function hzRange() {
+    const spec = getParam('lfoSpeed');
+    return {
+        min: Number.isFinite(spec?.min) ? spec.min : 0.1,
+        max: Number.isFinite(spec?.max) ? spec.max : 20,
+        step: Number.isFinite(spec?.step) && spec.step > 0 ? spec.step : 0.1,
+    };
 }
 
-function hzNormToValue(input, norm) {
-    const min = parseFloat(input.min) || 0.1;
-    const max = parseFloat(input.max) || 20;
-    const step = parseFloat(input.step) || 0.1;
+function hzValueToNorm(value) {
+    const { min, max } = hzRange();
+    if (!(max > min)) return 0;
+    const v = Number.isFinite(value) ? value : getNumber('lfoSpeed', 1);
+    return clamp((v - min) / (max - min), 0, 1);
+}
+
+function hzNormToValue(norm) {
+    const { min, max, step } = hzRange();
     const raw = min + clamp(norm, 0, 1) * (max - min);
     const stepped = Math.round(raw / step) * step;
     return clamp(Number(stepped.toFixed(6)), min, max);
@@ -208,28 +215,28 @@ function syncDialVisual(dial) {
         dial.setAttribute('aria-valuenow', String(idx));
         dial.setAttribute('aria-valuetext', LFO_SYNC_DIVISIONS[idx].label);
     } else {
-        const input = document.getElementById('lfoSpeed');
-        if (!input) return;
-        const norm = hzValueToNorm(input);
+        const { min, max } = hzRange();
+        const v = getNumber('lfoSpeed', 1);
+        const norm = hzValueToNorm(v);
         setKnobAngle(dial, norm);
-        dial.setAttribute('aria-valuemin', input.min);
-        dial.setAttribute('aria-valuemax', input.max);
-        dial.setAttribute('aria-valuenow', input.value);
-        dial.setAttribute('aria-valuetext', formatRangeValue(input));
+        dial.setAttribute('aria-valuemin', String(min));
+        dial.setAttribute('aria-valuemax', String(max));
+        dial.setAttribute('aria-valuenow', String(v));
+        dial.setAttribute('aria-valuetext', formatLfoRateReadout());
     }
 }
 
 /**
  * Mode-aware RATE dial: continuous Hz or stepped sync divisions.
+ * Binds from params + catalog even when #lfoSpeed / #lfoSyncDivision are missing.
  */
 export function initLfoRateKnob() {
     const dial = document.getElementById('kbLfoRateKnob');
+    if (!dial) return;
     const hzInput = document.getElementById('lfoSpeed');
     const syncInput = document.getElementById('lfoSyncDivision');
-    if (!dial || !hzInput || !syncInput) return;
-
-    ensureDisplayStep(hzInput);
-    ensureDisplayStep(syncInput);
+    if (hzInput) ensureDisplayStep(hzInput);
+    if (syncInput) ensureDisplayStep(syncInput);
     syncDialVisual(dial);
 
     let dragging = false;
@@ -239,27 +246,20 @@ export function initLfoRateKnob() {
     let activePointerId = null;
 
     const writeHz = (norm) => {
-        const next = hzNormToValue(hzInput, norm);
-        if (parseFloat(hzInput.value) !== next) {
-            set('lfoSpeed', next);
-        }
-        // Apply directly — don't wait for wireControls()'s input listener
+        const next = hzNormToValue(norm);
+        set('lfoSpeed', next);
         if (!state.lfoSync) applyLfoRate({ ramp: 0.02 });
     };
 
     const writeSync = (index) => {
         const idx = clamp(Math.round(index), 0, LFO_SYNC_DIVISIONS.length - 1);
-        if (parseInt(syncInput.value, 10) !== idx) {
-            set('lfoSyncDivision', idx);
-        } else {
-            syncDialVisual(dial);
-        }
+        set('lfoSyncDivision', idx);
         setLfoSyncDivision(idx, { ramp: 0.02 });
     };
 
     dial.addEventListener('pointerdown', (e) => {
         const rateId = state.lfoSync ? 'lfoSyncDivision' : 'lfoSpeed';
-        if (beginMidiLearn(e, document.getElementById(rateId), dial.closest('.synth-knob') || dial)) return;
+        if (beginMidiLearn(e, rateId, dial.closest('.synth-knob') || dial)) return;
         if (e.button !== undefined && e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
@@ -269,7 +269,7 @@ export function initLfoRateKnob() {
         if (state.lfoSync) {
             startIndex = getSyncDivisionIndex();
         } else {
-            startNorm = hzValueToNorm(hzInput);
+            startNorm = hzValueToNorm(getNumber('lfoSpeed', 1));
         }
         dial.classList.add('active');
         try {
@@ -290,7 +290,7 @@ export function initLfoRateKnob() {
             const norm = clamp(startNorm + deltaY / DRAG_PIXELS, 0, 1);
             setKnobAngle(dial, norm);
             writeHz(norm);
-            dial.setAttribute('aria-valuetext', formatRangeValue(hzInput));
+            dial.setAttribute('aria-valuetext', formatLfoRateReadout());
         }
     });
 
@@ -307,12 +307,23 @@ export function initLfoRateKnob() {
     dial.addEventListener('pointercancel', endDrag);
     dial.addEventListener('lostpointercapture', endDrag);
 
-    hzInput.addEventListener('input', () => {
+    hzInput?.addEventListener('input', () => {
         if (dragging || state.lfoSync) return;
         syncDialVisual(dial);
     });
-    syncInput.addEventListener('input', () => {
+    syncInput?.addEventListener('input', () => {
         if (dragging) return;
+        syncDialVisual(dial);
+    });
+
+    subscribe('lfoSpeed', () => {
+        if (dragging) return;
+        if (!state.lfoSync) applyLfoRate({ ramp: 0.02 });
+        syncDialVisual(dial);
+    });
+    subscribe('lfoSyncDivision', () => {
+        if (dragging) return;
+        if (state.lfoSync) applyLfoRate({ ramp: 0.02 });
         syncDialVisual(dial);
     });
 
@@ -335,7 +346,7 @@ export function initLfoRateKnob() {
             return;
         }
         const stepNorm = e.shiftKey ? 0.05 : 0.01;
-        let norm = hzValueToNorm(hzInput);
+        let norm = hzValueToNorm(getNumber('lfoSpeed', 1));
         if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
             e.preventDefault();
             norm = clamp(norm + stepNorm, 0, 1);
@@ -355,14 +366,19 @@ export function initLfoRateKnob() {
         writeHz(norm);
     });
 
-    // Double-click reset: Hz → default; Sync → 1/4
+    // Double-click reset: Hz → catalog default; Sync → 1/4
     dial.addEventListener('dblclick', (e) => {
         e.preventDefault();
         e.stopPropagation();
         if (state.lfoSync) {
             writeSync(LFO_SYNC_DEFAULT_INDEX);
-        } else {
+        } else if (hzInput) {
             resetInputToDefault(hzInput);
+            syncDialVisual(dial);
+        } else {
+            const spec = getParam('lfoSpeed');
+            set('lfoSpeed', spec?.default ?? 1);
+            applyLfoRate({ ramp: 0.02 });
             syncDialVisual(dial);
         }
     });
@@ -381,30 +397,18 @@ export function initLfoRateControls() {
     }
     rateControlsWired = true;
 
+    subscribe('lfoSyncToggle', (on) => setLfoSyncMode(!!on));
     const syncBtn = document.getElementById('lfoSyncToggle');
     if (syncBtn) {
-        syncBtn.addEventListener('click', () => {
-            setLfoSyncMode(!state.lfoSync);
-        });
+        syncBtn.addEventListener('click', () => toggle('lfoSyncToggle'));
     }
 
-    const speed = document.getElementById('lfoSpeed');
-    if (speed) {
-        speed.addEventListener('input', () => {
-            if (state.lfoSync) return;
-            applyLfoRate();
-        });
-    }
-
-    const divEl = document.getElementById('lfoSyncDivision');
-    if (divEl) {
-        // Ensure default index in DOM
-        if (!divEl.value) divEl.value = String(LFO_SYNC_DEFAULT_INDEX);
-        state.lfoSyncDivisionIndex = getSyncDivisionIndex();
-        divEl.addEventListener('input', () => {
-            setLfoSyncDivision(parseInt(divEl.value, 10) || 0);
-        });
-    }
+    subscribe('lfoSpeed', () => {
+        if (!state.lfoSync) applyLfoRate();
+    });
+    subscribe('lfoSyncDivision', (v) => {
+        setLfoSyncDivision(parseInt(v, 10) || 0);
+    });
 
     updateLfoRateReadout();
 }

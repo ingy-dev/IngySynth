@@ -1,7 +1,8 @@
 // Acid Mode strip above Steps: visibility, saw/square switch, OSC1 lock.
 
-import { state, OSC_COUNT } from './state.js?v=113';
-import { refreshFilterInputDrive } from './filter-drive.js?v=20';
+import { state, OSC_COUNT } from './state.js?v=114';
+import { getOscType, getOscVol, set } from './params.js?v=8';
+import { refreshFilterInputDrive } from './filter-drive.js?v=24';
 
 const ACID_WAVES = new Set(['sawtooth', 'square']);
 
@@ -18,16 +19,15 @@ function mainOscToggle(oscIndex) {
 
 function setOscEnabled(oscIndex, enabled) {
     const want = !!enabled;
-    if (!!state.oscStates[oscIndex] === want) {
-        syncOscToggleUi(oscIndex);
-        return;
-    }
     state.oscStates[oscIndex] = want;
+    set(`osc-toggle-${oscIndex}`, want);
     syncOscToggleUi(oscIndex);
     if (state.audioContext && state.oscGains?.[oscIndex]) {
-        const volEl = document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`);
-        const volume = want && volEl ? parseFloat(volEl.value) : 0;
-        state.oscGains[oscIndex].gain.setValueAtTime(volume, state.audioContext.currentTime);
+        const volume = want ? getOscVol(oscIndex) : 0;
+        state.oscGains[oscIndex].gain.setValueAtTime(
+            Number.isFinite(volume) ? volume : 0,
+            state.audioContext.currentTime,
+        );
     }
 }
 
@@ -81,13 +81,8 @@ function syncNoiseUi() {
 }
 
 function setOsc1Wave(value) {
-    const typeMain = mainOscType(0);
-    if (!typeMain) return;
     const next = ACID_WAVES.has(value) ? value : 'sawtooth';
-    if (typeMain.value !== next) {
-        typeMain.value = next;
-        typeMain.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    set('osc-type-0', next);
     syncAcidWaveUi(next);
 }
 
@@ -168,13 +163,13 @@ export function applyAcidOscLock(on) {
             acidSnapshot = {
                 oscStates: state.oscStates.slice(),
                 noiseState: !!state.noiseState,
-                osc1Wave: mainOscType(0)?.value || 'sawtooth',
+                osc1Wave: getOscType(0) || 'sawtooth',
             };
         }
         setOscEnabled(0, true);
         for (let i = 1; i < OSC_COUNT; i++) setOscEnabled(i, false);
         setNoiseEnabled(false);
-        const wave = mainOscType(0)?.value;
+        const wave = getOscType(0);
         if (!ACID_WAVES.has(wave)) setOsc1Wave('sawtooth');
         else syncAcidWaveUi(wave);
         setAcidLockedUi(true);
@@ -190,12 +185,8 @@ export function applyAcidOscLock(on) {
         setOscEnabled(i, !!snap.oscStates[i]);
     }
     setNoiseEnabled(!!snap.noiseState);
-    const typeMain = mainOscType(0);
-    if (typeMain && snap.osc1Wave && typeMain.value !== snap.osc1Wave) {
-        typeMain.value = snap.osc1Wave;
-        typeMain.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-    syncAcidWaveUi(mainOscType(0)?.value || 'sawtooth');
+    if (snap.osc1Wave) set('osc-type-0', snap.osc1Wave);
+    syncAcidWaveUi(snap.osc1Wave || getOscType(0) || 'sawtooth');
     if (state.audioContext) refreshFilterInputDrive();
 }
 
@@ -216,7 +207,7 @@ export function syncAcidStripUi() {
         mainBtn.classList.toggle('off', !on);
         mainBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
-    syncAcidWaveUi(mainOscType(0)?.value || 'sawtooth');
+    syncAcidWaveUi(getOscType(0) || 'sawtooth');
 }
 
 /**

@@ -1,17 +1,17 @@
-import { state } from './state.js?v=113';
-import { getNumber } from './params.js?v=5';
-import { semitonesToFrequency } from './tuning.js?v=77';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=80';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=98';
-import { bentFrequency } from './pitch-bend.js?v=84';
-import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=154';
-import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=86';
+import { state } from './state.js?v=114';
+import { getNumber } from './params.js?v=8';
+import { semitonesToFrequency } from './tuning.js?v=79';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=82';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=100';
+import { bentFrequency } from './pitch-bend.js?v=90';
+import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=158';
+import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=90';
 import {
     triggerAcidLiveAmp,
     triggerAcidLiveFilter,
     releaseAcidLiveEnvelopes,
     acidVegDecaySec,
-} from './acid-env.js?v=10';
+} from './acid-env.js?v=14';
 
 const RETUNE_RAMP = 0.012; // short glide — avoids zipper clicks on legato
 /** Above this amp level, a new noteOn reuses the voice instead of hard restarting. */

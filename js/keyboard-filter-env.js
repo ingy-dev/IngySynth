@@ -2,11 +2,11 @@
 // On/Off writes params; Invert is stage-only (state.filterEnvInvert).
 // ADSR knobs are wired in knobs.js.
 
-import { state } from './state.js?v=113';
-import { getNumber, wireToggle } from './params.js?v=5';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=80';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=17';
-import { drawFilterADSRVisualizer } from './visualizers.js?v=98';
+import { state } from './state.js?v=114';
+import { getNumber, wireToggle } from './params.js?v=8';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=24';
+import { drawFilterADSRVisualizer } from './visualizers.js?v=100';
 
 let syncToggle = () => {};
 

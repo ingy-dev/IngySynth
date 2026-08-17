@@ -1,11 +1,11 @@
 // Horizontal pitch-bend touch strip on the keyboard performance row.
 // Bends sequencer + live keyboard pitch; springs back to center on release.
 
-import { state } from './state.js?v=113';
-import { beginMidiLearn } from './midi-learn.js?v=3';
-import { midiPitchBendValue } from './tuning.js?v=77';
-import { voiceTargetFreq } from './unison.js?v=154';
-import { applyPolyPitchBend, hasPolyVoices } from './poly-voice.js?v=60';
+import { state } from './state.js?v=114';
+import { beginMidiLearn } from './midi-learn.js?v=6';
+import { midiPitchBendValue } from './tuning.js?v=79';
+import { voiceTargetFreq } from './unison.js?v=158';
+import { applyPolyPitchBend, hasPolyVoices } from './poly-voice.js?v=66';
 
 const BEND_RAMP = 0.01;
 

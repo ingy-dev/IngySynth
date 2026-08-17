@@ -1,9 +1,9 @@
 // Global unison stacks for the phase-reset oscillator path.
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
-import { state } from './state.js?v=113';
-import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=5';
-import { createOscSource, softStartVoiceGain, fadeStopOsc } from './osc-source.js?v=86';
+import { state } from './state.js?v=114';
+import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=8';
+import { createOscSource, softStartVoiceGain, fadeStopOsc } from './osc-source.js?v=90';
 
 const ALLOWED_VOICES = [3, 5, 7];
 
@@ -213,12 +213,6 @@ function setUnisonToggleUi(on) {
 
 /** Force Unison Off when Phase Reset is Off. Controls stay enabled so Unison can auto-enable Phase Reset. */
 export function syncUnisonControlsEnabled() {
-    // #region agent log
-    const _clearedByPhase = !state.phaseResetEnabled && state.unisonEnabled;
-    if (_clearedByPhase || state.keyboardMultitudes || state.keyboardPoly) {
-        fetch('http://127.0.0.1:7606/ingest/097204ca-714f-4954-a0f8-6c2082d733f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e6a350'},body:JSON.stringify({sessionId:'e6a350',runId:'pre-fix',hypothesisId:'B',location:'unison.js:syncUnisonControlsEnabled',message:'syncUnisonControlsEnabled',data:{clearedByPhase:_clearedByPhase,unison:!!state.unisonEnabled,phaseReset:!!state.phaseResetEnabled,multitudes:!!state.keyboardMultitudes,poly:!!state.keyboardPoly},timestamp:Date.now()})}).catch(()=>{});
-    }
-    // #endregion
     if (!state.phaseResetEnabled && state.unisonEnabled) {
         state.unisonEnabled = false;
         setUnisonToggleUi(false);

@@ -1,9 +1,8 @@
 // LFO shape / on-off / sync in the keyboard Mod Matrix.
 // RATE dial is mode-aware (Hz / Sync) — wired in lfo-rate.js.
 
-import { getString, set, subscribe, wireToggle } from './params.js?v=5';
-import { setLfoSyncMode } from './lfo-rate.js?v=10';
-import { state } from './state.js?v=113';
+import { getString, set, subscribe, toggle, wireToggle } from './params.js?v=8';
+import { state } from './state.js?v=114';
 
 const WAVEFORMS = [
     {
@@ -110,7 +109,7 @@ function wireSync() {
     sync();
 
     kbBtn.addEventListener('click', () => {
-        setLfoSyncMode(!state.lfoSync);
+        toggle('lfoSyncToggle');
     });
 }
 

@@ -1,61 +1,13 @@
 // ----- XY Pad Functionality -----
-// Get available control parameters for XY pad dropdowns (exclude step controls and buttons)
+import { getNumber, set } from './params.js?v=8';
+import { getParam, xyPadEntries } from './param-catalog.js?v=1';
+
 function populateXYPadControls() {
-    const availableParams = [];
-    const excludeControls = ['stepCount'];
-
-    // Find all range inputs that aren't step-related
-    document.querySelectorAll('input[type="range"]').forEach(input => {
-        const id = input.id;
-        if (id && !id.includes('step') && !excludeControls.includes(id)) {
-            // Get label text from previous sibling or parent's first child
-            let labelText = '';
-            if (input.previousElementSibling && input.previousElementSibling.tagName === 'LABEL') {
-                labelText = input.previousElementSibling.textContent;
-            } else if (input.parentElement && input.parentElement.querySelector('label')) {
-                labelText = input.parentElement.querySelector('label').textContent;
-            } else {
-                labelText = id.charAt(0).toUpperCase() + id.slice(1); // Capitalize first letter
-            }
-
-            const fieldset = input.closest('fieldset');
-            const group = fieldset?.querySelector('legend')?.textContent.trim() ?? 'Sequencer';
-
-            availableParams.push({
-                id: id,
-                name: labelText,
-                group,
-                min: parseFloat(input.min),
-                max: parseFloat(input.max),
-                value: parseFloat(input.value)
-            });
-        }
-    });
-
-    // Add class-based controls like oscillator volumes and tunes
-    ['osc-vol', 'osc-tune'].forEach(className => {
-        document.querySelectorAll(`.${className}`).forEach(input => {
-            const oscNum = input.dataset.osc;
-            const paramType = className === 'osc-vol' ? 'Volume' : 'Tune';
-
-            availableParams.push({
-                id: className,
-                dataAttribute: 'data-osc',
-                dataValue: oscNum,
-                name: paramType,
-                group: `Oscillator ${parseInt(oscNum, 10) + 1}`,
-                min: parseFloat(input.min),
-                max: parseFloat(input.max),
-                value: parseFloat(input.value)
-            });
-        });
-    });
-
-    return availableParams;
+    return xyPadEntries();
 }
 
 function getXYOptionValue(param) {
-    return param.dataValue !== undefined ? `${param.id}__${param.dataValue}` : param.id;
+    return param.id;
 }
 
 function populateXYSelect(select, params) {
@@ -83,10 +35,6 @@ function populateXYSelect(select, params) {
             const option = document.createElement('option');
             option.value = getXYOptionValue(param);
             option.textContent = param.name;
-            if (param.dataAttribute) {
-                option.dataset.attribute = param.dataAttribute;
-                option.dataset.value = param.dataValue;
-            }
             optgroup.appendChild(option);
         });
         select.appendChild(optgroup);
@@ -130,16 +78,23 @@ function optionValueToAutomationKey(optionValue) {
         if (cls === 'osc-vol' || cls === 'osc-tune') return `${cls}-${osc}`;
         return null;
     }
-    return optionValue;
+    return getParam(optionValue) ? optionValue : null;
 }
 
-function normalizeFromElement(el) {
-    if (!el) return null;
-    const min = parseFloat(el.min);
-    const max = parseFloat(el.max);
-    const value = parseFloat(el.value);
+function normalizeFromKey(key) {
+    const spec = getParam(key);
+    if (!spec || spec.type !== 'range') return null;
+    const min = spec.min;
+    const max = spec.max;
+    const value = getNumber(key, spec.default);
     if (![min, max, value].every(Number.isFinite) || max === min) return null;
     return Math.max(0, Math.min(1, (value - min) / (max - min)));
+}
+
+function mapNormToKey(norm, key) {
+    const spec = getParam(key);
+    if (!spec || spec.type !== 'range') return null;
+    return spec.min + norm * (spec.max - spec.min);
 }
 
 // Initialize XY pad and dropdowns
@@ -248,12 +203,8 @@ function initXYPad() {
     });
 
     function readParamNormalized(param) {
-        if (!param || param.isNone) return null;
-        if (param.isClassBased) {
-            const el = param.elements?.[0];
-            return normalizeFromElement(el);
-        }
-        return normalizeFromElement(param.element);
+        if (!param || param.isNone || !param.key) return null;
+        return normalizeFromKey(param.key);
     }
 
     followAutomationFn = (axes) => {
@@ -284,30 +235,12 @@ function initXYPad() {
 
     // Get parameter by id or class and data attributes
     function getParameter(paramId) {
-        if (paramId === "none") {
-            return {
-                element: null,
-                isClassBased: false,
-                isNone: true
-            };
+        if (paramId === 'none') {
+            return { key: null, isNone: true };
         }
-
-        const selectedOption = Array.from(xAxisSelect.options).find(opt => opt.value === paramId) ||
-                              Array.from(yAxisSelect.options).find(opt => opt.value === paramId);
-
-        if (selectedOption && selectedOption.dataset.attribute) {
-            const className = paramId.split('__')[0];
-            return {
-                elements: document.querySelectorAll(`.${className}[${selectedOption.dataset.attribute}="${selectedOption.dataset.value}"]`),
-                isClassBased: true
-            };
-        } else {
-            // ID-based parameter
-            return {
-                element: document.getElementById(paramId),
-                isClassBased: false
-            };
-        }
+        const key = optionValueToAutomationKey(paramId);
+        if (!key) return { key: null, isNone: true };
+        return { key, isNone: false };
     }
 
     // Update parameters based on dropdown selections
@@ -322,60 +255,17 @@ function initXYPad() {
         drawXYPad();
     }
 
-    // Map value from XY pad (0-1) to parameter range
-    function mapValue(value, paramElement) {
-        const min = parseFloat(paramElement.min);
-        const max = parseFloat(paramElement.max);
-        return value * (max - min) + min;
-    }
-
-    // Update parameter values based on XY position
     function updateParameterValues() {
-        if (xParam && !xParam.isNone) {
-            const xValue = currentX;
-
-            if (xParam.isClassBased) {
-                xParam.elements.forEach(element => {
-                    const mappedValue = mapValue(xValue, element);
-                    element.value = mappedValue;
-
-                    // Trigger input event to update synth
-                    const event = new Event('input', { bubbles: true });
-                    element.dispatchEvent(event);
-                });
-            } else if (xParam.element) {
-                const mappedValue = mapValue(xValue, xParam.element);
-                xParam.element.value = mappedValue;
-
-                // Trigger input event to update synth
-                const event = new Event('input', { bubbles: true });
-                xParam.element.dispatchEvent(event);
-            }
+        if (xParam && !xParam.isNone && xParam.key) {
+            const mapped = mapNormToKey(currentX, xParam.key);
+            if (mapped != null) set(xParam.key, mapped);
         }
 
-        if (yParam && !yParam.isNone) {
-            const yValue = 1 - currentY;
-
-            if (yParam.isClassBased) {
-                yParam.elements.forEach(element => {
-                    const mappedValue = mapValue(yValue, element);
-                    element.value = mappedValue;
-
-                    // Trigger input event to update synth
-                    const event = new Event('input', { bubbles: true });
-                    element.dispatchEvent(event);
-                });
-            } else if (yParam.element) {
-                const mappedValue = mapValue(yValue, yParam.element);
-                yParam.element.value = mappedValue;
-
-                // Trigger input event to update synth
-                const event = new Event('input', { bubbles: true });
-                yParam.element.dispatchEvent(event);
-            }
+        if (yParam && !yParam.isNone && yParam.key) {
+            const mapped = mapNormToKey(1 - currentY, yParam.key);
+            if (mapped != null) set(yParam.key, mapped);
         }
 
-        // Update visual pointer position
         updatePointerPosition();
     }
 

@@ -1,6 +1,6 @@
 ---
 name: Fullscreen-only stage
-overview: "Nine checkpoints to a stage-only UI, then a JS param store, then delete the ghost columns. Two independent reviews caught CP1/CP2 landmines (Off placement, Escape still flipping CSS, MIDI select apply, mapping drag). Those are now hard rules. Stop after CP3 for real use. Do not rewire onto kb* IDs. Do not delete #synthContainer until CP9."
+overview: "CP1–9 done (git restore 5527e83 is CP8). CP10 code is in (ghost HTML stays). Smoke CP10 before CP11. Do not rewire onto kb* IDs. Do not delete until params still work after #cutoff is removed in the inspector."
 todos:
   - id: cp1-stage-default
     content: "CP1: CSS default stage; Off beside Start (not MIDI row); Off hides piano/spacebar only, XY stays; Fullscreen/Escape no-op including the flag; XY CSS not gated on is-fullscreen; hide columns without inert; full ?v= graph"
@@ -26,44 +26,51 @@ todos:
   - id: cp8-widgets-write
     content: "CP8: knobs/buttons write the store; delete control-mirror click-through"
     status: completed
-  - id: cp9-xy-midi-auto-delete
-    content: "CP9 (later): catalogs, null-safe transport, then delete #synthContainer"
+  - id: cp9-memory-store
+    content: "CP9: Map + catalog; dual-write connected DOM; MIDI learn by catalog key; XY apply+follow via params.set; HTML stays. Smoked good-enough: audio niggles parked; MIDI CC not hardware-tested"
+    status: completed
+  - id: cp10-side-effects
+    content: "CP10: one engine path (no classic dispatch/click); flushDom no-op if bus gone; osc subscribe+apply-once; knobs bind without classic node; Rec ignores applying; Acid/Ingy/Poly store-backed; proof = set after remove PLUS rec with #cutoff still present"
+    status: in_progress
+  - id: cp11-delete-ghost
+    content: "CP11: delete #synthContainer / header / #mobileStartStop / mobile.js after CP10 proof; hard refresh is the real test; keep sr-only h1"
     status: pending
 isProject: false
 ---
 
 # Stage-only endpoint, checkpoint by checkpoint
 
-**Endpoint:** one green/black stage (what fullscreen is today). No wood page, no Fullscreen mode, no four-column sliders on screen. Audio/MIDI/automation read a JS param store whose keys are today’s IDs (`cutoff`, `osc-tune-0`, …). `#synthContainer` is gone.
+**Endpoint:** one green/black stage. No wood page, no Fullscreen mode, no four-column sliders. Audio/MIDI/automation read a **JS** param store whose keys are today’s IDs (`cutoff`, `osc-tune-0`, …). `#synthContainer` is gone.
 
-**Hard rules:**
+**Where we are (2026-08-16):** CP1–9 done. CP10 is implemented (one engine path via `params.subscribe`; `params.set` does not `dispatchEvent`/`click` classic nodes). Ghost HTML still in the page. **Smoke CP10 before CP11.** Do not delete `#synthContainer`.
+
+**Why the old CP9 was unsafe:** it listed catalogs, then “remove facade DOM sync” and **delete `#synthContainer` in the same checkpoint**. Today the facade **is** the ghost DOM. Delete first and boot throws: [`js/controls.js`](js/controls.js) ~1914–2034 attaches to `#stepCount` / `#tempo` / `#cutoff` / … at **import time** (no `?.`). [`togglePlay`](js/sequencer.js) does `startStopButton.querySelector('.front')` with no `?.`. `wireControls` does the same for `#mobileStartStop` (~151).
+
+**Hard rules (still in force):**
 
 - Do not make any `kb*` node the engine’s source of truth.
-- Do not delete `#synthContainer` until checkpoint 9.
+- Do not delete `#synthContainer` until **checkpoint 11**, and only after CP10’s proof (`params.set` after the node is gone — leftover detached listeners do not count).
 - Finish a checkpoint’s tests before the next. Fail = stop.
-- After checkpoint 3, play the instrument in real use before checkpoint 4.
-- **Normalize the entire `?v=` import graph before any other JS change.** Live skew: `knobs.js` 100\|106\|111, `midi.js` 83\|85, `berlin.js` 33\|34, `pitch-bend.js` 81\|82, `keyboard-acid-strip.js` 9\|10. Import-string-only edits in engine files are allowed for this step; do not change engine logic.
-- Do not use `inert` on the param bus. Use `hidden` + `aria-hidden`. Verify `.click()` on hidden `#filterEnvToggle` in Chrome, Safari, and Firefox.
-- **Never put Keyboard Off inside `#keyboardControlsFieldset`, the MIDI logo row, or `.keyboard-toolbar-top`.** Controls is collapsed. MIDI lives in `#midiFieldsetHome` until JS moves it, so Off in that row can sit **under** the fixed stage on first paint. `.keyboard-toolbar-top` is already `display: none` in `keyboard-stage-mode` (`styles.css` ~2146) — Off is **already invisible in today’s fullscreen**. Put Off next to `#kbStartStop` in `.keyboard-tempo-div-row` (inside `.keyboard-section` in the **HTML**, not after `initKeyboard`).
-- **Off hides piano + computer-keys + chromatic spacebar only.** Transport, synth knobs, steps, MIDI, and **XY stay**. Do not also say “XY follows keyboard visibility.”
-- Tests that can **false-pass:** inspector `#steps` × 32; `.click()` matrix; “Start works” via hidden `#startStop`; map-select highlight with no CC apply; Fullscreen/Escape with CSS locked but `state.keyboardFullscreen` still gating XY/spacebar; Off present in the DOM but still inside `.keyboard-toolbar-top`; MIDI present in the DOM but still in `#midiFieldsetHome` (under the overlay until JS).
+- If CP11 boot fails, revert **that commit only** — leave `5527e83` (CP8) intact.
+- One `?v=` per file across the whole import graph. Do not bump `docs/`.
+- Do not use `inert` on the param bus while it exists (`hidden` + `aria-hidden`).
+- **Off hides piano + computer-keys + chromatic spacebar only.** Transport, knobs, steps, MIDI, XY stay.
+- Parked (do not mix into 9–11): classic sequencer ratch stays on the private osc path (no unison, no shared filter env). Analog/digital UI lives on oscillator 1; code slot is still `OSC4_INDEX` — do not rename. **XY musical-only list** (drop slide/gate/accent/comp/etc.) is a later pass — CP9 only has to stop `querySelectorAll` and apply via `params.set`. **CP9 audio niggles** are not CP10 fails. **Hardware MIDI CC** is not a CP10 gate (`applyMappedCc` is already `params.set`; learn-by-key is the proof).
+- Do not convert Poly / Ingy-6 / Multitudes **mode** entry into “param widgets” in CP9. After CP10 those mode helpers must `params.set` osc/chorus keys instead of clicking missing nodes.
 
 ```mermaid
 flowchart LR
-  cp1[CP1 stage is the page]
-  cp2[CP2 MIDI learn]
-  cp3[CP3 drop fullscreen]
-  gate[Play in real use]
-  cp4[CP4 param facade]
-  cp5[CP5 engine reads]
-  cp6[CP6 osc keys]
-  cp7[CP7 live steps]
-  cp8[CP8 widgets write]
-  cp9[CP9 catalogs then delete]
-  cp1 --> cp2 --> cp3 --> gate --> cp4 --> cp5 --> cp6 --> cp7 --> cp8 --> cp9
+  done[CP1-8 done]
+  cp9[CP9 memory store dual-write]
+  cp10[CP10 side effects off DOM]
+  proof[params.set after node gone]
+  cp11[CP11 delete ghost]
+  done --> cp9 --> cp10 --> proof --> cp11
 ```
 
-Reviews: [first](e894934f-ab43-45d6-bf11-c583f14eb016), [second](662c3a5a-6e06-4a38-8045-134b8375d682), [third](3fbc585c-030e-450a-89ba-9a6966dfee17). Fourth: bindSteppedKnob / LFO RATE / `.is-fullscreen` CSS / sr-only `h1`. Fifth: MIDI in `#midiFieldsetStage` in HTML; rewrite `.keyboard-off`; pitch-bend + LFO-amount + dial-reset. Sixth: Off is already hidden in fullscreen (`.keyboard-toolbar-top { display: none }`); CP1 steps 2+3 and 2+4 are pairs (do not ship one without the other); selects are not in `setupMappingListeners`; Ingy-6 faders + ADSR canvas need the same mapping short-circuit as knobs.
+Reviews (CP1–3 era): [first](e894934f-ab43-45d6-bf11-c583f14eb016), [second](662c3a5a-6e06-4a38-8045-134b8375d682), [third](3fbc585c-030e-450a-89ba-9a6966dfee17).
+
+**Independent reviews of this CP9–11 split:** [first](2e46c4eb-718b-4f43-b3ad-5da792f1ca03) (detached ≠ present); [second](265b31be-6ff8-43c5-83e3-babd740b2c73) (automation **record**, MIDI learn without a live node, XY pointer/follow, step-knob bounds). **CP10-only:** [third](afe62281-14b7-4a19-9154-043276a131f0) (`flushDomToPattern` wipe; osc `querySelectorAll` no-throw; bind-at-boot; Rec `applying`; no classic `dispatchEvent`; `setLfoEnabled` recurse). Folded below.
 
 ---
 
@@ -73,7 +80,7 @@ Reviews: [first](e894934f-ab43-45d6-bf11-c583f14eb016), [second](662c3a5a-6e06-4
 
 **Core play (~5 min):** Start/Stop (toolbar + piano spacebar). Hold key; Latch. Tempo/division/steps while playing. Write 8 steps (note, rest, acc, sld, ratch). Cutoff/res/vol. Osc 1–4 on/off + wave. OSC4 analog/digital. Master tune/octave.
 
-**Full instrument (~20 min)** — gates after 1, 3, 5, 7, 9:
+**Full instrument (~20 min)** — gates after CP8, CP10, CP11:
 
 - Acid strip; FX; amp + filter ADSR (knobs and VFD drag); LFO (Hz/sync, dests, retrig, amount strip)
 - Unison / phase reset / ring / noise
@@ -219,29 +226,114 @@ Engine **logic** stays untouched (import `?v=` strings excepted).
 
 ---
 
-## Checkpoint 9 — Catalogs, then delete the ghost (later; point of no return)
+## Checkpoint 9 — In-memory store + catalog (DOM stays)
 
-**Inside this checkpoint, in order:**
+**Goal:** `params.get` / `set` are a JS Map. Hidden inputs are a **mirror**, not the store. Do **not** delete HTML.
 
-1. XY explicit catalog (not `querySelectorAll('input[type=range]')`) — already polluted by `kbSlideTime`, `kbWriteFineProxy`, etc.
-2. MIDI learn + playback by param key; aliases for old IDs.
-3. Automation hosts from a registry, not `.closest('.control')`. `RANGE_IDS` keep `lfoSpeed` and `lfoSyncDivision` coherent with sync mode.
-4. ADSR canvases: kb IDs only, store-backed.
-5. Oscilloscope: `#kbOscilloscope` only (today both canvases are painted every frame).
-6. **Null-safe transport before delete:** [`js/sequencer.js`](js/sequencer.js) `togglePlay` does `mobileStartStopButton.querySelector('.front')` with **no** `?.` — deleting `#mobileStartStop` or `#startStop` throws on Start. Fix that first.
-7. Delete `#synthContainer`, header scope, swipe dots, `#mobileStartStop`, [`js/mobile.js`](js/mobile.js). **Keep** the sr-only `h1`. Remove facade DOM sync. Null-safe [`js/controls.js`](js/controls.js) `mobileStartStopButton.addEventListener` (~151) as well as `togglePlay`. `controls.js` must not attach to missing classic IDs.
-8. Grep: zero duplicate `?v=` in the import graph.
+**Why this is first:** [`bindKnob`](js/knobs.js) still `return`s if `elementFor(key)` is missing (`if (!dial || !input) return`), and uses that node for min/max/step/`valueToNorm`. XY still does `querySelectorAll('input[type="range"]')` ([`js/xy-pad.js`](js/xy-pad.js) ~8) and is already polluted by `kbSlideTime`, `kbWriteFineProxy`, `.kb-osc-pan`, `.kb-step-fine`. MIDI CC still writes `mapping.element.value` + `dispatchEvent('input')` ([`js/midi.js`](js/midi.js) ~237–243); note maps still `button.click()`. Automation `setParamValue` does the same ([`js/automation.js`](js/automation.js) ~434–469) and `clampParam` reads `input.min`/`max`. After delete those elements are gone, so metadata and apply paths must not need them.
 
-**Smoke after delete:** No null TypeError; inspector has no `#cutoff` / `#steps` / `#startStop`; full kit; old in-session maps if still open; XY list sane; automation playback; phone.
+**Do, in this order:**
 
-**Real-world:** Long write session, hard refresh, second device. If boot fails, revert **this checkpoint only**.
+1. **Catalog** (`js/param-catalog.js` or equivalent) of every **engine** store key: type (`range` | `select` | `button`), min/max/step/default, select options (`division`, `delayTime`, `noiseType`, `unisonVoices`, `lfoWaveform`, `osc-type-N`, `osc4Model` / `osc4Bank`, **`semitoneAmount` 0–12 default 7**). Include `lfoSpeed` and `lfoSyncDivision` as separate keys (same as today’s `RANGE_IDS`). Include `osc-tune-0..3`, `osc-vol-*`, `osc-pan-*`, `osc-type-*`, `osc-toggle-*`. Step **metadata** for MIDI/knobs (`step-slider-N` …) is allowed; do **not** store 192 live values in the Map (that is a third copy beside `pattern.steps[]` and the bus). **Not** in the catalog: `kb*` mirrors, `#kbWriteFineProxy`, Berlin lane inputs, `pitchBend` (automation uses `state.pitchBendSemitones` / `applyPitchBend`, not a DOM id), latch, speech, computer-keys, analog/digital **engine buttons** (`.osc4-engine-btn` have **no id**; [`elementFor`](js/params.js) cannot find them — keep class listeners on the **stage** copies).
+2. **Memory Map** in [`js/params.js`](js/params.js). Boot: hydrate from catalog defaults, then overlay **connected** DOM (`el.isConnected`). A disconnected node is **absent**. **Hydrate timing:** [`js/sequencer.js`](js/sequencer.js) imports `params.js`, then `ensureStepParamBus()` runs — do not overlay step values at `params.js` eval. `get`/`set` for `step-*` are **views of `getLiveStep`**, not Map copies. Other keys: `get` reads the Map. `set` **must succeed with no connected element** (`if (!el) return false` is today’s code). Equality-guard on the Map stops `set` re-entry — it does **not** stop `notify` plus a leftover DOM `input` listener both applying AudioParams. Write the Map, `notify` subscribers, **then** if a **connected** `elementFor(key)` exists, mirror and dispatch so CP8-era listeners still run. Never dispatch on a detached node (that is the CP10 false-pass). [`onDomCommit`](js/params.js) must ignore non-catalog ids (`kbSlideTime` must not become a store key) and must not `notify` again when `set` already did.
+3. **Buttons:** while a **connected** node exists, `set(key, bool)` may still `click()` it (current CP8). That path is **untested** by removing `#cutoff`. Do not extract handlers yet (CP10). Ratch stays `click()` / cycle, not a bool. After CP10, button `set` is **set-to-value**, not a toggle: click handlers that flip `state.lfoSync` / `state.filterEnvState` plus `notify` will undo the set. Buttons skip `lastNotified` today (`params.js` ~84–86).
+4. **Knobs:** `bindKnob`, **`bindSteppedKnob`** (DIV → `#division`, [`js/knobs.js`](js/knobs.js) ~438–441 / ~548–553), and **`initLfoRateKnob`** ([`js/lfo-rate.js`](js/lfo-rate.js) ~225–229, Hz visual ~211–212) all `return` if the classic node is missing. CP9 may still bind to live inputs. Catalog min/max/step when the input is absent is CP10. Double-click reset uses catalog `default`, not `input.defaultValue` alone — and must `params.set`, not only write a cached input ([`resetInputToDefault`](js/knobs.js) ~102). Berlin still `bindKnob(dial, input)` on lane ranges (`keyFromElement` is null) — keep the **element form**; those stay out of the catalog. Write µtune still uses `#kbWriteFineProxy` — out of catalog **and** out of XY.
+5. **Step keys vs play:** play already reads `pattern.steps[]` via `getLiveStep`. The hidden bus stays in sync through [`bindLiveStepSync`](js/pattern-bank.js). Cataloguing `step-slider-N` is metadata only — **min/max are not a static row**: Write mode widens to −39…+48 ([`stepTuneBounds`](js/step-tune-range.js)). `bindKnob` for stage step dials must use `stepTuneBounds(liveValue)` and must **bind with no `.step-tune`** (today `elementFor` + `if (!input) return`). `params.set('step-slider-N', …)` must update `getLiveStep(N).tune`. Bank `flushDomToPattern` still reads the bus in CP9. Pattern clock (`tempo` / `division` / `stepCount`) is still `readClockFromDom` — CP10 must `params.set` on slot switch. `tempo`, `division`, `delayTime` are **three** keys (shared option values `2/4/8/16`, different meaning). `delayTime` HTML default is **first option `2`**, not 8 (`index.html` ~2688).
+6. **XY (boot-safe, not a musical curate):** stop `querySelectorAll('input[type="range"]')`. **Must rewrite apply**, not only the dropdown scrape: [`getParameter`](js/xy-pad.js) / `mapValue` / `updateParameterValues` / [`followXYPadAutomation`](js/xy-pad.js) (`normalizeFromElement`) still need live range nodes (~250–375). Osc extras are option values `osc-vol__0`, not catalog `osc-vol-0`. After `#cutoff.remove()` / CP11 those paths are **silent no-ops**. **Must exclude** `kb*` mirrors, `#kbWriteFineProxy`, step bus / `.kb-step-fine`, Berlin lanes. **Parked for later:** dropping non-musical ranges (`slideTime`, `gateLength`, `accentAmount`, `compThreshold`, …). Leaving `slideTime` on the list is not a fail.
+7. **MIDI** learn must store a **catalog key** from `data-param` / dial id / Ingy `INGY_PARAM_TO_MAIN`, **never** `ingy6-*` and never `getElementById(param)` falling through to the 0–10 fader ([`js/midi-learn.js`](js/midi-learn.js) ~154–181; [`js/keyboard-ingy6-panel.js`](js/keyboard-ingy6-panel.js) ~91–104). Mapping mode must succeed with `elementFor(key) === null`. Playback: **always** `params.set` / `toggle` / `click` by that key. Ignore `mapping.element` if missing **or disconnected**. Do not copy `|| 127` as max. Maps stay memory-only.
+8. **Automation** apply via `params.set` for catalog keys. **`pitchBend` is not a catalog key** — keep `applyPitchBend` / `state.pitchBendSemitones` ([`js/automation.js`](js/automation.js) ~17, ~442–450). `setParamValue` today sets `input.step = 'any'` so interpolated playback is not snapped to HTML step — `params.set` must keep **float** resolution. Host lookup from catalog / `RANGE_IDS`, not `.closest('.control')` on a missing column. Keep `lfoSpeed` vs `lfoSyncDivision` coherent with `state.lfoSync`.
+9. Oscilloscope / ADSR may still paint classic canvases if present (`paintOscilloscopeCanvas` already no-ops a null canvas). Prefer writing kb canvases; do not delete classic canvases yet. **Kb ADSR still `readAdsrParams` via `#attack` / `#filterAttack`** ([`js/visualizers.js`](js/visualizers.js) ~157–162) — missing any one returns `null`. That is a CP10 store read, not a cutoff `.value` check.
+10. **LFO factory CUT:** [`applyLfoStartupDefaults`](js/lfo-strip.js) writes `#cutoffMod` to 1500 then `input` (~336–349). Catalog / dblclick default stays **0**. After Map hydrate, startup must `params.set('cutoffMod', 1500)` or CUT dest stays 0.
+11. Stage `#kbPatternSemiAmount` / `#kbXySemiAmount` must `params.set('semitoneAmount')`. Today [`setSemitoneAmount`](js/keyboard.js) no-ops if `#semitoneAmount` is missing (~992–999). `getNumber('semitoneAmount')` fallback **0** silently kills transpose ([`js/tuning.js`](js/tuning.js) ~139). Same class of bug: catalog hydrate must match HTML or every `getNumber` fallback will rewrite the patch — `slideTime` 60 not 0, `tempo` 120, `division` 8, amp ADSR 0 / 0.5 / 0.5 / 1 (`js/sequencer.js` ~137, ~1435; `js/voice.js` ~126–128).
+12. **Selects are not done when listed in the catalog.** `delayTime` → `updateDelayTime`; `lfoWaveform` → `state.lfo.type` + [`updateLfoSmoothing`](js/lfo-strip.js) (~46) still reads `#lfoWaveform`; `unisonVoices` is dual SoT with `state.unisonVoices` (`js/controls.js` ~1601); `osc4Model` / `osc4Bank` go through `setOsc4Model` / `state.osc4Model`, not Map-only (`js/controls.js` ~1102). Do not catalog `#kbOsc4Model`. `noiseType` has no `controls.js` change listener — Ingy still `getElementById('noiseType')`. CP10 must `subscribe` those functions; CP9 dual-write can still use the nodes.
 
-Pitch bend, latch, held notes, Berlin lanes, speech modal, computer-keys are not `#synthContainer` params — they must still work after delete, but they are not store keys unless a later pass says so.
+**Do not:** delete `#synthContainer`. Do not strip `controls.js` listeners yet (they still have nodes). Do not mix ratch unison. Do not treat a disconnected node as “the input still exists.”
+
+**Done when:** `params.get('cutoff')` matches the stage knob after a drag; hidden **connected** `#cutoff` still tracks (dual-write). XY list has cutoff/res and does **not** list `kbWriteFineProxy` / step sliders. A CC mapped this session moves sound via `params.set` even if you `mapping.element.remove()`. `getNumber('semitoneAmount')` is 7 at boot.
+
+**Smoke:** Boot + core play. Ride cutoff while playing (inspector `#cutoff` still moves). XY assign cutoff — not a `kb*` id. Map volume CC. Double-click cutoff reset (Map returns to catalog default, LFO CUT dest is **not** this test — dest default is 0, factory 1500). Acid + MI cutoff still one value. Keyboard Off does not desync. Semitone amount 7 on stage selects. DIV and LFO RATE still bind (nodes still in the page).
+
+**False-pass:** MIDI highlight without the CC changing `params.get`. XY showing cutoff only because the hidden input still exists (grep: no `querySelectorAll` is not enough if `getParameter` / `followXYPadAutomation` still use the node). MIDI CC that still writes `mapping.element`. Learn that stored `ingy6-cutoff`. Leaving `slideTime` on the XY list is **not** a fail (parked curate).
+
+**Real-world:** Same session as CP8 (acid + Multitudes). Reload is not a MIDI persistence test.
+
+---
+
+## Checkpoint 10 — Side effects off the DOM (DOM still stays)
+
+**Goal:** AudioParam rides, osc state, FX toggles, and transport UI do not require classic nodes. Ghost HTML is still in the page as a safety net.
+
+**CP9 already did — do not re-open:** in-memory Map + catalog; XY apply/follow via `params.set` (no range scrape); MIDI learn stores catalog keys; CC/note apply is `params.set` / `toggle` / `click` (no `mapping.element` write). Dual-write `dispatchEvent` on **connected** classic nodes is still the engine path — that is what CP10 removes.
+
+**The boot killers if skipped** (list is not exhaustive — grep `getElementById('…').` with no `?.` **and** unguarded `.classList` / `.addEventListener` before CP11):
+
+- Import-time (throws before any click) in [`js/controls.js`](js/controls.js): `#stepCount`, `#tempo`, `#slideTime`, `#accentAmount`, `#gateLength`, `#cutoff`, `#resonance`, `#highPass`, `#delayTime`, `#volume`, `#scaleToggle` (~1914–2034), **and** `['attack','decay','sustain','release']` / `['filterAttack',…]` (~1994–2007), **and** `scaleSelect.appendChild` (~2021–2032) — `#scaleSelect` lives **inside** `#synthContainer`. Stage already has `#keyboardScaleSelect` / `#kbPatternScaleSelect` / `#kbXyScaleSelect` populated separately in [`js/keyboard.js`](js/keyboard.js).
+- First Start: [`togglePlay`](js/sequencer.js) ~1328–1333 `#startStop` / `#mobileStartStop` `.front` with no `?.`.
+- First `initAudio` → `wireControls`: `#startStop` / `#mobileStartStop` `.addEventListener` with no `?.` (~148–153); `#noiseToggle` / `#noiseVol` (~278–295); `#filterEnvToggle` plus unguarded `#filterEnvControls` (~306–312); `#masterTune` / `#octaveSwitch` / `#semitoneSwitch` / `#semitoneAmount` / `#distortion` / `#bitDepth` / `#delayAmount` / `#compThreshold` / LFO dests; chorus block (~1764–1845) including `chorusI.querySelector('.front')` with no `?.`; `toggleReverse` unguarded `#stepCount`.value (~177); **also** unguarded `#lfoWaveform` / `#ringMod` / `#reverse` `.addEventListener` and `#noiseToggle` / `#lfoRetrigger` `.classList.add` (~361, ~372, ~1367, ~1477, ~1480). Empty `querySelectorAll('.osc-*')` does **not** throw — it silently skips the osc engine (see Do §4).
+- Live AudioParam reads that still use the node, not `params.getNumber`: `updateFilterCutoffRange` path ~118 / ~316 / ~1417 `document.getElementById('cutoff').value` (no `?.`). Inspector-remove `#cutoff` throws here even if the import-time listener is gone — **unless** the leftover listener on the **detached node** still runs (`this.value`), which is a false-pass. `updateDelayTime` (~2044) reads `#delayTime` / `#tempo` the same way. [`syncLfoDepthsFromUi`](js/controls.js) (~1458) reads `#cutoffMod` etc. — `applyLfoStartupDefaults` runs in `main.js` **before** first Start, so subscribe-only dests stay 0 until touched unless you apply-from-store at `wireControls`. [`setAcidMode`](js/controls.js) ~118 is the same unguarded `#cutoff`.value on Acid enter (after audio exists). Amp/filter **import-time** ADSR listeners (~1994–2006) are display + VFD only — voice already `getNumber`s those keys; converting them is not the amp engine path. `#midiInputSelect` etc. are **stage** MIDI UI (survive CP11) — not a delete boot-killer.
+- [`bindKeyboardPatternRange`](js/controls.js) ~1927 (`kbSlideTime` ↔ `slideTime`, etc.): stage range still writes the classic node then `dispatchEvent('input')`. After the classic node is gone this must `params.set`. Stage `#kbTuningMasterTune` no-ops without `#masterTune` ([`setMasterTuneFromKeyboard`](js/keyboard.js) ~1027). Scale boot `!#scaleToggle?.classList.contains('off')` treats a **missing** toggle as scale ON.
+- **DIV / LFO RATE / all `KNOB_BINDINGS`:** `bindKnob` / `bindSteppedKnob` / `initLfoRateKnob` never bind if the classic node is missing **at init** (CP11 refresh). Not hit by removing `#cutoff` in a live session (the closure already captured the node).
+- **Kb ADSR:** `readAdsrParams` returns null without `#attack`… ([`js/visualizers.js`](js/visualizers.js) ~157–162). Drag writes those inputs via `setRangeInputValue`, not the Map.
+
+**Do:**
+
+1. Replace those import-time `addEventListener`s with `params.subscribe(key, …)` (or one dispatcher from `set`). **One engine path per key:** in CP10, `params.set` must **not** `dispatchEvent('input'|'change')` on classic ranges/selects at all (optional value-mirror is not the engine). Remove or no-op the DOM listeners so they are not a second path. Equality-guard on the Map stops `set` loops only. If `onDomCommit` writes the Map, skip notify when `set` already did. Never `click()` once the handler is extracted; button `set` is set-to-value. **Extracted handlers must read the notified value or `params.getNumber`**, never `this.value` (`fn(value, key)` does not set `this` to the input — cutoff ~1966, LFO dests ~1412, `compThreshold` ~497, `updateDelayTime` ~2044, osc-vol/pan ~228). **Every subscribe must apply current `params.get` once at wire** (and again at `initAudio` for dests/FX) — `subscribe` does not run the fn at bind. `syncLfoDepthsFromUi` reads the store, not `#cutoffMod`. Subscribe callbacks must **not** `notifyKey` / `set` / `click` the same key: [`setLfoEnabled`](js/lfo-strip.js) always `notifyKey('lfoToggle')` and button notify skips `lastNotified` — that recurses once stage `wireToggle` is the subscriber.
+2. `togglePlay` / reverse / scale: update `#kbStartStop` (and kb reverse/scale). Classic `#startStop` / `#mobileStartStop` only if present **and connected** (`?.`). Scale on/off and scale id must not require `#scaleToggle` / `#scaleSelect` — boot scale from the Map (catalog default is off), not `!missingToggle`. Reverse must `getNumber('stepCount')`. Master-tune mirrors `params.set`/`get`, not “return if `#masterTune` missing”. Put `params.subscribe` behind a **once-guard**; do not subscribe the same key at import-time **and** inside `wireControls` (`initAudio` already returns if context exists — today `wireControls` runs once).
+3. Button `params.set`: call the **same functions** the click handlers call (`setLfoEnabled`, osc on/off → `state.oscStates` + gains, chorus, delay, filter env) **as set-to-value**, never `.click()`. After this, `set('filterEnvToggle', true)` must work with the node **and** `#filterEnvControls` removed. Do not leave `notifyKey` inside those functions if subscribe owns the path. [`setAcidMode`](js/controls.js) still `filterEnvToggle?.click()` / `distortionToggle?.click()` (~74, ~95) then unguarded `#cutoff`.value (~118) — Acid enter must `params.set('filterEnvToggle'|'distortionToggle', true)` and `getNumber('cutoff')`.
+4. Keep `state.oscStates` / `state.oscTunes` in sync from `params.set` (no third volume copy). Today detune is `state.oscTunes[i] = parseInt(this.value)` on `.osc-tune` (~268–275). Classic osc engine is `wireControls` `querySelectorAll('.osc-toggle'|'.osc-vol'|'.osc-pan'|'.osc-tune'|'.osc-type')` — empty NodeList does not throw; after CP11 those listeners never attach. Require subscribe + one-shot apply-from-store for those five; proof `params.set('osc-vol-0'|'osc-toggle-0'|'osc-type-0')` after the classic osc nodes are gone. **Acid** still mutes if `.osc-vol` is missing ([`js/keyboard-acid-strip.js`](js/keyboard-acid-strip.js) ~19–31). **Ingy** `setOscVol` / `readMainRangeFromOscVol` still `el.value` or 0 ([`js/keyboard-ingy6-panel.js`](js/keyboard-ingy6-panel.js) ~391, ~652). **Chord Mem** uses `volEl?.value ?? '0.33'` — it does **not** mute; do not lump it with Acid. Mode lock/restore must `params.getOscVol` / `params.set('osc-type-0'|'osc-toggle-N')` only. Poly `setChorusButton` / `setFilterEnvEnabled` still `.click()` (~1174–1183); Multitudes `t0.click()` (~257) after writing `state.oscStates` double-toggles if the extracted handler still flips. Ingy `setOscEnabled` already writes `state.oscStates` — do not also `toggle`. **Poly amp→filter ADSR copy** must `params.set('filterAttack', params.get('attack'))` etc. — today’s `setRangeValue` no-ops without `#attack` ([`js/poly-voice.js`](js/poly-voice.js) ~1144, ~1199). Poly `setOscVolUi` must `params.set`, not only `.osc-vol` + dispatch.
+5. Pattern hydrate: `pattern.steps[]` is already SoT for play. `params.set` on `step-*` writes `getLiveStep` **directly** once the bus can be missing. **`flushDomToPattern` / `captureStepFromDom` already “don’t require” the bus — that is the bug.** Missing `.step-tune` returns `{ tune: 0, on: true, … }` and `flushDomToPattern` / `selectSlot` **overwrite the live pattern**. When the bus is absent, `flushDomToPattern` is a **no-op on steps** (leave `pattern.steps[]`). Clock is `params.set` on slot switch (`tempo` / `division` / `stepCount`); do not `writeClockToDom` dispatch. `#tempo` is **not** in `readClockFromDom` (only `stepCount` / `division` / `reverse`). CP11 must **stop building** `ensureStepParamBus` (it already falls back to `document.body`). `stepCount` subscribe must call `updateKeyboardStepVisibility`. Stage step knobs: `stepTuneBounds(liveValue)`, bind with no bus.
+6. **Knobs at boot, not after live remove:** `bindKnob` / `bindSteppedKnob` / `initLfoRateKnob` must not `return` if the classic node is missing. Read `params.get` + catalog (or `stepTuneBounds`) for drags; `params.subscribe` to follow MIDI/automation. Do not write or `dispatchEvent` on `!el.isConnected`. `resetInputToDefault` must `params.set(key, catalog.default)` even when `input == null` (compare `params.get`, not `input.value`). Berlin element-form still uses `input.defaultValue`. LFO RATE learn passes `'lfoSpeed'` / `'lfoSyncDivision'` strings, not `getElementById`. Proof for binders is **grep** (no `if (!input) return` / `if (!hzInput || !syncInput) return`) **or** a scratch delete of `#cutoff` / `#division` / `#lfoSpeed` / `#stepParamBus` **before reload**. Live `#cutoff.remove()` only tests the already-bound closure.
+7. ADSR canvases: `readAdsrParams` from `params.getNumber`; **drag** `params.set('attack'|…)` using catalog min/max, never `attackEl` / `setRangeInputValue`. LFO strip silent fallback 1000 is wrong. **Berlin** dest CV still `readRange('cutoff'|…)` with fallback 1000 ([`js/berlin.js`](js/berlin.js) ~79–81, ~321); master GATE no-ops without `#gateLength` (~948). Both go through `params.getNumber` / `params.set('gateLength')`. `kbGateLength` stays a mirror.
+8. Null-safe remaining classic `.value` reads. Analog/digital stays class listeners on **stage** `.osc4-engine-btn`. **FX disable** must follow `state.delayEnabled` etc. — [`inputEnabled`](js/keyboard-effects.js) treats a missing element as enabled (~23–26). **`state.lfoSync` stays a flag**; do not infer Sync from last write to `lfoSpeed` vs `lfoSyncDivision`. RATE / MIDI already pick the active key. **Automation record** today is `onDocumentInput` requiring a live `input[type=range]` ([`js/automation.js`](js/automation.js) ~840–867). Rec/offset must come from `params.subscribe` / the `set` path **and ignore playback** (`applying` is true inside `setParamValue`; a naive subscribe records the previous curve into the take). Loop length (`patternDuration`) from `params.getNumber('tempo'|'division'|'stepCount')`, not `#tempo`?.value fallbacks. Clamp from the catalog. Pointer-down on a stage dial can still `beginTake` ([`onPointerDownCapture`](js/automation.js) ~869) but the **values** must not require `t.value` on a range.
+
+**Proof (required before CP11).** A live `#cutoff.remove()` is **not** enough: import-time listeners already sit on that **object**, so a detached `input` event still rides the filter and CP11 hard refresh still throws. Keeping dual-write “because HTML stays” makes Rec and cutoff proofs lie.
+
+In order:
+
+1. Treat disconnected nodes as absent in `elementFor` / `set` / `bindKnob` (no write, no dispatch on `!isConnected`). Then **stop** `dispatchEvent` on connected classic ranges/selects — they must not be the engine.
+2. Rec one loop on stage cutoff **with `#cutoff` still in the inspector** and no `input` event on that node. Then `document.getElementById('cutoff').remove()`, then `params.set('cutoff', 800)` — filter must move **with no event on the detached node**. Then drag the **stage** cutoff; second gesture must not jump.
+3. Button proof: `document.getElementById('filterEnvToggle')?.remove()` (or remove `#synthContainer`, which also takes the step bus) — stage filter-env / Acc / chorus still work via `params.set`, not `click()`. **Do not** treat `#synthContainer.remove()` as a pattern-bank proof unless `flushDomToPattern` is already a no-op — otherwise P1→P2 wipes steps.
+4. MIDI **learn** with `elementFor('cutoff') === null` (including an Ingy fader) stores catalog `cutoff`, not `ingy6-cutoff`. Hardware CC is **not** a CP10 gate. RATE learn uses the catalog string.
+5. XY: assign cutoff, drag the pad, then `params.set('cutoff', …)` must move the pointer (`followXYPadAutomation`) with no live `#cutoff`.
+6. Osc: `params.set('osc-vol-0'|'osc-toggle-0'|'osc-type-0')` after classic osc nodes are gone — type/gain/pan/`state.oscTunes` must follow.
+7. Optional: `#startStop`.remove() and Start from `#kbStartStop`. DIV/LFO RATE and **stage step knobs** are proven by grep + a **scratch delete before reload**, not by removing `#division` after bind.
+
+Do **not** treat “Start still works because hidden `#startStop` exists” as a pass. Do **not** treat a visually moving knob with silent filter as a pass. Do **not** treat a cutoff ride that still uses `this.value` on a detached listener as a pass. Do **not** treat Rec that still heard hidden `#cutoff` `input` as a pass. Do **not** treat XY scrape-grep as a pass if `getParameter` still uses the node. Inspector `window.params` is the same object as the module export (`js/params.js` ~433–441).
+
+**Done when:** Console `params.set('cutoff', …)` moves the filter after `#cutoff.remove()`. Rec wrote a take **before** that remove, with no range `input`. Stage Acc/filter-env work after the canonical button is gone. Osc `params.set` after classic osc nodes are gone still changes sound. `params.get('cutoff')` tracks the knob. Kb ADSR still paints **and** drags (store-backed). Binders do not early-return on missing classic nodes (grep).
+
+**Smoke:** Boot + core play. Rec one loop on cutoff with `#cutoff` still present and no `input` dispatch. Console `params.set` after `#cutoff.remove()`. Stage filter-env after `#filterEnvToggle.remove()`. Start/Stop from `#kbStartStop`. Osc on/off, chorus I/II, delay select, LFO on/retrig/sync, DIV. Write acc/sld/on/ratch; P1→P2 does not zero the line. MIDI **learn** cutoff with canonical node gone (stage + Ingy). XY cutoff drag + follow. Semitone amount 7. Kb ADSR drag. Acid enter does not mute osc 1. CP9 audio niggles are **not** this smoke.
+
+**Real-world:** Full instrument kit including Acid + Multitudes enter-tweak-exit (mode helpers must not double-toggle **or** zero `.osc-vol`). If the proof fails, stop — do not delete HTML.
+
+---
+
+## Checkpoint 11 — Delete the ghost (point of no return)
+
+**Goal:** No hidden classic bus. Inspector has no `#cutoff`, no `#synthContainer`, no `#startStop`, no `#mobileStartStop`, no `#steps` / `#stepParamBus`.
+
+**Do only after CP10 proof.** In order:
+
+1. Confirm grep: engine has no unguarded `document.getElementById('…').value` / `.addEventListener` / `.querySelector('.front')` on classic bus IDs. `bindKnob` / `bindSteppedKnob` / `initLfoRateKnob` / `readAdsrParams` / `applyLfoStartupDefaults` do not require those nodes.
+2. Oscilloscope: paint `#kbOscilloscope` only (header canvas lives in `.header-grid`, **outside** `#synthContainer` — still deleted with the header).
+3. ADSR: kb canvases only, store-backed; delete classic `#adsrVisualizer` / `#filterAdsrVisualizer` / `#noteVisualizer` / `#filterEnvControls` with the container.
+4. Delete `#synthContainer` (includes classic sliders, `#startStop`, `#reverse`, `#scaleSelect` / `#scaleToggle`, `#semitoneAmount`, duplicate OSC4 engine UI, `#stepParamBus` host), `.header-grid`, swipe dots, `#mobileStartStop`. **Keep** the sr-only `h1`. [`js/mobile.js`](js/mobile.js) is already a no-op — delete the file and its import. Do not leave a spare `#cutoff` anywhere else in `index.html`.
+5. Stop calling `ensureStepParamBus` / building 32 hidden fieldsets. Confirm `#stepParamBus` is not recreated on `document.body`.
+6. Grep: zero duplicate `?v=` in the import graph. Scale UI after delete is the stage selects only. Analog/digital is the **stage** `.osc4-engine-btn` only.
+
+**Must still work (not store keys unless a later pass says so):** pitch bend (including automation key `pitchBend`), latch, held notes, Berlin lanes (own data, panel is on the stage), speech modal, computer-keys. They live outside `#synthContainer` today — do not delete those panels.
+
+**Smoke after delete:** **Hard refresh** (the only test of import-time bind). No TypeError. Inspector: no `#cutoff` / `#synthContainer` / `#startStop` / `#division` / `#lfoSpeed` / `#attack`. Boot + full instrument kit. DIV, LFO RATE, and **stage step knobs** bind. Kb ADSR paints and drags. Semitone amount 7. XY cutoff drag + follow (no scrape fallback onto `#kbSlideTime` / `#kbWriteFineProxy`). Automation rec + playback **after** delete. MIDI learn cutoff from stage (and Ingy if open) stores `cutoff`. Acid enter does not mute osc 1. Phone: no wood, arrows do not swipe.
+
+**False-pass:** Anything proven only in the pre-delete live session (listeners already attached). “Start works” because a leftover classic button survived. “Cutoff works” because a hidden input was left in `index.html` outside `#synthContainer`.
+
+**Real-world:** Long write session, hard refresh, second device. If boot fails, revert **this checkpoint’s commit only**.
 
 ---
 
 ## New features
 
 - After CP3: stage widget + `state.js` (hidden input only if engine still `getElementById`s it).
-- After CP4: stage widget + `params.set` / `get`.
+- After CP4 / now: stage widget + `params.set` / `get`.
+- After CP9: new keys go in the catalog first, then a widget.
 - Never add UI back into the four columns.

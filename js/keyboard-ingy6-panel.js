@@ -1,13 +1,13 @@
 // Ingy 6 panel (poly / Juno-60): fader chrome + wiring to main synth params.
 
-import { state } from './state.js?v=113';
-import { beginMidiLearn } from './midi-learn.js?v=3';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=80';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=17';
-import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=98';
-import { refreshFilterInputDrive } from './filter-drive.js?v=20';
-import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=80';
-import { elementFor, getNumber, set } from './params.js?v=5';
+import { state } from './state.js?v=114';
+import { beginMidiLearn } from './midi-learn.js?v=6';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=24';
+import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=100';
+import { refreshFilterInputDrive } from './filter-drive.js?v=24';
+import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=86';
+import { elementFor, get, getNumber, getOscType, getOscVol, set } from './params.js?v=8';
 
 const HPF_HZ = [20, 250, 700, 1400];
 
@@ -101,8 +101,7 @@ function wireFaderPointer(slot) {
             noise: 'noiseVol',
             vcaLevel: 'volume',
         }[param];
-        const canonical = (mainId && document.getElementById(mainId)) || input;
-        if (beginMidiLearn(e, canonical, fader)) return;
+        if (beginMidiLearn(e, mainId, fader)) return;
         if (input.disabled || !state.keyboardPoly) return;
         if (e.button != null && e.button !== 0) return;
         e.preventDefault();
@@ -299,17 +298,11 @@ function hzToHpfStep(hz) {
 }
 
 function setMainRange(id, value) {
-    const n = typeof value === 'number' ? value : parseFloat(value);
-    if (Number.isFinite(n) && getNumber(id, NaN) === n) {
-        elementFor(id)?.dispatchEvent(new Event('input', { bubbles: true }));
-        return;
-    }
     set(id, value);
 }
 
 function readMainRange(id, fallback = 0) {
-    const n = parseFloat(document.getElementById(id)?.value);
-    return Number.isFinite(n) ? n : fallback;
+    return getNumber(id, fallback);
 }
 
 function setFaderValue(param, value, { dispatch = false } = {}) {
@@ -324,7 +317,7 @@ function setFaderValue(param, value, { dispatch = false } = {}) {
 
 function ensureLiveNoiseSource() {
     if (!state.audioContext || !state.noiseBuffers?.white) return;
-    const type = document.getElementById('noiseType')?.value || 'white';
+    const type = get('noiseType') || 'white';
     const buf = state.noiseBuffers[type] || state.noiseBuffers.white;
     if (state.noiseSource) return;
     const src = state.audioContext.createBufferSource();
@@ -374,6 +367,7 @@ function setNoiseEnabled(enabled) {
 function setOscEnabled(oscIndex, enabled) {
     const want = !!enabled;
     state.oscStates[oscIndex] = want;
+    set(`osc-toggle-${oscIndex}`, want);
     const main = document.querySelector(`.osc-toggle[data-osc="${oscIndex}"]`);
     if (main) {
         const front = main.querySelector('.front');
@@ -390,29 +384,19 @@ function setOscEnabled(oscIndex, enabled) {
 }
 
 function setOscVol(oscIndex, value) {
-    const el = document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`);
-    if (!el) return;
     const clamped = clamp(Number(value) || 0, 0, 1);
-    el.value = String(clamped);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
+    set(`osc-vol-${oscIndex}`, clamped);
 }
 
 function setOscTune(oscIndex, semis) {
-    const el = document.querySelector(`.osc-tune[data-osc="${oscIndex}"]`);
-    if (!el) return;
     const clamped = clamp(Math.round(semis), -12, 12);
-    el.value = String(clamped);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
+    if (state.oscTunes) state.oscTunes[oscIndex] = clamped;
+    set(`osc-tune-${oscIndex}`, clamped);
 }
 
 /** Juno-60 sub is square-only — force OSC2 wave. */
 function setSubOscSquare() {
-    const typeMain = document.querySelector('.osc-type[data-osc="1"]');
-    if (!typeMain) return;
-    if (typeMain.value !== 'square') {
-        typeMain.value = 'square';
-        typeMain.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    set('osc-type-1', 'square');
 }
 
 /**
@@ -505,15 +489,11 @@ function applyFaderParam(param, faderValue) {
 }
 
 function chorusButtonOn(id) {
-    const el = document.getElementById(id);
-    return !!(el && !el.classList.contains('off'));
+    return !!get(id);
 }
 
 function setChorusButton(id, wantOn) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const isOn = !el.classList.contains('off');
-    if (isOn !== !!wantOn) el.click();
+    set(id, !!wantOn);
 }
 
 function setChorusMode(mode) {
@@ -558,9 +538,8 @@ function muteSharedOscGain(oscIndex) {
  */
 function toggleMainWave(wave) {
     if (!wave) return;
-    const typeMain = document.querySelector('.osc-type[data-osc="0"]');
     const osc1On = !!state.oscStates[0];
-    const current = typeMain?.value;
+    const current = getOscType(0);
 
     // Clicking the lit wave kills the main DCO
     if (osc1On && current === wave) {
@@ -571,9 +550,8 @@ function toggleMainWave(wave) {
         return;
     }
 
-    if (typeMain && typeMain.value !== wave) {
-        typeMain.value = wave;
-        typeMain.dispatchEvent(new Event('change', { bubbles: true }));
+    if (getOscType(0) !== wave) {
+        set('osc-type-0', wave);
     }
     setOscEnabled(0, true);
     muteSharedOscGain(0);
@@ -583,7 +561,7 @@ function toggleMainWave(wave) {
 
 function syncWaveUi() {
     const osc1On = !!state.oscStates[0];
-    const current = document.querySelector('.osc-type[data-osc="0"]')?.value || '';
+    const current = getOscType(0);
     document.querySelectorAll('#ingy6Panel .ingy6-wave-btn').forEach((btn) => {
         const on = osc1On && btn.dataset.wave === current;
         btn.classList.toggle('active', on);
@@ -651,9 +629,7 @@ export function syncIngy6PanelFromMain() {
 }
 
 function readMainRangeFromOscVol(oscIndex) {
-    const el = document.querySelector(`.osc-vol[data-osc="${oscIndex}"]`);
-    const n = el ? parseFloat(el.value) : 0;
-    return Number.isFinite(n) ? n : 0;
+    return getOscVol(oscIndex);
 }
 
 function wirePanelControls() {

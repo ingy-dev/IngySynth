@@ -1,7 +1,9 @@
-import { state } from './state.js?v=113';
-import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=77';
+import { state } from './state.js?v=114';
+import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=79';
 import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=2';
-import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=3';
+import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=6';
+import { getNumber, set } from './params.js?v=8';
+import { getParam } from './param-catalog.js?v=1';
 
 const NOTE_VFD_HOSTS = ['noteVisualizer', 'kbPatternNoteVisualizer', 'kbXyNoteVisualizer'];
 const NOTE_VFD_IDLE_TEXT = 'Note';
@@ -155,21 +157,26 @@ const FILTER_ADSR_IDS = {
 };
 
 function readAdsrParams(ids) {
-    const attackEl = document.getElementById(ids.attackId);
-    const decayEl = document.getElementById(ids.decayId);
-    const sustainEl = document.getElementById(ids.sustainId);
-    const releaseEl = document.getElementById(ids.releaseId);
-    if (!attackEl || !decayEl || !sustainEl || !releaseEl) return null;
     return {
-        attack: parseFloat(attackEl.value) || 0,
-        decay: parseFloat(decayEl.value) || 0,
-        sustain: parseFloat(sustainEl.value) || 0,
-        release: parseFloat(releaseEl.value) || 0,
-        attackEl,
-        decayEl,
-        sustainEl,
-        releaseEl,
+        attack: getNumber(ids.attackId, 0),
+        decay: getNumber(ids.decayId, 0),
+        sustain: getNumber(ids.sustainId, 0),
+        release: getNumber(ids.releaseId, 0),
+        attackId: ids.attackId,
+        decayId: ids.decayId,
+        sustainId: ids.sustainId,
+        releaseId: ids.releaseId,
     };
+}
+
+function adsrKeyMax(key, fallback) {
+    const spec = getParam(key);
+    return Number.isFinite(spec?.max) ? spec.max : fallback;
+}
+
+function setAdsrValue(key, value) {
+    if (!key) return;
+    set(key, value);
 }
 
 /** Shared ADSR (or Acid AD) polyline geometry (canvas pixel space). */
@@ -280,30 +287,6 @@ function strokeAdsrPath(ctx, path) {
     ctx.stroke();
 }
 
-function setRangeInputValue(el, value) {
-    if (!el) return;
-    const min = parseFloat(el.min);
-    const max = parseFloat(el.max);
-    const step = parseFloat(el.step);
-    let v = Number(value);
-    if (!Number.isFinite(v)) return;
-    if (Number.isFinite(min)) v = Math.max(min, v);
-    if (Number.isFinite(max)) v = Math.min(max, v);
-    if (Number.isFinite(step) && step > 0) {
-        const base = Number.isFinite(min) ? min : 0;
-        v = base + Math.round((v - base) / step) * step;
-        // Avoid float junk (e.g. 0.30000000004)
-        const decimals = (String(step).split('.')[1] || '').length;
-        if (decimals) v = parseFloat(v.toFixed(decimals));
-    }
-    if (el.value === String(v)) {
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        return;
-    }
-    el.value = String(v);
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
 function paintADSRVisualizer(options = {}) {
     const {
         canvasId = 'adsrVisualizer',
@@ -323,7 +306,6 @@ function paintADSRVisualizer(options = {}) {
     const width = canvas.width;
     const height = canvas.height;
     const params = readAdsrParams({ attackId, decayId, sustainId, releaseId });
-    if (!params) return;
     
     // Create the ADSR texture image if it doesn't exist
     if (!window.adsrTexture) {
@@ -391,7 +373,6 @@ function adsrCanvasPoint(canvas, e) {
 
 function hitAdsrKey(canvas, e, ids, invert) {
     const params = readAdsrParams(ids);
-    if (!params) return { params: null, key: null, pt: null };
     const pt = adsrCanvasPoint(canvas, e);
     const layout = getAdsrLayout(canvas.width, canvas.height, params, !!invert);
     let best = null;
@@ -423,9 +404,9 @@ function resolveAdsrMapping(canvas, e) {
         : false;
     const { params, key } = hitAdsrKey(canvas, e, ids, invert);
     if (!params || !key) return { unmappable: true, host: canvas };
-    const el = params[`${key}El`];
-    if (!el) return { unmappable: true, host: canvas };
-    return { canonical: el, host: canvas };
+    const catalogKey = ids[`${key}Id`];
+    if (!catalogKey) return { unmappable: true, host: canvas };
+    return { key: catalogKey, canonical: document.getElementById(catalogKey) || null, host: canvas };
 }
 
 /** Invisible hit-targets on envelope corners — appearance unchanged. */
@@ -440,7 +421,6 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
 
     const hitTest = (pt) => {
         const params = readAdsrParams(ids);
-        if (!params) return null;
         const layout = getAdsrLayout(canvas.width, canvas.height, params, !!getInvert());
         let best = null;
         let bestDist = ADSR_HIT_RADIUS;
@@ -456,7 +436,7 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
 
     const applyDrag = (pt) => {
         const params = readAdsrParams(ids);
-        if (!params || !dragKey) return;
+        if (!dragKey) return;
         const width = canvas.width;
         const x = Math.max(ADSR_PAD_X + 1, Math.min(ADSR_PAD_X + width - 1, pt.x));
         const u = (x - ADSR_PAD_X) / width;
@@ -466,36 +446,36 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
             if (dragKey === 'attack') {
                 const rest = Math.max(ADSR_SEG_FLOOR, params.decay);
                 const denom = 1 - u;
-                const nextA = denom > 1e-4 ? (u * rest) / denom : parseFloat(params.attackEl.max) || 2;
-                setRangeInputValue(params.attackEl, nextA);
+                const nextA = denom > 1e-4 ? (u * rest) / denom : adsrKeyMax(ids.attackId, 2);
+                setAdsrValue(ids.attackId, nextA);
             } else if (dragKey === 'decay') {
                 // Decay corner at u = A/(A+D); keep A fixed → D = A/u - A
                 const nextD = u > 1e-4
                     ? Math.max(0, params.attack * (1 / u - 1))
-                    : parseFloat(params.decayEl.max) || 2;
-                setRangeInputValue(params.decayEl, nextD);
+                    : adsrKeyMax(ids.decayId, 2);
+                setAdsrValue(ids.decayId, nextD);
             }
         } else if (dragKey === 'attack') {
             const rest = params.decay + ADSR_SUSTAIN_TIME + params.release;
             const denom = 1 - u;
-            const nextA = denom > 1e-4 ? (u * rest) / denom : parseFloat(params.attackEl.max) || 2;
-            setRangeInputValue(params.attackEl, nextA);
+            const nextA = denom > 1e-4 ? (u * rest) / denom : adsrKeyMax(ids.attackId, 2);
+            setAdsrValue(ids.attackId, nextA);
         } else if (dragKey === 'decay') {
             // Keep attack fixed; solve A+D from normalized x, then D = sum - A.
             const rest = ADSR_SUSTAIN_TIME + params.release;
             const denom = 1 - u;
-            const sumAD = denom > 1e-4 ? (u * rest) / denom : params.attack + (parseFloat(params.decayEl.max) || 2);
-            setRangeInputValue(params.decayEl, Math.max(0, sumAD - params.attack));
+            const sumAD = denom > 1e-4 ? (u * rest) / denom : params.attack + adsrKeyMax(ids.decayId, 2);
+            setAdsrValue(ids.decayId, Math.max(0, sumAD - params.attack));
             const layout = getAdsrLayout(width, canvas.height, params, !!getInvert());
-            setRangeInputValue(params.sustainEl, layout.levelAt(pt.y));
+            setAdsrValue(ids.sustainId, layout.levelAt(pt.y));
         } else if (dragKey === 'sustain') {
             // Horizontal: release (left = longer release). Vertical: sustain level.
             const fixed = params.attack + params.decay + ADSR_SUSTAIN_TIME;
             const denom = Math.max(1e-4, u);
             const nextR = Math.max(0, fixed * (1 / denom - 1));
-            setRangeInputValue(params.releaseEl, nextR);
+            setAdsrValue(ids.releaseId, nextR);
             const layout = getAdsrLayout(width, canvas.height, params, !!getInvert());
-            setRangeInputValue(params.sustainEl, layout.levelAt(pt.y));
+            setAdsrValue(ids.sustainId, layout.levelAt(pt.y));
         }
 
         if (isFilter) drawFilterADSRVisualizer();
@@ -511,8 +491,8 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
         if (e.button != null && e.button !== 0) return;
         if (state.midiMappingMode) {
             const { params, key } = hitAdsrKey(canvas, e, ids, !!getInvert());
-            const el = key && params ? params[`${key}El`] : null;
-            beginMidiLearn(e, el, canvas);
+            const catalogKey = key && params ? ids[`${key}Id`] : null;
+            beginMidiLearn(e, catalogKey, canvas);
             return;
         }
         const key = hitTest(adsrCanvasPoint(canvas, e));

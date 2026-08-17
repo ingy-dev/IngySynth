@@ -3,16 +3,18 @@
 // the pattern loop wraps → punch out → playback on subsequent loops.
 // Rec off + existing lane → knob tweaks set a persistent offset (curve shape kept).
 
-import { state } from './state.js?v=113';
+import { state } from './state.js?v=114';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=74';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=84';
-import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=75';
-import { ensureDisplayStep } from './knobs.js?v=113';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=90';
+import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=78';
+import { ensureDisplayStep } from './knobs.js?v=120';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
-} from './param-status.js?v=5';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=35';
+} from './param-status.js?v=7';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=41';
+import { getNumber, getString, set as setParam, subscribe } from './params.js?v=8';
+import { clampToCatalog, getParam } from './param-catalog.js?v=1';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */
@@ -102,15 +104,19 @@ let lastPhase = 0;
 let rafId = 0;
 
 function stepCount() {
-    const el = document.getElementById('stepCount');
-    return Math.max(1, Math.min(32, parseInt(el?.value, 10) || 8));
+    return Math.max(1, Math.min(32, Math.round(getNumber('stepCount', 8)) || 8));
 }
 
 function patternDuration() {
-    const tempo = parseInt(document.getElementById('tempo')?.value, 10) || 120;
+    const tempoN = getNumber('tempo', 120);
+    const tempo = Number.isFinite(tempoN) && tempoN > 0 ? tempoN : 120;
     // Berlin rows have unequal lengths — the longest one is the cycle
     if (isBerlinOn()) return Math.max(0.001, masterLoopSeconds(tempo));
-    const division = parseInt(document.getElementById('division')?.value, 10) || 8;
+    const fromStr = parseInt(getString('division', '8'), 10);
+    const fromNum = getNumber('division', 8);
+    const division = Number.isFinite(fromStr) && fromStr > 0
+        ? fromStr
+        : (Number.isFinite(fromNum) && fromNum > 0 ? fromNum : 8);
     const n = stepCount();
     const stepDur = (60 / tempo) * (4 / division);
     return Math.max(0.001, n * stepDur);
@@ -362,9 +368,7 @@ function resolveInput(key) {
 
 function getParamValue(key) {
     if (key === PITCH_BEND_KEY) return state.pitchBendSemitones || 0;
-    const input = resolveInput(key);
-    if (!input) return null;
-    const n = parseFloat(input.value);
+    const n = getNumber(key, NaN);
     return Number.isFinite(n) ? n : null;
 }
 
@@ -384,6 +388,7 @@ function clampParam(key, value) {
         const range = getBendRangeSemitones();
         return Math.max(-range, Math.min(range, value));
     }
+    if (getParam(key)?.type === 'range') return clampToCatalog(key, value);
     const input = resolveInput(key);
     if (!input) return value;
     const min = parseFloat(input.min);
@@ -449,23 +454,11 @@ function setParamValue(key, value) {
         }
         return;
     }
-    const input = resolveInput(key);
-    if (!input) return;
-
-    // Allow sub-step values so interpolated playback isn't quantized by range step
-    ensureDisplayStep(input);
-    const stepAttr = input.getAttribute('step');
     applying = true;
     try {
-        if (stepAttr !== 'any') input.step = 'any';
-        const cur = parseFloat(input.value);
-        if (Number.isFinite(cur) && Math.abs(cur - value) < 1e-5) return;
-        input.value = String(value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
+        setParam(key, value);
     } finally {
         applying = false;
-        if (stepAttr != null) input.setAttribute('step', stepAttr);
-        else if (stepAttr !== 'any') input.removeAttribute('step');
     }
 }
 
@@ -837,33 +830,42 @@ export function isAutomationArmed() {
     return armed;
 }
 
-function onDocumentInput(e) {
-    if (applying) return;
-    const t = e.target;
-    if (!(t instanceof HTMLInputElement) || t.type !== 'range') return;
-    let key = null;
-    if (t.id === 'keyboardMasterTune' || t.id === 'kbTuningMasterTune'
-        || t.id === 'kbXyTuningMasterTune') key = 'masterTune';
-    else key = paramKeyFromInput(t);
-    if (!key) return;
+function recordableKeys() {
+    const keys = RANGE_IDS.slice();
+    for (let i = 0; i < 4; i++) {
+        keys.push(`osc-tune-${i}`, `osc-vol-${i}`, `osc-pan-${i}`);
+    }
+    return keys;
+}
 
-    const value = parseFloat(t.value);
+function onStoreParam(key, value) {
+    if (applying) return;
+    if (!key || EXCLUDE_IDS.has(key)) return;
+    const n = typeof value === 'number' ? value : parseFloat(value);
+    if (!Number.isFinite(n)) return;
 
     // Rec off + existing curve → shift baseline, keep shape
     if (!armed && laneHasData(key)) {
-        applyManualOffset(key, value);
+        applyManualOffset(key, n);
         return;
     }
+    if (!armed) return;
 
     if (!activeTakes.has(key)) {
-        beginTake(key, t);
+        beginTake(key, highlightEl);
     } else if (canEngageTake()) {
-        if (Number.isFinite(value)) takeValues.set(key, value);
-        writeSample(key, getPhase(), Number.isFinite(value) ? value : getParamValue(key));
-        setHighlight(key, t);
-    } else if (armed) {
-        setHighlight(key, t);
+        takeValues.set(key, n);
+        writeSample(key, getPhase(), n);
+        setHighlight(key, highlightEl);
+    } else {
+        setHighlight(key, highlightEl);
     }
+}
+
+function wireStoreRecording() {
+    recordableKeys().forEach((key) => {
+        subscribe(key, (value) => onStoreParam(key, value));
+    });
 }
 
 function onPointerDownCapture(e) {
@@ -906,7 +908,7 @@ function wireUi() {
     }
     updateUndoRedoButtons();
 
-    document.addEventListener('input', onDocumentInput, true);
+    wireStoreRecording();
     document.addEventListener('pointerdown', onPointerDownCapture, true);
     document.addEventListener('pointerup', commitOffsetGestures, true);
     document.addEventListener('pointercancel', commitOffsetGestures, true);

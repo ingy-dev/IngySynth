@@ -1,15 +1,16 @@
 // Berlin Dream-960: eight lanes on one tempo — O1–O4 pitch+amp, M1–M4 filter CV.
 // Acid and Poly are mutually exclusive with it.
 
-import { state } from './state.js?v=113';
-import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=77';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=98';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=80';
-import { setPolyMode } from './poly-voice.js?v=60';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=19';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=11';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=113';
-import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=5';
+import { state } from './state.js?v=114';
+import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=79';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=100';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
+import { setPolyMode } from './poly-voice.js?v=66';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=25';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=120';
+import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=7';
+import { getNumber, set } from './params.js?v=8';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
@@ -29,7 +30,7 @@ import {
     clearPatternSteps,
     flashCopiedToast,
     syncPatternClipboardUi,
-} from './pattern-bank.js?v=9';
+} from './pattern-bank.js?v=10';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
@@ -77,8 +78,7 @@ function clamp(n, min, max) {
 }
 
 function readRange(id, fallback) {
-    const v = parseFloat(document.getElementById(id)?.value);
-    return Number.isFinite(v) ? v : fallback;
+    return getNumber(id, fallback);
 }
 
 // --- Mode state ------------------------------------------------------------
@@ -319,7 +319,7 @@ function applyCvNow(destination, semi, slideSeconds) {
     const ramp = Math.max(0.005, slideSeconds || 0.01);
 
     if (destination === 'cutoff') {
-        const base = Math.max(40, readRange('cutoff', 1000));
+        const base = Math.max(40, getNumber('cutoff'));
         const target = clamp(base * Math.pow(2, semi / 12), 40, 12000);
         // Drive the cutoff constant-source graph (LFO/env still sum on top)
         updateFilterCutoffRange(target, now, ramp);
@@ -940,17 +940,13 @@ function buildUi() {
 let stashedMasterGatePct = null;
 
 function readMasterGatePct() {
-    const el = document.getElementById('gateLength');
-    const v = el ? parseFloat(el.value) : 90;
+    const v = getNumber('gateLength', 90);
     return Math.max(5, Math.min(100, Number.isFinite(v) ? v : 90));
 }
 
 /** Drive main GATE so the Steps mirror (`kbGateLength`) stays in sync. */
 function setMasterGatePct(pct) {
-    const main = document.getElementById('gateLength');
-    if (!main) return;
-    main.value = String(Math.max(5, Math.min(100, Math.round(pct))));
-    main.dispatchEvent(new Event('input', { bubbles: true }));
+    set('gateLength', Math.max(5, Math.min(100, Math.round(pct))));
 }
 
 function applyBerlinMasterGateEnter() {

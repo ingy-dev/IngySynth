@@ -2,8 +2,8 @@
 // Plaits-style engines share one pooled AudioWorkletNode shell.
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
-import { state } from './state.js?v=113';
-import { getNumber, getOscType } from './params.js?v=5';
+import { state } from './state.js?v=114';
+import { getNumber, getOscType, getString } from './params.js?v=8';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
 export const OSC4_INDEX = 0;
@@ -689,7 +689,9 @@ function releasePoolSlot(slot, gen) {
 function createWavetableProxy(ctx, frequency) {
     const { x, y } = readOsc4Morph();
     const harmonics = readOsc4Harmonics();
-    const model = state.osc4Model || 'wavetable';
+    const model = getString('osc4Model', '') || state.osc4Model || 'wavetable';
+    state.osc4Model = model;
+    const bankFromStore = getNumber('osc4Bank', state.osc4Bank);
     const triggered = isTriggeredEngine(model);
     const trim = engineTrim(model);
     const slot = acquirePoolSlot(ctx);
@@ -704,7 +706,7 @@ function createWavetableProxy(ctx, frequency) {
     const morphYParam = node.parameters.get('morphY');
     const harmonicsParam = node.parameters.get('harmonics');
 
-    const bankRaw = Number(state.osc4Bank);
+    const bankRaw = Number.isFinite(bankFromStore) ? bankFromStore : Number(state.osc4Bank);
     const bank = Number.isFinite(bankRaw) ? Math.max(-1, Math.min(3, bankRaw)) : -1;
     if (model === 'fm6') {
         const fmBank = Math.max(0, Math.min(2, bank >= 0 ? bank : 0));

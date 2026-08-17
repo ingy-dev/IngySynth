@@ -3,8 +3,8 @@
 // (-39..+48), and any step already holding a value outside the manual window
 // keeps its own headroom until it is tuned back inside.
 
-import { state } from './state.js?v=113';
-import { refreshKnobDial } from './knobs.js?v=113';
+import { state } from './state.js?v=114';
+import { refreshKnobDial } from './knobs.js?v=120';
 
 export const MANUAL_TUNE_MIN = -24;
 export const MANUAL_TUNE_MAX = 24;

@@ -13,12 +13,12 @@ import {
     set,
     subscribe,
     toggle,
-} from './params.js?v=8';
+} from './params.js?v=13';
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=100';
-import { readRatchFromButton, syncRatchButton } from './step-ratch.js?v=1';
+} from './pattern-write.js?v=101';
+import { syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;
 
@@ -64,9 +64,9 @@ export function syncAllKeyboardStepFinesFromMain() {
     }
 }
 
-function syncKbRatchFromMain(kbBtn, mainBtn) {
-    if (!kbBtn || !mainBtn) return;
-    syncRatchButton(kbBtn, readRatchFromButton(mainBtn));
+function syncKbRatchFromMain(kbBtn, step) {
+    if (!kbBtn) return;
+    syncRatchButton(kbBtn, get(`step-ratch-${step}`));
 }
 
 export function syncKeyboardStepButtonsFromMain(step) {
@@ -78,7 +78,7 @@ export function syncKeyboardStepButtonsFromMain(step) {
     syncKbButtonFromKey(kbAcc, `step-accent-${step}`);
     syncKbButtonFromKey(kbSld, `step-slide-${step}`);
     syncKbToggleFromKey(kbOn, `step-toggle-${step}`);
-    syncKbRatchFromMain(kbRatch, elementFor(`step-ratch-${step}`));
+    syncKbRatchFromMain(kbRatch, step);
 }
 
 export function syncAllKeyboardStepButtonsFromMain() {

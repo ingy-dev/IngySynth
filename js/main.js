@@ -1,19 +1,19 @@
 // Entry point: import order mirrors the original single-file script order.
-import { initAudio } from './audio-engine.js?v=152';
-import { startIdleMarquee } from './sequencer.js?v=247';
-import './controls.js?v=261';
+import { initAudio } from './audio-engine.js?v=156';
+import { startIdleMarquee } from './sequencer.js?v=262';
+import './controls.js?v=270';
 import './midi.js?v=94';
 import './visualizers.js?v=100';
 import { syncNoteVfdFromPeer } from './visualizers.js?v=100';
 import './mobile.js?v=74';
 import { refreshXYPad } from './xy-pad.js?v=78';
-import { initKeyboard } from './keyboard.js?v=188';
+import { initKeyboard } from './keyboard.js?v=189';
 import { initComputerKeyboard } from './computer-keyboard.js?v=178';
 import { initKeyboardKnobs, initDoubleClickReset } from './knobs.js?v=120';
-import { initPitchBendStrip } from './pitch-bend.js?v=90';
+import { initPitchBendStrip } from './pitch-bend.js?v=91';
 import { initLfoStrip, applyLfoStartupDefaults, updateLfoSmoothing } from './lfo-strip.js?v=24';
 import { initLfoRateKnob, initLfoRateControls, onLfoRateApplied } from './lfo-rate.js?v=16';
-import { initKeyboardSteps } from './keyboard-steps.js?v=109';
+import { initKeyboardSteps } from './keyboard-steps.js?v=114';
 import { initPatternShift } from './pattern-shift.js?v=108';
 import { initKeyboardOscillators, syncKeyboardOscillatorsFromMain } from './keyboard-oscillators.js?v=91';
 import { initKeyboardEffects, syncKeyboardEffectsFromMain } from './keyboard-effects.js?v=94';
@@ -25,9 +25,9 @@ import { initCollapsibles } from './collapsible.js?v=74';
 import { initAutomation } from './automation.js?v=42';
 import { initParamStatus } from './param-status.js?v=7';
 import { initStepTuneRange } from './step-tune-range.js?v=9';
-import { initPatternBank } from './pattern-bank.js?v=10';
-import { initBerlin } from './berlin.js?v=41';
-import './params.js?v=8';
+import { initPatternBank } from './pattern-bank.js?v=12';
+import { initBerlin } from './berlin.js?v=44';
+import './params.js?v=13';
 
 onLfoRateApplied(() => updateLfoSmoothing());
 initLfoRateControls();
@@ -106,3 +106,9 @@ syncKeyboardEffectsCollapsible();
 syncAllKeyboardSynthFromMain();
 
 startIdleMarquee();
+
+if (new URLSearchParams(location.search).has('cp10smoke')) {
+    import('./cp10-smoke.js?v=1').then((m) => m.initCp10Smoke()).catch((err) => {
+        console.error('CP10 smoke tracker failed to load', err);
+    });
+}

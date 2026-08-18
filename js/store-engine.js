@@ -11,13 +11,13 @@ import {
     getOscPan,
     subscribe,
     notifyKey,
-} from './params.js?v=8';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=24';
+} from './params.js?v=13';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=25';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { previewStepsOnVfd } from './sequencer.js?v=247';
+import { previewStepsOnVfd } from './sequencer.js?v=262';
 import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer } from './visualizers.js?v=100';
 import { calculateSemitoneShift, getQuantizedStepTune } from './tuning.js?v=79';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=109';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=114';
 import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=120';
 import {
     setLfoEnabled,
@@ -28,8 +28,8 @@ import {
     updateLfoHighpassSafety,
 } from './lfo-strip.js?v=24';
 import { applyLfoRate } from './lfo-rate.js?v=16';
-import { applyPolyOscPan, forEachPolyOsc } from './poly-voice.js?v=66';
-import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=90';
+import { applyPolyOscPan, forEachPolyOsc } from './poly-voice.js?v=68';
+import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=98';
 
 let wired = false;
 let rebuildReverbIr = null;
@@ -214,14 +214,13 @@ function applyOscType(index) {
     const wave = getOscType(index);
     if (index === OSC4_INDEX && state.osc4Wavetable) return;
     if (!state.audioContext) return;
-    if (state.oscillators?.[index] && !state.oscillators[index].isWavetable) {
-        state.oscillators[index].type = wave;
+    const persistent = state.oscillators?.[index];
+    // Never splice OscillatorNode.type on a started analog osc.
+    // Do not firePhaseReset here — that overlaps playStep's lookahead stack.
+    // Next step spawn picks up the wave.
+    if (persistent && !persistent.isWavetable && !persistent.started) {
+        persistent.type = wave;
     }
-    state.activeOscillators?.forEach((osc) => {
-        if (osc.oscIndex === index && !osc.isWavetable) {
-            try { osc.type = wave; } catch (_) { /* ignore */ }
-        }
-    });
 }
 
 function applyOscToggle(index, on) {

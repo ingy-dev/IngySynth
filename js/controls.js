@@ -1,28 +1,28 @@
 import { state, OSC_COUNT } from './state.js?v=114';
-import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=8';
-import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=6';
+import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=13';
+import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=15';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=152';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=24';
+} from './audio-engine.js?v=156';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=25';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
 import { clearAccentSweep } from './acid-env.js?v=14';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=247';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=262';
 import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=100';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=79';
 import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=94';
-import { applyScaleState } from './keyboard.js?v=188';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=109';
-import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=158';
+import { applyScaleState } from './keyboard.js?v=189';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=114';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=166';
 import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=120';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=24';
 import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=16';
 import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=15';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, forEachPolyOsc } from './poly-voice.js?v=66';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=25';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc } from './poly-voice.js?v=68';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=27';
 import {
     ensurePlaitsWorklet,
     createOscSource,
@@ -34,8 +34,8 @@ import {
     applyFm6BankToLive,
     readFm6PatchName,
     fm6PresetFromHarmonics,
-} from './osc-source.js?v=90';
-import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=15';
+} from './osc-source.js?v=98';
+import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=16';
 
 function syncAcidModeUi() {
     syncAcidStripUi();
@@ -579,10 +579,12 @@ export function wireControls() {
             bank = Number.isFinite(n) ? Math.max(-1, Math.min(3, Math.round(n))) : -1;
         }
         if (state.osc4Bank === bank) {
+            if (getString('osc4Bank') !== String(bank)) set('osc4Bank', bank);
             syncOsc4WavetableUi();
             return;
         }
         state.osc4Bank = bank;
+        if (getString('osc4Bank') !== String(bank)) set('osc4Bank', bank);
         if (model === 'fm6') applyFm6BankToLive(bank);
         syncOsc4WavetableUi();
         applyOsc4MorphToLive();
@@ -594,14 +596,21 @@ export function wireControls() {
         if (OSC4_MONO_ONLY_MODELS.has(model) && state.keyboardPoly && !state.keyboardMultitudes) {
             model = 'wavetable';
         }
-        if (state.osc4Model === model) {
+        const earlyReturn = state.osc4Model === model;
+        if (earlyReturn && getString('osc4Model') === model) {
             syncOsc4WavetableUi();
             return;
         }
         state.osc4Model = model;
+        if (getString('osc4Model') !== model) set('osc4Model', model);
+        if (earlyReturn) {
+            syncOsc4WavetableUi();
+            return;
+        }
         if (model === 'fm6') {
             // Default to Bass bank when entering 6-op
             if (state.osc4Bank < 0 || state.osc4Bank > 2) state.osc4Bank = 0;
+            if (getString('osc4Bank') !== String(state.osc4Bank)) set('osc4Bank', state.osc4Bank);
             applyFm6BankToLive(state.osc4Bank);
         }
         syncOsc4WavetableUi();

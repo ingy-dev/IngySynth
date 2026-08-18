@@ -2,8 +2,8 @@
 // when connected. Step keys are views of pattern.steps[] (getLiveStep), not Map copies.
 // Widgets must not use kb* mirrors as the engine source.
 
-import { getLiveStep } from './pattern-bank.js?v=10';
-import { nextRatch } from './step-ratch.js?v=1';
+import { getLiveStep } from './pattern-bank.js?v=12';
+import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import {
     PARAMS,
     catalogDefault,
@@ -167,7 +167,7 @@ function silentMirror(el, value) {
     if (!el || !el.isConnected) return;
     if (el.tagName === 'BUTTON') {
         if (el.dataset?.ratch != null) {
-            el.dataset.ratch = String(value);
+            syncRatchButton(el, value);
             return;
         }
         el.classList.toggle('off', !value);
@@ -328,9 +328,9 @@ export function click(key) {
     if (isStepKey(key) && getParam(key)?.type === 'ratch') {
         const live = getLiveStep(getParam(key).stepIndex);
         live.ratch = nextRatch(live.ratch);
-        notify(key, live.ratch);
         applyingSet = true;
         try { silentMirror(connectedElementFor(key), live.ratch); } finally { applyingSet = false; }
+        notify(key, live.ratch);
         return true;
     }
     return toggle(key);

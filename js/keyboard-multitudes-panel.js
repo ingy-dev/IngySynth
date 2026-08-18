@@ -2,15 +2,15 @@
 
 import { state } from './state.js?v=114';
 import { bindKnob, refreshKnobDial } from './knobs.js?v=120';
-import { ensurePlaitsWorklet } from './osc-source.js?v=90';
+import { ensurePlaitsWorklet } from './osc-source.js?v=98';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
 import {
     forcePolyAllOff,
     ensureMultitudesPolyReady,
     syncMultitudesPolyLocks,
-} from './poly-voice.js?v=66';
+} from './poly-voice.js?v=68';
 import { clearPolyChordMemory } from './chord-memory.js?v=19';
-import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=8';
+import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=13';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */
 const MULTITUDES_DEFAULT_OSC_VOL = 0.1;

@@ -7,14 +7,14 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=188';
+} from './keyboard.js?v=189';
 import { needsHeldNoteSet } from './held-notes.js?v=8';
 import {
     catalogKeyFromLearn,
     clearMappingHighlight,
     setupMappingPointerCapture,
 } from './midi-learn.js?v=6';
-import { click, set, toggle } from './params.js?v=8';
+import { click, set, toggle } from './params.js?v=13';
 import { getParam, isCatalogKey, scaleCcToCatalog } from './param-catalog.js?v=1';
 
 /** MIDI note number → cell semitone while held (for Chord arp / Chord Mem). */

@@ -5,12 +5,12 @@ import { state } from './state.js?v=114';
 import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=79';
 import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=100';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { setPolyMode } from './poly-voice.js?v=66';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=25';
+import { setPolyMode } from './poly-voice.js?v=68';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=27';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
 import { bindKnob, refreshKnobDial } from './knobs.js?v=120';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=7';
-import { getNumber, set } from './params.js?v=8';
+import { getNumber, set } from './params.js?v=13';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
@@ -30,7 +30,7 @@ import {
     clearPatternSteps,
     flashCopiedToast,
     syncPatternClipboardUi,
-} from './pattern-bank.js?v=10';
+} from './pattern-bank.js?v=12';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */

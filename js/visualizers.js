@@ -2,7 +2,7 @@ import { state } from './state.js?v=114';
 import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=79';
 import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=2';
 import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=6';
-import { getNumber, set } from './params.js?v=8';
+import { getNumber, set } from './params.js?v=13';
 import { getParam } from './param-catalog.js?v=1';
 
 const NOTE_VFD_HOSTS = ['noteVisualizer', 'kbPatternNoteVisualizer', 'kbXyNoteVisualizer'];

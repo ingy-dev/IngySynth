@@ -2,8 +2,8 @@
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
 import { state } from './state.js?v=114';
-import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=8';
-import { createOscSource, softStartVoiceGain, fadeStopOsc } from './osc-source.js?v=90';
+import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=13';
+import { createOscSource, softStartVoiceGain, fadeStopOsc } from './osc-source.js?v=98';
 
 const ALLOWED_VOICES = [3, 5, 7];
 

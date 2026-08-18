@@ -2,7 +2,7 @@
 // When Off, callers keep the normal ADSR path untouched.
 
 import { state } from './state.js?v=114';
-import { getNumber } from './params.js?v=8';
+import { getNumber } from './params.js?v=13';
 import {
     getFilterEnvAmount,
     getFilterCutoffRange,

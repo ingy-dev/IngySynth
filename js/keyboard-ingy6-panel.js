@@ -5,9 +5,9 @@ import { beginMidiLearn } from './midi-learn.js?v=6';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
 import { updateLfoCutoffSafety } from './lfo-strip.js?v=24';
 import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=100';
-import { refreshFilterInputDrive } from './filter-drive.js?v=24';
+import { refreshFilterInputDrive } from './filter-drive.js?v=25';
 import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=86';
-import { elementFor, get, getNumber, getOscType, getOscVol, set } from './params.js?v=8';
+import { elementFor, get, getNumber, getOscType, getOscVol, set } from './params.js?v=13';
 
 const HPF_HZ = [20, 250, 700, 1400];
 

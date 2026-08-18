@@ -1,5 +1,5 @@
 import { state } from './state.js?v=114';
-import { getNumber, getString, getOscType, getOscVol } from './params.js?v=8';
+import { getNumber, getString, getOscType, getOscVol } from './params.js?v=13';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -13,12 +13,12 @@ import {
 } from './tuning.js?v=79';
 import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=100';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { forceNoteOff } from './voice.js?v=128';
+import { forceNoteOff } from './voice.js?v=129';
 import { getLfoRateHz } from './lfo-rate.js?v=16';
-import { bentFrequency } from './pitch-bend.js?v=90';
+import { bentFrequency } from './pitch-bend.js?v=91';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=158';
-import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=90';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=166';
+import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=98';
 import { notifyAutomationLoopAnchor } from './automation.js?v=42';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=8';
 import {
@@ -46,8 +46,8 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=41';
-import { getPattern, snapshotStepNeighborhood } from './pattern-bank.js?v=10';
+} from './berlin.js?v=44';
+import { getPattern, snapshotStepNeighborhood } from './pattern-bank.js?v=12';
 import {
     clampRatch,
     nextRatch,

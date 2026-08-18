@@ -9,7 +9,7 @@ import {
     subscribe,
     wireSelect,
     wireToggle,
-} from './params.js?v=8';
+} from './params.js?v=13';
 
 const syncFns = [];
 

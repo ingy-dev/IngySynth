@@ -3,7 +3,7 @@
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
 import { state } from './state.js?v=114';
-import { getNumber, getOscType, getString } from './params.js?v=8';
+import { getNumber, getOscType, getString } from './params.js?v=13';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
 export const OSC4_INDEX = 0;
@@ -232,6 +232,7 @@ export function fadeStopOsc(osc, when, { fadeSec = 0.02, hard = false } = {}) {
             const delayMs = Math.max(0, (tEnd - ctx.currentTime) * 1000) + 30;
             setTimeout(() => {
                 try { osc.disconnect(); } catch (_) { /* ignore */ }
+                try { osc.gainNode?.disconnect(); } catch (_) { /* ignore */ }
             }, delayMs);
         }
         // Wavetable proxy stop() owns outGain disconnect / pool return
@@ -1025,7 +1026,10 @@ export function applyLiveOscVolume(oscIndex, volRaw, extraOscs = null) {
 
     if (state.oscGains?.[oscIndexN]) {
         try {
-            state.oscGains[oscIndexN].gain.setValueAtTime(level, now);
+            const g = state.oscGains[oscIndexN].gain;
+            g.cancelScheduledValues(now);
+            g.setValueAtTime(Math.max(0.00001, Number(g.value) || 0.00001), now);
+            g.linearRampToValueAtTime(Math.max(0.00001, level), now + (level < 0.0001 ? 0.025 : 0.012));
         } catch (_) { /* ignore */ }
     }
 

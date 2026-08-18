@@ -3,7 +3,7 @@
 
 import { state } from './state.js?v=114';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
-import { getNumber, getString, set } from './params.js?v=8';
+import { getNumber, getString, set } from './params.js?v=13';
 
 /** Total Berlin lanes (and bank array length). */
 export const PATTERN_COUNT = 8;

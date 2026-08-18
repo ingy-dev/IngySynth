@@ -1,6 +1,6 @@
 ---
 name: Fullscreen-only stage
-overview: "CP1–9 done (git restore 5527e83 is CP8). CP10 code is in (ghost HTML stays). Smoke CP10 before CP11. Do not rewire onto kb* IDs. Do not delete until params still work after #cutoff is removed in the inspector."
+overview: "CP1–10 smoked. Ghost HTML stays until CP11 Phase A (store leftovers) then Phase B (delete). Do not rewire onto kb* IDs. Do not catalog kbWriteFineProxy. Do not treat an already-green unguarded-grep as CP11 done."
 todos:
   - id: cp1-stage-default
     content: "CP1: CSS default stage; Off beside Start (not MIDI row); Off hides piano/spacebar only, XY stays; Fullscreen/Escape no-op including the flag; XY CSS not gated on is-fullscreen; hide columns without inert; full ?v= graph"
@@ -31,9 +31,9 @@ todos:
     status: completed
   - id: cp10-side-effects
     content: "CP10: one engine path (no classic dispatch/click); flushDom no-op if bus gone; osc subscribe+apply-once; knobs bind without classic node; Rec ignores applying; Acid/Ingy/Poly store-backed; proof = set after remove PLUS rec with #cutoff still present"
-    status: in_progress
+    status: completed
   - id: cp11-delete-ghost
-    content: "CP11: delete #synthContainer / header / #mobileStartStop / mobile.js after CP10 proof; hard refresh is the real test; keep sr-only h1"
+    content: "CP11a: Map-only scale/stepCount/noise/octave/Ingy/MI/Write/Poly/chord names; drop import-time step bus. CP11b: delete container/header/swipe/mobile wrapper/mobile.js; bump only main.js?v=; keep sr-only h1 + #kbOscilloscope; bindKnob element form stays"
     status: pending
 isProject: false
 ---
@@ -42,35 +42,34 @@ isProject: false
 
 **Endpoint:** one green/black stage. No wood page, no Fullscreen mode, no four-column sliders. Audio/MIDI/automation read a **JS** param store whose keys are today’s IDs (`cutoff`, `osc-tune-0`, …). `#synthContainer` is gone.
 
-**Where we are (2026-08-16):** CP1–9 done. CP10 is implemented (one engine path via `params.subscribe`; `params.set` does not `dispatchEvent`/`click` classic nodes). Ghost HTML still in the page. **Smoke CP10 before CP11.** Do not delete `#synthContainer`.
+**Where we are (2026-08-18):** CP1–10 done and smoked (Write µTUNE was the CP10 fail: `bindKnob` treated `#kbWriteFineProxy` as a store key; `isCatalogKey` now nulls it and Write fine is `params.set('step-fine-N')`). Ghost HTML still in the page. **Do not delete `#synthContainer` until CP11 Phase B (after Phase A proofs).** The unguarded `getElementById('…').value` grep is already green — that is **not** a CP11 pass.
 
-**Why the old CP9 was unsafe:** it listed catalogs, then “remove facade DOM sync” and **delete `#synthContainer` in the same checkpoint**. Today the facade **is** the ghost DOM. Delete first and boot throws: [`js/controls.js`](js/controls.js) ~1914–2034 attaches to `#stepCount` / `#tempo` / `#cutoff` / … at **import time** (no `?.`). [`togglePlay`](js/sequencer.js) does `startStopButton.querySelector('.front')` with no `?.`. `wireControls` does the same for `#mobileStartStop` (~151).
+**Why the old CP9 was unsafe (history):** it listed catalogs, then “remove facade DOM sync” and **delete `#synthContainer` in the same checkpoint**. Those import-time throws were CP10’s job and are done. CP11 leftovers are **optional-chain reads that silently lie** (`?.value || 8`, missing toggle = scale ON vs OFF), plus an import-time step bus that **recreates itself on `document.body`**.
 
 **Hard rules (still in force):**
 
-- Do not make any `kb*` node the engine’s source of truth.
-- Do not delete `#synthContainer` until **checkpoint 11**, and only after CP10’s proof (`params.set` after the node is gone — leftover detached listeners do not count).
+- Do not make any `kb*` node the engine’s source of truth. Do **not** catalog `#kbWriteFineProxy`.
+- Do not delete `#synthContainer` until **checkpoint 11 Phase B**, and only after Phase A proofs.
 - Finish a checkpoint’s tests before the next. Fail = stop.
-- If CP11 boot fails, revert **that commit only** — leave `5527e83` (CP8) intact.
-- One `?v=` per file across the whole import graph. Do not bump `docs/`.
+- If CP11 boot fails, revert **that commit only**. Leave CP10 on `main` (`a71c961` / follow-ups). `5527e83` is CP8 — do not roll back that far unless you mean to.
+- One `?v=` per file. Do not bump `docs/`. When the `mobile.js` import line changes, bump **only** [`index.html`](index.html)’s `js/main.js?v=` (today `?v=162`). Do not bump every module. Cached `main.js?v=` that still imports `mobile.js` 404s the whole boot.
+- Keep `bindKnob` **element form**: [`js/berlin.js`](js/berlin.js) ~874 `bindKnob(dial, input)` on lane ranges; [`js/pattern-write.js`](js/pattern-write.js) ~81 `bindKnob(dial, proxy)` on `#kbWriteFineProxy`. [`isCatalogKey`](js/knobs.js) ~401 must keep nulling non-catalog ids. Cheap `if (!key) return` kills Berlin and Write µTUNE.
 - Do not use `inert` on the param bus while it exists (`hidden` + `aria-hidden`).
 - **Off hides piano + computer-keys + chromatic spacebar only.** Transport, knobs, steps, MIDI, XY stay.
-- Parked (do not mix into 9–11): classic sequencer ratch stays on the private osc path (no unison, no shared filter env). Analog/digital UI lives on oscillator 1; code slot is still `OSC4_INDEX` — do not rename. **XY musical-only list** (drop slide/gate/accent/comp/etc.) is a later pass — CP9 only has to stop `querySelectorAll` and apply via `params.set`. **CP9 audio niggles** are not CP10 fails. **Hardware MIDI CC** is not a CP10 gate (`applyMappedCc` is already `params.set`; learn-by-key is the proof).
-- Do not convert Poly / Ingy-6 / Multitudes **mode** entry into “param widgets” in CP9. After CP10 those mode helpers must `params.set` osc/chorus keys instead of clicking missing nodes.
+- Parked (do not mix into 11): classic sequencer ratch stays on the private osc path (no unison, no shared filter env). Analog/digital UI lives on oscillator 1; code slot is still `OSC4_INDEX` — do not rename. **XY musical-only list** (drop slide/gate/accent/comp/etc.) is a later pass. **CP9 audio niggles** are not CP11 fails. **Hardware MIDI CC** is not a CP11 gate.
+- Mode helpers must `params.set` osc/chorus/model keys — never `.click()` or `.value =` on missing classic nodes.
 
 ```mermaid
 flowchart LR
-  done[CP1-8 done]
-  cp9[CP9 memory store dual-write]
-  cp10[CP10 side effects off DOM]
-  proof[params.set after node gone]
-  cp11[CP11 delete ghost]
-  done --> cp9 --> cp10 --> proof --> cp11
+  done[CP1-10 smoked]
+  a[CP11a store leftovers]
+  b[CP11b delete ghost]
+  done --> a --> b
 ```
 
 Reviews (CP1–3 era): [first](e894934f-ab43-45d6-bf11-c583f14eb016), [second](662c3a5a-6e06-4a38-8045-134b8375d682), [third](3fbc585c-030e-450a-89ba-9a6966dfee17).
 
-**Independent reviews of this CP9–11 split:** [first](2e46c4eb-718b-4f43-b3ad-5da792f1ca03) (detached ≠ present); [second](265b31be-6ff8-43c5-83e3-babd740b2c73) (automation **record**, MIDI learn without a live node, XY pointer/follow, step-knob bounds). **CP10-only:** [third](afe62281-14b7-4a19-9154-043276a131f0) (`flushDomToPattern` wipe; osc `querySelectorAll` no-throw; bind-at-boot; Rec `applying`; no classic `dispatchEvent`; `setLfoEnabled` recurse). Folded below.
+**Independent reviews of this CP9–11 split:** [first](2e46c4eb-718b-4f43-b3ad-5da792f1ca03) (detached ≠ present); [second](265b31be-6ff8-43c5-83e3-babd740b2c73) (automation **record**, MIDI learn without a live node, XY pointer/follow, step-knob bounds). **CP10-only:** [third](afe62281-14b7-4a19-9154-043276a131f0) (`flushDomToPattern` wipe; osc `querySelectorAll` no-throw; bind-at-boot; Rec `applying`; no classic `dispatchEvent`; `setLfoEnabled` recurse). **CP11 (convert-then-delete):** [first](530ffa5d-b82d-4b07-9bd6-7ae2fb921d16) (scale polarity; step bus on `body`; `?.value || 8`; Acid noise mute; grep already green); [second](f793c976-4cf4-450f-9ad8-1e26415112d5) (Multitudes empty selects; octave/semitone UI; Ingy no subscribe; Write knobs follow the bus; `bindKnob` element form; `mobile.js` 404; Poly chord→wavetable; OSC4 chord names). Folded below.
 
 ---
 
@@ -93,6 +92,16 @@ Reviews (CP1–3 era): [first](e894934f-ab43-45d6-bf11-c583f14eb016), [second](6
 - Keyboard Off: toggle still on screen **without opening a collapsed panel**; piano/computer-keys/spacebar hide; **transport/Start/knobs/XY stay**; stage stays `#050805`; On restores piano
 - Phone: no wood, no swipe-dot paging, arrows must not steal keys for section swipe
 - Console clean
+
+**CP11 extras** (in addition to the full kit; fail the checkpoint if any one fails while Start/cutoff/DIV look fine):
+
+- Scale Off at boot: idle VFD is brand, not `SCALE`. Scale On: notes **and** Berlin snap; `getActiveScale` / `isScaleEnabled` agree with the stage toggle (Map only).
+- STEPS=16: write past step 8; shift the line; wrap/length is 16. Strip shows 16 steps at boot, not 8.
+- Acid: noise on → Acid on/off → noise still at the stored level (not muted). Osc 1 still sounds on enter.
+- Inspector after hard refresh: `document.getElementById('stepParamBus')` is **null** (not only absent from `index.html`).
+- Multitudes: MODEL/BANK/DELAY have a full option list; OSC1 vol knob moves.
+- Write µTUNE and Berlin step dials still scrub (element-form `bindKnob`).
+- Octave +2: label is `+2`; held note shifts; sliders are not yanked to 0.
 
 **Regression tell:** UI moves, sound does not (or the reverse) = mirror/store split.
 
@@ -306,26 +315,57 @@ Do **not** treat “Start still works because hidden `#startStop` exists” as a
 
 **Real-world:** Full instrument kit including Acid + Multitudes enter-tweak-exit (mode helpers must not double-toggle **or** zero `.osc-vol`). If the proof fails, stop — do not delete HTML.
 
+**CP10 closed (2026-08-18):** ear smoke passed after Write µTUNE. Leftover optional-chain DOM reads and the import-time step bus are **CP11 Phase A**, not a reason to reopen CP10.
+
 ---
 
-## Checkpoint 11 — Delete the ghost (point of no return)
+## Checkpoint 11 — Convert leftovers, then delete the ghost
 
-**Goal:** No hidden classic bus. Inspector has no `#cutoff`, no `#synthContainer`, no `#startStop`, no `#mobileStartStop`, no `#steps` / `#stepParamBus`.
+**Goal:** No hidden classic bus. After Phase B, inspector `getElementById` is null for every id in the **fail list** below — including `#stepParamBus` **on the live document**, not only absent from `index.html`.
 
-**Do only after CP10 proof.** In order:
+**Do not delete HTML until Phase A proofs pass.** The CP10 unguarded-`.value` grep is already green ([`scripts/cp10-smoke-static.sh`](scripts/cp10-smoke-static.sh) WARN-only leftovers). Optional-chain reads still lie. Promote those WARNs to **FAIL** in a CP11 static script (or extend the existing one). Required conversion: every classic-id read used for sound, wrap, or scale must be `params.get` / `getNumber` / `getString` with **no DOM fallback**.
 
-1. Confirm grep: engine has no unguarded `document.getElementById('…').value` / `.addEventListener` / `.querySelector('.front')` on classic bus IDs. `bindKnob` / `bindSteppedKnob` / `initLfoRateKnob` / `readAdsrParams` / `applyLfoStartupDefaults` do not require those nodes.
-2. Oscilloscope: paint `#kbOscilloscope` only (header canvas lives in `.header-grid`, **outside** `#synthContainer` — still deleted with the header).
-3. ADSR: kb canvases only, store-backed; delete classic `#adsrVisualizer` / `#filterAdsrVisualizer` / `#noteVisualizer` / `#filterEnvControls` with the container.
-4. Delete `#synthContainer` (includes classic sliders, `#startStop`, `#reverse`, `#scaleSelect` / `#scaleToggle`, `#semitoneAmount`, duplicate OSC4 engine UI, `#stepParamBus` host), `.header-grid`, swipe dots, `#mobileStartStop`. **Keep** the sr-only `h1`. [`js/mobile.js`](js/mobile.js) is already a no-op — delete the file and its import. Do not leave a spare `#cutoff` anywhere else in `index.html`.
-5. Stop calling `ensureStepParamBus` / building 32 hidden fieldsets. Confirm `#stepParamBus` is not recreated on `document.body`.
-6. Grep: zero duplicate `?v=` in the import graph. Scale UI after delete is the stage selects only. Analog/digital is the **stage** `.osc4-engine-btn` only.
+**Inspector fail list (Phase B):** `#synthContainer`, `#cutoff`, `#startStop`, `#mobileStartStop`, `#division`, `#lfoSpeed`, `#attack`, `#stepCount`, `#scaleToggle`, `#scaleSelect`, `#noiseVol`, `#oscilloscope`, `#logo-overlay`, `#stepParamBus` (live), `#swipeDots`, `#swipeDotsBottom`, `#osc4HarmonicsKnob`. Also zero `#osc4HarmonicsKnob` / classic `.osc-tune` / `.osc-vol` in HTML.
 
-**Must still work (not store keys unless a later pass says so):** pitch bend (including automation key `pitchBend`), latch, held notes, Berlin lanes (own data, panel is on the stage), speech modal, computer-keys. They live outside `#synthContainer` today — do not delete those panels.
+---
 
-**Smoke after delete:** **Hard refresh** (the only test of import-time bind). No TypeError. Inspector: no `#cutoff` / `#synthContainer` / `#startStop` / `#division` / `#lfoSpeed` / `#attack`. Boot + full instrument kit. DIV, LFO RATE, and **stage step knobs** bind. Kb ADSR paints and drags. Semitone amount 7. XY cutoff drag + follow (no scrape fallback onto `#kbSlideTime` / `#kbWriteFineProxy`). Automation rec + playback **after** delete. MIDI learn cutoff from stage (and Ingy if open) stores `cutoff`. Acid enter does not mute osc 1. Phone: no wood, arrows do not swipe.
+### Phase A — store leftovers (ghost HTML stays)
 
-**False-pass:** Anything proven only in the pre-delete live session (listeners already attached). “Start works” because a leftover classic button survived. “Cutoff works” because a hidden input was left in `index.html` outside `#synthContainer`.
+Do in this order. Ghost nodes may still exist; proofs must not depend on them.
+
+1. **Scale is Map-only.** [`getActiveScale`](js/tuning.js) ~107–111: missing `#scaleToggle` returns `null` (OFF); if the toggle is treated as on, unguarded `select.value` throws. [`isScaleEnabled`](js/sequencer.js) ~1092–1093: `!#scaleToggle?.classList.contains('off')` treats **missing as ON**. Play / Berlin / piano all go through `getActiveScale`. Fix: if `!get('scaleToggle')` return null; else `SCALE_MAP[getString('scaleSelect')]`. Never read `#scaleSelect`. Do not split those two IDs in HTML. Idle VFD marquee must use the same Map flag (catalog default is **off** — boot must not scroll `SCALE`).
+2. **Kill the import-time step bus before any HTML delete.** [`ensureStepParamBus`](js/sequencer.js) ~58–73 runs at module eval (`const stepsDiv = ensureStepParamBus()`). Host is `#synthContainer` **or `document.body`**. “Stop calling” while leaving that `const` is an import-time `ReferenceError`. Delete the function **and** the eval-time builder (and the 32-fieldset loop ~75–108). `flushDomToPattern` already no-ops steps when the bus is absent ([`js/pattern-bank.js`](js/pattern-bank.js) ~393–399) — leave `pattern.steps[]`. Hard-refresh proof **before** Phase B: after a scratch delete of `#synthContainer`, `getElementById('stepParamBus')` is null.
+3. **Clock wrap from the store.** [`pattern-write.js`](js/pattern-write.js) ~19–21, [`pattern-shift.js`](js/pattern-shift.js) ~19–21, [`keyboard-steps.js`](js/keyboard-steps.js) ~287–289: `#stepCount?.value || 8` (listeners only on `#stepCount` ~455–461). Play already uses `getNumber('stepCount')`. One helper: clamp `Math.round(getNumber('stepCount', 8))` 1–32. Subscribe `stepCount` for write-cursor clamp and `updateKeyboardStepVisibility`. Write-mode `setStepTune` / `setStepOn` / `setStepFlag` must `params.set`, not `.step-tune` dispatch (~196–205).
+4. **Write-mode knobs follow the store, not `.step-tune` / `.step-fine`.** [`refreshStepTuneRanges`](js/step-tune-range.js) ~49–50 scrapes `.step-tune` then `refreshKnobDial` (no-ops without `input`). Stage dials are `.kb-step-tune-dial` / `.kb-step-fine`. Walk stage dials with `stepTuneBounds(getNumber('step-slider-N'))`. Write µTUNE already `params.set('step-fine-N')` on drag (~63–70); also `subscribe` the write-step fine key so strip µtune moves the Write knob. Do **not** listen to classic `.step-fine` (~93–99) as the engine path.
+5. **Acid noise from the store.** [`setNoiseEnabled`](js/keyboard-acid-strip.js) ~51–63: `#noiseVol?.value || 0` mutes on Acid **exit**. Use `getNumber('noiseVol', 0)` (same as [`store-engine.js`](js/store-engine.js) ~244–259).
+6. **Octave / semitone UI from the store.** [`syncOctaveSwitchUi`](js/keyboard.js) ~913–915 / [`syncSemitoneSwitchUi`](js/keyboard.js) ~959–965 read `main?.value` → **0** after delete while the Map is unchanged (UI vs sound split). Held-note retune is only on classic `input`/`change` (~1418–1439). Both syncs read `get('octaveSwitch')` / `get('semitoneSwitch')`. Subscribe those keys to `refreshKeyboard` + poly/held retune. Master-tune is already `get('masterTune')` (~1018).
+7. **Multitudes selects from stage/catalog, not classic IDs.** [`cloneSelectOptions`](js/keyboard-multitudes-panel.js) ~46–58 / `wireSelectMirror` ~294–296 copy from `#osc4Model` / `#osc4Bank` / `#delayTime` inside `#synthContainer`. After delete the MI `<select>`s are empty. Clone from `#kbOsc4Model` / `#kbOsc4Bank` / `#kbDelayTimeSelect` **or** catalog option lists. [`setOscVolUi`](js/keyboard-multitudes-panel.js) ~81–88 / `setOscTuneUi` ~95–103 `refreshKnobDial` only if classic `.osc-vol` / `.osc-tune` exist — use `params.get` + catalog bounds.
+8. **Ingy-6 `subscribe`s.** [`js/keyboard-ingy6-panel.js`](js/keyboard-ingy6-panel.js) has no `subscribe`. Reverse-sync is classic `input`/`click` on `#attack`… / `.osc-*` / `#chorusI` (~680–712). `?.` so no throw; faders and SUB ceiling freeze. `params.subscribe` the same keys `syncIngy6PanelFromMain` reads, including `osc-vol-1` → `polySubCeil`.
+9. **Poly chord → wavetable via `params.set`.** [`js/poly-voice.js`](js/poly-voice.js) ~1316–1321 sets `state.osc4Model` and paints `<select>.value` on `osc4Model` / `kbOsc4Model` / `miOsc4Model` with no `change` / no `set`. Engine reads `getString('osc4Model')`. Must `set('osc4Model', 'wavetable')`.
+10. **OSC4 chord names from the store.** [`osc4ChordReadout`](js/knobs.js) ~257–262 only if `input?.id === 'osc4Harmonics'`. [`syncOsc4ToneValueLabels`](js/controls.js) ~824–850 returns if those classic inputs are missing. Caption from `params.getNumber('osc4Harmonics')` + `state.osc4Model`. Drop classic rows from [`KNOB_BINDINGS`](js/knobs.js) ~75–77 (`osc4HarmonicsKnob` / `osc4TimbreKnob` / `osc4MorphKnob`). Keep stage `kbOsc4*` rows.
+11. **Static FAIL list** (not WARN): `getElementById('stepCount')` in write/shift/keyboard-steps; `getElementById('noiseVol')` in acid-strip; `getElementById('scaleToggle')` / `scaleSelect` in tuning + sequencer; import-time `ensureStepParamBus`; `KNOB_BINDINGS` classic `osc4HarmonicsKnob`. Grep remaining `getElementById('startStop'|'cutoff'|…)` **even with `?.`** — leftover listeners are not a throw, they are a lie.
+
+**Phase A done when:** grep/static FAIL is clean. Scratch-delete `#synthContainer` in a session, hard refresh with HTML **restored** is not the proof — proof is: with classic nodes removed **in the live document**, Scale On snaps, STEPS=16 wraps at 16, Acid-exit noise lives, MI selects still have options, Write µTUNE and Berlin dials still bind, `getElementById('stepParamBus')` is null. Then restore HTML or proceed to Phase B in the **same** change set.
+
+**Phase A false-pass:** “no unguarded `.value`.” “Scale UI is the stage selects” without Map reads. “Stop calling `ensureStepParamBus`” while the import-time `const stepsDiv = …` remains. `if (!key) return` in `bindKnob`. Cataloguing `kbWriteFineProxy`.
+
+---
+
+### Phase B — delete the ghost (point of no return)
+
+**Do only after Phase A.** Same commit may include both phases; if split, Phase A must land first. In order:
+
+1. Oscilloscope: paint `#kbOscilloscope` only. Classic `#oscilloscope` + `#logo-overlay` live in [`.header-grid`](index.html) ~15–75. Stage `#kbOscilloscope` + `#kb-logo-overlay` live in `.keyboard-section` ~173–175 — **not** the header. Delete only `.header-grid`. Do not delete `.oscilloscope-container` globally.
+2. ADSR: kb canvases only, store-backed; classic `#adsrVisualizer` / `#filterAdsrVisualizer` / `#noteVisualizer` / `#filterEnvControls` go with the container.
+3. Delete `#synthContainer` (classic sliders, `#startStop`, `#reverse`, `#scaleSelect` / `#scaleToggle`, `#semitoneAmount`, duplicate OSC4 engine UI, `#stepParamBus` host if it still exists in HTML). Delete `.header-grid`, `#swipeDots` (~2160), `#swipeDotsBottom` (~2829), **`.mobile-start-stop-container`** (~77–82) not only `#mobileStartStop`. **Keep** the sr-only `h1`, `#kbOscilloscope`, `#kb-logo-overlay`. Do not leave a spare `#cutoff` anywhere else in `index.html`. Analog/digital is the **stage** `.osc4-engine-btn` pair only (`index.html` ~762 vs ~2285 — classic copy goes away). `wireControls` must not bind a second pair.
+4. Delete [`js/mobile.js`](js/mobile.js) and its import in [`js/main.js`](js/main.js) ~8. **Bump only** `index.html` `js/main.js?v=` (currently 162). Hard refresh Network: no 404 on `mobile.js`. Strip matching CSS: `.header-grid`, `.swipe-dots`, [`.mobile-start-stop-container`](styles.css) ~100–108 / ~1276 (`display: flex !important` at ≤768px beats `[hidden]` and eats vertical space). Bump `styles.css?v=` if those rules move. Zero duplicate `?v=` in the import graph.
+5. Retire or fork [`js/cp10-smoke.js`](js/cp10-smoke.js): Rec-watch / `#cutoff.remove` proofs cannot arm after delete. Do not keep `index.html?cp10smoke` as a CP11 gate. Static grep is the CP11 script from Phase A.
+
+**Must still work (not store keys unless a later pass says so):** pitch bend (including automation key `pitchBend`), latch, held notes, Berlin lanes (own data, panel is on the stage — element-form knobs), speech modal, computer-keys, `#kbWriteFineProxy` (stage proxy, not a catalog key). They live outside `#synthContainer` today — do not delete those panels.
+
+**Smoke after delete:** **Hard refresh** (the only test of import-time bind). No TypeError. No module 404. Inspector fail list above — including live `getElementById('stepParamBus') === null`. Boot + full instrument kit **plus CP11 extras**. DIV, LFO RATE, and **stage step knobs** bind. Write µTUNE and Berlin step dials scrub. Kb ADSR paints and drags. Semitone amount 7. Octave +2. XY cutoff drag + follow (no scrape onto `#kbSlideTime` / `#kbWriteFineProxy`). Automation rec + playback **after** delete. MIDI learn cutoff from stage (and Ingy if open) stores `cutoff`. Acid enter does not mute osc 1; Acid exit does not mute noise. Multitudes MODEL/BANK/DELAY populated; enter-tweak-exit does not zero osc vol. Phone: no wood, no swipe dots, no extra mobile Start chrome, arrows do not swipe.
+
+**False-pass:** Anything proven only in the pre-delete live session. “Start works” because a leftover classic button survived. “Cutoff works” because a hidden input was left outside `#synthContainer`. Inspector missing `#cutoff` while `#stepParamBus` exists on `body`. Re-running `?cp10smoke` proofs that remove classic nodes. Start/cutoff/DIV sounding fine with Scale / STEPS=16 / Acid-exit untested.
 
 **Real-world:** Long write session, hard refresh, second device. If boot fails, revert **this checkpoint’s commit only**.
 

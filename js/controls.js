@@ -1,6 +1,6 @@
 import { state, OSC_COUNT } from './state.js?v=114';
 import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=13';
-import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=15';
+import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=16';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
@@ -14,15 +14,15 @@ import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequen
 import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=100';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=79';
 import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=94';
-import { applyScaleState } from './keyboard.js?v=189';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=114';
+import { applyScaleState } from './keyboard.js?v=190';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=115';
 import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=166';
-import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=120';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=121';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=24';
-import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=16';
+import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=17';
 import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=15';
 import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc } from './poly-voice.js?v=68';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=27';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=28';
 import {
     ensurePlaitsWorklet,
     createOscSource,

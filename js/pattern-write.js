@@ -2,12 +2,13 @@
 import { state } from './state.js?v=114';
 import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=262';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
-import { bindKnob } from './knobs.js?v=120';
+import { bindKnob } from './knobs.js?v=121';
 import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=19';
 import { forceNoteOff } from './voice.js?v=129';
 import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=68';
+import { set } from './params.js?v=13';
 import { getLiveStep, syncLiveStepFromDom } from './pattern-bank.js?v=12';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=27';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=28';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8
@@ -31,10 +32,6 @@ function formatCents(cents) {
     return `${n > 0 ? '+' : ''}${n}¢`;
 }
 
-function stepFineInput(step) {
-    return document.querySelector(`.step-fine[data-step="${step}"]`);
-}
-
 export function requestKeyboardStepsSync() {
     document.dispatchEvent(new CustomEvent('ingysynth-kb-steps-sync'));
 }
@@ -55,10 +52,7 @@ export function syncWriteFineKnob() {
     const proxy = document.getElementById('kbWriteFineProxy');
     const valueEl = document.getElementById('kbWriteFineValue');
     if (!proxy) return;
-    const fine = stepFineInput(state.writeStep);
-    const cents = fine
-        ? (parseInt(fine.value, 10) || 0)
-        : Math.round(Number(getLiveStep(state.writeStep).fine) || 0);
+    const cents = Math.round(Number(getLiveStep(state.writeStep).fine) || 0);
     syncingWriteFineFromStep = true;
     proxy.value = String(cents);
     proxy.dispatchEvent(new Event('input', { bubbles: true }));
@@ -71,14 +65,9 @@ function applyWriteFineFromProxy() {
     const proxy = document.getElementById('kbWriteFineProxy');
     const valueEl = document.getElementById('kbWriteFineValue');
     if (!proxy) return;
-    const fine = stepFineInput(state.writeStep);
-    if (fine) {
-        fine.value = proxy.value;
-        fine.dispatchEvent(new Event('input', { bubbles: true }));
-    } else {
-        getLiveStep(state.writeStep).fine = Math.round(Number(proxy.value) || 0);
-    }
-    if (valueEl) valueEl.textContent = formatCents(proxy.value);
+    const cents = Math.round(Number(proxy.value) || 0);
+    set(`step-fine-${state.writeStep}`, cents);
+    if (valueEl) valueEl.textContent = formatCents(cents);
 }
 
 function initWriteFineKnob() {

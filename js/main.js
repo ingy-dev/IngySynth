@@ -1,32 +1,32 @@
 // Entry point: import order mirrors the original single-file script order.
 import { initAudio } from './audio-engine.js?v=156';
 import { startIdleMarquee } from './sequencer.js?v=262';
-import './controls.js?v=270';
+import './controls.js?v=271';
 import './midi.js?v=94';
 import './visualizers.js?v=100';
 import { syncNoteVfdFromPeer } from './visualizers.js?v=100';
 import './mobile.js?v=74';
 import { refreshXYPad } from './xy-pad.js?v=78';
-import { initKeyboard } from './keyboard.js?v=189';
+import { initKeyboard } from './keyboard.js?v=190';
 import { initComputerKeyboard } from './computer-keyboard.js?v=178';
-import { initKeyboardKnobs, initDoubleClickReset } from './knobs.js?v=120';
+import { initKeyboardKnobs, initDoubleClickReset } from './knobs.js?v=121';
 import { initPitchBendStrip } from './pitch-bend.js?v=91';
 import { initLfoStrip, applyLfoStartupDefaults, updateLfoSmoothing } from './lfo-strip.js?v=24';
-import { initLfoRateKnob, initLfoRateControls, onLfoRateApplied } from './lfo-rate.js?v=16';
-import { initKeyboardSteps } from './keyboard-steps.js?v=114';
-import { initPatternShift } from './pattern-shift.js?v=108';
-import { initKeyboardOscillators, syncKeyboardOscillatorsFromMain } from './keyboard-oscillators.js?v=91';
-import { initKeyboardEffects, syncKeyboardEffectsFromMain } from './keyboard-effects.js?v=94';
+import { initLfoRateKnob, initLfoRateControls, onLfoRateApplied } from './lfo-rate.js?v=17';
+import { initKeyboardSteps } from './keyboard-steps.js?v=115';
+import { initPatternShift } from './pattern-shift.js?v=109';
+import { initKeyboardOscillators, syncKeyboardOscillatorsFromMain } from './keyboard-oscillators.js?v=92';
+import { initKeyboardEffects, syncKeyboardEffectsFromMain } from './keyboard-effects.js?v=95';
 import { initKeyboardNoise, syncKeyboardNoiseFromMain } from './keyboard-noise.js?v=76';
 import { initKeyboardFilterEnv, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=86';
 import { initKeyboardAcidStrip } from './keyboard-acid-strip.js?v=15';
 import { initKeyboardLfo, syncKeyboardLfoFromMain } from './keyboard-lfo.js?v=7';
 import { initCollapsibles } from './collapsible.js?v=74';
-import { initAutomation } from './automation.js?v=42';
+import { initAutomation } from './automation.js?v=43';
 import { initParamStatus } from './param-status.js?v=7';
-import { initStepTuneRange } from './step-tune-range.js?v=9';
+import { initStepTuneRange } from './step-tune-range.js?v=10';
 import { initPatternBank } from './pattern-bank.js?v=12';
-import { initBerlin } from './berlin.js?v=44';
+import { initBerlin } from './berlin.js?v=45';
 import './params.js?v=13';
 
 onLfoRateApplied(() => updateLfoSmoothing());
@@ -108,7 +108,7 @@ syncAllKeyboardSynthFromMain();
 startIdleMarquee();
 
 if (new URLSearchParams(location.search).has('cp10smoke')) {
-    import('./cp10-smoke.js?v=1').then((m) => m.initCp10Smoke()).catch((err) => {
+    import('./cp10-smoke.js?v=3').then((m) => m.initCp10Smoke()).catch((err) => {
         console.error('CP10 smoke tracker failed to load', err);
     });
 }

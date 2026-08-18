@@ -4,7 +4,7 @@
 
 import { state } from './state.js?v=114';
 import { getQuantizedStepTune } from './tuning.js?v=79';
-import { bindKnob } from './knobs.js?v=120';
+import { bindKnob } from './knobs.js?v=121';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
 import {
     click,
@@ -17,7 +17,7 @@ import {
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=101';
+} from './pattern-write.js?v=102';
 import { syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;

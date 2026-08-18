@@ -18,7 +18,7 @@ import {
     initPatternWrite,
     writeNote,
     setWriteMode,
-} from './pattern-write.js?v=101';
+} from './pattern-write.js?v=102';
 import {
     addHeldNote,
     removeHeldNote,
@@ -45,7 +45,7 @@ import {
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=27';
+} from './keyboard-multitudes-panel.js?v=28';
 import {
     togglePolyMode,
     togglePolyUnison,

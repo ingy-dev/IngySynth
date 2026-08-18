@@ -7,7 +7,7 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=189';
+} from './keyboard.js?v=190';
 import { needsHeldNoteSet } from './held-notes.js?v=8';
 import {
     catalogKeyFromLearn,

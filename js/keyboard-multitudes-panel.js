@@ -1,7 +1,7 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
 import { state } from './state.js?v=114';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=120';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=121';
 import { ensurePlaitsWorklet } from './osc-source.js?v=98';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
 import {

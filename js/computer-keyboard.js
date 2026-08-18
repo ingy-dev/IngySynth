@@ -12,7 +12,7 @@ import {
     syncVisibilityUI,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=189';
+} from './keyboard.js?v=190';
 import { needsHeldNoteSet } from './held-notes.js?v=8';
 
 /** Ableton home-row octave: relative semitones from A-key root. */

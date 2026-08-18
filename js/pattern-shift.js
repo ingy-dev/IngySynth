@@ -6,9 +6,9 @@ import { refreshStepTuneReadouts } from './sequencer.js?v=262';
 import {
     syncAllKeyboardStepButtonsFromMain,
     syncAllKeyboardStepFinesFromMain,
-} from './keyboard-steps.js?v=114';
-import { setWriteCursor } from './pattern-write.js?v=101';
-import { rotateAutomationLanes } from './automation.js?v=42';
+} from './keyboard-steps.js?v=115';
+import { setWriteCursor } from './pattern-write.js?v=102';
+import { rotateAutomationLanes } from './automation.js?v=43';
 import {
     cloneStep,
     getPattern,

@@ -7,8 +7,8 @@ import { previewStepsOnVfd } from './sequencer.js?v=262';
 import { state } from './state.js?v=114';
 import { beginMidiLearn } from './midi-learn.js?v=6';
 import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=13';
-import { getParam } from './param-catalog.js?v=1';
-import { stepTuneBounds } from './step-tune-range.js?v=9';
+import { getParam, isCatalogKey } from './param-catalog.js?v=1';
+import { stepTuneBounds } from './step-tune-range.js?v=10';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -394,10 +394,11 @@ function syncDialFromKey(dial, key, input, valueEl) {
  * @param {string | HTMLInputElement | null} inputOrKey canonical param key or range element
  */
 export function bindKnob(dial, inputOrKey, valueEl, { onInteract } = {}) {
-    const key = typeof inputOrKey === 'string' ? inputOrKey : keyFromElement(inputOrKey);
+    let key = typeof inputOrKey === 'string' ? inputOrKey : keyFromElement(inputOrKey);
     const input = typeof inputOrKey === 'string'
         ? connectedElementFor(inputOrKey)
         : (inputOrKey && inputOrKey.isConnected ? inputOrKey : null);
+    if (key && !isCatalogKey(key)) key = null;
     if (!dial || (!key && !input)) return;
 
     if (key && key.startsWith('step-slider-') && input) {

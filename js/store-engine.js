@@ -17,8 +17,8 @@ import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
 import { previewStepsOnVfd } from './sequencer.js?v=262';
 import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer } from './visualizers.js?v=100';
 import { calculateSemitoneShift, getQuantizedStepTune } from './tuning.js?v=79';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=114';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=120';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=115';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=121';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -27,7 +27,7 @@ import {
     updateLfoCutoffSafety,
     updateLfoHighpassSafety,
 } from './lfo-strip.js?v=24';
-import { applyLfoRate } from './lfo-rate.js?v=16';
+import { applyLfoRate } from './lfo-rate.js?v=17';
 import { applyPolyOscPan, forEachPolyOsc } from './poly-voice.js?v=68';
 import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=98';
 

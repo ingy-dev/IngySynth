@@ -6,9 +6,9 @@ import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tun
 import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=100';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
 import { setPolyMode } from './poly-voice.js?v=68';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=27';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=28';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=120';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=121';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=7';
 import { getNumber, set } from './params.js?v=13';
 import {

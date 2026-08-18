@@ -3,11 +3,11 @@
 import { state } from './state.js?v=114';
 import { beginMidiLearn } from './midi-learn.js?v=6';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=24';
-import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=100';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=25';
+import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=101';
 import { refreshFilterInputDrive } from './filter-drive.js?v=25';
-import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=86';
-import { elementFor, get, getNumber, getOscType, getOscVol, set } from './params.js?v=13';
+import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=87';
+import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=13';
 
 const HPF_HZ = [20, 250, 700, 1400];
 
@@ -686,8 +686,16 @@ function wirePanelControls() {
             if (!state.keyboardPoly || syncingFromMain) return;
             syncIngy6PanelFromMain();
         });
+        subscribe(id, () => {
+            if (!state.keyboardPoly || syncingFromMain) return;
+            syncIngy6PanelFromMain();
+        });
     });
     document.querySelector('.osc-type[data-osc="0"]')?.addEventListener('change', () => {
+        if (!state.keyboardPoly || syncingFromMain) return;
+        syncWaveUi();
+    });
+    subscribe('osc-type-0', () => {
         if (!state.keyboardPoly || syncingFromMain) return;
         syncWaveUi();
     });
@@ -696,8 +704,18 @@ function wirePanelControls() {
         // Main/kb On/Off can mute OSC1 — keep Ingy wave lights honest
         requestAnimationFrame(() => syncWaveUi());
     });
+    subscribe('osc-toggle-0', () => {
+        if (!state.keyboardPoly || syncingFromMain) return;
+        syncWaveUi();
+    });
     // OSC2 vol knob = dynamic SUB ceiling while Poly is on
     document.querySelector('.osc-vol[data-osc="1"]')?.addEventListener('input', () => {
+        if (!state.keyboardPoly || syncingFromMain) return;
+        const ceil = readMainRangeFromOscVol(1);
+        if (Number.isFinite(ceil) && ceil > 0) state.polySubCeil = ceil;
+        refreshFilterInputDrive();
+    });
+    subscribe('osc-vol-1', () => {
         if (!state.keyboardPoly || syncingFromMain) return;
         const ceil = readMainRangeFromOscVol(1);
         if (Number.isFinite(ceil) && ceil > 0) state.polySubCeil = ceil;
@@ -708,6 +726,10 @@ function wirePanelControls() {
             if (!state.keyboardPoly || syncingFromMain) return;
             // After main toggle settles
             requestAnimationFrame(() => syncChorusUi());
+        });
+        subscribe(id, () => {
+            if (!state.keyboardPoly || syncingFromMain) return;
+            syncChorusUi();
         });
     });
 }

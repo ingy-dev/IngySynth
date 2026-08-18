@@ -4,12 +4,14 @@
 // keeps its own headroom until it is tuned back inside.
 
 import { state } from './state.js?v=114';
-import { refreshKnobDial } from './knobs.js?v=121';
+import { refreshKnobDial } from './knobs.js?v=122';
 
 export const MANUAL_TUNE_MIN = -24;
 export const MANUAL_TUNE_MAX = 24;
 export const FULL_TUNE_MIN = -39;
 export const FULL_TUNE_MAX = 48;
+
+const STEP_SLOTS = 32;
 
 /** Range a step-tune input should expose right now, given its stored value. */
 export function stepTuneBounds(value) {
@@ -31,33 +33,16 @@ export function clampManualTune(value) {
     return Math.max(MANUAL_TUNE_MIN, Math.min(MANUAL_TUNE_MAX, v));
 }
 
-function applyRange(input) {
-    const { min, max } = stepTuneBounds(parseInt(input.value, 10));
-    if (String(input.min) === String(min) && String(input.max) === String(max)) return false;
-    input.min = String(min);
-    input.max = String(max);
-    return true;
-}
-
-function refreshOne(input) {
-    if (!applyRange(input)) return;
-    const step = parseInt(input.dataset.step, 10);
-    // Value readout stays owned by the scale-quantized display, so pass none.
-    refreshKnobDial(document.getElementById(`kbStepTuneDial${step}`), input, null);
-}
-
 export function refreshStepTuneRanges() {
-    document.querySelectorAll('.step-tune').forEach(refreshOne);
+    for (let i = 0; i < STEP_SLOTS; i++) {
+        const dial = document.getElementById(`kbStepTuneDial${i}`);
+        if (!dial) continue;
+        refreshKnobDial(dial, `step-slider-${i}`);
+    }
 }
 
 export function initStepTuneRange() {
     refreshStepTuneRanges();
-
-    // Drag end on a main-panel slider: drop any widened headroom it no longer needs.
-    document.addEventListener('change', (e) => {
-        const input = e.target?.closest?.('.step-tune');
-        if (input) refreshOne(input);
-    });
 
     // Write mode, keyboard programming and bank loads all fire this.
     document.addEventListener('ingysynth-kb-steps-sync', refreshStepTuneRanges);

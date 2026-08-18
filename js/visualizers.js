@@ -1,5 +1,5 @@
 import { state } from './state.js?v=114';
-import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=79';
+import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=80';
 import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=2';
 import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=6';
 import { getNumber, set } from './params.js?v=13';

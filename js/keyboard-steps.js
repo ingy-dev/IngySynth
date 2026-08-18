@@ -3,13 +3,14 @@
 // tiny microtune → .step-fine, Acc/Sld/On → accent/slide/toggle.
 
 import { state } from './state.js?v=114';
-import { getQuantizedStepTune } from './tuning.js?v=79';
-import { bindKnob } from './knobs.js?v=121';
+import { getQuantizedStepTune } from './tuning.js?v=80';
+import { bindKnob } from './knobs.js?v=122';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
 import {
     click,
     elementFor,
     get,
+    getNumber,
     set,
     subscribe,
     toggle,
@@ -17,7 +18,7 @@ import {
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=102';
+} from './pattern-write.js?v=103';
 import { syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;
@@ -284,8 +285,8 @@ export function initKeyboardSteps() {
         setWriteCursor(step);
     });
 
-    const stepCountEl = document.getElementById('stepCount');
-    const count = stepCountEl ? parseInt(stepCountEl.value, 10) : 8;
+    const n = Math.round(getNumber('stepCount', 8));
+    const count = Math.max(1, Math.min(STEP_COUNT, Number.isFinite(n) ? n : 8));
     updateKeyboardStepVisibility(count);
 
     state.keyboardStepsExpanded = true;

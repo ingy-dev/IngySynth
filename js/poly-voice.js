@@ -3,7 +3,7 @@
 
 import { state, OSC_COUNT } from './state.js?v=114';
 import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=13';
-import { semitonesToFrequency } from './tuning.js?v=79';
+import { semitonesToFrequency } from './tuning.js?v=80';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=82';
 import { refreshFilterInputDrive } from './filter-drive.js?v=25';
 import {
@@ -11,11 +11,11 @@ import {
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=100';
+} from './visualizers.js?v=101';
 import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=166';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=25';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=86';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=16';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=26';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=87';
 import {
     createOscSource,
     fadeStopOsc,
@@ -1313,12 +1313,8 @@ export function setPolyMode(on) {
         state.keyboardPoly = true;
         state.keyboardPolyUnison = false;
         // Chord stays off in Ingy-6 (classic OSC1 voices). Allowed in Multitudes.
-        if (state.osc4Model === 'chord') {
-            state.osc4Model = 'wavetable';
-            ['osc4Model', 'kbOsc4Model', 'miOsc4Model'].forEach((id) => {
-                const el = document.getElementById(id);
-                if (el) el.value = 'wavetable';
-            });
+        if (getString('osc4Model') === 'chord' || state.osc4Model === 'chord') {
+            set('osc4Model', 'wavetable');
         }
         setPolyLockedUi(true);
         syncUnisonControlsEnabled();

@@ -1,5 +1,5 @@
 import { state } from './state.js?v=114';
-import { getNumber, getString, getOscType, getOscVol } from './params.js?v=13';
+import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=13';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -10,16 +10,16 @@ import {
     midiPitchBendValue,
     getGlobalTune,
     semitonesToFrequency,
-} from './tuning.js?v=79';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=100';
+} from './tuning.js?v=80';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=101';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { forceNoteOff } from './voice.js?v=129';
-import { getLfoRateHz } from './lfo-rate.js?v=17';
-import { bentFrequency } from './pitch-bend.js?v=91';
+import { forceNoteOff } from './voice.js?v=130';
+import { getLfoRateHz } from './lfo-rate.js?v=18';
+import { bentFrequency } from './pitch-bend.js?v=92';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
 import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=166';
 import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=98';
-import { notifyAutomationLoopAnchor } from './automation.js?v=43';
+import { notifyAutomationLoopAnchor } from './automation.js?v=44';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=8';
 import {
     scheduleAcidAmpEnvelope,
@@ -46,7 +46,7 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=45';
+} from './berlin.js?v=46';
 import { getPattern, snapshotStepNeighborhood } from './pattern-bank.js?v=12';
 import {
     clampRatch,
@@ -55,59 +55,9 @@ import {
     syncRatchButton,
 } from './step-ratch.js?v=1';
 
-function ensureStepParamBus() {
-    let bus = document.getElementById('stepParamBus');
-    if (!bus) {
-        bus = document.createElement('div');
-        bus.id = 'stepParamBus';
-        bus.hidden = true;
-        bus.setAttribute('aria-hidden', 'true');
-        const host = document.getElementById('synthContainer') || document.body;
-        host.appendChild(bus);
-    }
-    return bus;
-}
-
-// Canonical step inputs for knobs / MIDI / write. Not `#steps` (CP7: that stays empty).
 // Classic play reads `pattern.steps[]`, snapshotted at schedule time.
-const stepsDiv = ensureStepParamBus();
-// Guard against duplicate ES module instances (?v= skew) appending a second bank of steps.
-if (stepsDiv && !globalThis.__ingySynthStepsBuilt) {
-    globalThis.__ingySynthStepsBuilt = true;
-    for (let i = 0; i < 32; i++) {
-        const stepDiv = document.createElement('fieldset');
-        stepDiv.className = 'sequencer-step';
-        stepDiv.dataset.step = i;
-        stepDiv.innerHTML = `
-        <legend>Step ${i + 1}</legend>
-        <input type="range" class="step-tune" data-step="${i}" min="-39" max="48" value="0">
-        <span class="step-value">0</span>
-        <input type="range" class="step-fine" data-step="${i}" min="-100" max="100" value="0">
-        <span class="step-fine-value">0&cent;</span>
-        <div class="step-buttons">
-            <div class="step-buttons-row">
-                <button class="pushable step-accent off" data-step="${i}">
-                    <span class="front">Accent</span>
-                </button>
-                <button class="pushable step-slide off" data-step="${i}">
-                    <span class="front">Slide</span>
-                </button>
-            </div>
-            <div class="step-buttons-row">
-                <button class="pushable step-ratch off" data-step="${i}" data-ratch="1" aria-pressed="false">
-                    <span class="front">Ratch</span>
-                </button>
-            </div>
-            <div class="step-buttons-row">
-                <button class="pushable step-toggle" data-step="${i}">
-                    <span class="front">On</span>
-                </button>
-            </div>
-        </div>
-    `;
-        stepsDiv.appendChild(stepDiv);
-    }
-}
+// Do not create `#stepParamBus` here — no import-time bus on `#synthContainer`
+// or `document.body`. Stage knobs bind catalog keys.
 
 // Slide / Accent toggles — bind once globally.
 // Different ?v= query strings create separate ES module instances; without this
@@ -1090,7 +1040,7 @@ let idleMarqueeIndex = 0;
 let writeAwaitingFirstProgram = false;
 
 function isScaleEnabled() {
-    return !document.getElementById('scaleToggle')?.classList.contains('off');
+    return !!get('scaleToggle');
 }
 
 function setKeyboardStepDigits(pair, { lit = true, label = '', brand = false, cyan = false } = {}) {

@@ -1,9 +1,9 @@
 import { state } from './state.js?v=114';
 import { getNumber } from './params.js?v=13';
-import { semitonesToFrequency } from './tuning.js?v=79';
+import { semitonesToFrequency } from './tuning.js?v=80';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=82';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=100';
-import { bentFrequency } from './pitch-bend.js?v=91';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=101';
+import { bentFrequency } from './pitch-bend.js?v=92';
 import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=166';
 import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=98';
 import {

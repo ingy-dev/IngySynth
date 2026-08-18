@@ -1,8 +1,8 @@
 import { state } from './state.js?v=114';
-import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=79';
-import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=129';
-import { initAudio } from './audio-engine.js?v=156';
-import { updateNoteVisualizer } from './visualizers.js?v=100';
+import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=80';
+import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=130';
+import { initAudio } from './audio-engine.js?v=157';
+import { updateNoteVisualizer } from './visualizers.js?v=101';
 import {
     refreshStepTuneReadouts,
     startArp,
@@ -12,13 +12,13 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=262';
+} from './sequencer.js?v=263';
 import { refreshXYPad } from './xy-pad.js?v=78';
 import {
     initPatternWrite,
     writeNote,
     setWriteMode,
-} from './pattern-write.js?v=102';
+} from './pattern-write.js?v=103';
 import {
     addHeldNote,
     removeHeldNote,
@@ -32,7 +32,7 @@ import {
     recordArpChordSessionNote,
     freezeArpChordSession,
 } from './held-notes.js?v=8';
-import { get, getString, set as setParam } from './params.js?v=13';
+import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=13';
 import {
     toggleChordMemoryLearn,
     cancelChordMemoryLearn,
@@ -45,7 +45,7 @@ import {
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=28';
+} from './keyboard-multitudes-panel.js?v=29';
 import {
     togglePolyMode,
     togglePolyUnison,
@@ -57,7 +57,7 @@ import {
     retunePolyVoices,
     hasPolyVoices,
     initPolyVoice,
-} from './poly-voice.js?v=68';
+} from './poly-voice.js?v=69';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];
@@ -911,8 +911,7 @@ function formatOctaveSwitchValue(value) {
 }
 
 function syncOctaveSwitchUi() {
-    const main = document.getElementById('octaveSwitch');
-    const n = Math.max(-2, Math.min(2, parseInt(main?.value, 10) || 0));
+    const n = Math.max(-2, Math.min(2, Math.round(getNumber('octaveSwitch', 0)) || 0));
     const label = formatOctaveSwitchValue(n);
     [
         'kbPatternOctaveValue',
@@ -957,8 +956,7 @@ function clampSemiSwitch(n) {
 }
 
 function syncSemitoneSwitchUi() {
-    const main = document.getElementById('semitoneSwitch');
-    const pos = clampSemiSwitch(main?.value);
+    const pos = clampSemiSwitch(getNumber('semitoneSwitch', 0));
     const label = String(pos);
     SEMI_SWITCH_IDS.forEach((id) => {
         const el = document.getElementById(id);
@@ -984,6 +982,16 @@ function setSemitoneAmount(value) {
     const next = String(Math.max(0, Math.min(12, parseInt(value, 10) || 0)));
     setParam('semitoneAmount', next);
     syncSemitoneSwitchUi();
+}
+
+function retuneKeyboardFromGlobalPitch() {
+    refreshKeyboard();
+    notifyKeyboardPitchUi();
+    if (!state.isPlaying && hasPolyVoices()) {
+        retunePolyVoices((semi) => soundingSemitones(semi));
+    } else if (!state.isPlaying && state.keyboardVoiceActive && state.keyboardHeldSemitone !== null) {
+        noteOn(soundingSemitones(state.keyboardHeldSemitone));
+    }
 }
 
 function initSemitoneMirrors() {
@@ -1415,27 +1423,28 @@ export function initKeyboard() {
     document.getElementById('kbXyOctaveUp')?.addEventListener('click', () => shiftOctaveSwitch(1));
     initSemitoneMirrors();
 
+    subscribe('octaveSwitch', () => {
+        syncOctaveSwitchUi();
+        retuneKeyboardFromGlobalPitch();
+    });
+    subscribe('semitoneSwitch', () => {
+        syncSemitoneSwitchUi();
+        retuneKeyboardFromGlobalPitch();
+    });
+    subscribe('semitoneAmount', () => {
+        syncSemitoneSwitchUi();
+        retuneKeyboardFromGlobalPitch();
+    });
+
     ['masterTune', 'octaveSwitch', 'semitoneSwitch'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', () => {
             if (id === 'masterTune') syncKeyboardMasterTune();
             if (id === 'octaveSwitch') syncOctaveSwitchUi();
-            refreshKeyboard();
-            notifyKeyboardPitchUi();
-            if (!state.isPlaying && hasPolyVoices()) {
-                retunePolyVoices((semi) => soundingSemitones(semi));
-            } else if (!state.isPlaying && state.keyboardVoiceActive && state.keyboardHeldSemitone !== null) {
-                noteOn(soundingSemitones(state.keyboardHeldSemitone));
-            }
+            retuneKeyboardFromGlobalPitch();
         });
     });
     document.getElementById('semitoneAmount')?.addEventListener('change', () => {
-        refreshKeyboard();
-        notifyKeyboardPitchUi();
-        if (!state.isPlaying && hasPolyVoices()) {
-            retunePolyVoices((semi) => soundingSemitones(semi));
-        } else if (!state.isPlaying && state.keyboardVoiceActive && state.keyboardHeldSemitone !== null) {
-            noteOn(soundingSemitones(state.keyboardHeldSemitone));
-        }
+        retuneKeyboardFromGlobalPitch();
     });
 
     document.addEventListener('ingysynth:sequencer-start', () => onSequencerStart());
@@ -1444,9 +1453,7 @@ export function initKeyboard() {
     // Match keyboard scale UI to the param Map (catalog default is off)
     applyScaleState(
         !!get('scaleToggle'),
-        getString('scaleSelect')
-            || document.getElementById('scaleSelect')?.value
-            || document.getElementById('keyboardScaleSelect')?.value,
+        getString('scaleSelect'),
     );
 
     initPatternWrite(refreshKeyboard);

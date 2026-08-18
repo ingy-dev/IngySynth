@@ -5,14 +5,14 @@
 
 import { state } from './state.js?v=114';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=74';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=91';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=92';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=78';
-import { ensureDisplayStep } from './knobs.js?v=121';
+import { ensureDisplayStep } from './knobs.js?v=122';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=7';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=45';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=46';
 import { getNumber, getString, set as setParam, subscribe } from './params.js?v=13';
 import { clampToCatalog, getParam } from './param-catalog.js?v=1';
 

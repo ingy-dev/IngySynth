@@ -3,12 +3,12 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=262';
+import { previewStepsOnVfd } from './sequencer.js?v=263';
 import { state } from './state.js?v=114';
 import { beginMidiLearn } from './midi-learn.js?v=6';
 import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=13';
 import { getParam, isCatalogKey } from './param-catalog.js?v=1';
-import { stepTuneBounds } from './step-tune-range.js?v=10';
+import { stepTuneBounds } from './step-tune-range.js?v=11';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -72,9 +72,6 @@ const KNOB_BINDINGS = [
     { dialId: 'kbOsc4HarmonicsKnob', inputId: 'osc4Harmonics', valueId: 'kbOsc4HarmonicsValue' },
     { dialId: 'kbOsc4TimbreKnob', inputId: 'osc4MorphX', valueId: 'kbOsc4TimbreValue' },
     { dialId: 'kbOsc4MorphKnob', inputId: 'osc4MorphY', valueId: 'kbOsc4MorphValue' },
-    { dialId: 'osc4HarmonicsKnob', inputId: 'osc4Harmonics', valueId: 'osc4HarmonicsKnobValue' },
-    { dialId: 'osc4TimbreKnob', inputId: 'osc4MorphX', valueId: 'osc4TimbreKnobValue' },
-    { dialId: 'osc4MorphKnob', inputId: 'osc4MorphY', valueId: 'osc4MorphKnobValue' },
 ];
 
 const DIVISION_STEPS = [
@@ -254,19 +251,20 @@ export function chordNameFromHarmonics(h) {
     return OSC4_CHORD_NAMES[Math.max(0, Math.min(n - 1, i))];
 }
 
-function osc4ChordReadout(input) {
-    if (input?.id !== 'osc4Harmonics') return null;
+function osc4ChordReadout(value) {
     if (!state.osc4Wavetable) return null;
     const model = state.osc4Model;
     if (model !== 'chord' && model !== 'chiptune' && model !== 'string_machine') return null;
-    return chordNameFromHarmonics(input.value);
+    return chordNameFromHarmonics(value);
 }
 
 /** Readout string from native step (display only; input keeps full precision). */
 export function formatRangeValue(input) {
     if (!input) return '';
-    const chord = osc4ChordReadout(input);
-    if (chord) return chord;
+    if (input.id === 'osc4Harmonics') {
+        const chord = osc4ChordReadout(parseFloat(input.value));
+        if (chord) return chord;
+    }
     ensureDisplayStep(input);
     const n = parseFloat(input.value);
     if (!Number.isFinite(n)) return String(input.value ?? '');
@@ -312,8 +310,9 @@ function normToValue(input, norm) {
 }
 
 function formatParamReadout(key, value, input) {
-    if (key === 'osc4Harmonics' && input) {
-        const chord = osc4ChordReadout(input);
+    if (key === 'osc4Harmonics') {
+        const n = typeof value === 'number' ? value : parseFloat(value);
+        const chord = osc4ChordReadout(Number.isFinite(n) ? n : 0);
         if (chord) return chord;
     }
     const spec = key ? getParam(key) : null;
@@ -356,9 +355,13 @@ function syncDialFromInput(dial, input, valueEl) {
 }
 
 /** Re-read min/max/value into a bound dial (after a range or value swap). */
-export function refreshKnobDial(dial, input, valueEl = null) {
-    if (!dial || !input) return;
-    syncDialFromInput(dial, input, valueEl);
+export function refreshKnobDial(dial, inputOrKey, valueEl = null) {
+    if (!dial || inputOrKey == null) return;
+    if (typeof inputOrKey === 'string') {
+        syncDialFromKey(dial, inputOrKey, connectedElementFor(inputOrKey), valueEl);
+        return;
+    }
+    syncDialFromInput(dial, inputOrKey, valueEl);
 }
 
 function writeFromNorm(key, input, norm) {

@@ -1,28 +1,28 @@
 import { state, OSC_COUNT } from './state.js?v=114';
 import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=13';
-import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=16';
+import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=17';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=156';
+} from './audio-engine.js?v=157';
 import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=25';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
 import { clearAccentSweep } from './acid-env.js?v=14';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=262';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=100';
-import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=79';
-import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=94';
-import { applyScaleState } from './keyboard.js?v=190';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=115';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=263';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=101';
+import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=80';
+import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=95';
+import { applyScaleState } from './keyboard.js?v=191';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=116';
 import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=166';
-import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=121';
-import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=24';
-import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=17';
-import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=15';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc } from './poly-voice.js?v=68';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=28';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=122';
+import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=25';
+import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=18';
+import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=16';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc } from './poly-voice.js?v=69';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=29';
 import {
     ensurePlaitsWorklet,
     createOscSource,
@@ -357,8 +357,7 @@ export function wireControls() {
     function syncOsc4ChordNameUi() {
         const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
         const show = !!state.osc4Wavetable && OSC4_CHORD_NAME_MODELS.has(model);
-        const harmEl = document.getElementById('osc4Harmonics');
-        const h = harmEl ? parseFloat(harmEl.value) : state.osc4Harmonics;
+        const h = getNumber('osc4Harmonics', 0.5);
         const name = chordNameFromHarmonics(h);
         document.querySelectorAll('.osc4-chord-name').forEach((el) => {
             el.hidden = !show;
@@ -822,19 +821,17 @@ export function wireControls() {
     }
 
     function syncOsc4ToneValueLabels() {
-        const h = document.getElementById('osc4Harmonics');
-        const x = document.getElementById('osc4MorphX');
-        const y = document.getElementById('osc4MorphY');
+        const h = getNumber('osc4Harmonics', 0.5);
+        const x = getNumber('osc4MorphX', 0.5);
+        const y = getNumber('osc4MorphY', 0.5);
         const pairs = [
-            ['kbOsc4HarmonicsValue', 'osc4HarmonicsKnobValue', h],
-            ['kbOsc4TimbreValue', 'osc4TimbreKnobValue', x],
-            ['kbOsc4MorphValue', 'osc4MorphKnobValue', y],
+            ['kbOsc4HarmonicsValue', 'osc4HarmonicsKnobValue', formatTone01(h)],
+            ['kbOsc4TimbreValue', 'osc4TimbreKnobValue', formatTone01(x)],
+            ['kbOsc4MorphValue', 'osc4MorphKnobValue', formatTone01(y)],
         ];
         const chordNames = !!state.osc4Wavetable && OSC4_CHORD_NAME_MODELS.has(state.osc4Model);
-        pairs.forEach(([a, b, input], i) => {
-            if (!input) return;
+        pairs.forEach(([a, b, text], i) => {
             if (i === 0 && chordNames) return;
-            const text = formatTone01(input.value);
             const elA = document.getElementById(a);
             const elB = document.getElementById(b);
             if (elA) elA.textContent = text;

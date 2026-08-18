@@ -1,15 +1,16 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
 import { state } from './state.js?v=114';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=121';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=122';
 import { ensurePlaitsWorklet } from './osc-source.js?v=98';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=16';
 import {
     forcePolyAllOff,
     ensureMultitudesPolyReady,
     syncMultitudesPolyLocks,
-} from './poly-voice.js?v=68';
+} from './poly-voice.js?v=69';
 import { clearPolyChordMemory } from './chord-memory.js?v=19';
+import { getParam } from './param-catalog.js?v=1';
 import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=13';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */
@@ -43,12 +44,37 @@ function setToggleUi(btn, on) {
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
 }
 
-function cloneSelectOptions(fromId, toId) {
-    const src = document.getElementById(fromId);
+const STAGE_SELECT_SOURCE = {
+    osc4Model: 'kbOsc4Model',
+    osc4Bank: 'kbOsc4Bank',
+    delayTime: 'kbDelayTimeSelect',
+};
+
+function fillSelectFromCatalog(dst, catalogKey) {
+    const spec = getParam(catalogKey);
+    const options = spec?.options;
+    if (!options?.length) return;
+    const cur = String(getString(catalogKey, spec.default ?? ''));
+    dst.innerHTML = options.map((opt) => {
+        const value = String(opt);
+        const selected = value === cur ? ' selected' : '';
+        return `<option value="${value}"${selected}>${value}</option>`;
+    }).join('');
+    dst.value = cur;
+}
+
+function cloneSelectOptions(catalogKey, toId) {
     const dst = document.getElementById(toId);
-    if (!src || !dst) return;
-    dst.innerHTML = src.innerHTML;
-    dst.value = src.value;
+    if (!dst) return;
+    const stageId = STAGE_SELECT_SOURCE[catalogKey];
+    const src = (stageId && document.getElementById(stageId))
+        || document.getElementById(catalogKey);
+    if (src && src.options.length) {
+        dst.innerHTML = src.innerHTML;
+        dst.value = src.value;
+        return;
+    }
+    fillSelectFromCatalog(dst, catalogKey);
 }
 
 function wireSelectMirror(miId, key) {
@@ -64,16 +90,6 @@ function wirePushToggle(miId, key) {
     wireToggle(mi, key, { syncLabel: false });
 }
 
-function oscTuneInput(index) {
-    return document.querySelector(`.osc-tune[data-osc="${index}"]`);
-}
-function oscVolInput(index) {
-    return document.querySelector(`.osc-vol[data-osc="${index}"]`);
-}
-function oscTypeSelect(index) {
-    return document.querySelector(`.osc-type[data-osc="${index}"]`);
-}
-
 function readOscVol(index) {
     return getOscVol(index, MULTITUDES_DEFAULT_OSC_VOL);
 }
@@ -84,8 +100,7 @@ function setOscVolUi(index, value) {
     const kbVal = document.getElementById(`kbOsc${index + 1}VolValue`);
     if (kbVal) kbVal.textContent = clamped.toFixed(2);
     const miDial = document.getElementById(index === 0 ? 'miOsc1VolKnob' : 'miOsc2VolKnob');
-    const main = oscVolInput(index);
-    if (miDial && main) refreshKnobDial(miDial, main);
+    if (miDial) refreshKnobDial(miDial, `osc-vol-${index}`);
 }
 
 function readOscTune(index) {
@@ -98,9 +113,8 @@ function setOscTuneUi(index, semis) {
     set(`osc-tune-${index}`, clamped);
     const kbVal = document.getElementById(`kbOsc${index + 1}TuneValue`);
     if (kbVal) kbVal.textContent = String(clamped);
-    const el = oscTuneInput(index);
     const miDial = document.getElementById(index === 0 ? 'miOsc1TuneKnob' : 'miOsc2TuneKnob');
-    if (miDial && el) refreshKnobDial(miDial, el);
+    if (miDial) refreshKnobDial(miDial, `osc-tune-${index}`);
 }
 
 function setOsc2WaveUi(wave) {

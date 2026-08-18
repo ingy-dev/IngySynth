@@ -1,14 +1,14 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
 import { state } from './state.js?v=114';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=262';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=263';
 import { setCollapsibleExpanded } from './collapsible.js?v=74';
-import { bindKnob } from './knobs.js?v=121';
+import { bindKnob } from './knobs.js?v=122';
 import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=19';
-import { forceNoteOff } from './voice.js?v=129';
-import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=68';
-import { set } from './params.js?v=13';
-import { getLiveStep, syncLiveStepFromDom } from './pattern-bank.js?v=12';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=28';
+import { forceNoteOff } from './voice.js?v=130';
+import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=69';
+import { getNumber, set, subscribe } from './params.js?v=13';
+import { getLiveStep } from './pattern-bank.js?v=12';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=29';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8
@@ -17,8 +17,8 @@ let writeFineBound = false;
 let syncingWriteFineFromStep = false;
 
 function stepCount() {
-    const el = document.getElementById('stepCount');
-    return Math.max(1, Math.min(32, parseInt(el?.value, 10) || 8));
+    const n = Math.round(getNumber('stepCount', 8));
+    return Math.max(1, Math.min(32, Number.isFinite(n) ? n : 8));
 }
 
 function clampWriteStep(step) {
@@ -90,14 +90,13 @@ function initWriteFineKnob() {
         if (valueEl) valueEl.textContent = formatCents(proxy.value);
     });
 
-    document.querySelectorAll('.step-fine').forEach((slider) => {
-        slider.addEventListener('input', () => {
+    for (let i = 0; i < 32; i++) {
+        subscribe(`step-fine-${i}`, () => {
             if (!state.keyboardWrite) return;
-            if (parseInt(slider.dataset.step, 10) !== state.writeStep) return;
-            if (syncingWriteFineFromStep) return;
+            if (state.writeStep !== i) return;
             syncWriteFineKnob();
         });
-    });
+    }
 
     syncWriteFineKnob();
     syncWriteFineEnabled();
@@ -170,38 +169,17 @@ export function syncWriteCursorHighlight() {
 }
 
 function setStepOn(step, on) {
-    const toggle = document.querySelector(`.step-toggle[data-step="${step}"]`);
-    if (!toggle) {
-        getLiveStep(step).on = !!on;
-        return;
-    }
-    const front = toggle.querySelector('.front');
-    if (front) front.textContent = on ? 'On' : 'Off';
-    toggle.classList.toggle('off', !on);
-    syncLiveStepFromDom(step);
+    set(`step-toggle-${step}`, !!on);
 }
 
 function setStepFlag(kind, step, on) {
-    const main = document.querySelector(`.step-${kind}[data-step="${step}"]`);
-    if (!main) {
-        const data = getLiveStep(step);
-        if (kind === 'accent') data.accent = !!on;
-        if (kind === 'slide') data.slide = !!on;
-        return;
-    }
-    main.classList.toggle('off', !on);
-    syncLiveStepFromDom(step);
+    if (kind !== 'accent' && kind !== 'slide') return;
+    set(`step-${kind}-${step}`, !!on);
 }
 
 function setStepTune(step, semitones) {
-    const slider = document.querySelector(`.step-tune[data-step="${step}"]`);
     const clamped = Math.max(WRITE_TUNE_MIN, Math.min(WRITE_TUNE_MAX, Math.round(semitones)));
-    if (!slider) {
-        getLiveStep(step).tune = clamped;
-        return;
-    }
-    slider.value = String(clamped);
-    slider.dispatchEvent(new Event('input', { bubbles: true }));
+    set(`step-slider-${step}`, clamped);
 }
 
 function syncArpButtonOff() {
@@ -452,11 +430,7 @@ export function initPatternWrite(refreshKeyboard) {
         toggleWriteSlideArm();
     });
 
-    document.getElementById('stepCount')?.addEventListener('input', () => {
-        if (!state.keyboardWrite) return;
-        setWriteCursor(state.writeStep);
-    });
-    document.getElementById('stepCount')?.addEventListener('change', () => {
+    subscribe('stepCount', () => {
         if (!state.keyboardWrite) return;
         setWriteCursor(state.writeStep);
     });

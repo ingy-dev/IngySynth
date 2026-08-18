@@ -2,13 +2,13 @@
 // Acid and Poly are mutually exclusive with it.
 
 import { state } from './state.js?v=114';
-import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=79';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=100';
+import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=80';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=101';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { setPolyMode } from './poly-voice.js?v=68';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=28';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=15';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=121';
+import { setPolyMode } from './poly-voice.js?v=69';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=29';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=16';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=122';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=7';
 import { getNumber, set } from './params.js?v=13';
 import {

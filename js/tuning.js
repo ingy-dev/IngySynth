@@ -1,5 +1,5 @@
 import { state } from './state.js?v=114';
-import { getNumber } from './params.js?v=13';
+import { get, getNumber, getString } from './params.js?v=13';
 import { getLiveStep } from './pattern-bank.js?v=12';
 
 // Base reference frequency: C4.
@@ -104,11 +104,10 @@ for (const bank of SCALE_BANKS) {
 }
 
 // The active scale object, or null when scale mode is off.
+// Catalog default is off — missing Map flag must not snap notes.
 export function getActiveScale() {
-    const toggle = document.getElementById('scaleToggle');
-    if (!toggle || toggle.classList.contains('off')) return null;
-    const select = document.getElementById('scaleSelect');
-    return SCALE_MAP[select.value] || null;
+    if (!get('scaleToggle')) return null;
+    return SCALE_MAP[getString('scaleSelect')] || null;
 }
 
 // Snap a semitone offset to the nearest scale tone (ties resolve downward).

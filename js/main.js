@@ -5,7 +5,6 @@ import './controls.js?v=272';
 import './midi.js?v=95';
 import './visualizers.js?v=101';
 import { syncNoteVfdFromPeer } from './visualizers.js?v=101';
-import './mobile.js?v=74';
 import { refreshXYPad } from './xy-pad.js?v=78';
 import { initKeyboard } from './keyboard.js?v=191';
 import { initComputerKeyboard } from './computer-keyboard.js?v=179';
@@ -107,8 +106,3 @@ syncAllKeyboardSynthFromMain();
 
 startIdleMarquee();
 
-if (new URLSearchParams(location.search).has('cp10smoke')) {
-    import('./cp10-smoke.js?v=3').then((m) => m.initCp10Smoke()).catch((err) => {
-        console.error('CP10 smoke tracker failed to load', err);
-    });
-}

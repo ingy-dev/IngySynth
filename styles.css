@@ -70,12 +70,6 @@ html {
             padding: 0 5px;
             box-sizing: border-box;
         }
-        .synth-container {
-            grid-template-columns: 1fr !important;
-        }
-        .header-grid {
-            grid-template-columns: 1fr !important;
-        }
         .midi-device-panels {
             flex-direction: column;
             gap: 10px;
@@ -92,21 +86,6 @@ html {
             flex: 1 1 auto;
             max-width: 100%;
         }
-        /* Hide the original start/stop button on mobile */
-        .section .sequencer-controls #startStop {
-            display: none !important;
-        }
-        /* Show mobile start/stop button only on mobile */
-        .mobile-start-stop-container {
-            display: flex !important;
-            justify-content: center !important;
-            margin: 15px 0 !important;
-        }
-    }
-    
-    /* Hide mobile start/stop on desktop by default */
-    .mobile-start-stop-container {
-        display: none;
     }
     
     /* Improved touch targets */
@@ -156,65 +135,7 @@ html {
             padding: 10px !important;
             box-sizing: border-box !important;
         }
-        
-        .swipe-dots {
-            display: flex !important;
-            justify-content: center !important;
-            margin: 15px 0 !important;
-            align-items: center !important;
-        }
-        
-        .swipe-dot {
-            width: 10px !important;
-            height: 10px !important;
-            border-radius: 50% !important;
-            background-color: #666 !important;
-            margin: 0 5px !important;
-            cursor: pointer !important;
-            box-shadow: 0 0 2px rgba(255, 255, 255, 0.5) !important;
-            transition: transform 0.2s ease !important;
-        }
-        
-        .swipe-dot:hover, .swipe-dot:active {
-            transform: scale(1.2) !important;
-        }
-        
-        .swipe-dot.active {
-            background-color: #00ff00 !important;
-        }
-        
-        .swipe-arrow {
-            width: 20px !important;
-            height: 20px !important;
-            color: #888 !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            cursor: pointer !important;
-            margin: 0 10px !important;
-            font-weight: bold !important;
-            font-size: 18px !important;
-            user-select: none !important;
-            transition: color 0.2s ease !important;
-        }
-        
-        .swipe-arrow:hover {
-            color: #aaa !important;
-        }
-        
-        .swipe-arrow:active {
-            color: #00ff00 !important;
-        }
-        
-        .swipe-arrow-left {
-            margin-right: 5px !important;
-        }
-        
-        .swipe-arrow-right {
-            margin-left: 5px !important;
-        }
     }
-    #oscilloscope,
     #kbOscilloscope {
         display: block;
         width: 100%;
@@ -712,45 +633,11 @@ html {
         transition: transform 0.2s ease-out;
         white-space: nowrap;
     }
-    #startStop.pushable {
-        background: linear-gradient(to bottom, #1a1a1a, #000);
-    }
-    #startStop.pushable .front {
-        padding: 10px 20px;
-        font-size: 20px;
-        background: linear-gradient(to bottom, #333, #000);
-        color: #fff;
-    }
-    
-    /* Mobile Start/Stop button styling - exactly match the original button */
-    #mobileStartStop.pushable {
-        background: linear-gradient(to bottom, #1a1a1a, #000);
-        width: auto;
-    }
-    #mobileStartStop.pushable .front {
-        padding: 10px 20px;
-        font-size: 20px;
-        background: linear-gradient(to bottom, #333, #000);
-        color: #fff;
-    }
-    #mobileStartStop.start .front {
-        color: #00ff00;
-    }
-    #mobileStartStop.stop .front {
-        color: #ff0000;
-    }
-    
     button.pushable:hover .front {
         transform: translateY(-6px);
     }
     button.pushable:active .front {
         transform: translateY(-2px);
-    }
-    #startStop.start .front {
-        color: #00ff00;
-    }
-    #startStop.stop .front {
-        color: #ff0000;
     }
     .osc-toggle.off .front, .step-toggle.off .front, .step-ratch.off .front, .noise-toggle.off .front, .filter-env-toggle.off .front, .acid-mode-toggle.off .front {
         color: #ff0000;
@@ -1252,34 +1139,6 @@ html {
         color: #00aa00;
         background: #111;
         font-style: normal;
-    }
-    .header-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        margin-bottom: 25px;
-    }
-    
-    @media (max-width: 768px) {
-        .header-grid {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 25px;
-        }
-        
-        /* Hide the empty columns on mobile */
-        .header-grid > div:empty {
-            display: none;
-        }
-    }
-    
-    /* Mobile Start/Stop button container */
-    .mobile-start-stop-container {
-        margin: 0 auto 25px;
-        text-align: center;
-    }
-    
-    .swipe-dots {
-        margin: 15px 0 25px;
     }
 
     /* Power glitch effect - rare but noticeable CRT power issues */

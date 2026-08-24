@@ -1,11 +1,11 @@
-import { state, OSC_COUNT } from './state.js?v=114';
+import { state, OSC_COUNT } from './state.js?v=116';
 import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=13';
-import { wireControls } from './controls.js?v=272';
+import { wireControls } from './controls.js?v=289';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { updateLfoSmoothing } from './lfo-strip.js?v=25';
-import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=18';
-import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=25';
-import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX } from './osc-source.js?v=98';
+import { updateLfoSmoothing } from './lfo-strip.js?v=26';
+import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=20';
+import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=29';
+import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=121';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;
@@ -33,6 +33,16 @@ function makeBitcrushCurve(bits) {
         curve[i] = Math.round(x / step) * step; // quantize to `levels` steps
     }
     return curve;
+}
+
+/** `?os=dist2,filt2` ABX WaveShaper oversample. Dist stays 4× when on unless overridden. */
+function readShaperOversample() {
+    let raw = '';
+    try { raw = new URLSearchParams(location.search).get('os') || ''; } catch (_) { raw = ''; }
+    const dist = /dist0/.test(raw) ? 'none' : /dist2/.test(raw) ? '2x' : '4x';
+    const filtPost = /filt0/.test(raw) ? 'none' : /filt4/.test(raw) ? '4x' : '2x';
+    const filtPre = /filt0/.test(raw) ? 'none' : '2x';
+    return { dist, filtPre, filtPost };
 }
 
 const REVERB_IR_EXPONENT = 2.0;
@@ -153,7 +163,6 @@ function generateNoiseBuffers() {
     state.noiseBuffers.brown = brownBuffer;
 }
 
-
 function initAudio() {
     if (state.audioContext) {
         if (state.audioContext.state === 'suspended') {
@@ -204,21 +213,21 @@ function initAudio() {
         }
     });
     
-    // Fix potential browser audio context limitations
-    if (state.audioContext.state === 'suspended') {
-        // Some browsers require user interaction to start audio context
-        const resumeAudio = function() {
-            if (state.audioContext.state === 'suspended') {
-                state.audioContext.resume();
-            }
-            document.body.removeEventListener('touchstart', resumeAudio);
-            document.body.removeEventListener('mousedown', resumeAudio);
-            document.body.removeEventListener('keydown', resumeAudio);
-        };
-        document.body.addEventListener('touchstart', resumeAudio);
-        document.body.addEventListener('mousedown', resumeAudio);
-        document.body.addEventListener('keydown', resumeAudio);
-    }
+    // Safari can suspend after idle or tab hide; resume on every gesture / visibility.
+    const resumeAudio = () => {
+        const ctx = state.audioContext;
+        if (!ctx) return;
+        if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+            ctx.resume();
+        }
+    };
+    document.body.addEventListener('touchstart', resumeAudio, { capture: true });
+    document.body.addEventListener('mousedown', resumeAudio, { capture: true });
+    document.body.addEventListener('keydown', resumeAudio, { capture: true });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') resumeAudio();
+    });
+    resumeAudio();
 
     state.oscillators = Array(OSC_COUNT).fill().map((_, i) => createOscSource(state.audioContext, {
         oscIndex: i,
@@ -304,13 +313,8 @@ function initAudio() {
     state.ringModModulatorGain = modulatorGain;
     state.ringModInput = ringModInput;
     state.ringModulatorOsc = ringModCarrier;
+    state.ringProduct = ringProduct;
 
-    // Per-OSC pan always feeds the shared ring-mod input (stereo preserved downstream).
-    state.oscPanners.forEach((panner, i) => {
-        panner.pan.value = getOscPan(i);
-        panner.connect(ringModInput);
-    });
-    
     state.distortion = state.audioContext.createWaveShaper();
     state.bitcrusher = state.audioContext.createWaveShaper();
     state.delay = state.audioContext.createDelay(2.0);
@@ -338,8 +342,39 @@ function initAudio() {
         });
     }
 
+    state.oscMuteGains = Array(OSC_COUNT).fill().map(() => {
+        const g = state.audioContext.createGain();
+        g.gain.value = 1;
+        return g;
+    });
+    state.noiseMuteGain = state.audioContext.createGain();
+    state.noiseMuteGain.gain.value = 1;
+    state.drumMuteGains = [0, 1, 2].map(() => {
+        const g = state.audioContext.createGain();
+        g.gain.value = 1;
+        return g;
+    });
+    if (!state.mixer) {
+        state.mixer = {
+            oscMute: [false, false, false, false],
+            oscSolo: [false, false, false, false],
+            noiseMute: false,
+            noiseSolo: false,
+            drumMute: [false, false, false],
+            drumSolo: [false, false, false],
+        };
+    }
+
+    // Per-OSC pan → mute/solo → shared ring-mod input.
+    state.oscPanners.forEach((panner, i) => {
+        panner.pan.value = getOscPan(i);
+        panner.connect(state.oscMuteGains[i]);
+        state.oscMuteGains[i].connect(ringModInput);
+    });
+
     // Noise passes through ring mod too
-    state.noiseGain.connect(ringModInput);
+    state.noiseGain.connect(state.noiseMuteGain);
+    state.noiseMuteGain.connect(ringModInput);
 
     // Setup ring modulation paths
     // Dry path
@@ -352,14 +387,15 @@ function initAudio() {
     
     // Filter drive: pad → mild pre-limit → LP → post soft-clip → makeup.
     // Chord-aware pad/Q live in filter-drive.js (biquad rails on multi-pitch + high Q).
+    const shaperOs = readShaperOversample();
     state.filterInputPad = state.audioContext.createGain();
     state.filterInputPad.gain.value = 0.28;
     state.filterPreLimit = state.audioContext.createWaveShaper();
     state.filterPreLimit.curve = makeFilterInputCurve(1.35);
-    state.filterPreLimit.oversample = '2x';
+    state.filterPreLimit.oversample = shaperOs.filtPre;
     state.filterSoftClip = state.audioContext.createWaveShaper();
     state.filterSoftClip.curve = makeFilterInputCurve(2.45);
-    state.filterSoftClip.oversample = '4x';
+    state.filterSoftClip.oversample = shaperOs.filtPost;
     state.filterMakeup = state.audioContext.createGain();
     state.filterMakeup.gain.value = 2.4;
 
@@ -370,43 +406,51 @@ function initAudio() {
     state.filterSoftClip.connect(state.filterMakeup);
     state.filterMakeup.connect(state.highPassFilter);
     state.highPassFilter.connect(state.envelope);
-    state.envelope.connect(state.distortion);
 
+    state.distInput = state.audioContext.createGain();
+    state.distDryGain = state.audioContext.createGain();
+    state.distWetGain = state.audioContext.createGain();
+    state.distDryGain.gain.value = 1;
+    state.distWetGain.gain.value = 0;
+    state.scDucker = state.audioContext.createGain();
+    state.scDucker.gain.value = 1;
+    state.envelope.connect(state.scDucker);
+    state.scDucker.connect(state.distInput);
 
-    // Bit crusher sits right after distortion, feeding the chorus/delay split
-    state.distortion.connect(state.bitcrusher);
+    // Berlin drum FILT-off bus: skip LP/HP/amp envelope, still hit distortion+FX.
+    state.drumFxInput = state.audioContext.createGain();
+    state.drumFxInput.gain.value = 0.28 * 2.4;
+    state.drumFxInput.connect(state.distInput);
 
-    // Connect chorus effect
-    // Split the signal into dry and wet paths
-    state.bitcrusher.connect(state.chorusDryGain);
-    state.bitcrusher.connect(state.chorusSplitter);
-    
-    // Wet path goes through chorus processing
-    state.chorusSplitter.connect(state.chorusLeftDelay, 0);  // Left channel
-    state.chorusSplitter.connect(state.chorusRightDelay, 1); // Right channel
-    
-    // Connect LFO to modulate delay times
+    // Dist off = dry bypass (no identity 4× shaper). applyDistortionEnabled routes wet.
+    state.distInput.connect(state.distDryGain);
+    state.distDryGain.connect(state.bitcrusher);
+
+    // Analog 808 FILT-off joins after distortion so O1–O4 waveshaping is skipped.
+    state.analogDrumInput = state.audioContext.createGain();
+    state.analogDrumInput.gain.value = 0.32;
+    state.analogDrumInput.connect(state.bitcrusher);
+
+    state.berlinDrumPanners = [0, 1, 2].map((i) => {
+        const panner = state.audioContext.createStereoPanner();
+        panner.pan.value = 0;
+        panner.connect(state.drumMuteGains[i]);
+        state.drumMuteGains[i].connect(state.analogDrumInput);
+        return panner;
+    });
+
+    // Chorus internals stay wired; bitcrusher fans out only when chorus is on.
+    state.chorusSplitter.connect(state.chorusLeftDelay, 0);
+    state.chorusSplitter.connect(state.chorusRightDelay, 1);
     state.chorusLFO.connect(state.chorusLFOGain);
     state.chorusLFOGain.connect(state.chorusLeftDelay.delayTime);
     state.chorusLFOGain.connect(state.chorusRightDelay.delayTime);
-    
-    // Merge the delayed signals back together
-    state.chorusLeftDelay.connect(state.chorusMerger, 0, 0);  // Left to left
-    state.chorusRightDelay.connect(state.chorusMerger, 0, 1); // Right to right
-    
-    // Connect the merged wet signal through the wet gain
+    state.chorusLeftDelay.connect(state.chorusMerger, 0, 0);
+    state.chorusRightDelay.connect(state.chorusMerger, 0, 1);
     state.chorusMerger.connect(state.chorusWetGain);
 
-    // Dry path goes straight to output
-    state.chorusDryGain.connect(state.masterGain);
-    // Wet path to output
-    state.chorusWetGain.connect(state.masterGain);
-
-    // Delay (parallel wet + feedback)
-    state.bitcrusher.connect(state.delay);
-    state.delay.connect(state.delayGain);
-    state.delayGain.connect(state.masterGain);
-    state.delayGain.connect(state.delay);
+    // Default: chorus/delay off — bitcrusher straight to master (true bypass).
+    state.bitcrusher.connect(state.masterGain);
 
     // Advanced reverb internals (always wired). Edges connect only when enabled
     // so Off is a true bypass with no convolver input.
@@ -469,7 +513,7 @@ function initAudio() {
 
     state.envelope.gain.value = 0;
     state.distortion.curve = makeDistortionCurve(0);
-    state.distortion.oversample = '4x';
+    state.distortion.oversample = readShaperOversample().dist;
 
     // Bit crusher: keep aliasing (no oversampling), start clean/transparent
     state.bitcrusher.curve = makeBitcrushCurve(16);
@@ -515,7 +559,7 @@ function initAudio() {
             curve[i] = Math.tanh(x * drive) / norm;
         }
         state.lfoShaper.curve = curve;
-        state.lfoShaper.oversample = '4x';
+        state.lfoShaper.oversample = 'none';
     }
 
     state.lfoMasterGain = state.audioContext.createGain();
@@ -584,6 +628,8 @@ function initAudio() {
     state.lfo.started = true;
 
     generateNoiseBuffers();
+
+    warmAnalogShells(state.audioContext);
 
     wireControls();
     applyLfoRate({ ramp: 0 });

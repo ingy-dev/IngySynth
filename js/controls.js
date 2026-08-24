@@ -1,28 +1,28 @@
-import { state, OSC_COUNT } from './state.js?v=114';
+import { state, OSC_COUNT } from './state.js?v=116';
 import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=13';
-import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=17';
+import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=28';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=157';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=25';
+} from './audio-engine.js?v=178';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=29';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
 import { clearAccentSweep } from './acid-env.js?v=14';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=263';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=101';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=301';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=110';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=80';
-import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=95';
-import { applyScaleState } from './keyboard.js?v=191';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=116';
-import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=166';
-import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=122';
-import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=25';
-import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=18';
-import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=16';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc } from './poly-voice.js?v=69';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=29';
+import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=103';
+import { applyScaleState } from './keyboard.js?v=199';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=121';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=173';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=124';
+import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=26';
+import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=20';
+import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=17';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc } from './poly-voice.js?v=80';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=36';
 import {
     ensurePlaitsWorklet,
     createOscSource,
@@ -34,8 +34,8 @@ import {
     applyFm6BankToLive,
     readFm6PatchName,
     fm6PresetFromHarmonics,
-} from './osc-source.js?v=98';
-import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=16';
+} from './osc-source.js?v=121';
+import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=20';
 
 function syncAcidModeUi() {
     syncAcidStripUi();
@@ -617,7 +617,7 @@ export function wireControls() {
         const now = state.audioContext?.currentTime ?? 0;
         const polyMode = !!(state.keyboardMultitudes || state.keyboardPoly);
         const touch = (osc) => {
-            if (!osc?.isWavetable || !osc._worklet) return;
+            if (!osc?.isWavetable || !osc._worklet || osc.isBerlinDrum) return;
             try {
                 osc._worklet.port.postMessage({
                     engine: model,
@@ -998,7 +998,7 @@ export function wireControls() {
 
     subscribe('unisonVoices', (v) => {
         const n = parseInt(v, 10);
-        state.unisonVoices = [3, 5, 7].includes(n) ? n : 3;
+        state.unisonVoices = 3;
     });
     subscribe('unisonDetune', (v) => {
         state.unisonSpread = parseFloat(v) || 0;
@@ -1172,14 +1172,6 @@ function updateDisplay(element, valueElementId) {
 }
 
 function updateStepVisibility(stepCount) {
-    document.querySelectorAll('.sequencer-step').forEach(step => {
-        const stepIndex = parseInt(step.dataset.step);
-        if (stepIndex < stepCount) {
-            step.classList.remove('hidden');
-        } else {
-            step.classList.add('hidden');
-        }
-    });
     updateKeyboardStepVisibility(stepCount);
 }
 

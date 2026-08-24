@@ -54,7 +54,7 @@ export const PARAMS = {
     osc4Bank: select(['-1', '0', '1', '2', '3'], '-1'),
 
     unisonToggle: button(false),
-    unisonVoices: select(['3', '5', '7'], '3'),
+    unisonVoices: select(['3'], '3'),
     unisonDetune: range(0, 50, 10, 1, { name: 'Unison Detune', group: 'Unison' }),
     phaseResetToggle: button(true),
     ringModToggle: button(false),
@@ -96,6 +96,14 @@ export const PARAMS = {
     volume: range(0, 1, 0.5, 0.01, { name: 'Volume', group: 'Master' }),
     compToggle: button(false),
     compThreshold: range(-100, 0, -24, 1, { name: 'Comp Threshold', group: 'Effects' }),
+    scToggle: button(false),
+    scSource: select(['d1', 'd2', 'd3', 'o1', 'o2', 'o3', 'o4'], 'd3'),
+    scDepth: range(0, 1, 0.6, 0.01, { name: 'Sidechain Depth', group: 'Effects' }),
+    scTimeMs: range(50, 400, 150, 1, { name: 'Sidechain Time', group: 'Effects' }),
+    scTimeSyncToggle: button(false),
+    scTimeSyncDivision: range(0, 6, 2, 1, { name: 'Sidechain Sync', group: 'Effects' }),
+    drumModeToggle: button(false),
+    drumFiltToggle: button(false),
 
     lfoWaveform: select(OSC_WAVES, 'sine'),
     lfoSpeed: range(0.1, 20, 1, 0.1, { name: 'LFO Rate', group: 'LFO' }),
@@ -114,11 +122,11 @@ export const PARAMS = {
 
 for (let i = 0; i < 4; i++) {
     const group = `Oscillator ${i + 1}`;
-    PARAMS[`osc-tune-${i}`] = range(-12, 12, 0, 1, { name: 'Tune', group });
-    PARAMS[`osc-vol-${i}`] = range(0, 1, 0.33, 0.01, { name: 'Volume', group });
+    PARAMS[`osc-tune-${i}`] = range(-12, 12, i === 1 ? -12 : 0, 1, { name: 'Tune', group });
+    PARAMS[`osc-vol-${i}`] = range(0, 1, 0.25, 0.01, { name: 'Volume', group });
     PARAMS[`osc-pan-${i}`] = range(-1, 1, 0, 0.01);
     PARAMS[`osc-type-${i}`] = select(OSC_WAVES, 'sawtooth');
-    PARAMS[`osc-toggle-${i}`] = button(i !== 3);
+    PARAMS[`osc-toggle-${i}`] = button(i < 2);
 }
 
 for (let i = 0; i < STEP_SLOTS; i++) {

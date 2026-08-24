@@ -1,26 +1,33 @@
 // Berlin Dream-960: eight lanes on one tempo — O1–O4 pitch+amp, M1–M4 filter CV.
 // Acid and Poly are mutually exclusive with it.
 
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=80';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=101';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=110';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { setPolyMode } from './poly-voice.js?v=69';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=29';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=16';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=122';
+import { setPolyMode } from './poly-voice.js?v=80';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=36';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=17';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=124';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=7';
-import { getNumber, set } from './params.js?v=13';
+import { get, getNumber, set } from './params.js?v=13';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
     STEP_SLOTS,
     DESTINATIONS,
     OSC_LANE_COUNT,
+    DRUM_LANE_COUNT,
+    DRUM_MODELS,
     isOscLane,
     isModLane,
+    isDrumLane,
+    clampDrumLane,
+    clampDrumPatch,
+    isAnalogDrumEngine,
     ensureBank,
     getPattern,
+    getDrumPattern,
     patternStepCount,
     patternGate,
     flushDomToPattern,
@@ -30,7 +37,10 @@ import {
     clearPatternSteps,
     flashCopiedToast,
     syncPatternClipboardUi,
-} from './pattern-bank.js?v=12';
+    ensureBerlinDrumKit,
+    ensureDrumPatterns,
+} from './pattern-bank.js?v=15';
+import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=121';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
@@ -45,7 +55,7 @@ const MOD_DESTINATIONS = DESTINATIONS.filter((d) => (
 
 const OSC_DEST_BY_LANE = ['osc1Pitch', 'osc2Pitch', 'osc3Pitch', 'osc4Pitch'];
 
-export { isOscLane, isModLane, patternGate };
+export { isOscLane, isModLane, isDrumLane, patternGate };
 
 const DIVISIONS = [
     { value: 2, label: '1/2' },
@@ -53,6 +63,19 @@ const DIVISIONS = [
     { value: 8, label: '1/8' },
     { value: 16, label: '1/16' },
 ];
+
+const DRUM_TONE_LABELS = {
+    bass_drum: { harmonics: 'DRIVE', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
+    snare: { harmonics: 'TONE/N', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
+    hihat: { harmonics: 'METAL', timbre: 'COLOR', morph: 'DECAY', tune: 'TUNE' },
+};
+const ANALOG_TONE_LABELS = {
+    bass_drum: { harmonics: '—', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
+    snare: { harmonics: 'SNAPPY', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
+    hihat: { harmonics: '—', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
+};
+const DRUM_MODE_LABELS = { m1: 'DRONE', m2: 'HIT' };
+const DRUM_MODEL_LABELS = { hihat: 'Hi-Hat', snare: 'Snare', bass_drum: 'Bass Drum' };
 
 const PITCH_DESTINATIONS = {
     osc1Pitch: 0,
@@ -72,6 +95,8 @@ const DOT_HOST_KEYS = {
 };
 
 let uiBuilt = false;
+let berlinStepCache = null;
+const berlinActiveStep = [];
 
 function clamp(n, min, max) {
     return Math.min(max, Math.max(min, n));
@@ -100,7 +125,7 @@ export function berlinActiveCount() {
     return berlinOscCount() + berlinModCount();
 }
 
-/** Row indexes that are live right now (visible OSC/MOD sets — mute is separate). */
+/** Row indexes that are live right now (visible OSC + MOD — drums are not bank rows). */
 export function berlinActiveRows() {
     const osc = berlinOscCount();
     const mod = berlinModCount();
@@ -108,6 +133,10 @@ export function berlinActiveRows() {
     for (let i = 0; i < osc; i++) rows.push(i);
     for (let i = 0; i < mod; i++) rows.push(OSC_LANE_COUNT + i);
     return rows;
+}
+
+function isPitchLane(rowIndex) {
+    return isOscLane(rowIndex) || isDrumLane(rowIndex);
 }
 
 /** Output mute: pattern stays visible/editable; playhead keeps phase. */
@@ -169,15 +198,17 @@ export function keyboardHighlightRow() {
     return null;
 }
 
-/** Notify sequencer to release independent voices for an osc lane that went silent. */
-function notifyOscLaneSilenced(row) {
-    if (!isOscLane(row)) return;
-    document.dispatchEvent(new CustomEvent('ingysynth:berlin-osc-muted', {
-        detail: { row, oscIndex: row },
-    }));
+/** Notify sequencer to release independent voices for a silenced audio row. */
+function notifySoundingRowSilenced(row) {
+    if (isOscLane(row)) {
+        document.dispatchEvent(new CustomEvent('ingysynth:berlin-osc-muted', {
+            detail: { row, oscIndex: row },
+        }));
+        return;
+    }
 }
 
-/** Osc lane index → that oscillator; mod lanes have no pitch target. */
+/** Osc lane index → that oscillator; mod/drum lanes have no synth-osc target. */
 export function rowTargetOsc(rowIndex) {
     if (isOscLane(rowIndex)) return rowIndex | 0;
     return null;
@@ -218,6 +249,47 @@ export function resetBerlinPlayheads(startTime) {
         ph.prevGliss = false;
     }
     state.berlinLoopAnchor = startTime;
+}
+
+export function ensureDrumPlayheads() {
+    ensureDrumPatterns();
+    if (!Array.isArray(state.drumPlayheads) || state.drumPlayheads.length !== DRUM_LANE_COUNT) {
+        state.drumPlayheads = Array.from({ length: DRUM_LANE_COUNT }, makePlayhead);
+    }
+    if (!state.scSourcePlayhead) state.scSourcePlayhead = makePlayhead();
+    return state.drumPlayheads;
+}
+
+export function resetDrumPlayheads(startTime) {
+    ensureDrumPlayheads();
+    for (let i = 0; i < DRUM_LANE_COUNT; i++) {
+        const pattern = getDrumPattern(i);
+        const ph = state.drumPlayheads[i];
+        ph.currentStep = pattern.reverse ? patternStepCount(pattern) - 1 : 0;
+        ph.nextStepTime = startTime;
+        ph.semi = 0;
+        ph.fine = 0;
+        ph.sounded = false;
+        ph.prevSlide = false;
+        ph.prevGliss = false;
+    }
+    const sc = state.scSourcePlayhead;
+    sc.currentStep = 0;
+    sc.nextStepTime = startTime;
+    sc.semi = 0;
+    sc.fine = 0;
+    sc.sounded = false;
+    sc.prevSlide = false;
+    sc.prevGliss = false;
+}
+
+export function advanceDrumPlayhead(lane) {
+    const pattern = getDrumPattern(lane);
+    const ph = state.drumPlayheads[clampDrumLane(lane)];
+    const n = patternStepCount(pattern);
+    ph.currentStep = pattern.reverse
+        ? (ph.currentStep - 1 + n) % n
+        : (ph.currentStep + 1) % n;
 }
 
 export function advancePlayhead(rowIndex) {
@@ -261,7 +333,7 @@ export function berlinFrequency(semi, fine, oscIndex) {
  * Mod lanes and Berlin playback do not drive the VFD.
  */
 function previewBerlinOscStepNote(row, stepIndex) {
-    if (!isOscLane(row)) return;
+    if (!isPitchLane(row)) return;
     const { semi, fine } = rowStepValue(getPattern(row), stepIndex, row);
     const totalTune = berlinPitchSemitones(semi) + getGlobalTune();
     updateNoteVisualizer(totalTune, fine);
@@ -284,7 +356,7 @@ function previewBerlinOscStepNote(row, stepIndex) {
  */
 export function berlinStepDisplayValue(pattern, stepIndex, rowIndex = null) {
     const step = pattern.steps[stepIndex] || {};
-    const osc = rowIndex !== null ? isOscLane(rowIndex) : PITCH_DESTINATIONS[pattern.destination] !== undefined;
+    const osc = rowIndex !== null ? isPitchLane(rowIndex) : PITCH_DESTINATIONS[pattern.destination] !== undefined;
     // Osc lanes: full pitch depth (Amount unused). Mod lanes: Amount scales CV.
     const amount = osc ? 1 : clamp(Number(pattern.amount ?? 1), 0, 1);
     const scaled = (step.tune || 0) * amount;
@@ -296,7 +368,7 @@ export function berlinStepDisplayValue(pattern, stepIndex, rowIndex = null) {
 export function rowStepValue(pattern, stepIndex, rowIndex = null) {
     const step = pattern.steps[stepIndex] || { tune: 0, fine: 0 };
     const osc = rowIndex !== null
-        ? isOscLane(rowIndex)
+        ? isPitchLane(rowIndex)
         : PITCH_DESTINATIONS[pattern.destination] !== undefined;
     const amount = osc ? 1 : clamp(Number(pattern.amount ?? 1), 0, 1);
     return {
@@ -378,7 +450,7 @@ export function refreshBerlinDots() {
     }
     const map = {};
     berlinActiveRows().forEach((i) => {
-        if (!isRowSounding(i)) return;
+        if (!isRowSounding(i) || isDrumLane(i)) return;
         const key = DOT_HOST_KEYS[getPattern(i).destination];
         if (!key) return;
         if (!map[key]) map[key] = [];
@@ -442,7 +514,7 @@ function buildStepCell(row, step) {
 }
 
 function rowLegend(row) {
-    return isOscLane(row) ? `O${row + 1}` : `M${row - OSC_LANE_COUNT + 1}`;
+    return isOscLane(row) ? `OSC ${row + 1}` : `MOD ${row - OSC_LANE_COUNT + 1}`;
 }
 
 function buildRow(row) {
@@ -639,7 +711,7 @@ export function setRowEnabled(row, enabled) {
     }
     syncRowEnableUi(row);
     refreshBerlinDots();
-    if (wasSounding && !isRowSounding(row)) notifyOscLaneSilenced(row);
+    if (wasSounding && !isRowSounding(row)) notifySoundingRowSilenced(row);
 }
 
 /**
@@ -649,7 +721,7 @@ export function setRowEnabled(row, enabled) {
 export function setRowSolo(row, on) {
     const next = Math.max(0, Math.min(PATTERN_COUNT - 1, row | 0));
     const prevSounding = new Set(
-        berlinActiveRows().filter((i) => isOscLane(i) && isRowSounding(i))
+        berlinActiveRows().filter((i) => isPitchLane(i) && isRowSounding(i))
     );
     if (on) {
         state.berlinSoloRow = next;
@@ -668,7 +740,7 @@ export function setRowSolo(row, on) {
     syncAllRowEnableUi();
     refreshBerlinDots();
     prevSounding.forEach((i) => {
-        if (!isRowSounding(i)) notifyOscLaneSilenced(i);
+        if (!isRowSounding(i)) notifySoundingRowSilenced(i);
     });
 }
 
@@ -707,6 +779,21 @@ export function syncBerlinRowUi(row) {
         pattern.amount = 1;
     }
 
+    const drum = isDrumLane(row);
+    fieldset.classList.toggle('berlin-row-drum', drum);
+    fieldset.classList.toggle('berlin-row-mod', !isOscLane(row) && !drum);
+    fieldset.dataset.lane = isOscLane(row) ? 'osc' : (drum ? 'drum' : 'mod');
+    const enableBtn = fieldset.querySelector('.berlin-row-enable');
+    if (enableBtn) {
+        const legend = rowLegend(row);
+        enableBtn.textContent = legend;
+        enableBtn.setAttribute('aria-label', `${legend} on or off`);
+    }
+
+    fieldset.querySelector('.berlin-ctl-dest')?.classList.toggle('berlin-ctl-hidden', isOscLane(row) || drum);
+    fieldset.querySelector('.berlin-ctl-amount')?.classList.toggle('berlin-ctl-hidden', isOscLane(row) || drum);
+    fieldset.querySelector('.berlin-ctl-gate')?.classList.toggle('berlin-ctl-hidden', !(isOscLane(row) || drum));
+
     const dest = fieldset.querySelector('.berlin-row-dest');
     if (dest) dest.value = pattern.destination;
 
@@ -728,22 +815,23 @@ export function syncBerlinRowUi(row) {
 
 export function syncBerlinUi() {
     ensureBank();
+    ensureBerlinDrumKit();
     const oscCount = berlinOscCount();
     const modCount = berlinModCount();
+    const active = new Set(berlinActiveRows());
 
     document.querySelectorAll('.berlin-row').forEach((el) => {
+        if (el.classList.contains('keyboard-drum-row')) return;
         const row = parseInt(el.dataset.row, 10);
-        const hidden = isOscLane(row)
-            ? row >= oscCount
-            : (row - OSC_LANE_COUNT) >= modCount;
-        el.classList.toggle('hidden', hidden);
+        el.classList.toggle('hidden', !active.has(row));
     });
 
     document.querySelectorAll('.berlin-count-btn').forEach((btn) => {
         const n = parseInt(btn.dataset.count, 10);
         const kind = btn.dataset.laneKind;
-        const active = kind === 'mod' ? modCount : oscCount;
-        const on = n <= active;
+        btn.classList.remove('berlin-locked');
+        const activeCount = kind === 'mod' ? modCount : oscCount;
+        const on = n <= activeCount;
         btn.classList.toggle('off', !on);
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
@@ -758,20 +846,55 @@ export function syncBerlinUi() {
     const panel = document.getElementById('berlinPanel');
     if (panel) panel.hidden = !state.berlinMode;
 
+    document.body.classList.toggle('drum-mode', !!state.berlinDrumMode);
+    document.body.classList.toggle('berlin-drum-mode', !!(state.berlinMode && state.berlinDrumMode));
+    syncDrumBarUi();
+
     for (let row = 0; row < PATTERN_COUNT; row++) syncBerlinRowUi(row);
     refreshBerlinDots();
 }
 
+export function invalidateBerlinStepCache() {
+    berlinStepCache = null;
+}
+
+function ensureBerlinStepCache() {
+    if (berlinStepCache) return berlinStepCache;
+    berlinStepCache = [];
+    document.querySelectorAll('.berlin-step').forEach((el) => {
+        const r = parseInt(el.dataset.row, 10);
+        const s = parseInt(el.dataset.step, 10);
+        if (!Number.isFinite(r) || !Number.isFinite(s)) return;
+        if (!berlinStepCache[r]) berlinStepCache[r] = [];
+        berlinStepCache[r][s] = el;
+    });
+    return berlinStepCache;
+}
+
 export function setBerlinStepActive(row, step) {
-    document.querySelectorAll(`.berlin-step[data-row="${row}"].active`)
-        .forEach((el) => el.classList.remove('active'));
-    if (step === null || step === undefined) return;
-    document.querySelector(`.berlin-step[data-row="${row}"][data-step="${step}"]`)
-        ?.classList.add('active');
+    const t0 = performance.now();
+    const cache = ensureBerlinStepCache();
+    const prev = berlinActiveStep[row];
+    if (prev !== step) {
+        if (prev != null) cache[row]?.[prev]?.classList.remove('active');
+        if (step !== null && step !== undefined) {
+            cache[row]?.[step]?.classList.add('active');
+        }
+        berlinActiveStep[row] = step;
+    }
+    const p = (window.__ingyProf ||= {});
+    const ms = performance.now() - t0;
+    if (ms > (p.domMax || 0)) p.domMax = ms;
+    p.domN = (p.domN || 0) + 1;
 }
 
 export function clearBerlinStepActive() {
-    document.querySelectorAll('.berlin-step.active').forEach((el) => el.classList.remove('active'));
+    const cache = ensureBerlinStepCache();
+    for (let row = 0; row < berlinActiveStep.length; row++) {
+        const step = berlinActiveStep[row];
+        if (step != null) cache[row]?.[step]?.classList.remove('active');
+    }
+    berlinActiveStep.length = 0;
 }
 
 function wireRow(row) {
@@ -836,9 +959,11 @@ function wireRow(row) {
     });
 
     fieldset.querySelector('.berlin-row-dest')?.addEventListener('change', (e) => {
-        if (isOscLane(row)) {
-            pattern.destination = OSC_DEST_BY_LANE[row];
-            e.target.value = pattern.destination;
+        if (isOscLane(row) || isDrumLane(row)) {
+            if (isOscLane(row)) {
+                pattern.destination = OSC_DEST_BY_LANE[row];
+                e.target.value = pattern.destination;
+            }
             return;
         }
         pattern.destination = e.target.value;
@@ -847,7 +972,7 @@ function wireRow(row) {
     });
 
     fieldset.querySelector('.berlin-row-amount')?.addEventListener('input', (e) => {
-        if (isOscLane(row)) return;
+        if (isOscLane(row) || isDrumLane(row)) return;
         const pct = clamp(parseInt(e.target.value, 10) || 0, 0, 100);
         pattern.amount = pct / 100;
         const label = fieldset.querySelector('.berlin-row-amount-value');
@@ -856,7 +981,7 @@ function wireRow(row) {
     });
 
     fieldset.querySelector('.berlin-row-gate')?.addEventListener('input', (e) => {
-        if (!isOscLane(row)) return;
+        if (!isOscLane(row) && !isDrumLane(row)) return;
         const pct = clamp(parseInt(e.target.value, 10) || 90, 5, 100);
         pattern.gate = pct / 100;
         const label = fieldset.querySelector('.berlin-row-gate-value');
@@ -920,16 +1045,331 @@ function wireRow(row) {
     }
 }
 
+function formatDrumTone(v) {
+    return (Math.max(0, Math.min(1, Number(v) || 0))).toFixed(2);
+}
+
+function drumToneLabels(model, analog = false) {
+    if (analog) return ANALOG_TONE_LABELS[model] || ANALOG_TONE_LABELS.hihat;
+    return DRUM_TONE_LABELS[model] || DRUM_TONE_LABELS.hihat;
+}
+
+function drumLaneFieldset(lane) {
+    return document.querySelector(`.keyboard-drum-row[data-drum-lane="${clampDrumLane(lane)}"]`);
+}
+
+function writeDrumPatch(lane, partial) {
+    ensureBerlinDrumKit();
+    const i = clampDrumLane(lane);
+    const prev = state.berlinDrum[i];
+    const next = clampDrumPatch({ ...prev, ...partial }, i);
+    if (prev.engine !== next.engine || prev.model !== next.model) {
+        document.dispatchEvent(new CustomEvent('ingysynth:berlin-drum-muted', {
+            detail: { row: null, lane: i },
+        }));
+    }
+    state.berlinDrum[i] = next;
+    if (prev.engine !== next.engine) routeBerlinDrumPanners();
+    if (next.engine === 'plaits' && state.audioContext) ensurePlaitsWorklet(state.audioContext);
+    applyBerlinDrumKitToLive(i);
+    const fieldset = drumLaneFieldset(i);
+    if (fieldset) {
+        ensureDrumChrome(fieldset, i);
+        syncDrumChrome(fieldset, i);
+    }
+    document.dispatchEvent(new CustomEvent('ingysynth:drum-kit', { detail: { lane: i } }));
+}
+
+function ensureDrumBar() {}
+
+function syncDrumBarUi() {
+    const toggle = document.getElementById('kbDrumMode');
+    if (toggle) {
+        const on = !!state.berlinDrumMode;
+        toggle.classList.toggle('off', !on);
+        toggle.classList.toggle('on', on);
+        toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    const filt = document.getElementById('kbDrumFilt');
+    if (filt) {
+        const on = !!state.berlinDrumFilt;
+        const drumOn = !!state.berlinDrumMode;
+        filt.hidden = !drumOn;
+        filt.disabled = !drumOn;
+        filt.classList.toggle('off', !on);
+        filt.classList.toggle('on', on);
+        filt.classList.toggle('is-grey', !drumOn);
+        filt.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    const hide = document.getElementById('kbDrumHide');
+    if (hide) {
+        const drumOn = !!state.berlinDrumMode;
+        const lanesHidden = !!state.berlinDrumLanesHidden;
+        hide.hidden = !drumOn;
+        hide.disabled = !drumOn;
+        hide.classList.toggle('off', !lanesHidden);
+        hide.classList.toggle('on', lanesHidden);
+        hide.setAttribute('aria-pressed', lanesHidden ? 'true' : 'false');
+        hide.textContent = lanesHidden ? 'Hidden' : 'Hide';
+    }
+    const lanes = document.getElementById('keyboardDrumLanes');
+    if (lanes) lanes.hidden = !state.berlinDrumMode || !!state.berlinDrumLanesHidden;
+    document.body.classList.toggle('drum-mode', !!state.berlinDrumMode);
+}
+
+function ensureDrumChrome(fieldset, lane) {
+    if (!fieldset || fieldset.querySelector('.berlin-drum-toolbar')) return;
+    lane = clampDrumLane(lane);
+    const controls = fieldset.querySelector('.berlin-row-controls');
+    if (!controls) return;
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'berlin-drum-toolbar';
+    const modelOpts = DRUM_MODELS.map((m) => (
+        `<option value="${m}">${DRUM_MODEL_LABELS[m]}</option>`
+    )).join('');
+    toolbar.innerHTML = `
+        <div class="berlin-drum-engine-switch" role="group" aria-label="DRM ${lane + 1} engine">
+            <button type="button" class="ingy6-switch-btn berlin-drum-engine-btn" data-engine="analog"
+                    aria-pressed="true">ANALOG</button>
+            <button type="button" class="ingy6-switch-btn berlin-drum-engine-btn off" data-engine="digital"
+                    aria-pressed="false">DIGITAL</button>
+        </div>
+        <label class="berlin-ctl berlin-drum-model-ctl">
+            <span class="berlin-ctl-label">MODEL</span>
+            <select class="berlin-drum-model">${modelOpts}</select>
+        </label>
+        <div class="berlin-drum-tones">
+            ${['tune', 'harmonics', 'timbre', 'morph'].map((tone) => `
+                <div class="synth-knob berlin-drum-knob" data-drum-tone="${tone}">
+                    <span class="synth-knob-label berlin-drum-tone-label">${tone === 'tune' ? 'TUNE' : tone}</span>
+                    <div class="synth-knob-dial-wrap">
+                        <div class="synth-knob-dial berlin-drum-dial" role="slider"
+                             aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                            <span class="synth-knob-indicator"></span>
+                        </div>
+                    </div>
+                    <span class="synth-knob-value berlin-drum-tone-value">0.50</span>
+                    <input type="range" class="berlin-drum-tone-input" min="0" max="1" step="0.01" value="0.5"
+                           aria-hidden="true" tabindex="-1">
+                </div>
+            `).join('')}
+        </div>
+        <div class="berlin-drum-switches" role="group" aria-label="ALT and MODE">
+            <button type="button" class="ingy6-switch-btn berlin-drum-alt off" aria-pressed="false">ALT</button>
+            <button type="button" class="ingy6-switch-btn berlin-drum-mode-btn" aria-pressed="true">HIT</button>
+        </div>
+        <label class="berlin-ctl">
+            <span class="berlin-ctl-label">VOL</span>
+            <input type="range" class="berlin-drum-vol keyboard-master-tune-slider" min="0" max="100" value="80" step="1">
+            <span class="berlin-ctl-value berlin-drum-vol-value">80</span>
+        </label>
+        <label class="berlin-ctl">
+            <span class="berlin-ctl-label">PAN</span>
+            <input type="range" class="berlin-drum-pan keyboard-master-tune-slider" min="-100" max="100" value="0" step="1">
+            <span class="berlin-ctl-value berlin-drum-pan-value">0</span>
+        </label>
+    `;
+    // Gate/STEPS toolbar stays first; drum tone bar sits under it
+    controls.after(toolbar);
+
+    toolbar.querySelectorAll('.berlin-drum-knob').forEach((knob) => {
+        const dial = knob.querySelector('.berlin-drum-dial');
+        const input = knob.querySelector('.berlin-drum-tone-input');
+        const valueEl = knob.querySelector('.berlin-drum-tone-value');
+        if (dial && input) bindKnob(dial, input, valueEl);
+        input?.addEventListener('input', () => {
+            if (knob.classList.contains('is-disabled')) return;
+            const tone = knob.dataset.drumTone;
+            const v = clamp(parseFloat(input.value) || 0, 0, 1);
+            if (tone === 'tune') writeDrumPatch(lane, { tune: v });
+            else if (tone === 'harmonics') writeDrumPatch(lane, { harmonics: v });
+            else if (tone === 'timbre') writeDrumPatch(lane, { morphX: v });
+            else writeDrumPatch(lane, { morphY: v });
+        });
+    });
+
+    toolbar.querySelectorAll('.berlin-drum-engine-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            writeDrumPatch(lane, {
+                engine: btn.dataset.engine === 'digital' ? 'plaits' : 'analog',
+            });
+        });
+    });
+    toolbar.querySelector('.berlin-drum-model')?.addEventListener('change', (e) => {
+        writeDrumPatch(lane, { model: e.target.value });
+    });
+    toolbar.querySelector('.berlin-drum-alt')?.addEventListener('click', () => {
+        const patch = ensureBerlinDrumKit()[lane];
+        writeDrumPatch(lane, { alt: !patch.alt });
+    });
+    toolbar.querySelector('.berlin-drum-mode-btn')?.addEventListener('click', () => {
+        const patch = ensureBerlinDrumKit()[lane];
+        if (patch.model !== 'bass_drum') return;
+        writeDrumPatch(lane, { trigPatched: !patch.trigPatched });
+    });
+    toolbar.querySelector('.berlin-drum-vol')?.addEventListener('input', (e) => {
+        writeDrumPatch(lane, { vol: clamp(parseInt(e.target.value, 10) || 0, 0, 100) / 100 });
+    });
+    toolbar.querySelector('.berlin-drum-pan')?.addEventListener('input', (e) => {
+        writeDrumPatch(lane, { pan: clamp(parseInt(e.target.value, 10) || 0, -100, 100) / 100 });
+    });
+}
+
+function setDrumKnobDisabled(knob, off) {
+    const dial = knob?.querySelector('.berlin-drum-dial');
+    const input = knob?.querySelector('.berlin-drum-tone-input');
+    if (dial) {
+        if (off) dial.setAttribute('aria-disabled', 'true');
+        else dial.removeAttribute('aria-disabled');
+        dial.tabIndex = off ? -1 : 0;
+    }
+    if (input) input.disabled = !!off;
+    knob?.classList.toggle('is-disabled', !!off);
+}
+
+function syncDrumChrome(fieldset, lane) {
+    const toolbar = fieldset?.querySelector('.berlin-drum-toolbar');
+    if (!toolbar) return;
+    toolbar.hidden = false;
+    ensureBerlinDrumKit();
+    lane = clampDrumLane(lane);
+    const patch = state.berlinDrum[lane];
+    const analog = isAnalogDrumEngine(patch);
+    toolbar.classList.toggle('is-analog', analog);
+    toolbar.querySelectorAll('.berlin-drum-engine-btn').forEach((btn) => {
+        const digi = btn.dataset.engine === 'digital';
+        const active = digi ? !analog : analog;
+        btn.classList.toggle('off', !active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        btn.title = digi ? 'Digital Plaits' : 'Analog 808';
+    });
+    const model = toolbar.querySelector('.berlin-drum-model');
+    if (model) model.value = patch.model;
+    const labels = drumToneLabels(patch.model, analog);
+    const toneMap = {
+        tune: patch.tune,
+        harmonics: patch.harmonics,
+        timbre: patch.morphX,
+        morph: patch.morphY,
+    };
+    const greyHarmonics = analog && patch.model !== 'snare';
+    toolbar.querySelectorAll('.berlin-drum-knob').forEach((knob) => {
+        const tone = knob.dataset.drumTone;
+        const labelEl = knob.querySelector('.berlin-drum-tone-label');
+        const input = knob.querySelector('.berlin-drum-tone-input');
+        const valueEl = knob.querySelector('.berlin-drum-tone-value');
+        const dial = knob.querySelector('.berlin-drum-dial');
+        if (labelEl) labelEl.textContent = labels[tone] || tone;
+        const v = toneMap[tone] ?? 0.5;
+        if (input) input.value = String(v);
+        if (dial) {
+            refreshKnobDial(dial, input, valueEl);
+            dial.setAttribute('aria-label', labels[tone] || tone);
+        } else if (valueEl) {
+            valueEl.textContent = formatDrumTone(v);
+        }
+        if (tone === 'tune') knob.style.order = '0';
+        else if (analog && patch.model === 'snare') {
+            knob.style.order = ({ timbre: 1, harmonics: 2, morph: 3 }[tone] || 4).toString();
+        } else if (analog) {
+            knob.style.order = ({ timbre: 1, morph: 2, harmonics: 3 }[tone] || 4).toString();
+        } else {
+            knob.style.order = ({ harmonics: 1, timbre: 2, morph: 3 }[tone] || 4).toString();
+        }
+        setDrumKnobDisabled(knob, tone === 'harmonics' && greyHarmonics);
+    });
+    const altBtn = toolbar.querySelector('.berlin-drum-alt');
+    if (altBtn) {
+        altBtn.classList.toggle('off', !patch.alt);
+        altBtn.setAttribute('aria-pressed', patch.alt ? 'true' : 'false');
+    }
+    const modeBtn = toolbar.querySelector('.berlin-drum-mode-btn');
+    if (modeBtn) {
+        const modeActive = !analog && patch.model === 'bass_drum';
+        const mode2 = patch.trigPatched !== false;
+        modeBtn.disabled = !modeActive;
+        modeBtn.classList.toggle('is-grey', !modeActive);
+        modeBtn.classList.toggle('off', !mode2);
+        modeBtn.setAttribute('aria-pressed', modeActive && mode2 ? 'true' : 'false');
+        modeBtn.textContent = mode2 ? DRUM_MODE_LABELS.m2 : DRUM_MODE_LABELS.m1;
+        modeBtn.title = modeActive
+            ? (mode2 ? 'MODE 2 — HIT (TRIG patched)' : 'MODE 1 — DRONE')
+            : 'MODE unavailable for this model';
+    }
+    const vol = toolbar.querySelector('.berlin-drum-vol');
+    const volVal = toolbar.querySelector('.berlin-drum-vol-value');
+    if (vol) vol.value = String(Math.round(patch.vol * 100));
+    if (volVal) volVal.textContent = String(Math.round(patch.vol * 100));
+    const pan = toolbar.querySelector('.berlin-drum-pan');
+    const panVal = toolbar.querySelector('.berlin-drum-pan-value');
+    if (pan) pan.value = String(Math.round(patch.pan * 100));
+    if (panVal) panVal.textContent = String(Math.round(patch.pan * 100));
+}
+
+export function setDrumMode(on) {
+    const next = !!on;
+    ensureBank();
+    ensureBerlinDrumKit();
+    if (state.berlinDrumMode === next) {
+        syncDrumBarUi();
+        return;
+    }
+    if (next) {
+        if (state.audioContext) {
+            ensurePlaitsWorklet(state.audioContext);
+            routeBerlinDrumPanners();
+        }
+    } else {
+        document.dispatchEvent(new CustomEvent('ingysynth:berlin-drum-muted', {
+            detail: { row: null, lane: null, all: true },
+        }));
+    }
+    state.berlinDrumMode = next;
+    if (get('drumModeToggle') !== next) set('drumModeToggle', next);
+    syncBerlinUi();
+    document.dispatchEvent(new CustomEvent('ingysynth:berlin-drum-mode', {
+        detail: { on: next },
+    }));
+}
+
+export const setBerlinDrumMode = setDrumMode;
+
+export function setBerlinDrumFilt(on) {
+    const next = !!on;
+    state.berlinDrumFilt = next;
+    if (get('drumFiltToggle') !== next) set('drumFiltToggle', next);
+    routeBerlinDrumPanners();
+    document.dispatchEvent(new CustomEvent('ingysynth:berlin-drum-filt', {
+        detail: { on: state.berlinDrumFilt },
+    }));
+    syncDrumBarUi();
+}
+
+/** Hide D-lane UI only. Drum Mode and audio stay on. */
+export function setDrumLanesHidden(on) {
+    state.berlinDrumLanesHidden = !!on;
+    syncDrumBarUi();
+}
+
+export function attachDrumChrome(fieldset, lane) {
+    ensureDrumChrome(fieldset, lane);
+    syncDrumChrome(fieldset, lane);
+}
+
 function buildUi() {
     if (uiBuilt) return;
     const rows = document.getElementById('berlinRows');
     if (!rows) return;
     ensureBank();
     rows.innerHTML = '';
+    invalidateBerlinStepCache();
     for (let row = 0; row < PATTERN_COUNT; row++) {
         rows.appendChild(buildRow(row));
     }
+    ensureBerlinStepCache();
     for (let row = 0; row < PATTERN_COUNT; row++) wireRow(row);
+    ensureDrumBar();
     uiBuilt = true;
     syncPatternClipboardUi();
 }
@@ -1018,6 +1458,10 @@ export function setBerlinMode(on) {
         ensurePlayheads();
         resetBerlinPlayheads(state.audioContext ? state.audioContext.currentTime : 0);
         buildUi();
+        if (state.berlinDrumMode && state.audioContext) {
+            ensurePlaitsWorklet(state.audioContext);
+            routeBerlinDrumPanners();
+        }
         setBerlinLockedUi(true);
         // Master GATE at 100% = unity over per-lane gates (stash for exit)
         applyBerlinMasterGateEnter();
@@ -1064,7 +1508,7 @@ export function setBerlinOscCount(count) {
     }
     syncBerlinUi();
     prevSounding.forEach((i) => {
-        if (i >= next || !isRowSounding(i)) notifyOscLaneSilenced(i);
+        if (i >= next || !isRowSounding(i)) notifySoundingRowSilenced(i);
     });
 }
 
@@ -1093,8 +1537,9 @@ export function initBerlin() {
     document.querySelectorAll('.berlin-count-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
             const n = parseInt(btn.dataset.count, 10);
-            if (btn.dataset.laneKind === 'mod') setBerlinModCount(n);
-            else setBerlinOscCount(n);
+            if (btn.dataset.laneKind === 'mod') {
+                setBerlinModCount(n);
+            } else setBerlinOscCount(n);
         });
     });
 

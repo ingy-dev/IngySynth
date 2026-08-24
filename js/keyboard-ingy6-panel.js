@@ -1,12 +1,11 @@
 // Ingy 6 panel (poly / Juno-60): fader chrome + wiring to main synth params.
 
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { beginMidiLearn } from './midi-learn.js?v=6';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=25';
-import { drawFilterADSRVisualizer, drawADSRVisualizer } from './visualizers.js?v=101';
-import { refreshFilterInputDrive } from './filter-drive.js?v=25';
-import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=87';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=26';
+import { refreshFilterInputDrive } from './filter-drive.js?v=29';
+import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=89';
 import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=13';
 
 const HPF_HZ = [20, 250, 700, 1400];
@@ -442,19 +441,15 @@ function applyFaderParam(param, faderValue) {
     switch (param) {
         case 'attack':
             setMainRange('attack', faderToLinear(v, 0, 2));
-            drawADSRVisualizer();
             break;
         case 'decay':
             setMainRange('decay', faderToLinear(v, 0, 2));
-            drawADSRVisualizer();
             break;
         case 'sustain':
             setMainRange('sustain', faderToLinear(v, 0, 1));
-            drawADSRVisualizer();
             break;
         case 'release':
             setMainRange('release', faderToLinear(v, 0, 5));
-            drawADSRVisualizer();
             break;
         case 'cutoff':
             setMainRange('cutoff', faderToCutoff(v));
@@ -464,7 +459,6 @@ function applyFaderParam(param, faderValue) {
             break;
         case 'filterEnvAmount':
             setMainRange('filterEnvAmount', faderToLinear(v, 0, 100));
-            drawFilterADSRVisualizer();
             if (state.audioContext) {
                 const cutoff = Math.max(40, readMainRange('cutoff', 1000));
                 updateFilterCutoffRange(cutoff, state.audioContext.currentTime, 0.03);

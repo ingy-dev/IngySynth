@@ -2,8 +2,10 @@
 // Plaits-style engines share one pooled AudioWorkletNode shell.
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
-import { state } from './state.js?v=114';
+import { state, OSC_COUNT } from './state.js?v=116';
 import { getNumber, getOscType, getString } from './params.js?v=13';
+import { isAnalogDrumEngine } from './pattern-bank.js?v=15';
+import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=16';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
 export const OSC4_INDEX = 0;
@@ -61,6 +63,58 @@ export const ENGINE_TAIL_SEC = {
 export const DRUM_ENGINES = new Set(['bass_drum', 'snare', 'hihat']);
 
 const WT_POOL_MAX = 16;
+const DRUM_POOL_MAX = 6;
+/** Idle Plaits shells for Digital / Berlin. */
+export const PLAITS_WARM_COUNT = 6;
+/** 6-voice Multitudes: live voices + ringing extras so note-on does not construct nodes. */
+export const PLAITS_POLY_WARM_COUNT = 12;
+
+const ANALOG_SHELL_UNISON = 3;
+const ANALOG_SHELL_OVERLAP = 2;
+/** oscs × unison × overlap — no extra burst. Logs: refill-to-72 was 51 creates / 270 ms Safari. */
+const ANALOG_SHELL_TARGET = OSC_COUNT * ANALOG_SHELL_UNISON * ANALOG_SHELL_OVERLAP;
+const ANALOG_SHELL_WARM = ANALOG_SHELL_TARGET;
+const ANALOG_SHELL_REFILL_BUDGET = 3;
+let analogShells = [];
+let analogShellCtx = null;
+let analogRefillTimer = null;
+let analogAbxDone = false;
+
+/** Last AudioWorklet process() sample (main thread; posted from the processor). */
+let lastWorkletPerf = null;
+
+function poolCounts(pool) {
+    let inUse = 0;
+    let ringing = 0;
+    for (const s of pool) {
+        if (s.inUse) inUse += 1;
+        if (s.ringing) ringing += 1;
+    }
+    return { size: pool.length, inUse, ringing };
+}
+
+function bindWorkletPort(slot) {
+    slot.node.port.onmessage = (ev) => {
+        const msg = ev.data;
+        if (msg?.silent) slot.ringing = false;
+        if (msg?.perf) lastWorkletPerf = msg.perf;
+    };
+}
+
+export function getWorkletPoolStats() {
+    return {
+        wt: poolCounts(wtPool),
+        drum: {
+            ...poolCounts(drumPool),
+            overflow: drumPool.length > DRUM_POOL_MAX,
+            max: DRUM_POOL_MAX,
+        },
+        analogShells: analogShells.length,
+        analogShellTarget: ANALOG_SHELL_TARGET,
+        lastWorklet: lastWorkletPerf,
+        wtMax: WT_POOL_MAX,
+    };
+}
 
 export function engineTrim(model = state.osc4Model) {
     const key = model || 'wavetable';
@@ -231,17 +285,25 @@ export function fadeStopOsc(osc, when, { fadeSec = 0.02, hard = false } = {}) {
         if (!osc.isWavetable) {
             const delayMs = Math.max(0, (tEnd - ctx.currentTime) * 1000) + 30;
             setTimeout(() => {
+                const tDisc = performance.now();
                 try { osc.disconnect(); } catch (_) { /* ignore */ }
                 try { osc.gainNode?.disconnect(); } catch (_) { /* ignore */ }
+                const ms = performance.now() - tDisc;
+                const p = (window.__ingyProf ||= {});
+                p.analogDisconnectN = (p.analogDisconnectN || 0) + 1;
+                if (ms > (p.analogDisconnectMax || 0)) p.analogDisconnectMax = ms;
             }, delayMs);
         }
         // Wavetable proxy stop() owns outGain disconnect / pool return
     } catch (_) { /* ignore */ }
 }
 
-/** @type {{ ctx: AudioContext, node: AudioWorkletNode, inUse: boolean, gen: number, tablesSent?: boolean, ringing?: boolean }[]} */
+/** @type {{ ctx: AudioContext, node: AudioWorkletNode, inUse: boolean, gen: number, tablesSent?: boolean, ringing?: boolean, drum?: boolean, engine?: string }[]} */
 let wtPool = [];
 let wtPoolCtx = null;
+/** Dedicated Plaits pool for Berlin D1–D3 — never steal wtPool[0]. */
+let drumPool = [];
+let drumPoolCtx = null;
 /** Official Plaits wavetable ROM (float32 LE, 4×64×128 integrated). */
 let plaitsTablesBuffer = null;
 let plaitsTablesPromise = null;
@@ -545,7 +607,7 @@ export function applyFm6BankToLive(bankIndex = plaitsFmBankIndex) {
     const bank = getFm6BankBytes(plaitsFmBankIndex);
     if (!bank) return;
     wtPool.forEach((slot) => {
-        if (!slot?.node?.port) return;
+        if (!slot?.node?.port || slot.drum) return;
         try {
             slot.node.port.postMessage({ fmBank: bank.slice(0) });
         } catch (_) { /* ignore */ }
@@ -570,13 +632,24 @@ export function readOsc4Harmonics() {
     return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.5;
 }
 
-function resetWtPoolIfNeeded(ctx) {
-    if (wtPoolCtx === ctx) return;
-    wtPool.forEach((slot) => {
+function resetDrumPoolIfNeeded(ctx) {
+    if (drumPoolCtx === ctx) return;
+    drumPool.forEach((slot) => {
         try { slot.node.disconnect(); } catch (_) { /* ignore */ }
     });
-    wtPool = [];
-    wtPoolCtx = ctx;
+    drumPool = [];
+    drumPoolCtx = ctx;
+}
+
+function resetWtPoolIfNeeded(ctx) {
+    if (wtPoolCtx !== ctx) {
+        wtPool.forEach((slot) => {
+            try { slot.node.disconnect(); } catch (_) { /* ignore */ }
+        });
+        wtPool = [];
+        wtPoolCtx = ctx;
+    }
+    resetDrumPoolIfNeeded(ctx);
 }
 
 /** Load AudioWorklet + Plaits ROM assets once per AudioContext. */
@@ -586,6 +659,7 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
         return Promise.resolve(false);
     }
     if (state.plaitsWorkletReady && state.plaitsWorkletCtx === ctx && plaitsTablesBuffer) {
+        warmPlaitsPool(ctx, PLAITS_WARM_COUNT);
         return Promise.resolve(true);
     }
     if (state.plaitsWorkletPromise && state.plaitsWorkletCtx === ctx) {
@@ -593,7 +667,7 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
     }
 
     state.plaitsWorkletCtx = ctx;
-    const url = new URL(`js/worklets/plaits-engine-processor.js?v=37`, window.location.href).href;
+    const url = new URL(`js/worklets/plaits-engine-processor.js?v=42`, window.location.href).href;
     state.plaitsWorkletPromise = Promise.all([
         ctx.audioWorklet.addModule(url),
         loadPlaitsTables(),
@@ -608,6 +682,7 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
             }
             state.plaitsWorkletReady = true;
             resetWtPoolIfNeeded(ctx);
+            warmPlaitsPool(ctx, PLAITS_WARM_COUNT);
             return true;
         })
         .catch((err) => {
@@ -616,6 +691,48 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
             return false;
         });
     return state.plaitsWorkletPromise;
+}
+
+function bumpWorkletCreate(ms) {
+    const p = (window.__ingyProf ||= {});
+    if (ms > (p.workletCreateMax || 0)) p.workletCreateMax = ms;
+    p.workletCreateN = (p.workletCreateN || 0) + 1;
+}
+
+function makePlaitsWorkletNode(ctx) {
+    const t0 = performance.now();
+    const node = new AudioWorkletNode(ctx, PLAITS_PROCESSOR, {
+        numberOfInputs: 0,
+        numberOfOutputs: 1,
+        outputChannelCount: [1],
+        parameterData: {
+            frequency: 440,
+            detune: 0,
+            morphX: 0.5,
+            morphY: 0.5,
+            harmonics: 0.5,
+            bank: -1,
+            gate: 0,
+        },
+    });
+    bumpWorkletCreate(performance.now() - t0);
+    return node;
+}
+
+/** Pre-create idle Plaits shells so the first notes do not construct AudioWorkletNode. */
+export function warmPlaitsPool(ctx, count = PLAITS_WARM_COUNT) {
+    if (!ctx || !state.plaitsWorkletReady) return 0;
+    resetWtPoolIfNeeded(ctx);
+    let made = 0;
+    while (wtPool.length < count && wtPool.length < WT_POOL_MAX) {
+        const node = makePlaitsWorkletNode(ctx);
+        const slot = { ctx, node, inUse: false, gen: 0, tablesSent: true, ringing: false };
+        bindWorkletPort(slot);
+        injectPlaitsAssets(node);
+        wtPool.push(slot);
+        made += 1;
+    }
+    return made;
 }
 
 function acquirePoolSlot(ctx) {
@@ -639,33 +756,47 @@ function acquirePoolSlot(ctx) {
                 slot.ringing = false;
             }
         } else {
-            const node = new AudioWorkletNode(ctx, PLAITS_PROCESSOR, {
-                numberOfInputs: 0,
-                numberOfOutputs: 1,
-                outputChannelCount: [1],
-                parameterData: {
-                    frequency: 440,
-                    detune: 0,
-                    morphX: 0.5,
-                    morphY: 0.5,
-                    harmonics: 0.5,
-                    bank: -1,
-                    gate: 0,
-                },
-            });
-            injectPlaitsAssets(node);
+            const node = makePlaitsWorkletNode(ctx);
             slot = { ctx, node, inUse: false, gen: 0, tablesSent: true, ringing: false };
-            node.port.onmessage = (ev) => {
-                const msg = ev.data;
-                if (msg?.silent) {
-                    slot.ringing = false;
-                }
-            };
+            bindWorkletPort(slot);
+            injectPlaitsAssets(node);
             wtPool.push(slot);
         }
     }
     slot.inUse = true;
     slot.ringing = false;
+    slot.gen += 1;
+    if (!slot.tablesSent) {
+        injectPlaitsAssets(slot.node);
+        slot.tablesSent = true;
+    }
+    return slot;
+}
+
+function acquireDrumPoolSlot(ctx) {
+    resetDrumPoolIfNeeded(ctx);
+    let slot = drumPool.find((s) => !s.inUse && !s.ringing);
+    if (!slot) {
+        if (drumPool.length >= DRUM_POOL_MAX) {
+            slot = drumPool.find((s) => !s.inUse && !s.ringing);
+            if (!slot) slot = drumPool.find((s) => !s.inUse);
+            if (!slot) {
+                // Cap at DRUM_POOL_MAX — overflow-grow leaked worklets on Safari.
+                slot = drumPool.find((s) => !s.inUse) || drumPool[0];
+            }
+        } else {
+            const node = makePlaitsWorkletNode(ctx);
+            slot = {
+                ctx, node, inUse: false, gen: 0, tablesSent: true, ringing: false, drum: true,
+            };
+            bindWorkletPort(slot);
+            injectPlaitsAssets(node);
+            drumPool.push(slot);
+        }
+    }
+    slot.inUse = true;
+    slot.ringing = false;
+    slot.drum = true;
     slot.gen += 1;
     if (!slot.tablesSent) {
         injectPlaitsAssets(slot.node);
@@ -681,21 +812,53 @@ function releasePoolSlot(slot, gen) {
     } catch (_) { /* ignore */ }
     try { slot.node.disconnect(); } catch (_) { /* ignore */ }
     try {
-        slot.node.port.postMessage({ reset: true, engine: state.osc4Model || 'wavetable' });
+        slot.node.port.postMessage({
+            reset: true,
+            engine: slot.engine || 'wavetable',
+        });
     } catch (_) { /* ignore */ }
     slot.inUse = false;
     slot.ringing = false;
 }
 
-function createWavetableProxy(ctx, frequency) {
-    const { x, y } = readOsc4Morph();
-    const harmonics = readOsc4Harmonics();
-    const model = getString('osc4Model', '') || state.osc4Model || 'wavetable';
-    state.osc4Model = model;
-    const bankFromStore = getNumber('osc4Bank', state.osc4Bank);
+function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = false } = {}) {
+    let model;
+    let x;
+    let y;
+    let harmonics;
+    let alt;
+    let trigPatched;
+    let velocity;
+    let bank;
+    if (patchOverride) {
+        model = patchOverride.model || 'hihat';
+        x = Math.max(0, Math.min(1, Number(patchOverride.morphX) || 0.5));
+        y = Math.max(0, Math.min(1, Number(patchOverride.morphY) || 0.5));
+        harmonics = Math.max(0, Math.min(1, Number(patchOverride.harmonics) || 0.5));
+        alt = !!patchOverride.alt;
+        trigPatched = patchOverride.trigPatched !== false;
+        velocity = Math.max(0, Math.min(1, Number(patchOverride.velocity)));
+        if (!Number.isFinite(Number(patchOverride.velocity))) velocity = 0.8;
+        bank = -1;
+    } else {
+        const morph = readOsc4Morph();
+        x = morph.x;
+        y = morph.y;
+        harmonics = readOsc4Harmonics();
+        model = getString('osc4Model', '') || state.osc4Model || 'wavetable';
+        state.osc4Model = model;
+        const bankFromStore = getNumber('osc4Bank', state.osc4Bank);
+        const bankRaw = Number.isFinite(bankFromStore) ? bankFromStore : Number(state.osc4Bank);
+        bank = Number.isFinite(bankRaw) ? Math.max(-1, Math.min(3, bankRaw)) : -1;
+        alt = !!state.osc4Alt;
+        trigPatched = state.osc4TrigPatched !== false;
+        velocity = Number.isFinite(state.lastVelocity) ? state.lastVelocity : 0.8;
+    }
     const triggered = isTriggeredEngine(model);
     const trim = engineTrim(model);
-    const slot = acquirePoolSlot(ctx);
+    const slot = drum ? acquireDrumPoolSlot(ctx) : acquirePoolSlot(ctx);
+    slot.engine = model;
+    slot.drum = !!drum;
     const node = slot.node;
     const gen = slot.gen;
     const now = ctx.currentTime;
@@ -707,14 +870,11 @@ function createWavetableProxy(ctx, frequency) {
     const morphYParam = node.parameters.get('morphY');
     const harmonicsParam = node.parameters.get('harmonics');
 
-    const bankRaw = Number.isFinite(bankFromStore) ? bankFromStore : Number(state.osc4Bank);
-    const bank = Number.isFinite(bankRaw) ? Math.max(-1, Math.min(3, bankRaw)) : -1;
-    if (model === 'fm6') {
+    if (model === 'fm6' && !drum) {
         const fmBank = Math.max(0, Math.min(2, bank >= 0 ? bank : 0));
         if (fmBank !== plaitsFmBankIndex) {
             applyFm6BankToLive(fmBank);
         } else {
-            // Ensure this node has the bank (fresh pool slot)
             try {
                 const bytes = getFm6BankBytes(fmBank);
                 if (bytes) node.port.postMessage({ fmBank: bytes.slice(0) });
@@ -732,21 +892,17 @@ function createWavetableProxy(ctx, frequency) {
         if (harmonicsParam) harmonicsParam.setValueAtTime(harmonics, now);
         node.parameters.get('bank').setValueAtTime(bank, now);
         const velParam = node.parameters.get('velocity');
-        if (velParam) {
-            const vel = Number.isFinite(state.lastVelocity) ? state.lastVelocity : 0.8;
-            velParam.setValueAtTime(Math.max(0, Math.min(1, vel)), now);
-        }
+        if (velParam) velParam.setValueAtTime(Math.max(0, Math.min(1, velocity)), now);
         const altParam = node.parameters.get('alt');
-        if (altParam) altParam.setValueAtTime(state.osc4Alt ? 1 : 0, now);
+        if (altParam) altParam.setValueAtTime(alt ? 1 : 0, now);
         const trigParam = node.parameters.get('trigPatched');
-        if (trigParam) trigParam.setValueAtTime(state.osc4TrigPatched === false ? 0 : 1, now);
-        // Idle reset only — note-on phase reset is edge-triggered in the worklet
+        if (trigParam) trigParam.setValueAtTime(trigPatched ? 1 : 0, now);
         node.port.postMessage({
             reset: true,
             engine: model,
-            polyMode: !!(state.keyboardMultitudes || state.keyboardPoly),
-            alt: !!state.osc4Alt,
-            trigPatched: state.osc4TrigPatched !== false,
+            polyMode: drum ? false : !!(state.keyboardMultitudes || state.keyboardPoly),
+            alt,
+            trigPatched,
         });
     } catch (_) { /* ignore */ }
 
@@ -766,6 +922,7 @@ function createWavetableProxy(ctx, frequency) {
         isWavetable: true,
         isTriggered: triggered,
         isDrum: DRUM_ENGINES.has(model),
+        isBerlinDrum: !!drum,
         engineModel: model,
         _worklet: node,
         _outGain: outGain,
@@ -952,10 +1109,134 @@ function createWavetableProxy(ctx, frequency) {
  * Create a voice source for one OSC slot.
  * Returns an OscillatorNode or a wavetable proxy with frequency/detune/start/stop/connect.
  */
+function bumpAnalogOscCreate(ms) {
+    const p = (window.__ingyProf ||= {});
+    if (ms > (p.analogOscCreateMax || 0)) p.analogOscCreateMax = ms;
+    p.analogOscCreateN = (p.analogOscCreateN || 0) + 1;
+}
+
+function bumpAnalogOscStart(ms) {
+    const p = (window.__ingyProf ||= {});
+    if (ms > (p.analogOscStartMax || 0)) p.analogOscStartMax = ms;
+    p.analogOscStartN = (p.analogOscStartN || 0) + 1;
+}
+
+function makeIdleAnalogOsc(ctx) {
+    const t0 = performance.now();
+    const osc = ctx.createOscillator();
+    bumpAnalogOscCreate(performance.now() - t0);
+    return osc;
+}
+
+function benchAnalogStartVsCreate(ctx) {
+    const n = 6;
+    const mute = ctx.createGain();
+    mute.gain.value = 0;
+    const tCreate0 = performance.now();
+    const fresh = [];
+    for (let i = 0; i < n; i++) {
+        const o = ctx.createOscillator();
+        o.connect(mute);
+        fresh.push(o);
+    }
+    const createMs = performance.now() - tCreate0;
+    const when = ctx.currentTime + 0.08;
+    const tStart0 = performance.now();
+    fresh.forEach((o) => {
+        try { o.start(when); o.stop(when + 0.02); } catch (_) { /* ignore */ }
+    });
+    const startMs = performance.now() - tStart0;
+    const pooled = [];
+    for (let i = 0; i < n; i++) pooled.push(ctx.createOscillator());
+    const tPool0 = performance.now();
+    pooled.forEach((o) => {
+        o.connect(mute);
+        try { o.start(when + 0.05); o.stop(when + 0.07); } catch (_) { /* ignore */ }
+    });
+    const poolStartMs = performance.now() - tPool0;
+    const p = (window.__ingyProf ||= {});
+    p.analogAbx = {
+        n,
+        createMs: Math.round(createMs * 10) / 10,
+        startMs: Math.round(startMs * 10) / 10,
+        poolStartMs: Math.round(poolStartMs * 10) / 10,
+    };
+}
+
+function scheduleAnalogShellRefill() {
+    if (analogRefillTimer != null || !analogShellCtx) return;
+    analogRefillTimer = setTimeout(() => {
+        analogRefillTimer = null;
+        const ctx = analogShellCtx;
+        if (!ctx || ctx.state === 'closed') return;
+        const t0 = performance.now();
+        let made = 0;
+        while (analogShells.length < ANALOG_SHELL_TARGET && made < ANALOG_SHELL_REFILL_BUDGET) {
+            analogShells.push(makeIdleAnalogOsc(ctx));
+            made += 1;
+        }
+        const ms = performance.now() - t0;
+        const p = (window.__ingyProf ||= {});
+        p.refillN = (p.refillN || 0) + 1;
+        if (ms > (p.refillMaxMs || 0)) p.refillMaxMs = ms;
+        if (made > (p.refillMadeMax || 0)) p.refillMadeMax = made;
+        if (analogShells.length < ANALOG_SHELL_TARGET) scheduleAnalogShellRefill();
+    }, 40);
+}
+
+/** Pre-create unstarted analog OscillatorNodes. Disconnected until take. */
+export function warmAnalogShells(ctx, count = ANALOG_SHELL_WARM) {
+    if (!ctx) return 0;
+    if (analogShellCtx !== ctx) {
+        analogShells = [];
+        analogShellCtx = ctx;
+        analogAbxDone = false;
+    }
+    let made = 0;
+    const target = Math.min(Math.max(1, count | 0), ANALOG_SHELL_TARGET);
+    while (analogShells.length < target) {
+        analogShells.push(makeIdleAnalogOsc(ctx));
+        made += 1;
+    }
+    if (!analogAbxDone) {
+        analogAbxDone = true;
+        const wantAbx = new URLSearchParams(location.search).get('abx') === '1';
+        if (wantAbx) {
+            try { benchAnalogStartVsCreate(ctx); } catch (_) { /* ignore */ }
+        }
+    }
+    return made;
+}
+
+export function takeAnalogShell(ctx, wave, frequency) {
+    if (!ctx) return null;
+    if (analogShellCtx !== ctx) warmAnalogShells(ctx, ANALOG_SHELL_WARM);
+    let osc = analogShells.pop();
+    if (!osc) {
+        const p = (window.__ingyProf ||= {});
+        p.analogShellMissN = (p.analogShellMissN || 0) + 1;
+        osc = makeIdleAnalogOsc(ctx);
+    }
+    try { osc.type = wave || 'sawtooth'; } catch (_) { /* ignore */ }
+    try { osc.frequency.value = Math.max(20, frequency || 440); } catch (_) { /* ignore */ }
+    scheduleAnalogShellRefill();
+    return osc;
+}
+
+/** Meter analog OscillatorNode.start separately from create. */
+export function startAnalogOsc(osc, when) {
+    if (!osc) return;
+    const t0 = performance.now();
+    if (when == null) osc.start();
+    else osc.start(when);
+    bumpAnalogOscStart(performance.now() - t0);
+}
+
 export function createOscSource(ctx, {
     oscIndex = 0,
     wave = 'sawtooth',
     frequency = 440,
+    pooled = false,
 } = {}) {
     if (
         oscIndex === OSC4_INDEX
@@ -970,10 +1251,95 @@ export function createOscSource(ctx, {
             console.warn('Wavetable source failed; falling back to classic osc:', err);
         }
     }
-    const osc = ctx.createOscillator();
+    if (pooled) return takeAnalogShell(ctx, wave, frequency);
+    const osc = makeIdleAnalogOsc(ctx);
     osc.type = wave || 'sawtooth';
     osc.frequency.value = Math.max(20, frequency || 440);
     return osc;
+}
+
+/** Berlin D-lanes: Plaits drum worklet from an explicit patch. No OSC1 globals. */
+export function createPlaitsSource(ctx, frequency, patch = {}) {
+    if (!ctx || !state.plaitsWorkletReady) return null;
+    const model = DRUM_ENGINES.has(patch.model) ? patch.model : 'hihat';
+    try {
+        return createWavetableProxy(ctx, frequency, { ...patch, model }, { drum: true });
+    } catch (err) {
+        console.warn('Plaits drum source failed:', err);
+        return null;
+    }
+}
+
+/** Push one Berlin drum-lane kit onto ringing hits for that lane. */
+export function applyBerlinDrumKitToLive(lane) {
+    const i = lane | 0;
+    const patch = state.berlinDrum?.[i];
+    if (!patch || !state.audioContext) return;
+    const now = state.audioContext.currentTime;
+    const panner = state.berlinDrumPanners?.[i];
+    if (panner) {
+        try {
+            panner.pan.setValueAtTime(Math.max(-1, Math.min(1, Number(patch.pan) || 0)), now);
+        } catch (_) { /* ignore */ }
+    }
+    if (isAnalogDrumEngine(patch)) {
+        applyAnalog808KitToLive(i);
+        return;
+    }
+    const touch = (osc) => {
+        if (!osc?.isBerlinDrum || !osc._worklet) return;
+        try {
+            osc.morphX?.setValueAtTime(patch.morphX, now);
+            osc.morphY?.setValueAtTime(patch.morphY, now);
+            osc.harmonics?.setValueAtTime(patch.harmonics, now);
+            const altP = osc._worklet.parameters?.get('alt');
+            if (altP) altP.setValueAtTime(patch.alt ? 1 : 0, now);
+            const trigP = osc._worklet.parameters?.get('trigPatched');
+            if (trigP) trigP.setValueAtTime(patch.trigPatched !== false ? 1 : 0, now);
+            osc._worklet.port.postMessage({
+                alt: !!patch.alt,
+                trigPatched: patch.trigPatched !== false,
+            });
+        } catch (_) { /* ignore */ }
+    };
+    const tunedHz = (stepHz) => digitalDrumTuneHz(stepHz, patch.tune);
+    state.berlinDrumVoices?.forEach((voice) => {
+        if (voice?.lane !== i || voice.isAnalog) return;
+        if (voice.amp) {
+            try {
+                const g = voice.amp.gain;
+                g.setValueAtTime(Math.max(0.00001, Number(g.value) || 0.00001), now);
+                g.linearRampToValueAtTime(Math.max(0.00001, patch.vol), now + 0.012);
+            } catch (_) { /* ignore */ }
+        }
+        touch(voice.osc);
+        if (voice.osc?.frequency && Number.isFinite(voice.stepHz)) {
+            try {
+                voice.osc.frequency.setValueAtTime(tunedHz(voice.stepHz), now);
+            } catch (_) { /* ignore */ }
+        }
+    });
+}
+
+export function routeBerlinDrumPanners() {
+    if (!Array.isArray(state.berlinDrumPanners)) return;
+    state.berlinDrumPanners.forEach((panner, i) => {
+        if (!panner) return;
+        const analog = isAnalogDrumEngine(state.berlinDrum?.[i]);
+        const dest = state.berlinDrumFilt
+            ? state.ringModInput
+            : (analog ? state.analogDrumInput : state.drumFxInput);
+        if (!dest) return;
+        const mute = state.drumMuteGains?.[i];
+        try { panner.disconnect(); } catch (_) { /* ignore */ }
+        try { mute?.disconnect(); } catch (_) { /* ignore */ }
+        if (mute) {
+            try { panner.connect(mute); } catch (_) { /* ignore */ }
+            try { mute.connect(dest); } catch (_) { /* ignore */ }
+        } else {
+            try { panner.connect(dest); } catch (_) { /* ignore */ }
+        }
+    });
 }
 
 /** Optional live-morph hook for poly/other voice pools (avoids circular imports). */
@@ -988,7 +1354,7 @@ export function applyOsc4AltModeToLive() {
     const alt = !!state.osc4Alt;
     const trigPatched = state.osc4TrigPatched !== false;
     const touch = (osc) => {
-        if (!osc?.isWavetable || !osc._worklet) return;
+        if (!osc?.isWavetable || !osc._worklet || osc.isBerlinDrum) return;
         try {
             const altP = osc._worklet.parameters?.get('alt');
             if (altP) altP.setValueAtTime(alt ? 1 : 0, now);
@@ -1075,7 +1441,7 @@ export function applyOsc4MorphToLive() {
     const now = state.audioContext?.currentTime ?? 0;
 
     const touch = (osc) => {
-        if (!osc?.isWavetable) return;
+        if (!osc?.isWavetable || osc.isBerlinDrum) return;
         try {
             if (osc.morphX) {
                 osc.morphX.setValueAtTime(x, now);

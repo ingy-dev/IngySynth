@@ -1,15 +1,17 @@
-// Compact effects controls in the keyboard Synthesizer panel (column 4).
-// Knobs are wired in knobs.js; chorus, delay, compressor, ring, distortion
-// write params (same keys as acid / Multitudes).
+// Compact effects controls in the keyboard Effects fieldset (under Synthesizer).
+// Knobs are wired in knobs.js; chorus, delay, ring, distortion write params
+// (same keys as acid / Multitudes). Compressor / sidechain live on the mixer strip.
 
-import { state } from './state.js?v=114';
-import { bindKnob, formatRangeValue } from './knobs.js?v=122';
+import { state } from './state.js?v=116';
+import { bindKnob, formatRangeValue } from './knobs.js?v=124';
 import {
     elementFor,
+    get,
     subscribe,
     wireSelect,
     wireToggle,
 } from './params.js?v=13';
+import { initScTimeKnob } from './sc-time.js?v=1';
 
 const syncFns = [];
 
@@ -26,6 +28,7 @@ function inputEnabled(key) {
         return !!state.reverbEnabled;
     }
     if (key === 'compThreshold') return !!state.compressorEnabled;
+    if (key === 'scDepth') return !!get('scToggle');
     if (key === 'distortion') return !!state.distortionEnabled;
     if (key === 'bitDepth') return !!state.bitcrusherEnabled;
     if (key === 'ringMod') return !!state.ringModEnabled;
@@ -131,6 +134,30 @@ function wireCompressor() {
     syncDisabled();
 }
 
+function wireSidechain() {
+    const kbToggle = document.getElementById('kbScToggle');
+    const src = document.getElementById('scSource');
+    const depthDial = document.getElementById('kbScDepthKnob');
+    const depthValue = document.getElementById('kbScDepthValue');
+    if (kbToggle) {
+        syncFns.push(wireToggle(kbToggle, 'scToggle', { syncLabel: true }));
+    }
+    if (src) syncFns.push(wireSelect(src, 'scSource'));
+    bindKnob(depthDial, 'scDepth', depthValue);
+    initScTimeKnob();
+    const syncDisabled = () => {
+        const enabled = inputEnabled('scDepth');
+        syncDialDisabled(depthDial, enabled);
+        syncDialDisabled(document.getElementById('kbScTimeKnob'), enabled);
+        if (src) src.disabled = !enabled;
+        const timeSync = document.getElementById('kbScTimeSync');
+        if (timeSync) timeSync.disabled = !enabled;
+    };
+    syncFns.push(syncDisabled);
+    subscribe('scToggle', syncDisabled);
+    syncDisabled();
+}
+
 export function syncKeyboardEffectsFromMain() {
     syncFns.forEach((fn) => fn());
 }
@@ -161,4 +188,5 @@ export function initKeyboardEffects() {
     });
     wireReverb();
     wireCompressor();
+    wireSidechain();
 }

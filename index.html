@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=332">
+    <link rel="stylesheet" href="styles.css?v=403">
 </head>
 <body>
     <div class="container">
@@ -631,6 +631,22 @@
                                     </button>
                                 </div>
                             </div>
+                            <div class="keyboard-drum-dock" aria-label="Drum machine">
+                                <div class="keyboard-drum-dock-bar">
+                                    <button type="button" id="kbDrumMode" class="pushable off keyboard-drum-mode-toggle"
+                                            aria-label="Drum mode on or off" aria-pressed="false">
+                                        <span class="front">
+                                            <span class="kb-drum-mode-label" aria-hidden="true"></span>
+                                            <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
+                                        </span>
+                                    </button>
+                                    <div class="keyboard-drum-dock-actions">
+                                    <button type="button" id="kbDrumFilt" class="ingy6-switch-btn off" aria-pressed="false" hidden title="Send DRM 1–3 through the main filter">Filter</button>
+                                    <button type="button" id="kbDrumHide" class="ingy6-switch-btn off" aria-pressed="false" hidden title="Hide drum lanes without turning them off">Hide</button>
+                                    </div>
+                                </div>
+                                <div id="keyboardDrumLanes" class="keyboard-drum-lanes" hidden></div>
+                            </div>
                         </div>
                     </fieldset>
                     <fieldset class="keyboard-automation-fieldset collapsible-fieldset collapsed" id="keyboardAutomationFieldset">
@@ -685,9 +701,9 @@
                         </legend>
                         <div id="keyboardSynthPanel" class="keyboard-synth-panel collapsible-panel">
                             <div class="keyboard-synth-grid">
-                            <fieldset class="keyboard-perf-fieldset keyboard-osc-group keyboard-synth-col keyboard-synth-col--oscs">
-                                <legend>Oscillators</legend>
-                                <div class="keyboard-osc-rows">
+                            <fieldset class="keyboard-perf-fieldset keyboard-osc-group">
+                                <legend>OSCILLATORS</legend>
+                                <div class="keyboard-osc-grid">
                             <fieldset class="keyboard-perf-fieldset keyboard-osc-field" data-osc="0">
                                 <legend>OSC 1</legend>
                                 <div class="keyboard-osc-controls">
@@ -804,7 +820,7 @@
                                             <span class="synth-knob-indicator"></span>
                                         </div>
                                     </div>
-                                    <span class="synth-knob-value" id="kbOsc1VolValue">0.33</span>
+                                    <span class="synth-knob-value" id="kbOsc1VolValue">0.25</span>
                                 </div>
                                 </div>
                                 <div class="keyboard-osc-pan-row">
@@ -822,6 +838,11 @@
                             <fieldset class="keyboard-perf-fieldset keyboard-osc-field" data-osc="1">
                                 <legend>OSC 2</legend>
                                 <div class="keyboard-osc-controls">
+                                <div class="osc4-engine-switch osc-align-spacer" aria-hidden="true">
+                                    <span class="ingy6-switch-btn">ANALOG</span>
+                                    <span class="ingy6-switch-btn off">DIGITAL</span>
+                                </div>
+                                <span class="osc4-plaititudes-logo osc-align-spacer" aria-hidden="true"></span>
                                 <div class="keyboard-osc-wave" data-osc="1" role="radiogroup" aria-label="Oscillator 2 waveform"></div>
                                 <div class="keyboard-osc-knob-row">
                                 <div class="synth-knob keyboard-osc-knob">
@@ -831,7 +852,7 @@
                                             <span class="synth-knob-indicator"></span>
                                         </div>
                                     </div>
-                                    <span class="synth-knob-value" id="kbOsc2TuneValue">0</span>
+                                    <span class="synth-knob-value" id="kbOsc2TuneValue">-12</span>
                                 </div>
                                 <div class="synth-knob keyboard-osc-knob">
                                     <span class="synth-knob-label">VOL</span>
@@ -840,7 +861,7 @@
                                             <span class="synth-knob-indicator"></span>
                                         </div>
                                     </div>
-                                    <span class="synth-knob-value" id="kbOsc2VolValue">0.33</span>
+                                    <span class="synth-knob-value" id="kbOsc2VolValue">0.25</span>
                                 </div>
                                 </div>
                                 <div class="keyboard-osc-pan-row">
@@ -876,7 +897,7 @@
                                             <span class="synth-knob-indicator"></span>
                                         </div>
                                     </div>
-                                    <span class="synth-knob-value" id="kbOsc3VolValue">0.33</span>
+                                    <span class="synth-knob-value" id="kbOsc3VolValue">0.25</span>
                                 </div>
                                 </div>
                                 <div class="keyboard-osc-pan-row">
@@ -887,7 +908,7 @@
                                     <span class="kb-osc-pan-value" data-osc="2">C</span>
                                 </div>
                                 <div class="keyboard-osc-toggle-row">
-                                <button type="button" class="kb-step-btn kb-osc-toggle" data-osc="2" aria-label="Oscillator 3 on or off" aria-pressed="true">On</button>
+                                <button type="button" class="kb-step-btn kb-osc-toggle off" data-osc="2" aria-label="Oscillator 3 on or off" aria-pressed="false">Off</button>
                                 </div>
                                 </div>
                             </fieldset>
@@ -912,7 +933,7 @@
                                             <span class="synth-knob-indicator"></span>
                                         </div>
                                     </div>
-                                    <span class="synth-knob-value" id="kbOsc4VolValue">0.33</span>
+                                    <span class="synth-knob-value" id="kbOsc4VolValue">0.25</span>
                                 </div>
                                 </div>
                                 <div class="keyboard-osc-pan-row">
@@ -927,7 +948,7 @@
                                 </div>
                                 </div>
                             </fieldset>
-                                </div>
+                            <div class="keyboard-synth-col-stack keyboard-synth-col-stack--bottom">
                             <fieldset class="keyboard-perf-fieldset keyboard-unison-field" id="keyboardUnisonField">
                                 <legend>Unison</legend>
                                 <div class="keyboard-unison-controls">
@@ -940,8 +961,6 @@
                                             <span class="keyboard-unison-voices-label">Voices</span>
                                             <select id="kbUnisonVoices" aria-label="Unison voices">
                                                 <option value="3" selected>3</option>
-                                                <option value="5">5</option>
-                                                <option value="7">7</option>
                                             </select>
                                         </div>
                                     </div>
@@ -962,33 +981,7 @@
                                     <button type="button" class="kb-step-btn" id="kbPhaseResetToggle" aria-label="Phase reset on or off" aria-pressed="true">On</button>
                                 </div>
                             </fieldset>
-                            </fieldset>
-                            <div class="keyboard-synth-col-stack keyboard-synth-col-stack--2">
-                                <fieldset class="keyboard-perf-fieldset keyboard-filter-knob-group">
-                                    <legend>Filter</legend>
-                                    <div class="keyboard-filter-controls">
-                                    <div class="synth-knob keyboard-filter-cutoff-knob" data-param="cutoff">
-                                        <span class="synth-knob-label">CUTOFF</span>
-                                        <div class="synth-knob-dial" id="kbCutoffKnob" role="slider" aria-label="Cutoff" aria-valuemin="20" aria-valuemax="10000" tabindex="0">
-                                            <span class="synth-knob-indicator"></span>
-                                        </div>
-                                    </div>
-                                    <div class="keyboard-filter-knob-row">
-                                    <div class="synth-knob keyboard-effects-knob" data-param="resonance">
-                                        <span class="synth-knob-label">RES</span>
-                                        <div class="synth-knob-dial" id="kbResonanceKnob" role="slider" aria-label="Resonance" aria-valuemin="0" aria-valuemax="20" tabindex="0">
-                                            <span class="synth-knob-indicator"></span>
-                                        </div>
-                                    </div>
-                                    <div class="synth-knob keyboard-effects-knob" data-param="highPass">
-                                        <span class="synth-knob-label">HP</span>
-                                        <div class="synth-knob-dial" id="kbHighPassKnob" role="slider" aria-label="High Pass" aria-valuemin="20" aria-valuemax="2000" tabindex="0">
-                                            <span class="synth-knob-indicator"></span>
-                                        </div>
-                                    </div>
-                                    </div>
-                                    </div>
-                                </fieldset>
+                            </div>
                                 <fieldset class="keyboard-perf-fieldset keyboard-noise-group">
                                     <legend>Noise</legend>
                                     <div class="keyboard-noise-controls">
@@ -1015,13 +1008,39 @@
                                         </div>
                                     </div>
                                 </fieldset>
-                            </div>
-                            <div class="keyboard-synth-col-stack keyboard-synth-col-stack--3">
-                                <fieldset class="keyboard-perf-fieldset keyboard-filter-env-group">
+                                </div>
+                            </fieldset>
+                            <fieldset class="keyboard-perf-fieldset keyboard-filter-section">
+                                <legend>FILTER</legend>
+                                <div class="keyboard-filter-section-grid">
+                            <fieldset class="keyboard-perf-fieldset keyboard-filter-knob-group">
+                                    <legend>Filter</legend>
+                                    <div class="keyboard-filter-controls">
+                                    <div class="synth-knob keyboard-filter-cutoff-knob" data-param="cutoff">
+                                        <span class="synth-knob-label">CUTOFF</span>
+                                        <div class="synth-knob-dial" id="kbCutoffKnob" role="slider" aria-label="Cutoff" aria-valuemin="20" aria-valuemax="10000" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <div class="keyboard-filter-knob-row">
+                                    <div class="synth-knob keyboard-effects-knob" data-param="resonance">
+                                        <span class="synth-knob-label">RES</span>
+                                        <div class="synth-knob-dial" id="kbResonanceKnob" role="slider" aria-label="Resonance" aria-valuemin="0" aria-valuemax="20" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    <div class="synth-knob keyboard-effects-knob" data-param="highPass">
+                                        <span class="synth-knob-label">HP</span>
+                                        <div class="synth-knob-dial" id="kbHighPassKnob" role="slider" aria-label="High Pass" aria-valuemin="20" aria-valuemax="2000" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                    </div>
+                                    </div>
+                                </fieldset>
+                            <fieldset class="keyboard-perf-fieldset keyboard-filter-env-group">
                                     <legend>Filter Env</legend>
                                     <div class="keyboard-filter-env-controls">
-                                        <fieldset class="keyboard-perf-fieldset keyboard-filter-env-field">
-                                            <legend>Filter Envelope</legend>
                                             <div class="keyboard-filter-env-panel">
                                                 <div class="vfd-frame adsr-vfd-frame">
                                                     <canvas id="kbFilterAdsrVisualizer" class="keyboard-adsr-visualizer vfd-glass" width="180" height="84" aria-label="Filter envelope shape"></canvas>
@@ -1064,14 +1083,15 @@
                                                 <button type="button" id="kbFilterEnvToggle" class="kb-step-btn kb-filter-env-toggle off" aria-label="Filter envelope on or off" aria-pressed="false">Off</button>
                                                 <button type="button" id="kbFilterEnvInvert" class="kb-step-btn kb-filter-env-invert off" aria-label="Invert filter envelope" aria-pressed="false">Inv</button>
                                             </div>
-                                        </fieldset>
                                     </div>
                                 </fieldset>
-                                <fieldset class="keyboard-perf-fieldset keyboard-amp-group">
-                                    <legend>Amp</legend>
-                                    <div class="keyboard-amp-controls">
-                                        <fieldset class="keyboard-perf-fieldset keyboard-vol-env-field">
-                                            <legend>Volume Envelope</legend>
+                                </div>
+                            </fieldset>
+                            <fieldset class="keyboard-perf-fieldset keyboard-amp-section">
+                                <legend>AMPLIFIER</legend>
+                                <div class="keyboard-amp-section-grid">
+                                <fieldset class="keyboard-perf-fieldset keyboard-vol-env-field">
+                                            <legend>Amp Env</legend>
                                             <div class="keyboard-vol-env-controls">
                                                 <div class="vfd-frame adsr-vfd-frame">
                                                     <canvas id="kbAdsrVisualizer" class="keyboard-adsr-visualizer vfd-glass" width="180" height="84" aria-label="Volume envelope shape"></canvas>
@@ -1105,25 +1125,28 @@
                                             </div>
                                         </fieldset>
                                         <fieldset class="keyboard-perf-fieldset keyboard-volume-field">
-                                            <legend>Volume</legend>
-                                            <div class="synth-knob keyboard-effects-knob" data-param="volume">
-                                                <span class="synth-knob-label">VOL</span>
+                                            <legend>Amp</legend>
+                                            <div class="synth-knob keyboard-volume-knob" data-param="volume">
+                                                <span class="synth-knob-label">VOLUME</span>
                                                 <div class="synth-knob-dial" id="kbVolumeKnob" role="slider" aria-label="Master volume" aria-valuemin="0" aria-valuemax="1" tabindex="0">
                                                     <span class="synth-knob-indicator"></span>
                                                 </div>
                                             </div>
                                         </fieldset>
-                                    </div>
-                                </fieldset>
+                                </div>
+                            </fieldset>
                             </div>
-                            <fieldset id="keyboardEffectsFieldset" class="keyboard-perf-fieldset keyboard-effects-group keyboard-synth-col keyboard-synth-col--effects collapsible-fieldset">
-                                <legend class="collapsible-legend">
-                                    <button id="keyboardEffectsToggle" class="collapsible-toggle" type="button" aria-expanded="true" aria-controls="keyboardEffectsPanel">
-                                        <span class="collapsible-label">Effects</span>
-                                        <span class="collapsible-arrow" aria-hidden="true"></span>
-                                    </button>
-                                </legend>
-                                <div id="keyboardEffectsPanel" class="keyboard-effects-controls collapsible-panel">
+                        </div>
+                    </fieldset>
+                    <fieldset class="keyboard-synth-fieldset collapsible-fieldset" id="keyboardEffectsFieldset">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardEffectsToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardEffectsPanel">
+                                <span class="collapsible-label">Effects</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardEffectsPanel" class="keyboard-effects-panel collapsible-panel">
+                            <div class="keyboard-effects-controls">
                                     <fieldset class="keyboard-perf-fieldset keyboard-effects-ringmod-field">
                                         <legend>Ring Mod</legend>
                                         <div class="keyboard-effects-ringmod-controls">
@@ -1253,54 +1276,266 @@
                                             </div>
                                         </div>
                                     </fieldset>
-                                    <fieldset class="keyboard-perf-fieldset keyboard-effects-comp-field">
-                                        <legend>Compressor</legend>
-                                        <div class="keyboard-effects-comp-controls">
-                                            <div class="keyboard-effects-comp-toggle-row">
-                                                <button type="button" id="kbCompToggle" class="kb-step-btn" aria-label="Compressor on or off" aria-pressed="true">On</button>
-                                            </div>
-                                            <div class="synth-knob keyboard-effects-knob" data-param="compThreshold">
-                                                <span class="synth-knob-label">THRESH</span>
-                                                <div class="synth-knob-dial-wrap">
-                                                    <div class="synth-knob-dial" id="kbCompThresholdKnob" role="slider" aria-label="Compressor threshold" aria-valuemin="-100" aria-valuemax="0" tabindex="0">
-                                                        <span class="synth-knob-indicator"></span>
-                                                    </div>
-                                                </div>
-                                                <span class="synth-knob-value" id="kbCompThresholdValue">-24</span>
-                                            </div>
-                                        </div>
-                                    </fieldset>
-                                </div>
-                            </fieldset>
                             </div>
                         </div>
                     </fieldset>
-                    <fieldset class="keyboard-xy-fieldset collapsible-fieldset collapsed" id="keyboardXyFieldset">
+                    <fieldset class="keyboard-synth-fieldset collapsible-fieldset" id="keyboardMixerFieldset">
                         <legend class="collapsible-legend">
-                            <button id="keyboardXyToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardXyPanel">
-                                <span class="collapsible-label">XY Pad</span>
+                            <button id="keyboardMixerToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardMixerPanel">
+                                <span class="collapsible-label">Mixer</span>
                                 <span class="collapsible-arrow" aria-hidden="true"></span>
                             </button>
                         </legend>
-                        <div id="keyboardXyPanel" class="keyboard-xy-panel collapsible-panel hidden" hidden>
-                            <fieldset class="keyboard-perf-fieldset keyboard-xy-pad-field">
-                                <div class="xy-pad-container">
-                                    <div class="xy-pad-wrapper">
-                                        <canvas id="xyPad" width="280" height="280"></canvas>
-                                        <div class="xy-pointer" id="xyPointer"></div>
+                        <div id="keyboardMixerPanel" class="keyboard-mixer-panel collapsible-panel">
+                            <div class="mixer-desk">
+                                <div class="mixer-group" data-group="osc" role="group" aria-labelledby="mixerGroupOscTitle">
+                                    <span class="mixer-group-title" id="mixerGroupOscTitle">OSCILLATORS</span>
+                                    <div class="mixer-group-strips">
+                                <div class="mixer-strip" data-strip="osc" data-index="0">
+                                    <span class="mixer-name">OSC 1</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan mixer-pan" min="-1" max="1" step="0.01" value="0" aria-label="Oscillator 1 pan">
+                                        <span class="kb-osc-pan-value mixer-pan-value">C</span>
                                     </div>
-                                    <div class="xy-controls">
-                                        <div class="xy-select-group">
-                                            <label for="yAxisParam">Y</label>
-                                            <select id="yAxisParam" class="xy-select"></select>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0.25" orient="vertical" aria-label="Oscillator 1 level">
                                         </div>
-                                        <div class="xy-select-group">
-                                            <label for="xAxisParam">X</label>
-                                            <select id="xAxisParam" class="xy-select"></select>
+                                    </div>
+                                    <div class="mixer-btns">
+                                        <button type="button" class="kb-step-btn mixer-mute off" aria-pressed="false">M</button>
+                                        <button type="button" class="kb-step-btn mixer-solo off" aria-pressed="false">S</button>
+                                    </div>
+                                </div>
+                                <div class="mixer-strip" data-strip="osc" data-index="1">
+                                    <span class="mixer-name">OSC 2</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan mixer-pan" min="-1" max="1" step="0.01" value="0" aria-label="Oscillator 2 pan">
+                                        <span class="kb-osc-pan-value mixer-pan-value">C</span>
+                                    </div>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0.25" orient="vertical" aria-label="Oscillator 2 level">
+                                        </div>
+                                    </div>
+                                    <div class="mixer-btns">
+                                        <button type="button" class="kb-step-btn mixer-mute off" aria-pressed="false">M</button>
+                                        <button type="button" class="kb-step-btn mixer-solo off" aria-pressed="false">S</button>
+                                    </div>
+                                </div>
+                                <div class="mixer-strip" data-strip="osc" data-index="2">
+                                    <span class="mixer-name">OSC 3</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan mixer-pan" min="-1" max="1" step="0.01" value="0" aria-label="Oscillator 3 pan">
+                                        <span class="kb-osc-pan-value mixer-pan-value">C</span>
+                                    </div>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0.25" orient="vertical" aria-label="Oscillator 3 level">
+                                        </div>
+                                    </div>
+                                    <div class="mixer-btns">
+                                        <button type="button" class="kb-step-btn mixer-mute off" aria-pressed="false">M</button>
+                                        <button type="button" class="kb-step-btn mixer-solo off" aria-pressed="false">S</button>
+                                    </div>
+                                </div>
+                                <div class="mixer-strip" data-strip="osc" data-index="3">
+                                    <span class="mixer-name">OSC 4</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan mixer-pan" min="-1" max="1" step="0.01" value="0" aria-label="Oscillator 4 pan">
+                                        <span class="kb-osc-pan-value mixer-pan-value">C</span>
+                                    </div>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0.25" orient="vertical" aria-label="Oscillator 4 level">
+                                        </div>
+                                    </div>
+                                    <div class="mixer-btns">
+                                        <button type="button" class="kb-step-btn mixer-mute off" aria-pressed="false">M</button>
+                                        <button type="button" class="kb-step-btn mixer-solo off" aria-pressed="false">S</button>
+                                    </div>
+                                </div>
+                                    </div>
+                                </div>
+                                <div class="mixer-group" data-group="noise" role="group" aria-label="Noise">
+                                    <span class="mixer-group-title mixer-group-title--blank" aria-hidden="true">&nbsp;</span>
+                                    <div class="mixer-group-strips">
+                                <div class="mixer-strip" data-strip="noise">
+                                    <span class="mixer-name">NOISE</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row mixer-pan-row--blank">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan" min="-1" max="1" value="0" step="0.01" tabindex="-1" disabled aria-hidden="true">
+                                        <span class="kb-osc-pan-value mixer-pan-value mixer-pan-blank"></span>
+                                    </div>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0" orient="vertical" aria-label="Noise level">
+                                        </div>
+                                    </div>
+                                    <div class="mixer-btns">
+                                        <button type="button" class="kb-step-btn mixer-mute off" aria-pressed="false">M</button>
+                                        <button type="button" class="kb-step-btn mixer-solo off" aria-pressed="false">S</button>
+                                    </div>
+                                </div>
+                                    </div>
+                                </div>
+                                <div class="mixer-group" data-group="drums" role="group" aria-labelledby="mixerGroupDrumsTitle">
+                                    <span class="mixer-group-title" id="mixerGroupDrumsTitle">DRUMS</span>
+                                    <div class="mixer-group-strips">
+                                <div class="mixer-strip" data-strip="drum" data-index="0">
+                                    <span class="mixer-name">DRM 1</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan mixer-pan" min="-1" max="1" step="0.01" value="0" aria-label="Drum 1 pan">
+                                        <span class="kb-osc-pan-value mixer-pan-value">C</span>
+                                    </div>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0.8" orient="vertical" aria-label="Drum 1 level">
+                                        </div>
+                                    </div>
+                                    <div class="mixer-btns">
+                                        <button type="button" class="kb-step-btn mixer-mute off" aria-pressed="false">M</button>
+                                        <button type="button" class="kb-step-btn mixer-solo off" aria-pressed="false">S</button>
+                                    </div>
+                                </div>
+                                <div class="mixer-strip" data-strip="drum" data-index="1">
+                                    <span class="mixer-name">DRM 2</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan mixer-pan" min="-1" max="1" step="0.01" value="0" aria-label="Drum 2 pan">
+                                        <span class="kb-osc-pan-value mixer-pan-value">C</span>
+                                    </div>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0.8" orient="vertical" aria-label="Drum 2 level">
+                                        </div>
+                                    </div>
+                                    <div class="mixer-btns">
+                                        <button type="button" class="kb-step-btn mixer-mute off" aria-pressed="false">M</button>
+                                        <button type="button" class="kb-step-btn mixer-solo off" aria-pressed="false">S</button>
+                                    </div>
+                                </div>
+                                <div class="mixer-strip" data-strip="drum" data-index="2">
+                                    <span class="mixer-name">DRM 3</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan mixer-pan" min="-1" max="1" step="0.01" value="0" aria-label="Drum 3 pan">
+                                        <span class="kb-osc-pan-value mixer-pan-value">C</span>
+                                    </div>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0.8" orient="vertical" aria-label="Drum 3 level">
+                                        </div>
+                                    </div>
+                                    <div class="mixer-btns">
+                                        <button type="button" class="kb-step-btn mixer-mute off" aria-pressed="false">M</button>
+                                        <button type="button" class="kb-step-btn mixer-solo off" aria-pressed="false">S</button>
+                                    </div>
+                                </div>
+                                    </div>
+                                </div>
+                                <div class="mixer-group mixer-group--master" data-group="master" role="group" aria-label="Master">
+                                    <span class="mixer-group-title mixer-group-title--blank" aria-hidden="true">&nbsp;</span>
+                                    <div class="mixer-group-strips">
+                                <div class="mixer-strip mixer-strip-master" data-strip="master">
+                                    <span class="mixer-name">MASTER</span>
+                                    <div class="mixer-pan-row keyboard-osc-pan-row mixer-pan-row--blank">
+                                        <span class="keyboard-osc-pan-label">PAN</span>
+                                        <input type="range" class="kb-osc-pan" min="-1" max="1" value="0" step="0.01" tabindex="-1" disabled aria-hidden="true">
+                                        <span class="kb-osc-pan-value mixer-pan-value mixer-pan-blank"></span>
+                                    </div>
+                                    <div class="mixer-btns mixer-btns--blank" aria-hidden="true"></div>
+                                    <div class="mixer-fader">
+                                        <div class="mixer-fader-slot">
+                                            <div class="mixer-fader-track" aria-hidden="true"></div>
+                                            <div class="mixer-fader-cap" aria-hidden="true"></div>
+                                            <input type="range" class="mixer-level" min="0" max="1" step="0.01" value="0.5" orient="vertical" aria-label="Master level">
                                         </div>
                                     </div>
                                 </div>
-                            </fieldset>
+                                    </div>
+                                </div>
+                                <div class="mixer-group mixer-group--comp" data-group="comp" role="group" aria-label="Compressor">
+                                    <span class="mixer-group-title mixer-group-title--blank" aria-hidden="true">&nbsp;</span>
+                                    <div class="mixer-group-strips">
+                                <div class="mixer-strip mixer-strip-comp" data-strip="comp">
+                                    <span class="mixer-name">COMPRESSOR</span>
+                                    <button type="button" id="kbCompToggle" class="kb-step-btn mixer-comp-on" aria-label="Compressor on or off" aria-pressed="true">On</button>
+                                    <div class="synth-knob keyboard-effects-knob" data-param="compThreshold">
+                                        <span class="synth-knob-label">THRESH</span>
+                                        <div class="synth-knob-dial-wrap">
+                                            <div class="synth-knob-dial" id="kbCompThresholdKnob" role="slider" aria-label="Compressor threshold" aria-valuemin="-100" aria-valuemax="0" tabindex="0">
+                                                <span class="synth-knob-indicator"></span>
+                                            </div>
+                                        </div>
+                                        <span class="synth-knob-value" id="kbCompThresholdValue">-24</span>
+                                    </div>
+                                    <hr class="mixer-comp-rule">
+                                    <span class="mixer-name">SIDECHAIN</span>
+                                    <button type="button" id="kbScToggle" class="kb-step-btn off mixer-sc-btn" aria-label="Sidechain on or off" aria-pressed="false">Off</button>
+                                    <label class="mixer-sc-src">
+                                        <span class="mixer-sc-src-label">Source</span>
+                                        <select id="scSource" aria-label="Sidechain source">
+                                            <optgroup label="Drums">
+                                                <option value="d1">DRM 1</option>
+                                                <option value="d2">DRM 2</option>
+                                                <option value="d3" selected>DRM 3</option>
+                                            </optgroup>
+                                            <optgroup label="Oscillators">
+                                                <option value="o1">OSC 1</option>
+                                                <option value="o2">OSC 2</option>
+                                                <option value="o3">OSC 3</option>
+                                                <option value="o4">OSC 4</option>
+                                            </optgroup>
+                                        </select>
+                                    </label>
+                                    <div class="synth-knob keyboard-effects-knob" data-param="scTimeMs">
+                                        <span class="synth-knob-label">TIME</span>
+                                        <div class="synth-knob-dial-wrap">
+                                            <div class="synth-knob-dial" id="kbScTimeKnob" role="slider" aria-label="Sidechain time" aria-valuemin="50" aria-valuemax="400" tabindex="0">
+                                                <span class="synth-knob-indicator"></span>
+                                            </div>
+                                        </div>
+                                        <span class="synth-knob-value" id="kbScTimeValue">150 ms</span>
+                                        <button type="button" id="kbScTimeSync" class="kb-step-btn off" aria-pressed="false" aria-label="Sidechain time milliseconds or sync">ms</button>
+                                    </div>
+                                    <div class="synth-knob keyboard-effects-knob" data-param="scDepth">
+                                        <span class="synth-knob-label">DEPTH</span>
+                                        <div class="synth-knob-dial-wrap">
+                                            <div class="synth-knob-dial" id="kbScDepthKnob" role="slider" aria-label="Sidechain depth" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                <span class="synth-knob-indicator"></span>
+                                            </div>
+                                        </div>
+                                        <span class="synth-knob-value" id="kbScDepthValue">0.60</span>
+                                    </div>
+                                    <input type="range" id="scDepth" min="0" max="1" step="0.01" value="0.6" hidden>
+                                    <input type="range" id="scTimeMs" min="50" max="400" step="1" value="150" hidden>
+                                    <input type="range" id="scTimeSyncDivision" min="0" max="6" step="1" value="2" hidden>
+                                </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </fieldset>
                     <fieldset class="keyboard-tuning-fieldset collapsible-fieldset" id="keyboardXyTuningFieldset">
@@ -1388,12 +1623,6 @@
                         </div>
                     </fieldset>
                     <div id="keyboardPolyToggleHome" class="keyboard-mode-toggle-row keyboard-poly-toggle-row" aria-label="Mode toggles">
-                        <button id="keyboardChordMemToggle" class="pushable off keyboard-chord-mem-toggle" type="button" aria-pressed="false" aria-label="Chord memory learn">
-                            <span class="front">
-                                <span class="kb-chord-mem-label" aria-hidden="true"></span>
-                                <span class="kb-chord-mem-dot" aria-hidden="true"></span>
-                            </span>
-                        </button>
                         <button id="keyboardPolyToggle" class="pushable off keyboard-poly-toggle" type="button" aria-pressed="false" aria-label="Polyphonic mode">
                             <span class="front">
                                 <span class="kb-poly-mode-label" aria-hidden="true"></span>
@@ -1960,37 +2189,73 @@
                     </div>
 
                 </div>
-                <div class="keyboard-play-row">
-                    <div class="keyboard-play-bend-lfo">
-                        <fieldset class="keyboard-arp-panel" aria-label="Arpeggiator">
-                            <legend><span class="legend-hex">Arpeggiator</span></legend>
-                            <div class="keyboard-arp-panel-body">
-                                <button id="keyboardArpToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Arp: Off</button>
-                                <button id="keyboardArpChordToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Arp Chord: Off</button>
-                                <button id="keyboardArpOrderToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Order: Up</button>
-                                <button id="keyboardArpRangeToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Range: 1</button>
-                                <button id="keyboardLatchToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Latch: Off</button>
+                <fieldset class="keyboard-xy-fieldset collapsible-fieldset collapsed" id="keyboardXyFieldset">
+                    <legend class="collapsible-legend">
+                        <button id="keyboardXyToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardXyPanel">
+                            <span class="collapsible-label">XY Pad</span>
+                            <span class="collapsible-arrow" aria-hidden="true"></span>
+                        </button>
+                    </legend>
+                    <div id="keyboardXyPanel" class="keyboard-xy-panel collapsible-panel hidden" hidden>
+                        <fieldset class="keyboard-perf-fieldset keyboard-xy-pad-field">
+                            <div class="xy-pad-container">
+                                <div class="xy-pad-wrapper">
+                                    <canvas id="xyPad" width="280" height="280"></canvas>
+                                    <div class="xy-pointer" id="xyPointer"></div>
+                                </div>
+                                <div class="xy-controls">
+                                    <div class="xy-select-group">
+                                        <label for="yAxisParam">Y</label>
+                                        <select id="yAxisParam" class="xy-select"></select>
+                                    </div>
+                                    <div class="xy-select-group">
+                                        <label for="xAxisParam">X</label>
+                                        <select id="xAxisParam" class="xy-select"></select>
+                                    </div>
+                                </div>
                             </div>
                         </fieldset>
-                        <div class="keyboard-play-strips">
-                            <div class="keyboard-pitch-bend" id="keyboardPitchBend" role="slider" aria-label="Pitch bend" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0" tabindex="0">
-                                <span class="synth-knob-label">PITCH BEND</span>
-                                <div class="keyboard-pitch-bend-track">
-                                    <div class="keyboard-pitch-bend-center"></div>
-                                    <div class="keyboard-pitch-bend-thumb" id="keyboardPitchBendThumb"></div>
-                                </div>
+                    </div>
+                </fieldset>
+                <div class="keyboard-play-row">
+                    <fieldset class="keyboard-arp-panel collapsible-fieldset collapsible-mobile-only" id="keyboardArpPanel" aria-label="Arpeggiator">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardArpPanelToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardArpPanelBody">
+                                <span class="collapsible-label">Arpeggiator</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardArpPanelBody" class="keyboard-arp-panel-body collapsible-panel">
+                            <button id="keyboardArpToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Arp: Off</button>
+                            <button id="keyboardArpChordToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Arp Chord: Off</button>
+                            <button id="keyboardArpOrderToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Order: Up</button>
+                            <button id="keyboardArpRangeToggle" class="kb-step-btn keyboard-toolbar-btn off is-locked" type="button" aria-pressed="false" aria-disabled="true" disabled>Range: 1</button>
+                            <button id="keyboardLatchToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Latch: Off</button>
+                        </div>
+                    </fieldset>
+                    <div class="keyboard-play-strips">
+                        <div class="keyboard-pitch-bend" id="keyboardPitchBend" role="slider" aria-label="Pitch bend" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0" tabindex="0">
+                            <span class="synth-knob-label">PITCH BEND</span>
+                            <div class="keyboard-pitch-bend-track">
+                                <div class="keyboard-pitch-bend-center"></div>
+                                <div class="keyboard-pitch-bend-thumb" id="keyboardPitchBendThumb"></div>
                             </div>
-                            <div class="keyboard-lfo-strip" id="keyboardLfoStrip" role="slider" aria-label="LFO amount" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" tabindex="0">
-                                <span class="synth-knob-label">LFO AMOUNT</span>
-                                <div class="keyboard-lfo-strip-track">
-                                    <div class="keyboard-lfo-strip-thumb" id="keyboardLfoStripThumb"></div>
-                                </div>
+                        </div>
+                        <div class="keyboard-lfo-strip" id="keyboardLfoStrip" role="slider" aria-label="LFO amount" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" tabindex="0">
+                            <span class="synth-knob-label">LFO AMOUNT</span>
+                            <div class="keyboard-lfo-strip-track">
+                                <div class="keyboard-lfo-strip-thumb" id="keyboardLfoStripThumb"></div>
                             </div>
                         </div>
                     </div>
-                    <fieldset class="keyboard-mod-matrix" id="keyboardModMatrix">
-                        <legend><span class="legend-hex">Modulation</span></legend>
-                        <div class="keyboard-mod-matrix-body">
+                    <fieldset class="keyboard-mod-matrix collapsible-fieldset collapsible-mobile-only" id="keyboardModMatrix">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardModMatrixToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardModMatrixBody">
+                                <span class="collapsible-label">Modulation</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardModMatrixBody" class="keyboard-mod-matrix-body collapsible-panel">
                             <div class="keyboard-mod-matrix-left">
                                 <div class="keyboard-mod-matrix-lfo-shape">
                                     <div class="keyboard-lfo-wave" id="kbLfoWave" role="radiogroup" aria-label="LFO waveform"></div>
@@ -2073,6 +2338,20 @@
                         </div>
                     </fieldset>
                 </div>
+                <div class="computer-keyboard-toggle-row" aria-label="Chord memory and computer keyboard mode">
+                    <button id="keyboardChordMemToggle" class="pushable off keyboard-chord-mem-toggle" type="button" aria-pressed="false" aria-label="Chord memory learn">
+                        <span class="front">
+                            <span class="kb-chord-mem-label" aria-hidden="true"></span>
+                            <span class="kb-chord-mem-dot" aria-hidden="true"></span>
+                        </span>
+                    </button>
+                    <button id="computerKeyboardToggle" class="pushable off keyboard-computer-keys-toggle" type="button" aria-pressed="false" aria-label="Computer keyboard mode">
+                        <span class="front">
+                            <span class="kb-model-m-label" aria-hidden="true"></span>
+                            <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
+                        </span>
+                    </button>
+                </div>
                 <div id="chromaticKeyboardPanel" class="chromatic-keyboard-panel">
                     <div id="chromaticKeyboard" class="chromatic-keyboard"></div>
                 </div>
@@ -2084,7 +2363,9 @@
                     </button>
                 </div>
                 <div id="computerKeyboardPanel" class="computer-keyboard-panel" hidden>
-                    <div id="computerKeyboardBoard" class="computer-keyboard-board" aria-label="Computer keyboard"></div>
+                    <div class="computer-keyboard-case">
+                        <div id="computerKeyboardBoard" class="computer-keyboard-board" aria-label="Computer keyboard"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2137,6 +2418,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=164"></script>
+    <script type="module" src="js/main.js?v=226"></script>
 </body>
 </html>

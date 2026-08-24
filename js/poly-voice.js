@@ -1,32 +1,35 @@
 // Kb-only 6-voice polyphonic playground (shared filter, per-voice amp).
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
-import { state, OSC_COUNT } from './state.js?v=114';
+import { state, OSC_COUNT } from './state.js?v=116';
 import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=13';
 import { semitonesToFrequency } from './tuning.js?v=80';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=82';
-import { refreshFilterInputDrive } from './filter-drive.js?v=25';
+import { refreshFilterInputDrive } from './filter-drive.js?v=29';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=101';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=166';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=16';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=26';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=87';
+} from './visualizers.js?v=110';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=173';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=17';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=28';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=89';
 import {
     createOscSource,
     fadeStopOsc,
     softStartVoiceGain,
     setOsc4MorphLiveHook,
-} from './osc-source.js?v=98';
+    ensurePlaitsWorklet,
+    warmPlaitsPool,
+    PLAITS_POLY_WARM_COUNT,
+} from './osc-source.js?v=121';
 import {
     isPolyChordMemoryOn,
     getPolyChordIntervals,
     clearPolyChordMemory,
-} from './chord-memory.js?v=19';
+} from './chord-memory.js?v=20';
 
 /** Local bend helper — avoid circular import with pitch-bend.js. */
 function bentFrequency(baseFreq) {
@@ -1066,28 +1069,20 @@ export function syncPolyModeUI() {
         btn.setAttribute('aria-disabled', locked ? 'true' : 'false');
         btn.setAttribute('aria-label', on ? 'Polyphonic mode on' : 'Polyphonic mode');
 
-        // Home: Chord Memory | Poly | Multitudes.
-        // Ingy-6 on: Chord Memory + Multitudes far left, Poly centered, logo right.
+        // Home: Poly | Multitudes. Chord Memory stays left of computer-keys toggle.
+        // Ingy-6 on: Multitudes far left, Poly centered, logo right.
         // Multitudes panel owns docking while Multitudes mode is on (Poly off).
         const home = document.getElementById('keyboardPolyToggleHome');
         const polySlot = document.getElementById('ingy6PolyToggleSlot');
         const chordSlot = document.getElementById('ingy6ChordMemSlot');
-        const chordBtn = document.getElementById('keyboardChordMemToggle');
         const multBtn = document.getElementById('keyboardMultitudesToggle');
         if (on) {
             if (polySlot && btn.parentElement !== polySlot) {
                 polySlot.appendChild(btn);
             }
-            if (chordSlot) {
-                if (chordBtn) chordSlot.appendChild(chordBtn);
-                if (multBtn) chordSlot.appendChild(multBtn);
-                // Chord Memory immediately left of Multitudes
-                if (chordBtn && multBtn) chordSlot.insertBefore(chordBtn, multBtn);
-            }
+            if (chordSlot && multBtn) chordSlot.appendChild(multBtn);
             if (home) home.hidden = true;
         } else if (!state.keyboardMultitudes && home) {
-            // Chord Memory | Poly | Multitudes
-            if (chordBtn) home.appendChild(chordBtn);
             home.appendChild(btn);
             if (multBtn) home.appendChild(multBtn);
             home.hidden = false;
@@ -1415,6 +1410,11 @@ export function ensureMultitudesPolyReady() {
     }
     state.polyVcaGate = false;
     state.keyboardPolyUnison = false;
+    const ctx = state.audioContext;
+    void ensurePlaitsWorklet(ctx).then((ok) => {
+        if (!ok || !state.keyboardMultitudes) return;
+        warmPlaitsPool(ctx, PLAITS_POLY_WARM_COUNT);
+    });
 }
 
 /** @type {{ unisonEnabled: boolean, ringModEnabled: boolean } | null } */

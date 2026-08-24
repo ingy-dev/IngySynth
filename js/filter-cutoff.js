@@ -1,4 +1,4 @@
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { getNumber } from './params.js?v=13';
 
 /** Keep in sync with getLfoAmountAudio() in lfo-strip.js (avoid circular import). */

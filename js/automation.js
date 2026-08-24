@@ -3,18 +3,18 @@
 // the pattern loop wraps → punch out → playback on subsequent loops.
 // Rec off + existing lane → knob tweaks set a persistent offset (curve shape kept).
 
-import { state } from './state.js?v=114';
-import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=74';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=92';
+import { state } from './state.js?v=116';
+import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=75';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=96';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=78';
-import { ensureDisplayStep } from './knobs.js?v=122';
+import { ensureDisplayStep } from './knobs.js?v=124';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=7';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=46';
-import { getNumber, getString, set as setParam, subscribe } from './params.js?v=13';
-import { clampToCatalog, getParam } from './param-catalog.js?v=1';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=69';
+import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=13';
+import { clampToCatalog, getParam } from './param-catalog.js?v=2';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */
@@ -29,7 +29,7 @@ const RANGE_IDS = [
     'attack', 'decay', 'sustain', 'release',
     'distortion', 'bitDepth', 'chorusAmount', 'delayAmount',
     'reverbAmount', 'reverbSize', 'reverbDecay', 'reverbDamp',
-    'volume', 'compThreshold',
+    'volume', 'compThreshold', 'scDepth', 'scTimeMs', 'scTimeSyncDivision',
     'lfoSpeed',
     'lfoSyncDivision',
     'cutoffMod', 'resonanceMod', 'highpassMod',
@@ -718,6 +718,8 @@ function keyFromEventTarget(target) {
         if (oscVol) return `osc-vol-${parseInt(oscVol[1], 10) - 1}`;
         if (dialId === 'kbUnisonDetuneKnob') return 'unisonDetune';
         if (dialId === 'kbCompThresholdKnob') return 'compThreshold';
+        if (dialId === 'kbScDepthKnob') return 'scDepth';
+        if (dialId === 'kbScTimeKnob') return get('scTimeSyncToggle') ? 'scTimeSyncDivision' : 'scTimeMs';
     }
     if (target.id === 'keyboardMasterTune' || target.id === 'kbTuningMasterTune'
         || target.id === 'kbXyTuningMasterTune') return 'masterTune';

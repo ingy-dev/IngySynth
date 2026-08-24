@@ -1,11 +1,11 @@
-import { state } from './state.js?v=114';
-import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=80';
-import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=2';
+import { state } from './state.js?v=116';
+import { semitonesToNoteName } from './tuning.js?v=80';
+import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=4';
 import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=6';
 import { getNumber, set } from './params.js?v=13';
-import { getParam } from './param-catalog.js?v=1';
+import { getParam } from './param-catalog.js?v=2';
 
-const NOTE_VFD_HOSTS = ['noteVisualizer', 'kbPatternNoteVisualizer', 'kbXyNoteVisualizer'];
+const NOTE_VFD_HOSTS = ['kbPatternNoteVisualizer', 'kbXyNoteVisualizer'];
 const NOTE_VFD_IDLE_TEXT = 'Note';
 
 function noteVfdHostIsVisible(host) {
@@ -39,98 +39,85 @@ if (document.readyState === 'loading') {
     initNoteVfds();
 }
 
-function ensureOscilloscopeTexture() {
-    if (window.oscilloscopeTexture) return;
-    window.oscilloscopeTexture = new Image();
-    window.oscilloscopeTexture.src = './assets/oscilloscope-glass.jpg';
-    window.oscilloscopeTexture.onerror = function () {
-        console.log('Failed to load oscilloscope texture');
-        window.oscilloscopeTextureError = true;
-    };
-    window.oscilloscopeTexture.onload = function () {
-        console.log('Oscilloscope texture loaded');
-    };
+function getScopeCtx(canvas) {
+    if (canvas._ingyScopeCtx) return canvas._ingyScopeCtx;
+    const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true })
+        || canvas.getContext('2d');
+    canvas._ingyScopeCtx = ctx;
+    return ctx;
 }
 
 function paintOscilloscopeCanvas(canvas, dataArray) {
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = getScopeCtx(canvas);
     if (!ctx) return;
     const width = canvas.width;
     const height = canvas.height;
+    const bins = dataArray.length;
+    const steps = Math.min(bins, Math.max(64, width));
+    const stride = bins / steps;
 
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, width, height);
+    ctx.clearRect(0, 0, width, height);
 
-    if (window.oscilloscopeTexture && window.oscilloscopeTexture.complete && !window.oscilloscopeTextureError) {
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        ctx.drawImage(window.oscilloscopeTexture, 0, 0, width, height);
-        ctx.globalAlpha = 1.0;
-        ctx.restore();
-    }
-
-    ctx.save();
-    ctx.shadowColor = '#00ff00';
-    ctx.shadowBlur = 10;
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(0, 255, 0, 0.4)';
     ctx.beginPath();
-
-    const sliceWidth = width / state.analyser.frequencyBinCount;
     let x = 0;
-
-    for (let i = 0; i < state.analyser.frequencyBinCount; i++) {
+    const sliceWidth = width / steps;
+    for (let s = 0; s < steps; s++) {
+        const i = Math.min(bins - 1, (s * stride) | 0);
         const v = dataArray[i] / 128.0;
         const y = v * height / 2;
-
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
+        if (s === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
         x += sliceWidth;
     }
-
     ctx.lineTo(width, height / 2);
-    ctx.stroke();
-    ctx.restore();
-
     ctx.lineWidth = 2;
     ctx.strokeStyle = '#00ff00';
-    ctx.beginPath();
-
-    x = 0;
-    for (let i = 0; i < state.analyser.frequencyBinCount; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = v * height / 2;
-
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
-        x += sliceWidth;
-    }
-
-    ctx.lineTo(width, height / 2);
     ctx.stroke();
 }
 
 function drawOscilloscope() {
+    const p0 = (window.__ingyProf ||= {});
+    p0.scopeGlow = false;
+    if (new URLSearchParams(location.search).get('scope') === '0') {
+        p0.scopeVisible = false;
+        p0.scopeMs = 0;
+        return;
+    }
     if (!state.analyser) return;
-    const mainCanvas = document.getElementById('oscilloscope');
-    const kbCanvas = document.getElementById('kbOscilloscope');
-    if (!mainCanvas && !kbCanvas) return;
+    const canvas = document.getElementById('kbOscilloscope');
+    if (!canvas) return;
 
     const dataArray = new Uint8Array(state.analyser.frequencyBinCount);
-    ensureOscilloscopeTexture();
+    let scopeVisible = true;
+    try {
+        const io = new IntersectionObserver((entries) => {
+            scopeVisible = entries.some((e) => e.isIntersecting);
+            const p = (window.__ingyProf ||= {});
+            p.scopeVisible = scopeVisible;
+        }, { threshold: 0.02 });
+        io.observe(canvas);
+    } catch (_) {
+        scopeVisible = true;
+    }
 
     function draw() {
         requestAnimationFrame(draw);
+        const p = (window.__ingyProf ||= {});
+        p.scopeRafN = (p.scopeRafN || 0) + 1;
+        p.scopeVisible = scopeVisible;
+        p.scopeGlow = false;
+        if (!scopeVisible) {
+            p.scopeMs = 0;
+            return;
+        }
+        const t0 = performance.now();
         state.analyser.getByteTimeDomainData(dataArray);
-        paintOscilloscopeCanvas(mainCanvas, dataArray);
-        paintOscilloscopeCanvas(kbCanvas, dataArray);
+        paintOscilloscopeCanvas(canvas, dataArray);
+        const ms = performance.now() - t0;
+        p.scopeMs = ms;
+        if (ms > (p.scopeMax || 0)) p.scopeMax = ms;
+        p.scopePaintN = (p.scopePaintN || 0) + 1;
     }
 
     draw();
@@ -289,14 +276,12 @@ function strokeAdsrPath(ctx, path) {
 
 function paintADSRVisualizer(options = {}) {
     const {
-        canvasId = 'adsrVisualizer',
+        canvasId = 'kbAdsrVisualizer',
         attackId = 'attack',
         decayId = 'decay',
         sustainId = 'sustain',
         releaseId = 'release',
-        glowColor = '#00ff00',
         lineColor = '#66ff66',
-        glowAlpha = 0.2,
         invert = false,
     } = options;
 
@@ -336,20 +321,7 @@ function paintADSRVisualizer(options = {}) {
 
     const layout = getAdsrLayout(width, height, params, invert);
     const { maxHeight, path, labels } = layout;
-    
-    // First pass - draw the glow effect with reduced intensity
-    ctx.save();
-    ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 5;
-    ctx.lineWidth = 3;
-    const glowR = parseInt(glowColor.slice(1, 3), 16);
-    const glowG = parseInt(glowColor.slice(3, 5), 16);
-    const glowB = parseInt(glowColor.slice(5, 7), 16);
-    ctx.strokeStyle = `rgba(${glowR}, ${glowG}, ${glowB}, ${glowAlpha})`;
-    strokeAdsrPath(ctx, path);
-    ctx.restore();
-    
-    // Second pass - draw the crisp ADSR / AD line
+
     ctx.strokeStyle = lineColor;
     ctx.lineWidth = 2;
     strokeAdsrPath(ctx, path);
@@ -389,17 +361,15 @@ function hitAdsrKey(canvas, e, ids, invert) {
 
 function idsForAdsrCanvas(canvas) {
     if (!canvas) return null;
-    if (canvas.id === 'adsrVisualizer' || canvas.id === 'kbAdsrVisualizer') return AMP_ADSR_IDS;
-    if (canvas.id === 'filterAdsrVisualizer' || canvas.id === 'kbFilterAdsrVisualizer') {
-        return FILTER_ADSR_IDS;
-    }
+    if (canvas.id === 'kbAdsrVisualizer') return AMP_ADSR_IDS;
+    if (canvas.id === 'kbFilterAdsrVisualizer') return FILTER_ADSR_IDS;
     return null;
 }
 
 function resolveAdsrMapping(canvas, e) {
     const ids = idsForAdsrCanvas(canvas);
     if (!ids) return null;
-    const invert = canvas.id === 'filterAdsrVisualizer' || canvas.id === 'kbFilterAdsrVisualizer'
+    const invert = canvas.id === 'kbFilterAdsrVisualizer'
         ? !!state.filterEnvInvert
         : false;
     const { params, key } = hitAdsrKey(canvas, e, ids, invert);
@@ -410,7 +380,7 @@ function resolveAdsrMapping(canvas, e) {
 }
 
 /** Invisible hit-targets on envelope corners — appearance unchanged. */
-function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter = false } = {}) {
+function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false } = {}) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || canvas.dataset.adsrDragBound === '1') return;
     canvas.dataset.adsrDragBound = '1';
@@ -477,9 +447,6 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
             const layout = getAdsrLayout(width, canvas.height, params, !!getInvert());
             setAdsrValue(ids.sustainId, layout.levelAt(pt.y));
         }
-
-        if (isFilter) drawFilterADSRVisualizer();
-        else drawADSRVisualizer();
     };
 
     const setCursor = (mode) => {
@@ -528,31 +495,21 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false, isFilter =
 
 function initAdsrCanvasDragging() {
     const filterInvert = () => !!state.filterEnvInvert;
-    bindAdsrCanvasDrag('adsrVisualizer', AMP_ADSR_IDS, { isFilter: false });
-    bindAdsrCanvasDrag('kbAdsrVisualizer', AMP_ADSR_IDS, { isFilter: false });
-    bindAdsrCanvasDrag('filterAdsrVisualizer', FILTER_ADSR_IDS, {
-        getInvert: filterInvert,
-        isFilter: true,
-    });
+    bindAdsrCanvasDrag('kbAdsrVisualizer', AMP_ADSR_IDS);
     bindAdsrCanvasDrag('kbFilterAdsrVisualizer', FILTER_ADSR_IDS, {
         getInvert: filterInvert,
-        isFilter: true,
     });
     registerAdsrMappingResolver(resolveAdsrMapping);
 }
 
 function drawADSRVisualizer(options = {}) {
-    paintADSRVisualizer(options);
-    const canvasId = options.canvasId ?? 'adsrVisualizer';
-    if (canvasId === 'adsrVisualizer') {
-        paintADSRVisualizer({ ...options, canvasId: 'kbAdsrVisualizer' });
-    }
+    paintADSRVisualizer({ ...options, canvasId: 'kbAdsrVisualizer' });
 }
 
 
 function drawFilterADSRVisualizer() {
-    const options = {
-        canvasId: 'filterAdsrVisualizer',
+    paintADSRVisualizer({
+        canvasId: 'kbFilterAdsrVisualizer',
         attackId: 'filterAttack',
         decayId: 'filterDecay',
         sustainId: 'filterSustain',
@@ -560,43 +517,20 @@ function drawFilterADSRVisualizer() {
         glowColor: '#00ffff',
         lineColor: '#66ffff',
         invert: !!state.filterEnvInvert,
-    };
-    paintADSRVisualizer(options);
-    paintADSRVisualizer({ ...options, canvasId: 'kbFilterAdsrVisualizer' });
+    });
 }
 
-window.addEventListener('load', function() {
-    setTimeout(() => {
-        drawADSRVisualizer();
-        drawFilterADSRVisualizer();
-        initAdsrCanvasDragging();
-    }, 500);
-});
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAdsrCanvasDragging, { once: true });
-} else {
+function bootAdsrVisualizers() {
+    drawADSRVisualizer();
+    drawFilterADSRVisualizer();
     initAdsrCanvasDragging();
 }
 
-
-document.getElementById('masterTune')?.addEventListener('input', function () {
-    if ((state.isPlaying || state.isArping) && !window.noteVisualizerPreviewActive) {
-        updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
-    }
-});
-
-document.getElementById('octaveSwitch')?.addEventListener('input', function () {
-    if ((state.isPlaying || state.isArping) && !window.noteVisualizerPreviewActive) {
-        updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
-    }
-});
-
-document.getElementById('semitoneSwitch')?.addEventListener('input', function () {
-    if ((state.isPlaying || state.isArping) && !window.noteVisualizerPreviewActive) {
-        updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
-    }
-});
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootAdsrVisualizers, { once: true });
+} else {
+    bootAdsrVisualizers();
+}
 
 function updateNoteVisualizer(totalTune, cents = 0) {
     const noteName = semitonesToNoteName(totalTune, cents);
@@ -613,7 +547,7 @@ function clearNoteVisualizer() {
 export function syncNoteVfdFromPeer(hostId, peerId = 'kbPatternNoteVisualizer') {
     const host = document.getElementById(hostId);
     if (!host || !noteVfdHostIsVisible(host)) return;
-    const peer = document.getElementById(peerId) || document.getElementById('noteVisualizer');
+    const peer = document.getElementById(peerId);
     ensureNoteVfd(host);
     const chars = host.querySelector('.note-vfd-chars');
     if (chars) delete chars.dataset.painted;
@@ -625,29 +559,24 @@ export function syncNoteVfdFromPeer(hostId, peerId = 'kbPatternNoteVisualizer') 
 
 let logoFlickerRunning = false;
 
-function logoOverlays() {
-    return [
-        document.getElementById('logo-overlay'),
-        document.getElementById('kb-logo-overlay'),
-    ].filter(Boolean);
+function logoOverlay() {
+    return document.getElementById('kb-logo-overlay');
 }
 
 function startLogoFlicker() {
-    const overlays = logoOverlays();
-    if (!overlays.length || logoFlickerRunning) return;
+    const overlay = logoOverlay();
+    if (!overlay || logoFlickerRunning) return;
     logoFlickerRunning = true;
 
     function randomFlicker() {
-        const visible = overlays.filter((el) => !el.classList.contains('hidden'));
-        if (!visible.length) {
+        if (overlay.classList.contains('hidden')) {
             logoFlickerRunning = false;
             return;
         }
 
         if (Math.random() > 0.97) {
-            visible.forEach((overlay) => {
-                const logoSvg = overlay.querySelector('svg');
-                if (!logoSvg) return;
+            const logoSvg = overlay.querySelector('svg');
+            if (logoSvg) {
                 logoSvg.classList.add('flicker');
 
                 if (Math.random() > 0.7) {
@@ -669,7 +598,7 @@ function startLogoFlicker() {
                 setTimeout(() => {
                     logoSvg.classList.remove('flicker');
                 }, 150);
-            });
+            }
         }
 
         requestAnimationFrame(randomFlicker);
@@ -680,13 +609,13 @@ function startLogoFlicker() {
 
 /** Hide the logo so the oscilloscope waveform is visible. */
 function hideLogoOverlay() {
-    const overlays = logoOverlays();
-    if (!overlays.length) return;
+    const overlay = logoOverlay();
+    if (!overlay) return;
     if (state.logoDisplayTimeout) {
         clearTimeout(state.logoDisplayTimeout);
         state.logoDisplayTimeout = null;
     }
-    overlays.forEach((el) => el.classList.add('hidden'));
+    overlay.classList.add('hidden');
 }
 
 /**
@@ -694,8 +623,8 @@ function hideLogoOverlay() {
  * @param {number} delayMs - delay before revealing (matches sequencer stop fade)
  */
 function showLogoOverlay(delayMs = 0) {
-    const overlays = logoOverlays();
-    if (!overlays.length) return;
+    const overlay = logoOverlay();
+    if (!overlay) return;
 
     if (state.logoDisplayTimeout) {
         clearTimeout(state.logoDisplayTimeout);
@@ -705,7 +634,7 @@ function showLogoOverlay(delayMs = 0) {
     const reveal = () => {
         // Keep scope visible while sequencer or keyboard voice is active
         if (state.isPlaying || state.keyboardVoiceActive) return;
-        overlays.forEach((el) => el.classList.remove('hidden'));
+        overlay.classList.remove('hidden');
         startLogoFlicker();
         state.logoDisplayTimeout = null;
     };
@@ -719,7 +648,8 @@ function showLogoOverlay(delayMs = 0) {
 
 // Add script to apply CRT flicker randomly
 document.addEventListener('DOMContentLoaded', function() {
-    logoOverlays().forEach((el) => el.classList.remove('hidden'));
+    const overlay = logoOverlay();
+    if (overlay) overlay.classList.remove('hidden');
     startLogoFlicker();
 });
 

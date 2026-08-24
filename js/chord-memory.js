@@ -1,11 +1,11 @@
-import { state, OSC_COUNT } from './state.js?v=114';
+import { state, OSC_COUNT } from './state.js?v=116';
 import { getOscVol, set } from './params.js?v=13';
 import {
     clearHeldNotes,
     intervalsFromHeldNotes,
     polyChordIntervalsFromNotes,
 } from './held-notes.js?v=8';
-import { refreshFilterInputDrive } from './filter-drive.js?v=25';
+import { refreshFilterInputDrive } from './filter-drive.js?v=29';
 
 /** Notes heard during the current Learn gesture (survives staggered key-ups). */
 let learnSessionNotes = [];
@@ -49,7 +49,7 @@ function enableOscillator(oscIndex) {
     if (state.audioContext && state.oscGains[oscIndex]) {
         const vol = getOscVol(oscIndex);
         state.oscGains[oscIndex].gain.setValueAtTime(
-            Number.isFinite(vol) ? vol : 0.33,
+            Number.isFinite(vol) ? vol : 0.25,
             state.audioContext.currentTime,
         );
     }

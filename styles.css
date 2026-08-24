@@ -140,11 +140,12 @@ html {
         display: block;
         width: 100%;
         height: 100%;
-        background: #000;
+        background: transparent;
         margin: 0;
         position: absolute;
         top: 0;
         left: 0;
+        z-index: 2;
     }
     
     /* Add new border overlay style */
@@ -170,6 +171,17 @@ html {
         clip-path: polygon(21% 0, 79% 0, 100% 50%, 79% 100%, 21% 100%, 0% 50%);            
         background: #000;
         overflow: hidden; /* Ensure content is clipped to container shape */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+    .oscilloscope-container::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background: url('assets/oscilloscope-glass.jpg') center / cover no-repeat;
+        opacity: 0.25;
     }
     
     @media (max-width: 768px) {
@@ -193,7 +205,6 @@ html {
         }
         
         /* Don't use 100% dimensions for the oscilloscope itself on mobile */
-        #oscilloscope,
         #kbOscilloscope {
             width: 350px !important; /* Match container dimensions exactly */
             height: 150px !important;
@@ -211,7 +222,6 @@ html {
         }
         
         /* Ensure logo overlay also matches exact dimensions */
-        #logo-overlay,
         #kb-logo-overlay {
             width: 350px !important;
             height: 150px !important;
@@ -221,7 +231,6 @@ html {
     }
     
     /* Logo overlay container */
-    #logo-overlay,
     #kb-logo-overlay {
         position: absolute;
         top: 0;
@@ -237,7 +246,6 @@ html {
         align-items: center;
     }
     
-    #logo-overlay::before,
     #kb-logo-overlay::before {
         content: '';
         position: absolute;
@@ -252,7 +260,6 @@ html {
         z-index: -1;
     }
     
-    #logo-overlay.hidden,
     #kb-logo-overlay.hidden {
         animation: fadeOut 0.5s ease-in-out forwards;
     }
@@ -277,7 +284,6 @@ html {
         91% { filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)); }
     }
 
-    #logo-overlay svg,
     #kb-logo-overlay svg {
         width: 80%;
         max-width: 230px;
@@ -912,9 +918,7 @@ html {
     .midi-mapping-active .keyboard-lfo-strip:hover,
     .midi-mapping-active .pushable:hover:not(#midiMapping):not(#midiLogoToggle),
     .midi-mapping-active #kbAdsrVisualizer:hover,
-    .midi-mapping-active #kbFilterAdsrVisualizer:hover,
-    .midi-mapping-active #adsrVisualizer:hover,
-    .midi-mapping-active #filterAdsrVisualizer:hover {
+    .midi-mapping-active #kbFilterAdsrVisualizer:hover {
         outline: 2px dashed rgba(0, 255, 255, 0.5);
         cursor: pointer;
     }
@@ -1185,16 +1189,6 @@ html {
     fieldset.control-group .control {
         width: 100%; /* Make controls take full width of the group */
         gap: 5px;    /* Keep original gap inside individual controls */
-    }
-    
-    /* Specific adjustments for ADSR visualizer inside group */
-    fieldset.control-group #adsrVisualizer,
-    fieldset.control-group #filterAdsrVisualizer {
-        margin-top: 0; /* Remove default top margin */
-    }
-
-    .filter-env-controls.hidden {
-        display: none;
     }
 
     /* Filter Group Start */
@@ -1507,7 +1501,8 @@ html {
         margin: 0 auto 6px;
         align-self: center;
     }
-    .osc4-engine-switch .osc4-engine-btn {
+    .osc4-engine-switch .osc4-engine-btn,
+    .osc-align-spacer.osc4-engine-switch .ingy6-switch-btn {
         flex: 0 0 auto;
         min-width: 0;
         padding: 3px 7px;
@@ -1516,17 +1511,31 @@ html {
         min-height: 0;
         line-height: 1.1;
     }
-    .osc4-engine-switch .osc4-engine-btn[data-engine="analog"] {
+    .osc4-engine-switch .osc4-engine-btn[data-engine="analog"],
+    .osc-align-spacer.osc4-engine-switch .ingy6-switch-btn:first-child {
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
         border-right-width: 0;
     }
-    .osc4-engine-switch .osc4-engine-btn[data-engine="digital"] {
+    .osc4-engine-switch .osc4-engine-btn[data-engine="digital"],
+    .osc-align-spacer.osc4-engine-switch .ingy6-switch-btn:last-child {
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
     }
-    .keyboard-osc-field[data-osc="0"] .osc4-engine-switch {
+    .keyboard-osc-field[data-osc="0"] .osc4-engine-switch,
+    .keyboard-osc-field[data-osc="1"] .osc4-engine-switch.osc-align-spacer {
         margin-bottom: 8px;
+    }
+    .osc-align-spacer {
+        visibility: hidden;
+        pointer-events: none;
+        user-select: none;
+    }
+    .osc-align-spacer.osc4-engine-switch .ingy6-switch-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
     }
     .osc4-alt-mode-row {
         justify-content: center;
@@ -2129,7 +2138,8 @@ html {
 }
 .keyboard-section.keyboard-off #chromaticKeyboardPanel,
 .keyboard-section.keyboard-off #computerKeyboardPanel,
-.keyboard-section.keyboard-off #chromaticSpaceBarRow {
+.keyboard-section.keyboard-off #chromaticSpaceBarRow,
+.keyboard-section.keyboard-off .computer-keyboard-toggle-row {
     display: none !important;
 }
 .keyboard-toolbar {
@@ -2246,9 +2256,12 @@ html {
     z-index: 1;
 }
 .keyboard-section .keyboard-arp-panel > legend,
-.keyboard-section .keyboard-mod-matrix > legend {
+.keyboard-section .keyboard-mod-matrix > legend,
+.keyboard-section .keyboard-transport-fieldset > legend,
+.keyboard-section .keyboard-write-fieldset > legend {
     margin-left: 10px;
     margin-right: 0;
+    align-self: flex-start;
 }
 .keyboard-section .legend-hex {
     --hex-bg: #050805;
@@ -2564,6 +2577,10 @@ html {
 .keyboard-play-row {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+        "arp arp mod mod"
+        "strips strips mod mod";
     gap: 8px;
     align-items: stretch;
     width: 100%;
@@ -2572,16 +2589,18 @@ html {
     box-sizing: border-box;
     overflow: visible;
 }
-.keyboard-play-bend-lfo {
-    grid-column: span 2;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
+.keyboard-arp-panel {
+    grid-area: arp;
+}
+.keyboard-play-strips {
+    grid-area: strips;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
     min-width: 0;
-    height: 100%;
-    box-sizing: border-box;
-    overflow: visible;
+    min-height: 0;
+    width: 100%;
+    align-items: stretch;
 }
 .keyboard-play-slot {
     display: flex;
@@ -2682,19 +2701,26 @@ html {
     padding: 0 8px;
     font-size: 9px;
 }
-.keyboard-play-strips {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    flex: 1 1 auto;
-    min-height: 0;
-    align-items: stretch;
-}
 .keyboard-play-strips .keyboard-pitch-bend,
 .keyboard-play-strips .keyboard-lfo-strip {
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
+}
+@media (max-width: 900px) {
+    .keyboard-play-row {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+        grid-template-areas:
+            "arp"
+            "mod"
+            "strips";
+    }
+    .keyboard-arp-panel,
+    .keyboard-mod-matrix,
+    .keyboard-play-strips {
+        grid-column: 1 / -1;
+    }
 }
 
 /* --- Reusable collapsible fieldset (legend + arrow) --- */
@@ -2756,6 +2782,21 @@ html {
     display: none;
 }
 
+@media (min-width: 769px) {
+    .collapsible-mobile-only > .collapsible-legend .collapsible-arrow {
+        display: none;
+    }
+    .collapsible-mobile-only > .collapsible-legend .collapsible-toggle {
+        pointer-events: none;
+        cursor: default;
+    }
+    .keyboard-section .collapsible-mobile-only .collapsible-toggle.legend-hex:hover,
+    .keyboard-section .collapsible-mobile-only .collapsible-toggle.legend-hex:focus-visible {
+        --hex-stroke: #00aa00;
+        color: #00aa00;
+    }
+}
+
 /* Collapsible full-width sections under Transport / Write */
 .keyboard-steps-fieldset,
 .keyboard-tuning-fieldset,
@@ -2783,12 +2824,18 @@ html {
     overflow: hidden;
     max-width: 100%;
 }
+#keyboardMixerFieldset > .collapsible-panel {
+    overflow: hidden;
+    overflow-x: auto;
+}
 .keyboard-steps-fieldset.collapsed,
 .keyboard-tuning-fieldset.collapsed,
 .keyboard-automation-fieldset.collapsed,
 .keyboard-synth-fieldset.collapsed,
 .keyboard-xy-fieldset.collapsed,
-.keyboard-controls-fieldset.collapsed {
+.keyboard-controls-fieldset.collapsed,
+.keyboard-arp-panel.collapsed,
+.keyboard-mod-matrix.collapsed {
     padding-bottom: 0;
 }
 .keyboard-tuning-body {
@@ -3110,21 +3157,86 @@ html {
 .keyboard-synth-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: 1fr;
+    grid-template-rows: auto auto auto;
     gap: 6px;
     width: 100%;
     min-width: 0;
     align-items: stretch;
-    overflow: hidden;
+    overflow: visible;
 }
-.keyboard-synth-col--oscs {
-    grid-column: 1;
-    grid-row: 1;
+.keyboard-osc-group {
+    grid-column: 1 / 3;
+    grid-row: 1 / 4;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0;
+    padding: 8px 8px 10px;
+    width: 100%;
     min-width: 0;
+    min-height: 0;
     height: 100%;
+    box-sizing: border-box;
 }
-.keyboard-synth-col-stack--2,
-.keyboard-synth-col-stack--3 {
+.keyboard-osc-group > legend,
+.keyboard-filter-section > legend,
+.keyboard-amp-section > legend {
+    font-family: 'Michroma', sans-serif;
+    color: #00aa00;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 0 6px;
+    width: fit-content;
+    margin: 0 auto;
+}
+.keyboard-osc-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: 6px;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+}
+.keyboard-osc-field[data-osc="0"] { grid-column: 1; grid-row: 1; }
+.keyboard-osc-field[data-osc="1"] { grid-column: 2; grid-row: 1; }
+.keyboard-osc-field[data-osc="2"] { grid-column: 1; grid-row: 2; }
+.keyboard-osc-field[data-osc="3"] { grid-column: 2; grid-row: 2; }
+.keyboard-filter-section,
+.keyboard-amp-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0;
+    padding: 8px 8px 10px;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    box-sizing: border-box;
+}
+.keyboard-filter-section {
+    grid-column: 3 / 5;
+    grid-row: 1;
+}
+.keyboard-amp-section {
+    grid-column: 3 / 5;
+    grid-row: 2;
+}
+.keyboard-filter-section-grid,
+.keyboard-amp-section-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+}
+.keyboard-synth-col-stack--bottom {
+    grid-column: 1;
+    grid-row: 3;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -3133,19 +3245,21 @@ html {
     align-self: stretch;
     box-sizing: border-box;
 }
-.keyboard-synth-col-stack--2 {
-    grid-column: 2;
-    grid-row: 1;
-}
-.keyboard-synth-col-stack--3 {
-    grid-column: 3;
-    grid-row: 1;
-}
-.keyboard-synth-col-stack--2 > .keyboard-perf-fieldset,
-.keyboard-synth-col-stack--3 > .keyboard-perf-fieldset {
-    flex: 1 1 0;
+.keyboard-synth-col-stack--bottom > .keyboard-perf-fieldset {
+    flex: 1 1 auto;
     min-height: 0;
     margin: 0;
+}
+.keyboard-synth-panel .keyboard-noise-group {
+    grid-column: 2;
+    grid-row: 3;
+}
+.keyboard-synth-grid > .keyboard-perf-fieldset,
+.keyboard-osc-grid > .keyboard-perf-fieldset,
+.keyboard-filter-section-grid > .keyboard-perf-fieldset,
+.keyboard-amp-section-grid > .keyboard-perf-fieldset {
+    height: 100%;
+    min-height: 0;
 }
 .keyboard-synth-panel .keyboard-filter-env-group {
     display: flex;
@@ -3173,8 +3287,7 @@ html {
     overflow: visible;
     box-sizing: border-box;
 }
-.keyboard-vol-env-field,
-.keyboard-filter-env-field {
+.keyboard-vol-env-field {
     margin: 0;
     padding: 6px 6px 8px;
     width: 100%;
@@ -3187,7 +3300,7 @@ html {
     flex: 1 1 auto;
 }
 .keyboard-vol-env-field legend,
-.keyboard-filter-env-field legend {
+.keyboard-synth-panel .keyboard-filter-env-group > legend {
     font-family: 'Michroma', sans-serif;
     color: #00aa00;
     font-size: 9px;
@@ -3205,30 +3318,6 @@ html {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
-}
-.keyboard-synth-col--effects {
-    grid-column: 4;
-    grid-row: 1;
-    min-width: 0;
-    height: 100%;
-}
-.keyboard-osc-group {
-    margin: 0;
-    padding: 6px 8px 8px;
-    width: 100%;
-    min-width: 0;
-    height: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-}
-.keyboard-osc-rows {
-    display: grid;
-    grid-template-rows: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
 }
 .keyboard-unison-field {
     margin: 6px 0 0;
@@ -3342,7 +3431,7 @@ html {
 .keyboard-synth-panel .keyboard-filter-knob-group {
     display: flex;
     flex-direction: column;
-    justify-content: stretch;
+    justify-content: flex-start;
     align-items: center;
     gap: 4px;
     width: 100%;
@@ -3355,28 +3444,32 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 6px;
     width: 100%;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
 }
-.keyboard-filter-cutoff-knob {
+.keyboard-filter-cutoff-knob,
+.keyboard-volume-knob {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: auto;
     gap: 2px;
 }
-.keyboard-filter-cutoff-knob .synth-knob-label {
+.keyboard-filter-cutoff-knob .synth-knob-label,
+.keyboard-volume-knob .synth-knob-label {
     font-size: 9px;
     letter-spacing: 0.02em;
 }
-.keyboard-filter-cutoff-knob .synth-knob-dial {
+.keyboard-filter-cutoff-knob .synth-knob-dial,
+.keyboard-volume-knob .synth-knob-dial {
     width: 88px;
     height: 88px;
 }
-.keyboard-filter-cutoff-knob .synth-knob-indicator {
+.keyboard-filter-cutoff-knob .synth-knob-indicator,
+.keyboard-volume-knob .synth-knob-indicator {
     top: 8px;
     height: 18px;
     transform-origin: 50% 36px;
@@ -3519,15 +3612,11 @@ html {
     max-width: 220px;
 }
 /* Custom green/black hand cursors for envelope corner drag */
-#adsrVisualizer.adsr-cursor-grab,
 #kbAdsrVisualizer.adsr-cursor-grab,
-#filterAdsrVisualizer.adsr-cursor-grab,
 #kbFilterAdsrVisualizer.adsr-cursor-grab {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='%23000000' stroke='%2300ff00' stroke-width='0.9' d='M12 3.5c-.8 0-1.5.7-1.5 1.5v10.2l-.8-.9a1.6 1.6 0 0 0-2.4 2.1l3.2 3.7c1.2 1.4 3 2.2 4.8 2.2h3.2c2.3 0 4.2-1.7 4.5-4l.7-6.2a1.5 1.5 0 0 0-3-.3l-.3 2.5V6a1.5 1.5 0 0 0-3 0v5.5V6a1.5 1.5 0 0 0-3 0v5.5V5a1.5 1.5 0 0 0-3 0v6.5V5c0-.8-.7-1.5-1.5-1.5z'/%3E%3C/svg%3E") 10 3, grab;
 }
-#adsrVisualizer.adsr-cursor-grabbing,
 #kbAdsrVisualizer.adsr-cursor-grabbing,
-#filterAdsrVisualizer.adsr-cursor-grabbing,
 #kbFilterAdsrVisualizer.adsr-cursor-grabbing {
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='%23000000' stroke='%2300ff00' stroke-width='0.9' d='M11.5 8.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5v3.2h1V7c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5v4.7h1V7.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5v5.2l.4-1.1a1.5 1.5 0 0 1 2.8 1.1l-1.2 3.2c-.7 1.9-2.5 3.1-4.5 3.1h-3.1c-2.1 0-4-1.1-5-2.9l-2.2-3.7a1.5 1.5 0 0 1 2.5-1.6l1.3 1.7V8.5z'/%3E%3C/svg%3E") 10 8, grabbing;
 }
@@ -3594,19 +3683,27 @@ body.acid-mode .kb-step-ratch,
     opacity: 0.35;
     pointer-events: none;
 }
+/* D-lanes keep RATCH (Plaits retrigger) even though they were built as mod rows */
+.berlin-row-drum .berlin-step-ratch {
+    opacity: 1;
+    pointer-events: auto;
+}
 body.acid-mode .berlin-step-ratch {
     opacity: 0.35;
     pointer-events: none;
 }
 .keyboard-volume-field {
     margin: 0;
-    padding: 6px 6px 8px;
+    padding: 6px 8px 8px;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    min-height: 0;
 }
 .keyboard-volume-field legend {
     font-family: 'Michroma', sans-serif;
@@ -3616,25 +3713,25 @@ body.acid-mode .berlin-step-ratch {
     width: fit-content;
     margin: 0 auto;
 }
-.keyboard-synth-panel {
+.keyboard-synth-panel,
+.keyboard-effects-panel {
     --kb-toggle-width: 46px; /* matches one Chorus I/II button in a 96px row */
 }
 
 /* All synth-panel On/Off toggles share Chorus I/II width */
-.keyboard-synth-panel .kb-chorus-toggle,
 .keyboard-synth-panel .kb-osc-toggle,
 .keyboard-synth-panel .kb-noise-toggle,
 .keyboard-synth-panel .keyboard-noise-toggle-row .kb-step-btn,
 .keyboard-synth-panel .kb-filter-env-toggle,
 .keyboard-synth-panel .kb-filter-env-invert,
 .keyboard-synth-panel .keyboard-unison-toggle-row .kb-step-btn,
-.keyboard-synth-panel .keyboard-effects-comp-toggle-row .kb-step-btn,
-.keyboard-synth-panel .keyboard-effects-ringmod-toggle-row .kb-step-btn,
-.keyboard-synth-panel .keyboard-effects-dist-toggle-row .kb-step-btn,
-.keyboard-synth-panel .keyboard-effects-bitcrush-toggle-row .kb-step-btn,
-.keyboard-synth-panel .keyboard-effects-delay-toggle-row .kb-step-btn,
-.keyboard-synth-panel .keyboard-effects-reverb-toggle-row .kb-step-btn,
-.keyboard-synth-panel .keyboard-phase-reset-controls .kb-step-btn {
+.keyboard-synth-panel .keyboard-phase-reset-controls .kb-step-btn,
+.keyboard-effects-panel .kb-chorus-toggle,
+.keyboard-effects-panel .keyboard-effects-ringmod-toggle-row .kb-step-btn,
+.keyboard-effects-panel .keyboard-effects-dist-toggle-row .kb-step-btn,
+.keyboard-effects-panel .keyboard-effects-bitcrush-toggle-row .kb-step-btn,
+.keyboard-effects-panel .keyboard-effects-delay-toggle-row .kb-step-btn,
+.keyboard-effects-panel .keyboard-effects-reverb-toggle-row .kb-step-btn {
     flex: 0 0 var(--kb-toggle-width);
     width: var(--kb-toggle-width);
     min-width: var(--kb-toggle-width);
@@ -3643,48 +3740,37 @@ body.acid-mode .berlin-step-ratch {
     box-sizing: border-box;
 }
 
-.keyboard-synth-panel .keyboard-effects-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
+.keyboard-effects-panel {
+    padding: 8px 8px 10px;
     width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 6px 8px 8px;
+    min-width: 0;
     box-sizing: border-box;
-    min-height: 0;
 }
-/* Desktop: Effects stays open — no collapse chrome */
-@media (min-width: 769px) {
-    .keyboard-synth-panel .keyboard-effects-group.collapsible-fieldset > .collapsible-legend .collapsible-arrow {
-        display: none;
-    }
-    .keyboard-synth-panel .keyboard-effects-group.collapsible-fieldset > .collapsible-legend .collapsible-toggle {
-        cursor: default;
-        pointer-events: none;
-    }
-}
-.keyboard-synth-panel .keyboard-effects-group .synth-knob {
+.keyboard-effects-panel .synth-knob {
     width: auto;
 }
 .keyboard-effects-controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 0.9fr)) minmax(0, 1.15fr) minmax(0, 2.2fr);
+    align-items: stretch;
     gap: 6px;
     width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
+    min-width: 0;
+}
+@media (max-width: 1100px) {
+    .keyboard-effects-controls {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .keyboard-effects-reverb-field {
+        grid-column: 1 / -1;
+    }
 }
 .keyboard-effects-dist-field,
 .keyboard-effects-bitcrush-field,
 .keyboard-effects-ringmod-field,
 .keyboard-effects-chorus-field,
 .keyboard-effects-delay-field,
-.keyboard-effects-reverb-field,
-.keyboard-effects-comp-field {
+.keyboard-effects-reverb-field {
     margin: 0;
     padding: 6px 8px 8px;
     width: 100%;
@@ -3699,8 +3785,7 @@ body.acid-mode .berlin-step-ratch {
 .keyboard-effects-ringmod-field legend,
 .keyboard-effects-chorus-field legend,
 .keyboard-effects-delay-field legend,
-.keyboard-effects-reverb-field legend,
-.keyboard-effects-comp-field legend {
+.keyboard-effects-reverb-field legend {
     font-family: 'Michroma', sans-serif;
     color: #00aa00;
     font-size: 9px;
@@ -3786,6 +3871,37 @@ body.acid-mode .berlin-step-ratch {
     gap: 4px;
     width: 100%;
 }
+.keyboard-effects-sc-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 170, 0, 0.22);
+}
+.keyboard-effects-sc-src {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.keyboard-effects-sc-src select {
+    min-width: 72px;
+    font-size: 9px;
+}
+.keyboard-effects-sc-controls .synth-knob {
+    position: relative;
+}
+#kbScTimeSync {
+    min-width: 36px;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 8px;
+    margin-top: 2px;
+}
 .keyboard-effects-reverb-knob-row {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3863,7 +3979,7 @@ body.acid-mode .berlin-step-ratch {
     box-sizing: border-box;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    overflow: hidden;
+    overflow: visible;
 }
 .keyboard-osc-field legend {
     font-family: 'Michroma', sans-serif;
@@ -3882,7 +3998,7 @@ body.acid-mode .berlin-step-ratch {
     width: 100%;
     min-width: 0;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 .keyboard-osc-knob-row {
     display: flex;
@@ -4167,6 +4283,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     appearance: none;
     display: block;
     width: 40px;
+    min-width: 0;
     max-width: 100%;
     height: 12px;
     margin: 1px auto 0;
@@ -4410,6 +4527,223 @@ body.berlin-mode .pattern-bank-select {
     gap: 6px;
     padding: 2px 0 6px;
 }
+.berlin-drum-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 8px 2px;
+    box-sizing: border-box;
+}
+.berlin-drum-bar[hidden],
+.berlin-drum-toolbar[hidden] {
+    display: none !important;
+}
+body:not(.berlin-mode) .berlin-drum-bar {
+    display: none !important;
+}
+.berlin-drum-bar .berlin-drum-toggle,
+.berlin-drum-bar .berlin-drum-filt {
+    min-width: 88px;
+    height: 22px;
+    padding: 0 10px;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+}
+.berlin-drum-bar .berlin-drum-filt.is-grey,
+.berlin-drum-bar .berlin-drum-filt:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+.berlin-drum-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 4px 0 2px;
+    padding: 6px 8px 4px;
+    border: 1px solid color-mix(in srgb, var(--berlin-color, #00aa00) 55%, transparent);
+    border-radius: 4px;
+    min-width: 0;
+}
+/* Same segmented chrome as OSC 1; phosphor follows lane --berlin-color */
+.berlin-drum-engine-switch {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    align-items: center;
+    flex: 0 0 auto;
+}
+.berlin-drum-engine-switch .berlin-drum-engine-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    padding: 3px 7px;
+    font-size: 7px;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+    color: var(--berlin-color, #00aa00);
+    border-color: var(--berlin-color, #00aa00);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #00aa00) 22%, transparent);
+}
+.berlin-drum-engine-switch .berlin-drum-engine-btn[data-engine="analog"] {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right-width: 0;
+}
+.berlin-drum-engine-switch .berlin-drum-engine-btn[data-engine="digital"] {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+.berlin-drum-engine-switch .berlin-drum-engine-btn:hover,
+.berlin-drum-engine-switch .berlin-drum-engine-btn:focus-visible,
+.berlin-drum-engine-switch .berlin-drum-engine-btn.off:hover,
+.berlin-drum-engine-switch .berlin-drum-engine-btn.off:focus-visible {
+    border-color: color-mix(in srgb, var(--berlin-color, #00aa00) 55%, #fff);
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--berlin-color, #00aa00) 18%, #1a1a1a) 0%,
+        color-mix(in srgb, var(--berlin-color, #00aa00) 10%, #0d0d0d) 100%
+    );
+}
+.berlin-drum-engine-switch .berlin-drum-engine-btn:not(.off),
+.berlin-drum-engine-switch .berlin-drum-engine-btn:active,
+.berlin-drum-engine-switch .berlin-drum-engine-btn:not(.off):hover,
+.berlin-drum-engine-switch .berlin-drum-engine-btn:not(.off):focus-visible {
+    color: #000;
+    border-color: var(--berlin-color, #00ff00);
+    background: var(--berlin-color, #00ff00);
+    box-shadow: none;
+}
+.berlin-drum-engine-switch .berlin-drum-engine-btn.off {
+    color: var(--berlin-color, #00aa00);
+    border-color: var(--berlin-color, #00aa00);
+    background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #00aa00) 22%, transparent);
+}
+.berlin-drum-toolbar.is-analog .berlin-drum-switches {
+    display: none !important;
+}
+.berlin-drum-tones {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 6px;
+}
+.berlin-drum-knob {
+    width: auto;
+    gap: 1px;
+}
+/* Knob dial owns the control; keep range input for bindKnob only */
+.berlin-drum-knob input[type="range"].berlin-drum-tone-input {
+    display: none;
+}
+.berlin-drum-knob.is-disabled {
+    opacity: 0.38;
+    filter: grayscale(0.55);
+    pointer-events: none;
+}
+.berlin-drum-knob.is-disabled .berlin-drum-dial {
+    pointer-events: none;
+}
+.berlin-drum-knob .synth-knob-label {
+    font-size: 6px;
+    letter-spacing: 0.04em;
+    height: 8px;
+    color: var(--berlin-color, #00aa00);
+}
+.berlin-drum-knob .synth-knob-value {
+    font-size: 7px;
+    height: 8px;
+    min-width: 2.2em;
+    color: color-mix(in srgb, var(--berlin-color, #00aa00) 80%, #fff);
+}
+.berlin-drum-knob .synth-knob-dial-wrap {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+}
+.berlin-drum-knob .synth-knob-dial {
+    width: 30px;
+    height: 30px;
+    border-color: var(--berlin-color, #00aa00);
+}
+.berlin-drum-knob .synth-knob-indicator {
+    background: var(--berlin-color, #00aa00);
+    transform-origin: 50% 12px;
+}
+.berlin-drum-switches {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.berlin-drum-switches .ingy6-switch-btn {
+    min-width: 36px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 7px;
+    color: var(--berlin-color, #00aa00);
+    border-color: var(--berlin-color, #00aa00);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #00aa00) 22%, transparent);
+}
+.berlin-drum-switches .ingy6-switch-btn:hover,
+.berlin-drum-switches .ingy6-switch-btn:focus-visible,
+.berlin-drum-switches .ingy6-switch-btn.off:hover,
+.berlin-drum-switches .ingy6-switch-btn.off:focus-visible {
+    border-color: color-mix(in srgb, var(--berlin-color, #00aa00) 55%, #fff);
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--berlin-color, #00aa00) 18%, #1a1a1a) 0%,
+        color-mix(in srgb, var(--berlin-color, #00aa00) 10%, #0d0d0d) 100%
+    );
+}
+.berlin-drum-switches .ingy6-switch-btn:not(.off),
+.berlin-drum-switches .ingy6-switch-btn:active,
+.berlin-drum-switches .ingy6-switch-btn:not(.off):hover,
+.berlin-drum-switches .ingy6-switch-btn:not(.off):focus-visible {
+    color: #000;
+    border-color: var(--berlin-color, #00ff00);
+    background: var(--berlin-color, #00ff00);
+    box-shadow: none;
+}
+.berlin-drum-switches .ingy6-switch-btn.off {
+    color: var(--berlin-color, #00aa00);
+    border-color: var(--berlin-color, #00aa00);
+    background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #00aa00) 22%, transparent);
+}
+.berlin-drum-switches .ingy6-switch-btn.is-grey,
+.berlin-drum-switches .ingy6-switch-btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+.berlin-drum-model-ctl select {
+    min-width: 88px;
+    font-size: 8px;
+}
+.berlin-row-drum legend .legend-hex.berlin-row-enable {
+    letter-spacing: 0.08em;
+}
+@media (max-width: 768px) {
+    .berlin-drum-toolbar {
+        gap: 6px;
+        padding: 4px 6px;
+    }
+    .berlin-drum-knob .synth-knob-dial-wrap {
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+    }
+    .berlin-drum-knob .synth-knob-dial {
+        width: 26px;
+        height: 26px;
+    }
+}
 /* Untitled frame around Berlin logos + bank + steps — chrome only in Berlin mode */
 .keyboard-section fieldset.berlin-dream-frame {
     margin: 0;
@@ -4487,6 +4821,30 @@ body.berlin-mode .keyboard-section fieldset.berlin-dream-frame {
     background: var(--berlin-color, #00aa00);
     color: #000;
 }
+.berlin-row-ms {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+.berlin-row .berlin-row-mute,
+.keyboard-drum-row .berlin-row-solo {
+    flex: 0 0 auto;
+    min-width: 34px;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 7px;
+}
+.berlin-row .berlin-row-mute:not(.off),
+.keyboard-drum-row .berlin-row-solo:not(.off) {
+    background: var(--berlin-color, #00aa00);
+    color: #000;
+    border-color: var(--berlin-color, #00aa00);
+}
+.berlin-row.is-muted .berlin-row-mute,
+.berlin-row.is-solo .berlin-row-solo {
+    opacity: 1;
+}
 .berlin-row legend {
     --hex-h: 20px;
     --field-border: 1px;
@@ -4507,7 +4865,7 @@ body.berlin-mode .keyboard-section fieldset.berlin-dream-frame {
     color: var(--berlin-color, #00aa00);
     font-family: 'Michroma', sans-serif;
     font-size: 9px;
-    letter-spacing: 1px;
+    letter-spacing: 0.08em;
     cursor: pointer;
     margin: 0;
     background-color: transparent;
@@ -5279,6 +5637,79 @@ canvas.vfd-glass {
     padding: 4px 0 2px;
     box-sizing: border-box;
 }
+.keyboard-drum-dock {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 6px auto 0;
+    padding: 4px 0 2px;
+    box-sizing: border-box;
+}
+.keyboard-drum-dock-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: visible;
+    padding-top: 6px;
+}
+.keyboard-drum-dock-bar #kbDrumMode.pushable.keyboard-drum-mode-toggle {
+    flex: 0 0 auto;
+    width: min(168px, 100%);
+    max-width: 100%;
+    height: 44px;
+    box-sizing: border-box;
+}
+.keyboard-drum-dock-bar #kbDrumMode.pushable.keyboard-drum-mode-toggle .front {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+#kbDrumFilt[hidden],
+body:not(.drum-mode) #kbDrumFilt,
+#kbDrumHide[hidden],
+body:not(.drum-mode) #kbDrumHide {
+    display: none !important;
+}
+.keyboard-drum-dock-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+#kbDrumFilt.ingy6-switch-btn,
+#kbDrumHide.ingy6-switch-btn {
+    flex: 0 0 auto;
+    min-width: 46px;
+}
+#keyboardDrumLanes[hidden],
+body:not(.drum-mode) #keyboardDrumLanes {
+    display: none !important;
+}
+.keyboard-drum-lanes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+.keyboard-drum-row {
+    margin: 0;
+    padding: 4px 6px 6px;
+}
+.keyboard-drum-row .berlin-drum-toolbar {
+    flex-wrap: wrap;
+}
 .keyboard-pattern-octave {
     display: flex;
     flex-direction: row;
@@ -5380,21 +5811,60 @@ canvas.vfd-glass {
 #berlinToggle.pushable.keyboard-berlin-toggle,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle,
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle,
-#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle {
+#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle,
+#computerKeyboardToggle.pushable.keyboard-computer-keys-toggle {
     background: rgba(0, 170, 0, 0.5);
     width: 168px;
     height: 44px;
     flex: 0 0 168px;
     margin: 0;
 }
+/* Column dock: flex-basis is height. Never use the 168px face width as basis. */
+#kbDrumMode.pushable.keyboard-drum-mode-toggle {
+    background: rgba(0, 170, 0, 0.5);
+    width: min(168px, 100%);
+    max-width: 100%;
+    height: 44px;
+    flex: 0 0 auto;
+    margin: 0 auto;
+    align-self: center;
+    box-sizing: border-box;
+}
+.computer-keyboard-toggle-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 8px 2px;
+}
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle .front,
 #berlinToggle.pushable.keyboard-berlin-toggle .front,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle .front,
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .front,
-#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .front {
+#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .front,
+#computerKeyboardToggle.pushable.keyboard-computer-keys-toggle .front {
     box-sizing: border-box;
     width: 168px;
     height: 44px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, #333, #000);
+    font-family: 'Michroma', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    text-align: center;
+    color: #ff0000;
+}
+#kbDrumMode.pushable.keyboard-drum-mode-toggle .front {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
     padding: 0 10px;
     display: flex;
     align-items: center;
@@ -5419,7 +5889,9 @@ canvas.vfd-glass {
 #berlinToggle.pushable.keyboard-berlin-toggle.off .front,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle.off .front,
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.off .front,
-#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle.off .front {
+#keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle.off .front,
+#computerKeyboardToggle.pushable.keyboard-computer-keys-toggle.off .front,
+#kbDrumMode.pushable.keyboard-drum-mode-toggle.off .front {
     color: #ff0000;
 }
 /* Multitudes: grey lockup placeholder (unwired).
@@ -5448,7 +5920,9 @@ canvas.vfd-glass {
 #kbAcidStripToggle.pushable .kb-mode-off-label,
 #berlinToggle.pushable .kb-mode-off-label,
 #keyboardPolyToggle.pushable .kb-mode-off-label,
-#keyboardMultitudesToggle.pushable .kb-mode-off-label {
+#keyboardMultitudesToggle.pushable .kb-mode-off-label,
+#computerKeyboardToggle.pushable .kb-mode-off-label,
+#kbDrumMode.pushable .kb-mode-off-label {
     display: none;
     font-family: 'Michroma', sans-serif;
     font-size: 10px;
@@ -5461,13 +5935,34 @@ canvas.vfd-glass {
 #kbAcidStripToggle.pushable:not(.off) .kb-mode-off-label,
 #berlinToggle.pushable:not(.off) .kb-mode-off-label,
 #keyboardPolyToggle.pushable:not(.off) .kb-mode-off-label,
-#keyboardMultitudesToggle.pushable:not(.off) .kb-mode-off-label {
+#keyboardMultitudesToggle.pushable:not(.off) .kb-mode-off-label,
+#computerKeyboardToggle.pushable:not(.off) .kb-mode-off-label,
+#kbDrumMode.pushable:not(.off) .kb-mode-off-label {
     display: block;
 }
 #kbAcidStripToggle.pushable:not(.off) .kb-acid-mode-label,
 #berlinToggle.pushable:not(.off) .kb-berlin-label,
 #keyboardPolyToggle.pushable:not(.off) .kb-poly-mode-label,
-#keyboardMultitudesToggle.pushable:not(.off) .kb-multitudes-label {
+#keyboardMultitudesToggle.pushable:not(.off) .kb-multitudes-label,
+#computerKeyboardToggle.pushable:not(.off) .kb-model-m-label,
+#kbDrumMode.pushable:not(.off) .kb-drum-mode-label {
+    display: none;
+}
+/* Computer keys: grey KBM lockup when off */
+#computerKeyboardToggle.pushable.keyboard-computer-keys-toggle .kb-model-m-label {
+    display: block;
+    /* Match INGY-6 / Chord Mem / Multitudes height at 148px cap */
+    height: calc(148px * 92.13 / 432);
+    width: auto;
+    max-width: 92%;
+    aspect-ratio: 235.49 / 100.35;
+    color: #aaa;
+    background-color: currentColor;
+    -webkit-mask: url('SVG/kbm.svg') center / 100% 100% no-repeat;
+    mask: url('SVG/kbm.svg') center / 100% 100% no-repeat;
+    pointer-events: none;
+}
+#computerKeyboardToggle.pushable.keyboard-computer-keys-toggle:not(.off) .kb-model-m-label {
     display: none;
 }
 /* Poly Mode: grey INGY-6 lockup when off */
@@ -5521,6 +6016,23 @@ canvas.vfd-glass {
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle:not(.off) .kb-acid-mode-label {
     display: none;
 }
+/* Drum Mode: grey lockup when off — same button as Acid / Berlin; logo fits the face */
+#kbDrumMode.pushable.keyboard-drum-mode-toggle .kb-drum-mode-label {
+    display: block;
+    /* viewBox 62.72 × 8.93 */
+    width: 88%;
+    max-width: min(140px, 100%);
+    aspect-ratio: 62.72 / 8.93;
+    height: auto;
+    color: #aaa;
+    background-color: currentColor;
+    -webkit-mask: url('SVG/drum-mode-logo.svg') center / contain no-repeat;
+    mask: url('SVG/drum-mode-logo.svg') center / contain no-repeat;
+    pointer-events: none;
+}
+#kbDrumMode.pushable.keyboard-drum-mode-toggle:not(.off) .kb-drum-mode-label {
+    display: none;
+}
 /* Chord Mem: grey SVG when idle; flashing green rec dot while learning */
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .kb-chord-mem-label {
     display: none;
@@ -5570,6 +6082,8 @@ canvas.vfd-glass {
 .keyboard-acid-strip-controls {
     width: 100%;
     max-width: 920px;
+    container-type: inline-size;
+    container-name: acid-strip;
 }
 .keyboard-acid-strip-controls[hidden] {
     display: none !important;
@@ -5679,6 +6193,125 @@ canvas.vfd-glass {
     align-self: center;
     padding: 0 4px;
     box-sizing: border-box;
+}
+/* Narrow: logos on the rule ends, wave centered; knobs one row underneath */
+@container acid-strip (max-width: 840px) {
+    .keyboard-acid-strip-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        grid-template-areas:
+            "ingy wave acid"
+            "knobs knobs knobs";
+        align-items: center;
+        justify-content: stretch;
+        row-gap: 8px;
+        column-gap: 8px;
+        padding: 12px 8px 10px;
+    }
+    .keyboard-acid-strip-brand-col,
+    .keyboard-acid-strip-brand-col--acid {
+        display: contents;
+    }
+    .keyboard-acid-logo--ingy {
+        grid-area: ingy;
+        justify-self: start;
+        align-self: center;
+    }
+    .keyboard-acid-logo {
+        --acid-logo-cap: clamp(12px, 4.8cqi, 20px);
+    }
+    .keyboard-acid-osc-wave.keyboard-osc-wave {
+        grid-area: wave;
+        justify-self: center;
+        width: clamp(48px, 18cqi, 64px);
+    }
+    .keyboard-acid-logo--acid {
+        grid-area: acid;
+        justify-self: end;
+        align-self: center;
+        margin-bottom: 0;
+    }
+    .keyboard-acid-strip-panel::before {
+        display: none;
+    }
+    .keyboard-acid-strip-knobs {
+        grid-area: knobs;
+        flex: none;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        justify-content: center;
+        justify-content: safe center;
+        margin-top: 2px;
+        padding: 8px 0 0;
+        border-top: 1px solid rgba(0, 170, 0, 0.55);
+        scrollbar-color: #00aa00 #111;
+        scrollbar-width: thin;
+    }
+    .keyboard-acid-strip-knobs .acid-303-knob.synth-knob {
+        flex: 0 0 auto;
+        width: clamp(58px, calc(100% / 7), 72px);
+    }
+}
+@media (max-width: 840px) {
+    .keyboard-acid-strip-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        grid-template-areas:
+            "ingy wave acid"
+            "knobs knobs knobs";
+        align-items: center;
+        justify-content: stretch;
+        row-gap: 8px;
+        column-gap: 8px;
+        padding: 12px 8px 10px;
+    }
+    .keyboard-acid-strip-brand-col,
+    .keyboard-acid-strip-brand-col--acid {
+        display: contents;
+    }
+    .keyboard-acid-logo--ingy {
+        grid-area: ingy;
+        justify-self: start;
+        align-self: center;
+    }
+    .keyboard-acid-logo {
+        --acid-logo-cap: clamp(12px, 4.8cqi, 20px);
+    }
+    .keyboard-acid-osc-wave.keyboard-osc-wave {
+        grid-area: wave;
+        justify-self: center;
+        width: clamp(48px, 18cqi, 64px);
+    }
+    .keyboard-acid-logo--acid {
+        grid-area: acid;
+        justify-self: end;
+        align-self: center;
+        margin-bottom: 0;
+    }
+    .keyboard-acid-strip-panel::before {
+        display: none;
+    }
+    .keyboard-acid-strip-knobs {
+        grid-area: knobs;
+        flex: none;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        justify-content: center;
+        justify-content: safe center;
+        margin-top: 2px;
+        padding: 8px 0 0;
+        border-top: 1px solid rgba(0, 170, 0, 0.55);
+        scrollbar-color: #00aa00 #111;
+        scrollbar-width: thin;
+    }
+    .keyboard-acid-strip-knobs .acid-303-knob.synth-knob {
+        flex: 0 0 auto;
+        width: clamp(58px, calc(100% / 7), 72px);
+    }
 }
 .acid-303-knob.synth-knob {
     /* Fixed rows: label / dial / value — every knob shares the same baselines */
@@ -6337,6 +6970,13 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     width: fit-content;
     margin: 0 auto;
 }
+.keyboard-transport-fieldset > legend,
+.keyboard-write-fieldset > legend {
+    margin-left: 10px;
+    margin-right: 0;
+    align-self: flex-start;
+    text-align: left;
+}
 #kbStartStop.pushable.keyboard-start-stop {
     background: rgba(0, 170, 0, 0.5);
     width: 44px;
@@ -6774,30 +7414,35 @@ body.write-mode-on .keyboard-step {
     --lfo: 0;
 }
 .keyboard-mod-matrix {
-    grid-column: span 2;
+    grid-area: mod;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 0;
+    container-type: inline-size;
+    container-name: mod-matrix;
 }
 .keyboard-mod-matrix-body {
     display: flex;
     flex-direction: row;
-    align-items: stretch;
-    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: clamp(4px, 1.4cqi, 8px);
     min-width: 0;
     width: 100%;
     box-sizing: border-box;
-    padding: 8px 6px 6px;
+    padding: clamp(4px, 1.4cqi, 8px);
     border: none;
     background: transparent;
     box-shadow: none;
+    overflow: hidden;
 }
 .keyboard-mod-matrix-left {
     display: flex;
     flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 6px;
+    gap: clamp(4px, 1.2cqi, 6px);
     flex: 0 1 auto;
     min-width: 0;
 }
@@ -6806,11 +7451,12 @@ body.write-mode-on .keyboard-step {
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    min-width: 0;
 }
 .keyboard-mod-matrix-rate .kb-step-btn {
-    min-width: 2.6rem;
-    font-size: 0.62rem;
+    min-width: 0;
+    font-size: clamp(0.5rem, 1.8cqi, 0.62rem);
     padding: 0.12rem 0.3rem;
     line-height: 1.1;
 }
@@ -6820,6 +7466,7 @@ body.write-mode-on .keyboard-step {
     align-items: stretch;
     gap: 4px;
     min-width: 0;
+    flex: 0 1 auto;
 }
 .keyboard-mod-matrix-lfo-toggles {
     display: flex;
@@ -6833,8 +7480,8 @@ body.write-mode-on .keyboard-step {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: center;
     gap: 2px;
-    width: 96px;
-    min-width: 72px;
+    width: clamp(56px, 18cqi, 96px);
+    min-width: 0;
     margin: 0;
     padding: 2px;
     border: 1px solid #00aa00;
@@ -6844,52 +7491,63 @@ body.write-mode-on .keyboard-step {
     overflow: hidden;
 }
 .keyboard-lfo-wave .keyboard-osc-wave-btn {
-    height: 20px;
+    height: clamp(14px, 3.8cqi, 20px);
 }
 .keyboard-mod-matrix-left .kb-step-btn {
     flex: 1 1 0;
     min-width: 0;
-    height: 28px;
-    padding: 0 6px;
-    font-size: 10px;
+    height: clamp(18px, 5cqi, 28px);
+    padding: 0 4px;
+    font-size: clamp(7px, 1.8cqi, 10px);
 }
 .keyboard-mod-matrix-left #kbLfoRetrigger {
     min-width: 0;
 }
 .keyboard-mod-matrix-dests {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-rows: auto;
+    justify-items: center;
+    align-items: end;
+    gap: 0 clamp(2px, 0.8cqi, 4px);
     flex: 1 1 0;
     min-width: 0;
-}
-.keyboard-mod-matrix-knob {
-    flex: 1 1 0;
     width: auto;
+}
+.keyboard-mod-matrix .keyboard-mod-matrix-knob {
+    --mod-dial: clamp(22px, 6.8cqi, 40px);
+    flex: none;
+    width: 100%;
     min-width: 0;
     max-width: 56px;
 }
+.keyboard-mod-matrix-rate .keyboard-mod-matrix-knob {
+    width: auto;
+    max-width: 56px;
+}
 .keyboard-mod-matrix-knob .synth-knob-dial-wrap {
-    width: 40px;
-    height: 40px;
+    width: var(--mod-dial, 40px);
+    height: var(--mod-dial, 40px);
+    flex: 0 0 var(--mod-dial, 40px);
 }
 .keyboard-mod-matrix-knob .synth-knob-dial {
-    width: 36px;
-    height: 36px;
+    width: calc(var(--mod-dial, 40px) - 4px);
+    height: calc(var(--mod-dial, 40px) - 4px);
 }
 .keyboard-mod-matrix-knob .synth-knob-indicator {
-    top: 4px;
-    height: 10px;
-    transform-origin: 50% 14px;
+    top: calc(var(--mod-dial, 40px) * 0.11);
+    height: calc(var(--mod-dial, 40px) * 0.28);
+    transform-origin: 50% calc(var(--mod-dial, 40px) * 0.39);
 }
 .keyboard-mod-matrix-knob .synth-knob-label {
-    font-size: 9px;
+    font-size: clamp(6px, 1.7cqi, 9px);
+    height: auto;
+    min-height: 0;
+    white-space: nowrap;
 }
 .keyboard-mod-matrix-rate .synth-knob-value {
-    font-size: 9px;
+    font-size: clamp(6px, 1.7cqi, 9px);
     line-height: 1;
     min-height: 0.9em;
     color: #00cc00;
@@ -7091,22 +7749,26 @@ body.write-mode-on .keyboard-step {
     align-items: center;
     justify-content: center;
 }
-.chromatic-keyboard-panel::-webkit-scrollbar {
+.chromatic-keyboard-panel::-webkit-scrollbar,
+.keyboard-mixer-panel::-webkit-scrollbar {
     height: 14px;
 }
-.chromatic-keyboard-panel::-webkit-scrollbar-track {
+.chromatic-keyboard-panel::-webkit-scrollbar-track,
+.keyboard-mixer-panel::-webkit-scrollbar-track {
     background: #111;
     border: 1px solid #333;
     border-radius: 7px;
     margin: 0 18%;
 }
-.chromatic-keyboard-panel::-webkit-scrollbar-thumb {
+.chromatic-keyboard-panel::-webkit-scrollbar-thumb,
+.keyboard-mixer-panel::-webkit-scrollbar-thumb {
     background: linear-gradient(to bottom, #00cc00, #006600);
     border-radius: 7px;
     border: 2px solid #111;
     min-width: 24px;
 }
-.chromatic-keyboard-panel::-webkit-scrollbar-thumb:hover {
+.chromatic-keyboard-panel::-webkit-scrollbar-thumb:hover,
+.keyboard-mixer-panel::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(to bottom, #00ff00, #00aa00);
 }
 .chromatic-keyboard {
@@ -7243,49 +7905,90 @@ body.write-mode-on .keyboard-step {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 4px;
     }
-    /* Flatten wrappers so sections share one 2-col grid */
-    .keyboard-synth-col--oscs,
-    .keyboard-osc-rows,
-    .keyboard-synth-col-stack--2,
-    .keyboard-synth-col-stack--3,
-    .keyboard-synth-panel .keyboard-amp-group,
-    .keyboard-amp-controls {
-        display: contents;
+    .mixer-fader {
+        height: 132px;
+        --mixer-cap-h: 26px;
     }
-    .keyboard-osc-group > legend {
+    .mixer-fader-cap {
+        height: var(--mixer-cap-h);
+    }
+    .mixer-strip {
+        min-width: 56px;
+        padding: 4px 3px 6px;
+    }
+    .mixer-strip-comp {
+        min-width: 92px;
+        max-width: 108px;
+    }
+    /* Oscillators box full-width; filter/amp wrap below */
+    .keyboard-osc-group {
         grid-column: 1 / -1;
-        width: fit-content;
-        margin: 0 auto;
-    }
-    .keyboard-amp-group > legend {
-        display: none;
+        grid-row: 1;
+        height: auto;
+        padding: 6px 6px 8px;
     }
     .keyboard-osc-field[data-osc="0"] {
         grid-column: 1;
-        grid-row: 2;
+        grid-row: 1;
     }
     .keyboard-osc-field[data-osc="1"] {
         grid-column: 2;
-        grid-row: 2;
+        grid-row: 1;
     }
     .keyboard-osc-field[data-osc="2"] {
         grid-column: 1;
-        grid-row: 3;
+        grid-row: 2;
     }
     .keyboard-osc-field[data-osc="3"] {
         grid-column: 2;
+        grid-row: 2;
+    }
+    .keyboard-filter-section {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        height: auto;
+        padding: 6px 6px 8px;
+    }
+    .keyboard-amp-section {
+        grid-column: 1 / -1;
         grid-row: 3;
+        height: auto;
+        padding: 6px 6px 8px;
+    }
+    .keyboard-filter-knob-group {
+        height: auto;
+        align-self: stretch;
+        padding: 4px 4px 6px;
+    }
+    .keyboard-synth-panel .keyboard-filter-env-group {
+        height: auto;
+        align-self: stretch;
+        padding: 4px 4px 6px;
+    }
+    .keyboard-volume-field {
+        height: auto;
+        align-self: stretch;
+        padding: 4px 4px 6px;
+        justify-content: flex-start;
+    }
+    .keyboard-vol-env-field {
+        height: auto;
+        align-self: stretch;
+        padding: 4px 3px 6px;
+    }
+    .keyboard-synth-col-stack--bottom {
+        grid-column: 1;
+        grid-row: 3;
+        height: auto;
     }
     .keyboard-synth-panel .keyboard-noise-group {
-        grid-column: 1 / -1;
-        grid-row: 4;
+        grid-column: 2;
+        grid-row: 3;
         height: auto;
         align-self: stretch;
         padding: 3px 3px 5px;
     }
     .keyboard-unison-field {
-        grid-column: 1 / -1;
-        grid-row: 5;
         height: auto;
         align-self: stretch;
         margin: 0;
@@ -7306,8 +8009,6 @@ body.write-mode-on .keyboard-step {
         border-color: #00aa00;
     }
     .keyboard-phase-reset-field {
-        grid-column: 1 / -1;
-        grid-row: 5;
         height: auto;
         align-self: stretch;
         margin: 0;
@@ -7316,102 +8017,43 @@ body.write-mode-on .keyboard-step {
     .keyboard-phase-reset-field legend {
         font-size: 7px;
     }
-    .keyboard-filter-knob-group {
-        grid-column: 1;
-        grid-row: 6;
-        height: auto;
-        align-self: stretch;
-        padding: 4px 4px 6px;
-    }
-    .keyboard-synth-panel .keyboard-filter-env-group {
-        grid-column: 2;
-        grid-row: 6;
-        height: auto;
-        align-self: stretch;
-        padding: 4px 4px 6px;
-    }
-    .keyboard-vol-env-field {
-        grid-column: 1;
-        grid-row: 7;
-        height: auto;
-        align-self: stretch;
-        padding: 4px 3px 6px;
-    }
-    .keyboard-volume-field {
-        grid-column: 2;
-        grid-row: 7;
-        height: auto;
-        align-self: stretch;
-        padding: 4px 4px 6px;
-        justify-content: center;
-    }
-    .keyboard-synth-panel .keyboard-effects-group {
-        grid-column: 1 / -1;
-        grid-row: 8;
-        display: flex;
-        flex-direction: column;
-        height: auto;
-        width: 100%;
-        min-width: 0;
-        padding: 4px 6px 6px;
-        box-sizing: border-box;
-    }
-    .keyboard-synth-panel .keyboard-effects-group > .collapsible-legend .collapsible-toggle {
-        font-size: 8px;
-    }
-    .keyboard-synth-panel .keyboard-effects-group.collapsed {
-        padding-bottom: 4px;
-    }
-    .keyboard-synth-panel .keyboard-effects-controls {
-        display: grid;
+    .keyboard-effects-controls {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 4px;
-        width: 100%;
-        min-width: 0;
-        align-items: stretch;
     }
-    .keyboard-synth-panel .keyboard-effects-controls.collapsible-panel.hidden {
-        display: none;
-    }
-    .keyboard-synth-panel .keyboard-effects-ringmod-field {
+    .keyboard-effects-ringmod-field {
         grid-column: 1;
         grid-row: 1;
         height: auto;
         align-self: stretch;
     }
-    .keyboard-synth-panel .keyboard-effects-dist-field {
+    .keyboard-effects-dist-field {
         grid-column: 2;
         grid-row: 1;
         height: auto;
         align-self: stretch;
     }
-    .keyboard-synth-panel .keyboard-effects-bitcrush-field {
+    .keyboard-effects-bitcrush-field {
         grid-column: 1;
         grid-row: 2;
         height: auto;
         align-self: stretch;
     }
-    .keyboard-synth-panel .keyboard-effects-chorus-field {
+    .keyboard-effects-chorus-field {
         grid-column: 2;
         grid-row: 2;
         height: auto;
         align-self: stretch;
     }
-    .keyboard-synth-panel .keyboard-effects-delay-field {
+    .keyboard-effects-delay-field {
         grid-column: 1 / -1;
         grid-row: 3;
         height: auto;
         align-self: stretch;
     }
-    .keyboard-synth-panel .keyboard-effects-reverb-field {
+    .keyboard-effects-reverb-field {
         grid-column: 1 / -1;
         grid-row: 4;
-        height: auto;
-        align-self: stretch;
-    }
-    .keyboard-synth-panel .keyboard-effects-comp-field {
-        grid-column: 1 / -1;
-        grid-row: 5;
         height: auto;
         align-self: stretch;
     }
@@ -7420,8 +8062,7 @@ body.write-mode-on .keyboard-step {
     .keyboard-effects-ringmod-field,
     .keyboard-effects-chorus-field,
     .keyboard-effects-delay-field,
-    .keyboard-effects-reverb-field,
-    .keyboard-effects-comp-field {
+    .keyboard-effects-reverb-field {
         padding: 4px 4px 6px;
     }
     .keyboard-effects-dist-field legend,
@@ -7429,8 +8070,7 @@ body.write-mode-on .keyboard-step {
     .keyboard-effects-ringmod-field legend,
     .keyboard-effects-chorus-field legend,
     .keyboard-effects-delay-field legend,
-    .keyboard-effects-reverb-field legend,
-    .keyboard-effects-comp-field legend {
+    .keyboard-effects-reverb-field legend {
         font-size: 7px;
     }
     .keyboard-effects-delay-controls {
@@ -7456,11 +8096,13 @@ body.write-mode-on .keyboard-step {
         height: 7px;
         transform-origin: 50% 10px;
     }
-    .keyboard-filter-cutoff-knob .synth-knob-dial {
+    .keyboard-filter-cutoff-knob .synth-knob-dial,
+    .keyboard-volume-knob .synth-knob-dial {
         width: 56px;
         height: 56px;
     }
-    .keyboard-filter-cutoff-knob .synth-knob-indicator {
+    .keyboard-filter-cutoff-knob .synth-knob-indicator,
+    .keyboard-volume-knob .synth-knob-indicator {
         top: 5px;
         height: 12px;
         transform-origin: 50% 23px;
@@ -7484,11 +8126,8 @@ body.write-mode-on .keyboard-step {
         height: 7px;
         transform-origin: 50% 10px;
     }
-    .keyboard-filter-env-field {
+    .keyboard-synth-panel .keyboard-filter-env-group {
         padding: 4px 3px 6px;
-    }
-    .keyboard-filter-env-field legend {
-        font-size: 7px;
     }
     .kb-step-btn.kb-filter-env-toggle,
     .kb-step-btn.kb-filter-env-invert {
@@ -7614,28 +8253,46 @@ body.write-mode-on .keyboard-step {
     #berlinToggle.pushable.keyboard-berlin-toggle,
     #keyboardPolyToggle.pushable.keyboard-poly-toggle,
     #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle,
-    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle {
-        width: 132px;
+    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle,
+    #computerKeyboardToggle.pushable.keyboard-computer-keys-toggle,
+    #kbDrumMode.pushable.keyboard-drum-mode-toggle {
+        width: min(132px, 100%);
         height: 36px;
-        flex-basis: 132px;
+        flex: 0 0 auto;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .keyboard-drum-dock-bar #kbDrumMode.pushable.keyboard-drum-mode-toggle {
+        width: min(132px, 100%);
+        height: 36px;
+        flex: 0 0 auto;
     }
     #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle .front,
     #berlinToggle.pushable.keyboard-berlin-toggle .front,
     #keyboardPolyToggle.pushable.keyboard-poly-toggle .front,
     #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle .front,
-    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .front {
-        width: 132px;
-        height: 36px;
+    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .front,
+    #computerKeyboardToggle.pushable.keyboard-computer-keys-toggle .front,
+    #kbDrumMode.pushable.keyboard-drum-mode-toggle .front {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
         padding: 0 8px;
         font-size: 8px;
+        box-sizing: border-box;
     }
     /* Match peer logo height at ~92% of 132px front (~22.8px) */
-    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .kb-multitudes-label {
+    #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle .kb-multitudes-label,
+    #computerKeyboardToggle.pushable.keyboard-computer-keys-toggle .kb-model-m-label {
         height: calc(132px * 0.92 * 92.13 / 432);
     }
     .acid-303-knob.synth-knob {
         width: 58px;
         grid-template-rows: 14px 52px 10px;
+    }
+    .keyboard-acid-strip-knobs .acid-303-knob.synth-knob {
+        flex: 0 0 auto;
+        width: clamp(58px, calc(100% / 7), 72px);
     }
     .acid-303-knob .synth-knob-dial-wrap {
         width: 52px;
@@ -7661,7 +8318,7 @@ body.write-mode-on .keyboard-step {
         height: 5px;
     }
     .keyboard-acid-logo {
-        --acid-logo-cap: 20px;
+        --acid-logo-cap: clamp(12px, 4.8cqi, 20px);
     }
     #kbWrite.pushable.keyboard-write {
         width: 58px;
@@ -7783,12 +8440,20 @@ body.write-mode-on .keyboard-step {
         font-size: 5px;
     }
     .keyboard-play-row {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+        grid-template-areas:
+            "arp"
+            "mod"
+            "strips";
         gap: 6px;
         padding: 0 4px;
         margin-bottom: 4px;
     }
-    .keyboard-play-bend-lfo {
-        gap: 4px;
+    .keyboard-arp-panel,
+    .keyboard-mod-matrix,
+    .keyboard-play-strips {
+        grid-column: 1 / -1;
     }
     .keyboard-play-slot {
         padding: 3px 2px 1px;
@@ -7806,33 +8471,15 @@ body.write-mode-on .keyboard-step {
         height: 36px;
         min-height: 36px;
     }
-    .keyboard-mod-matrix-body {
+    .keyboard-filter-knob-row,
+    .keyboard-osc-knob-row,
+    .osc4-tone-knob-row {
         flex-wrap: wrap;
-        gap: 6px;
-        padding: 4px;
     }
-    .keyboard-mod-matrix-left {
-        width: 100%;
-        justify-content: space-between;
-    }
-    .keyboard-mod-matrix-lfo-shape {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-    .keyboard-lfo-wave {
-        width: 100%;
-        flex: none;
-    }
-    .keyboard-mod-matrix-dests {
-        width: 100%;
-    }
-    .keyboard-mod-matrix-knob .synth-knob-dial-wrap {
-        width: 36px;
-        height: 36px;
-    }
-    .keyboard-mod-matrix-knob .synth-knob-dial {
-        width: 32px;
-        height: 32px;
+    .keyboard-vol-env-knob-row,
+    .keyboard-filter-env-knob-row,
+    .keyboard-effects-reverb-knob-row {
+        grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
     }
     .synth-knob-dial {
         width: 36px;
@@ -7866,10 +8513,36 @@ body.write-mode-on .keyboard-step {
     user-select: none;
     -webkit-user-select: none;
 }
-.computer-keyboard-board {
+.computer-keyboard-case {
     --ckb-key-size: 48px;
     --ckb-gap: 6px;
     --ckb-travel: 4px;
+    --ckb-case-pad-x: 16px;
+    /* IBM oval is ~1.25u wide; bezel ~1.75× badge so it sits in the top margin */
+    --ckb-logo-w: calc(var(--ckb-key-size) * 1.25);
+    --ckb-logo-h: calc(var(--ckb-logo-w) * 229.42 / 323.9);
+    position: relative;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 16px var(--ckb-case-pad-x);
+    background: #050505;
+    border: 1px solid #00aa00;
+    border-radius: 10px;
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 170, 0, 0.15),
+        0 0 12px rgba(0, 170, 0, 0.12);
+}
+.ckb-model-m-logo {
+    flex: 0 0 var(--ckb-logo-w);
+    width: var(--ckb-logo-w);
+    height: var(--ckb-logo-h);
+    align-self: center;
+    background: url('SVG/kbm-logo.svg') center / 100% 100% no-repeat;
+    pointer-events: none;
+}
+.computer-keyboard-board {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -7878,15 +8551,9 @@ body.write-mode-on .keyboard-step {
     max-width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
-    padding: 14px 16px 16px;
-    background: #050505;
-    border: 1px solid #00aa00;
-    border-radius: 10px;
-    box-shadow:
-        inset 0 0 0 1px rgba(0, 170, 0, 0.15),
-        0 0 12px rgba(0, 170, 0, 0.12);
+    padding: 0;
 }
-.keyboard-section .computer-keyboard-board {
+.keyboard-section .computer-keyboard-case {
     --ckb-key-size: 56px;
     --ckb-gap: 7px;
 }
@@ -8098,6 +8765,12 @@ body.write-mode-on .keyboard-step {
 }
 
 @media (max-width: 768px) {
+    .computer-keyboard-case {
+        --ckb-key-size: 40px;
+        --ckb-gap: 4px;
+        --ckb-travel: 3px;
+        --ckb-case-pad-x: 12px;
+    }
     .computer-keyboard-board {
         --ckb-key-size: 40px;
         --ckb-gap: 4px;
@@ -8162,7 +8835,7 @@ body.poly-mode {
     box-sizing: border-box;
     color: #00ff00;
 }
-/* Chord Memory + Multitudes far left; Poly Mode centered; logo far right */
+/* Multitudes far left; Poly Mode centered; logo far right */
 .ingy6-brand {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -9511,9 +10184,422 @@ body.multitudes-mode {
     color: #eee;
     cursor: pointer;
 }
-.speech-rec-modal__actions .button-primary {
-    background: #a22;
-    border-color: #c44;
+.keyboard-mixer-panel,
+#keyboardMixerFieldset > .collapsible-panel.keyboard-mixer-panel {
+    padding: 8px 8px 14px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-color: #00aa00 #111;
+    scrollbar-gutter: stable both-edges;
+    scrollbar-width: auto;
+}
+.mixer-desk {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 8px;
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
+}
+.mixer-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    box-sizing: border-box;
+    flex: 1 0 auto;
+}
+.mixer-group[data-group="osc"] {
+    flex: 4 0 248px;
+    min-width: 248px;
+}
+.mixer-group[data-group="noise"] {
+    flex: 1 0 62px;
+    min-width: 62px;
+}
+.mixer-group[data-group="drums"] {
+    flex: 3 0 186px;
+    min-width: 186px;
+}
+.mixer-group--master {
+    flex: 1.2 0 72px;
+    min-width: 72px;
+}
+.mixer-group--comp {
+    flex: 0 0 108px;
+    min-width: 108px;
+}
+.mixer-group:not(:last-child) {
+    padding-right: 6px;
+    border-right: 1px solid rgba(0, 170, 0, 0.4);
+}
+.mixer-group-title {
+    display: block;
+    font-family: 'Michroma', sans-serif;
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    color: #00aa00;
+    text-align: center;
+    line-height: 1;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+.mixer-group-title--blank {
+    visibility: hidden;
+}
+.mixer-group-strips {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    flex: 1 1 auto;
+}
+.mixer-strip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex: 1 0 56px;
+    min-width: 56px;
+    padding: 6px 4px 8px;
+    border: 1px solid #00aa00;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+.mixer-strip-master {
+    flex: 1 0 68px;
+    min-width: 68px;
+    border-color: #00ff00;
+}
+.mixer-name {
+    font-family: 'Michroma', sans-serif;
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    color: #00aa00;
+    line-height: 1;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mixer-strip-master .mixer-name {
+    color: #00ff00;
+}
+.mixer-pan-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    width: 100%;
+    min-height: 32px;
+}
+.mixer-pan-row--blank {
+    visibility: hidden;
+    pointer-events: none;
+}
+.mixer-fader {
+    --mixer-cap-h: 32px;
+    display: grid;
+    grid-template-columns: 1fr 22px 1fr;
+    column-gap: 2px;
+    align-items: stretch;
+    width: 100%;
+    height: 168px;
+    flex: 0 0 auto;
+    order: 4;
+}
+.mixer-fader-slot {
+    grid-column: 2;
+    position: relative;
+    width: 22px;
+    height: 100%;
+    box-sizing: border-box;
+    touch-action: none;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.mixer-fader-track {
+    position: absolute;
+    left: 50%;
+    top: 4px;
+    bottom: 4px;
+    width: 5px;
+    margin-left: -2.5px;
+    z-index: 1;
+    border-radius: 1px;
+    background:
+        linear-gradient(
+            to right,
+            #020302 0%,
+            #0a0f0a 35%,
+            #151a15 50%,
+            #0a0f0a 65%,
+            #020302 100%
+        );
+    box-shadow:
+        inset 1px 0 0 rgba(0, 0, 0, 0.85),
+        inset -1px 0 0 rgba(0, 255, 0, 0.1),
+        inset 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.mixer-fader-track::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    margin-left: -0.5px;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(180, 190, 180, 0.3) 20%,
+        rgba(180, 190, 180, 0.18) 80%,
+        transparent 100%
+    );
+    pointer-events: none;
+}
+/* Chunky cap; horizontal hash is the value pointer (aligns with ticks). */
+.mixer-fader-cap {
+    position: absolute;
+    left: 50%;
+    width: 22px;
+    height: var(--mixer-cap-h);
+    margin-left: -11px;
+    top: 0;
+    z-index: 2;
+    border-radius: 2px;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            #222 0px,
+            #222 1px,
+            #0c0c0c 1px,
+            #0c0c0c 2px
+        );
+    box-shadow:
+        0 2px 3px rgba(0, 0, 0, 0.9),
+        0 0 0 1px #000,
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.65);
+}
+.mixer-fader-cap::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 5px;
+    margin-top: -2.5px;
+    background: #0a0a0a;
+    pointer-events: none;
+}
+.mixer-fader-cap::after {
+    content: '';
+    position: absolute;
+    left: 1px;
+    right: 1px;
+    top: 50%;
+    height: 2px;
+    margin-top: -1px;
+    background: #00ff00;
+    box-shadow: 0 0 3px rgba(0, 255, 0, 0.45);
+    pointer-events: none;
+}
+body .mixer-level {
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+body .mixer-level::-webkit-slider-runnable-track,
+body .mixer-level::-moz-range-track {
+    background: transparent;
+    border: none;
+}
+body .mixer-level::-webkit-slider-thumb,
+body .mixer-level::-moz-range-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: none;
+}
+.mixer-fader-scale {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-family: 'Michroma', sans-serif;
+    font-size: 6px;
+    line-height: 1;
+    color: #00aa00;
+    padding: calc(var(--mixer-cap-h) / 2) 0;
+    box-sizing: border-box;
+    min-width: 0;
+    justify-self: start;
+}
+.mixer-fader-scale span:nth-child(3) {
+    color: #00ff00;
+}
+.mixer-level-value {
+    order: 5;
+    display: block;
+    width: 100%;
+    font-family: 'Michroma', sans-serif;
+    font-size: 7px;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: #00ff00;
+    text-align: center;
+    min-height: 8px;
+}
+.mixer-btns {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    width: 100%;
+    order: 3;
+}
+.mixer-btns--blank {
+    visibility: hidden;
+    pointer-events: none;
+    min-height: 18px;
+}
+.mixer-strip .kb-step-btn {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    max-width: 18px;
+    padding: 0;
+    box-sizing: border-box;
+}
+.mixer-strip-comp {
+    --kb-toggle-width: 46px;
+    min-width: 92px;
+    max-width: 108px;
+    flex: 0 0 auto;
+    gap: 6px;
+    justify-content: flex-start;
+}
+.mixer-strip-comp .mixer-name {
+    text-align: center;
+    white-space: normal;
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+}
+/* Same chrome as Effects On/Off (Chorus-width toggles). */
+.mixer-strip-comp > .kb-step-btn.mixer-comp-on,
+.mixer-strip-comp > .kb-step-btn.mixer-sc-btn {
+    flex: 0 0 auto;
+    width: var(--kb-toggle-width);
+    min-width: var(--kb-toggle-width);
+    max-width: var(--kb-toggle-width);
+    height: auto;
+    padding: 4px 10px;
+    box-sizing: border-box;
+    font-size: 7px;
+    line-height: 1;
+    white-space: nowrap;
+}
+.mixer-comp-rule {
+    display: block;
+    width: 100%;
+    margin: 2px 0;
+    border: 0;
+    border-top: 1px solid rgba(0, 170, 0, 0.4);
+    height: 0;
+}
+.mixer-sc-src {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+.mixer-sc-src-label {
+    font-family: 'Michroma', sans-serif;
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    color: #00aa00;
+    text-transform: uppercase;
+    line-height: 1;
+}
+.mixer-sc-src select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    font-family: 'Michroma', sans-serif;
+    font-size: 8px;
+    color: #00ff00;
+    background: #111;
+    border: 1px solid #00aa00;
+    border-radius: 3px;
+    padding: 4px 4px;
+    box-sizing: border-box;
+}
+.mixer-sc-src select:disabled {
+    opacity: 0.45;
+}
+.mixer-sc-src select:focus-visible {
+    outline: 1px solid #00ff00;
+    outline-offset: 1px;
+}
+.mixer-strip-comp .synth-knob {
+    width: 100%;
+    align-items: center;
+}
+.mixer-strip-comp .keyboard-effects-knob .synth-knob-dial-wrap {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+}
+.mixer-strip-comp .keyboard-effects-knob .synth-knob-dial {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+.mixer-strip-comp .keyboard-effects-knob .synth-knob-indicator {
+    top: 4px;
+    height: 8px;
+    transform-origin: 50% 12px;
+}
+.mixer-strip-comp #kbScTimeSync {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 36px;
+    max-width: none;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 8px;
+    margin-top: 2px;
+    white-space: nowrap;
 }
 .speech-rec-modal__actions .button:disabled {
     opacity: 0.45;

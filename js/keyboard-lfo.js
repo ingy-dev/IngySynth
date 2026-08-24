@@ -2,7 +2,7 @@
 // RATE dial is mode-aware (Hz / Sync) — wired in lfo-rate.js.
 
 import { getString, set, subscribe, toggle, wireToggle } from './params.js?v=13';
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 
 const WAVEFORMS = [
     {

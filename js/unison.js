@@ -1,11 +1,11 @@
 // Global unison stacks for the phase-reset oscillator path.
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=13';
-import { createOscSource, softStartVoiceGain, fadeStopOsc } from './osc-source.js?v=98';
+import { createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=121';
 
-const ALLOWED_VOICES = [3, 5, 7];
+const ALLOWED_VOICES = [3];
 
 function bentFromBase(baseFreq) {
     const ratio = Math.pow(2, (state.pitchBendSemitones || 0) / 12);
@@ -99,6 +99,7 @@ export function spawnOscStack(oscIndex, baseFreq, startTime, {
             oscIndex,
             wave,
             frequency: freq,
+            pooled: true,
         });
         try {
             osc.frequency.value = freq;
@@ -115,7 +116,8 @@ export function spawnOscStack(oscIndex, baseFreq, startTime, {
         gain.connect(connectTarget);
         osc.gainNode = gain;
 
-        osc.start(oscStart);
+        if (osc.isWavetable) osc.start(oscStart);
+        else startAnalogOsc(osc, oscStart);
         softStartVoiceGain(gain.gain, voiceVol, gainRampStart, {
             wavetable: !!osc.isWavetable,
             triggered: !!osc.isTriggered,

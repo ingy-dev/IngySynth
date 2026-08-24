@@ -1,14 +1,14 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
-import { state } from './state.js?v=114';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=263';
-import { setCollapsibleExpanded } from './collapsible.js?v=74';
-import { bindKnob } from './knobs.js?v=122';
-import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=19';
-import { forceNoteOff } from './voice.js?v=130';
-import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=69';
+import { state } from './state.js?v=116';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=301';
+import { setCollapsibleExpanded } from './collapsible.js?v=75';
+import { bindKnob } from './knobs.js?v=124';
+import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=20';
+import { forceNoteOff } from './voice.js?v=138';
+import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=80';
 import { getNumber, set, subscribe } from './params.js?v=13';
-import { getLiveStep } from './pattern-bank.js?v=12';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=29';
+import { getLiveStep } from './pattern-bank.js?v=15';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=36';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8
@@ -228,6 +228,7 @@ function syncArpButtonOff() {
 const WRITE_VIEW_PANEL_IDS = [
     'keyboardStepsFieldset',
     'keyboardSynthFieldset',
+    'keyboardMixerFieldset',
     'keyboardXyFieldset',
     'keyboardAutomationFieldset',
 ];
@@ -249,6 +250,7 @@ function applyWriteTemporaryView() {
     state.keyboardStepsExpanded = true;
     setCollapsibleExpanded(document.getElementById('keyboardStepsFieldset'), true);
     setCollapsibleExpanded(document.getElementById('keyboardSynthFieldset'), false);
+    setCollapsibleExpanded(document.getElementById('keyboardMixerFieldset'), false);
     setCollapsibleExpanded(document.getElementById('keyboardXyFieldset'), false);
     setCollapsibleExpanded(document.getElementById('keyboardAutomationFieldset'), false);
 }

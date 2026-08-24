@@ -11,7 +11,7 @@ export const state = {
     oscillators: [],
     oscGains: [],
     oscPanners: [],                    // StereoPannerNode per OSC (shared mono/spawn path)
-    oscTunes: [0, 0, 0, 0],
+    oscTunes: [0, -12, 0, 0],
     filter: undefined,
     // Pre-filter headroom: pad → soft-clip → filter → makeup (keeps high-Q stable)
     filterInputPad: undefined,
@@ -49,7 +49,7 @@ export const state = {
     masterGain: undefined,
     compressor: undefined,
     analyser: undefined,
-    oscStates: [true, true, true, false], // OSC 4 Off on load
+    oscStates: [true, true, false, false], // OSC 1+2 On; OSC 3+4 Off on load
     // OSC 1 digital engine (wavetable | fm | …)
     osc4Wavetable: false,
     osc4Model: 'wavetable',
@@ -193,6 +193,18 @@ export const state = {
     berlinLoopAnchor: 0,               // audio time the master loop last wrapped
     berlinOscVoices: [],               // independent per-osc amp voices while Berlin runs
     berlinSharedPathArmed: false,      // envelope open + main oscs muted for shared-filter CV
+    berlinDrumMode: false,             // global Drum Mode (D1–D3 spawn on Play)
+    berlinDrumLanesHidden: false,      // hide D-lane UI only; audio still runs
+    berlinDrumFilt: false,             // drums through shared filter (default off)
+    berlinDrum: [],                    // 3 × { engine, model, tune, harmonics, morphX, morphY, alt, trigPatched, vol, pan }
+    berlinDrumVoices: [],              // independent drum hits (Plaits or analog 808)
+    berlinDrumPanners: [],             // StereoPannerNode × 3 (not oscPanners)
+    drumPatterns: [],                  // 3 × dedicated D-lane patterns (not P6–P8)
+    drumPlayheads: [],                 // playhead × 3 for D1–D3
+    scSourcePlayhead: undefined,       // extra playhead when SC SRC is an oscillator
+    scDucker: undefined,               // GainNode after envelope, before distInput
+    drumFxInput: undefined,            // post-envelope pad into distortion (Plaits FILT off)
+    analogDrumInput: undefined,        // post-distortion pad into bitcrusher (analog FILT off)
 
     // Chorus effect nodes
     chorusDryGain: undefined,

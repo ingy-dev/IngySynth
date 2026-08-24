@@ -1,21 +1,21 @@
 // Shift Pattern: rotate active step content left/right within stepCount.
 // `pattern.steps[]` is the source; hydrate paints the hidden bus + stage strip.
 
-import { state } from './state.js?v=114';
-import { refreshStepTuneReadouts } from './sequencer.js?v=263';
+import { state } from './state.js?v=116';
+import { refreshStepTuneReadouts } from './sequencer.js?v=301';
 import {
     syncAllKeyboardStepButtonsFromMain,
     syncAllKeyboardStepFinesFromMain,
-} from './keyboard-steps.js?v=116';
-import { setWriteCursor } from './pattern-write.js?v=103';
-import { rotateAutomationLanes } from './automation.js?v=44';
+} from './keyboard-steps.js?v=121';
+import { setWriteCursor } from './pattern-write.js?v=105';
+import { rotateAutomationLanes } from './automation.js?v=50';
 import { getNumber } from './params.js?v=13';
 import {
     cloneStep,
     getPattern,
     hydratePatternToDom,
     STEP_SLOTS,
-} from './pattern-bank.js?v=12';
+} from './pattern-bank.js?v=15';
 
 function stepCount() {
     const n = Math.round(getNumber('stepCount', 8));

@@ -1,9 +1,9 @@
 // Stage MIDI learn: pick a visible widget, store the canonical range/button.
 // Pointer capture runs in mapping mode so knobs/strips do not scrub while learning.
 
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { keyFromElement } from './params.js?v=13';
-import { getParam, isCatalogKey } from './param-catalog.js?v=1';
+import { getParam, isCatalogKey } from './param-catalog.js?v=2';
 
 const IGNORE_IDS = new Set([
     'midiMapping',
@@ -23,6 +23,10 @@ const KB_BUTTON_TO_MAIN = {
     kbDelayToggle: 'delayToggle',
     kbReverbToggle: 'reverbToggle',
     kbCompToggle: 'compToggle',
+    kbScToggle: 'scToggle',
+    kbDrumMode: 'drumModeToggle',
+    kbDrumFilt: 'drumFiltToggle',
+    kbScTimeSync: 'scTimeSyncToggle',
     kbRingModToggle: 'ringModToggle',
     kbDistortionToggle: 'distortionToggle',
     kbBitcrushToggle: 'bitcrusherToggle',
@@ -292,8 +296,7 @@ function resolveMappingHit(target, event) {
     if (canvas && adsrResolver) {
         const hit = adsrResolver(canvas, event);
         if (hit) return hit;
-        if (canvas.id === 'kbAdsrVisualizer' || canvas.id === 'kbFilterAdsrVisualizer'
-            || canvas.id === 'adsrVisualizer' || canvas.id === 'filterAdsrVisualizer') {
+        if (canvas.id === 'kbAdsrVisualizer' || canvas.id === 'kbFilterAdsrVisualizer') {
             return { unmappable: true, host: canvas };
         }
     }

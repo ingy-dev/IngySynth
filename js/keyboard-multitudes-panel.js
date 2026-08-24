@@ -1,16 +1,16 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
-import { state } from './state.js?v=114';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=122';
-import { ensurePlaitsWorklet } from './osc-source.js?v=98';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=16';
+import { state } from './state.js?v=116';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=124';
+import { ensurePlaitsWorklet } from './osc-source.js?v=121';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=17';
 import {
     forcePolyAllOff,
     ensureMultitudesPolyReady,
     syncMultitudesPolyLocks,
-} from './poly-voice.js?v=69';
-import { clearPolyChordMemory } from './chord-memory.js?v=19';
-import { getParam } from './param-catalog.js?v=1';
+} from './poly-voice.js?v=80';
+import { clearPolyChordMemory } from './chord-memory.js?v=20';
+import { getParam } from './param-catalog.js?v=2';
 import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=13';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */
@@ -29,10 +29,8 @@ let multitudesOscSnapshot = null;
 function placeHomeButtons() {
     const home = document.getElementById('keyboardPolyToggleHome');
     if (!home) return;
-    const chordBtn = document.getElementById('keyboardChordMemToggle');
     const polyBtn = document.getElementById('keyboardPolyToggle');
     const multBtn = document.getElementById('keyboardMultitudesToggle');
-    if (chordBtn) home.appendChild(chordBtn);
     if (polyBtn) home.appendChild(polyBtn);
     if (multBtn) home.appendChild(multBtn);
     home.hidden = false;
@@ -182,15 +180,11 @@ export function syncMultitudesPanelUi() {
     const home = document.getElementById('keyboardPolyToggleHome');
     const left = document.getElementById('multitudesBrandLeft');
     const toggleSlot = document.getElementById('multitudesToggleSlot');
-    const chordBtn = document.getElementById('keyboardChordMemToggle');
     const polyBtn = document.getElementById('keyboardPolyToggle');
     const multBtn = document.getElementById('keyboardMultitudesToggle');
 
     if (on) {
-        if (left) {
-            if (chordBtn) left.appendChild(chordBtn);
-            if (polyBtn) left.appendChild(polyBtn);
-        }
+        if (left && polyBtn) left.appendChild(polyBtn);
         if (toggleSlot && multBtn) toggleSlot.appendChild(multBtn);
         if (home) home.hidden = true;
     } else {

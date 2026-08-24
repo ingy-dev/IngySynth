@@ -1,7 +1,7 @@
 // CP10: one engine path from the param store. Classic nodes are optional mirrors.
 // Subscribe apply-once at bind (params.subscribe). Re-apply after initAudio.
 
-import { state, OSC_COUNT } from './state.js?v=114';
+import { state, OSC_COUNT } from './state.js?v=116';
 import {
     get,
     getNumber,
@@ -12,13 +12,14 @@ import {
     subscribe,
     notifyKey,
 } from './params.js?v=13';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=25';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=29';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { previewStepsOnVfd } from './sequencer.js?v=263';
-import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer } from './visualizers.js?v=101';
+import { previewStepsOnVfd } from './sequencer.js?v=301';
+import { resetSidechainDucker } from './sc-time.js?v=1';
+import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer } from './visualizers.js?v=110';
 import { calculateSemitoneShift, getQuantizedStepTune } from './tuning.js?v=80';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=116';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=122';
+import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=121';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=124';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -26,10 +27,10 @@ import {
     updateLfoSmoothing,
     updateLfoCutoffSafety,
     updateLfoHighpassSafety,
-} from './lfo-strip.js?v=25';
-import { applyLfoRate } from './lfo-rate.js?v=18';
-import { applyPolyOscPan, forEachPolyOsc } from './poly-voice.js?v=69';
-import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=98';
+} from './lfo-strip.js?v=26';
+import { applyLfoRate } from './lfo-rate.js?v=20';
+import { applyPolyOscPan, forEachPolyOsc } from './poly-voice.js?v=80';
+import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=121';
 
 let wired = false;
 let rebuildReverbIr = null;
@@ -118,11 +119,6 @@ function setInputDisabled(id, disabled) {
 
 export function updateStepVisibility(stepCount) {
     const n = Math.max(1, Math.min(32, parseInt(stepCount, 10) || 8));
-    document.querySelectorAll('.sequencer-step').forEach((step) => {
-        const stepIndex = parseInt(step.dataset.step, 10);
-        if (stepIndex < n) step.classList.remove('hidden');
-        else step.classList.add('hidden');
-    });
     updateKeyboardStepVisibility(n);
 }
 
@@ -303,13 +299,11 @@ function applyRingModEnabled(on) {
     syncButton('ringModToggle', on);
     setInputDisabled('ringMod', !on);
     if (!state.audioContext || !state.ringModDryGain || !state.ringModWetGain) return;
+    routeRingMod();
     if (state.ringModEnabled) {
         const value = getNumber('ringMod', 0);
         state.ringModDryGain.gain.setValueAtTime(1 - value, state.audioContext.currentTime);
         state.ringModWetGain.gain.setValueAtTime(value, state.audioContext.currentTime);
-    } else {
-        state.ringModDryGain.gain.setValueAtTime(1, state.audioContext.currentTime);
-        state.ringModWetGain.gain.setValueAtTime(0, state.audioContext.currentTime);
     }
 }
 
@@ -319,15 +313,97 @@ function applyDistortion() {
     state.distortion.curve = makeDistortionCurve(getNumber('distortion', 0));
 }
 
+const DIST_RAMP_SEC = 0.025;
+let distRouteTimer = null;
+
+function routeDistortion() {
+    const ctx = state.audioContext;
+    if (!ctx || !state.distInput || !state.distortion || !state.bitcrusher) return;
+    const on = !!state.distortionEnabled;
+    const t = ctx.currentTime;
+    if (distRouteTimer) {
+        clearTimeout(distRouteTimer);
+        distRouteTimer = null;
+    }
+    try { state.distInput.disconnect(); } catch (_) { /* ignore */ }
+    try { state.distDryGain?.disconnect(); } catch (_) { /* ignore */ }
+    try { state.distWetGain?.disconnect(); } catch (_) { /* ignore */ }
+    try { state.distortion.disconnect(); } catch (_) { /* ignore */ }
+
+    state.distInput.connect(state.distDryGain);
+    state.distDryGain.connect(state.bitcrusher);
+    if (on) {
+        state.distInput.connect(state.distortion);
+        state.distortion.connect(state.distWetGain);
+        state.distWetGain.connect(state.bitcrusher);
+        try {
+            state.distDryGain.gain.setValueAtTime(Math.max(0, state.distDryGain.gain.value), t);
+            state.distDryGain.gain.linearRampToValueAtTime(0, t + DIST_RAMP_SEC);
+            state.distWetGain.gain.setValueAtTime(Math.max(0, state.distWetGain.gain.value), t);
+            state.distWetGain.gain.linearRampToValueAtTime(1, t + DIST_RAMP_SEC);
+        } catch (_) { /* ignore */ }
+        distRouteTimer = setTimeout(() => {
+            try { state.distDryGain.disconnect(); } catch (_) { /* ignore */ }
+        }, DIST_RAMP_SEC * 1000 + 15);
+        state.distortion.curve = makeDistortionCurve(getNumber('distortion', 0));
+    } else {
+        try {
+            state.distDryGain.gain.setValueAtTime(Math.max(0, state.distDryGain.gain.value), t);
+            state.distDryGain.gain.linearRampToValueAtTime(1, t + DIST_RAMP_SEC);
+        } catch (_) { /* ignore */ }
+    }
+}
+
 function applyDistortionEnabled(on) {
     state.distortionEnabled = !!on;
     syncButton('distortionToggle', on);
     setInputDisabled('distortion', !on);
     if (!state.audioContext || !state.distortion) return;
-    if (state.distortionEnabled) {
-        state.distortion.curve = makeDistortionCurve(getNumber('distortion', 0));
+    routeDistortion();
+}
+
+function routeTimeFx() {
+    const ctx = state.audioContext;
+    if (!ctx || !state.bitcrusher || !state.masterGain) return;
+    const chorusOn = !!get('chorusI') || !!get('chorusII');
+    const delayOn = !!state.delayEnabled;
+    try { state.bitcrusher.disconnect(); } catch (_) { /* ignore */ }
+    try { state.chorusDryGain?.disconnect(); } catch (_) { /* ignore */ }
+    try { state.chorusWetGain?.disconnect(); } catch (_) { /* ignore */ }
+    try { state.delay?.disconnect(); } catch (_) { /* ignore */ }
+    try { state.delayGain?.disconnect(); } catch (_) { /* ignore */ }
+
+    if (chorusOn) {
+        state.bitcrusher.connect(state.chorusDryGain);
+        state.bitcrusher.connect(state.chorusSplitter);
+        state.chorusDryGain.connect(state.masterGain);
+        state.chorusWetGain.connect(state.masterGain);
     } else {
-        state.distortion.curve = makeDistortionCurve(0);
+        state.bitcrusher.connect(state.masterGain);
+    }
+    if (delayOn && state.delay && state.delayGain) {
+        state.bitcrusher.connect(state.delay);
+        state.delay.connect(state.delayGain);
+        state.delayGain.connect(state.masterGain);
+        state.delayGain.connect(state.delay);
+    }
+}
+
+function routeRingMod() {
+    if (!state.audioContext || !state.ringModInput || !state.ringModulator) return;
+    try { state.ringModInput.disconnect(); } catch (_) { /* ignore */ }
+    try { state.ringModDryGain?.disconnect(); } catch (_) { /* ignore */ }
+    try { state.ringModWetGain?.disconnect(); } catch (_) { /* ignore */ }
+    try { state.ringModModulatorGain?.disconnect(); } catch (_) { /* ignore */ }
+    if (state.ringModEnabled && state.ringModDryGain && state.ringModWetGain && state.ringModModulatorGain && state.ringProduct) {
+        state.ringModInput.connect(state.ringModDryGain);
+        state.ringModInput.connect(state.ringModModulatorGain);
+        state.ringModDryGain.connect(state.ringModulator);
+        state.ringModModulatorGain.connect(state.ringProduct);
+        state.ringProduct.connect(state.ringModWetGain);
+        state.ringModWetGain.connect(state.ringModulator);
+    } else {
+        state.ringModInput.connect(state.ringModulator);
     }
 }
 
@@ -366,6 +442,7 @@ function applyDelayEnabled(on) {
     } else {
         state.delayGain.gain.setValueAtTime(0, state.audioContext.currentTime);
     }
+    routeTimeFx();
 }
 
 function applyReverbAmount(amount) {
@@ -468,6 +545,7 @@ export function applyChorusFromStore() {
         state.chorusLFOGain.gain.setValueAtTime(0, now);
         state.chorusWetGain.gain.setValueAtTime(0, now);
         state.chorusDryGain.gain.setValueAtTime(1, now);
+        routeTimeFx();
         return;
     }
 
@@ -489,6 +567,7 @@ export function applyChorusFromStore() {
     }
     state.chorusWetGain.gain.setValueAtTime(amount, now);
     state.chorusDryGain.gain.setValueAtTime(1 - 0.5 * amount, now);
+    routeTimeFx();
 }
 
 function applyLfoWaveform(wave) {
@@ -642,6 +721,39 @@ export function applyStoreToAudio() {
     }
     applyStepCount(getNumber('stepCount', 8));
     applyTempo();
+    applyMixerMutes();
+}
+
+export function applyMixerMutes() {
+    const ctx = state.audioContext;
+    if (!ctx) return;
+    const mix = state.mixer || {};
+    const t = ctx.currentTime;
+    const anySolo = (mix.oscSolo || []).some(Boolean)
+        || !!mix.noiseSolo
+        || (mix.drumSolo || []).some(Boolean);
+    const ramp = (node, open) => {
+        if (!node) return;
+        const v = open ? 1 : 0;
+        try {
+            node.gain.cancelScheduledValues(t);
+            node.gain.setValueAtTime(node.gain.value, t);
+            node.gain.linearRampToValueAtTime(v, t + 0.02);
+        } catch (_) { /* ignore */ }
+    };
+    for (let i = 0; i < OSC_COUNT; i++) {
+        let on = !mix.oscMute?.[i];
+        if (anySolo) on = on && !!mix.oscSolo?.[i];
+        ramp(state.oscMuteGains?.[i], on);
+    }
+    let noiseOn = !mix.noiseMute;
+    if (anySolo) noiseOn = noiseOn && !!mix.noiseSolo;
+    ramp(state.noiseMuteGain, noiseOn);
+    for (let i = 0; i < 3; i++) {
+        let on = !mix.drumMute?.[i];
+        if (anySolo) on = on && !!mix.drumSolo?.[i];
+        ramp(state.drumMuteGains?.[i], on);
+    }
 }
 
 export function wireStoreEngine() {
@@ -676,6 +788,9 @@ export function wireStoreEngine() {
     subscribe('reverbDamp', applyReverbDamp);
     subscribe('compToggle', applyCompEnabled);
     subscribe('compThreshold', applyCompThreshold);
+    subscribe('scToggle', (on) => {
+        if (!on) resetSidechainDucker();
+    });
     subscribe('noiseToggle', applyNoiseEnabled);
     subscribe('noiseVol', applyNoiseVol);
     subscribe('noiseType', applyNoiseType);

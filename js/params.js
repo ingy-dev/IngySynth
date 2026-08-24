@@ -2,7 +2,7 @@
 // when connected. Step keys are views of pattern.steps[] (getLiveStep), not Map copies.
 // Widgets must not use kb* mirrors as the engine source.
 
-import { getLiveStep } from './pattern-bank.js?v=12';
+import { getLiveStep } from './pattern-bank.js?v=15';
 import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import {
     PARAMS,
@@ -11,7 +11,7 @@ import {
     getParam,
     isCatalogKey,
     isStepKey,
-} from './param-catalog.js?v=1';
+} from './param-catalog.js?v=2';
 
 const subscribers = new Map();
 const lastNotified = new Map();
@@ -260,7 +260,7 @@ export function getOscType(index, fallback = 'sawtooth') {
     return getString(`osc-type-${index}`, fallback);
 }
 
-export function getOscVol(index, fallback = 0.33) {
+export function getOscVol(index, fallback = 0.25) {
     return getNumber(`osc-vol-${index}`, fallback);
 }
 

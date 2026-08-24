@@ -1,7 +1,7 @@
 // Pattern bank: normal mode uses slots 0–7 (P1–P8). Berlin Dream uses all 8 lanes
 // (O1–O4 pitch + M1–M4 modulation). Dom step strip is a view of `editSlot`.
 
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { getNumber, getString, set } from './params.js?v=13';
 
@@ -12,6 +12,17 @@ export const BANK_COUNT = 8;
 export const STEP_SLOTS = 32;
 
 export const OSC_LANE_COUNT = 4;
+/** Legacy Berlin row index for D1 (M2). D-lanes no longer overlay the bank. */
+export const DRUM_LANE_START = 5;
+export const DRUM_LANE_COUNT = 3;
+export const DRUM_MODELS = ['hihat', 'snare', 'bass_drum'];
+/** 1-indexed On steps for factory D1 / D2 / D3 (8 steps, 1/8). */
+export const FACTORY_DRUM_ONS = [
+    [2, 4, 6, 8],
+    [3, 7],
+    [1, 3, 5, 7],
+];
+const DRUM_MODEL_SET = new Set(DRUM_MODELS);
 
 export const DESTINATIONS = [
     { id: 'osc1Pitch', label: 'Osc 1 Pitch' },
@@ -35,6 +46,83 @@ export function isModLane(index) {
     return (index | 0) >= OSC_LANE_COUNT && (index | 0) < PATTERN_COUNT;
 }
 
+/** Bank rows are never drums. D1–D3 live on `state.drumPatterns`. */
+export function isDrumLane(_index) {
+    return false;
+}
+
+export function drumLaneIndex(row) {
+    return (row | 0) - DRUM_LANE_START;
+}
+
+export function clampDrumLane(lane) {
+    return Math.max(0, Math.min(DRUM_LANE_COUNT - 1, lane | 0));
+}
+
+export function defaultDrumPatch(lane = 0) {
+    const i = Math.max(0, Math.min(DRUM_LANE_COUNT - 1, lane | 0));
+    return {
+        engine: 'analog',
+        model: DRUM_MODELS[i] || 'hihat',
+        tune: 0.5,
+        harmonics: 0.5,
+        morphX: 0.5,
+        morphY: 0.5,
+        alt: false,
+        trigPatched: true,
+        vol: 0.8,
+        pan: 0,
+    };
+}
+
+export function clampDrumEngine(engine) {
+    if (engine === 'plaits' || engine === 'digital') return 'plaits';
+    return 'analog';
+}
+
+export function isAnalogDrumEngine(patch) {
+    return clampDrumEngine(patch?.engine) === 'analog';
+}
+
+export function clampDrumPatch(src, lane = 0) {
+    const d = defaultDrumPatch(lane);
+    const model = DRUM_MODEL_SET.has(src?.model) ? src.model : d.model;
+    const num = (v, fallback) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
+    };
+    return {
+        engine: clampDrumEngine(src?.engine ?? d.engine),
+        model,
+        tune: Math.max(0, Math.min(1, num(src?.tune, d.tune))),
+        harmonics: Math.max(0, Math.min(1, num(src?.harmonics, d.harmonics))),
+        morphX: Math.max(0, Math.min(1, num(src?.morphX, d.morphX))),
+        morphY: Math.max(0, Math.min(1, num(src?.morphY, d.morphY))),
+        alt: !!src?.alt,
+        trigPatched: src?.trigPatched !== false,
+        vol: Math.max(0, Math.min(1, num(src?.vol, d.vol))),
+        pan: Math.max(-1, Math.min(1, num(src?.pan, d.pan))),
+    };
+}
+
+export function ensureBerlinDrumKit() {
+    if (!Array.isArray(state.berlinDrum) || state.berlinDrum.length !== DRUM_LANE_COUNT) {
+        state.berlinDrum = Array.from({ length: DRUM_LANE_COUNT }, (_, i) => defaultDrumPatch(i));
+    }
+    state.berlinDrum.forEach((p, i) => {
+        state.berlinDrum[i] = clampDrumPatch(p, i);
+    });
+    return state.berlinDrum;
+}
+
+export function mirrorDrumKitToPatterns() {
+    ensureBerlinDrumKit();
+}
+
+export function hydrateDrumKitFromPatterns() {
+    ensureBerlinDrumKit();
+}
+
 function clampGate(n) {
     const v = Number(n);
     if (!Number.isFinite(v)) return 0.9;
@@ -43,6 +131,71 @@ function clampGate(n) {
 
 function emptyStep() {
     return { tune: 0, fine: 0, on: true, accent: false, slide: false, ratch: 1 };
+}
+
+function restStep() {
+    return { tune: 0, fine: 0, on: false, accent: false, slide: false, ratch: 1 };
+}
+
+function factoryDrumSteps(ones) {
+    const steps = Array.from({ length: STEP_SLOTS }, restStep);
+    (ones || []).forEach((n) => {
+        const i = (n | 0) - 1;
+        if (i >= 0 && i < STEP_SLOTS) steps[i] = { ...restStep(), on: true };
+    });
+    return steps;
+}
+
+function createDrumPattern(lane = 0) {
+    const i = clampDrumLane(lane);
+    return {
+        steps: factoryDrumSteps(FACTORY_DRUM_ONS[i]),
+        stepCount: 8,
+        division: 8,
+        reverse: false,
+        enabled: true,
+        gate: 0.9,
+        amount: 1,
+        laneKind: 'drum',
+    };
+}
+
+export function ensureDrumPatterns() {
+    if (!Array.isArray(state.drumPatterns) || state.drumPatterns.length !== DRUM_LANE_COUNT) {
+        state.drumPatterns = Array.from({ length: DRUM_LANE_COUNT }, (_, i) => createDrumPattern(i));
+    }
+    state.drumPatterns.forEach((p, i) => {
+        if (!p) {
+            state.drumPatterns[i] = createDrumPattern(i);
+            return;
+        }
+        if (p.enabled === undefined) p.enabled = true;
+        if (p.gate === undefined) p.gate = 0.9;
+        else p.gate = clampGate(p.gate);
+        p.amount = 1;
+        p.laneKind = 'drum';
+        if (p.stepCount === undefined) p.stepCount = 8;
+        if (p.division === undefined) p.division = 8;
+        if (p.reverse === undefined) p.reverse = false;
+        if (Array.isArray(p.steps)) {
+            p.steps.forEach((s) => {
+                if (s && s.ratch === undefined) s.ratch = 1;
+            });
+            while (p.steps.length < STEP_SLOTS) p.steps.push(restStep());
+        } else {
+            p.steps = factoryDrumSteps(FACTORY_DRUM_ONS[i]);
+        }
+    });
+    return state.drumPatterns;
+}
+
+export function getDrumPattern(lane) {
+    ensureDrumPatterns();
+    return state.drumPatterns[clampDrumLane(lane)];
+}
+
+export function isDrumPatternEnabled(lane) {
+    return getDrumPattern(lane)?.enabled !== false;
 }
 
 function createPattern(index) {
@@ -107,6 +260,10 @@ export function ensureBank() {
                 }
             }
         }
+        if (p.drum && typeof p.drum === 'object') {
+            const lane = Math.max(0, Math.min(DRUM_LANE_COUNT - 1, i - DRUM_LANE_START));
+            p.drum = clampDrumPatch(p.drum, lane);
+        }
         if (Array.isArray(p.steps)) {
             p.steps.forEach((s) => {
                 if (s && s.ratch === undefined) s.ratch = 1;
@@ -115,6 +272,8 @@ export function ensureBank() {
             p.steps = Array.from({ length: STEP_SLOTS }, emptyStep);
         }
     });
+    ensureDrumPatterns();
+    ensureBerlinDrumKit();
     return state.patterns;
 }
 
@@ -238,10 +397,11 @@ export function pastePatternContent(slot) {
     pattern.stepCount = patternClipboard.stepCount;
     pattern.division = patternClipboard.division;
     pattern.reverse = !!patternClipboard.reverse;
-    if (isOscLane(slot)) {
+    if (isOscLane(slot) || isDrumLane(slot)) {
         pattern.gate = clampGate(patternClipboard.gate ?? 0.9);
         pattern.amount = 1;
-        pattern.destination = OSC_DESTINATIONS[slot];
+        if (isOscLane(slot)) pattern.destination = OSC_DESTINATIONS[slot];
+        // Drum kit / FILT / vol / pan stay on the slot
     } else {
         pattern.amount = Math.max(0, Math.min(1, Number(patternClipboard.amount ?? 1)));
         // Keep mod Dest; only paste amount/clock/steps
@@ -250,6 +410,47 @@ export function pastePatternContent(slot) {
         detail: { action: 'paste', slot },
     }));
     return true;
+}
+
+export function copyDrumPatternContent(lane) {
+    const pattern = getDrumPattern(lane);
+    patternClipboard = {
+        steps: cloneSteps(pattern.steps),
+        stepCount: patternStepCount(pattern),
+        division: parseInt(pattern.division, 10) || 8,
+        reverse: !!pattern.reverse,
+        amount: 1,
+        gate: clampGate(pattern.gate),
+    };
+    document.dispatchEvent(new CustomEvent('ingysynth:pattern-clipboard', {
+        detail: { action: 'copy', slot: `d${clampDrumLane(lane) + 1}` },
+    }));
+    return true;
+}
+
+export function pasteDrumPatternContent(lane) {
+    if (!patternClipboard) return false;
+    const pattern = getDrumPattern(lane);
+    pattern.steps = cloneSteps(patternClipboard.steps);
+    pattern.stepCount = patternClipboard.stepCount;
+    pattern.division = patternClipboard.division;
+    pattern.reverse = !!patternClipboard.reverse;
+    pattern.gate = clampGate(patternClipboard.gate ?? 0.9);
+    pattern.amount = 1;
+    document.dispatchEvent(new CustomEvent('ingysynth:pattern-clipboard', {
+        detail: { action: 'paste', slot: `d${clampDrumLane(lane) + 1}` },
+    }));
+    return true;
+}
+
+export function clearDrumPatternSteps(lane) {
+    const pattern = getDrumPattern(lane);
+    for (let i = 0; i < STEP_SLOTS; i++) {
+        pattern.steps[i] = restStep();
+    }
+    document.dispatchEvent(new CustomEvent('ingysynth:pattern-clipboard', {
+        detail: { action: 'clear', slot: `d${clampDrumLane(lane) + 1}` },
+    }));
 }
 
 /** Reset step slots only — clock / Dest / mute stay put. */

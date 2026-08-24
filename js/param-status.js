@@ -1,7 +1,7 @@
 // Persistent corner dots: magenta (automation, top-left), cyan (MIDI map,
 // top-right), phosphor (Berlin Dream-960 destination, bottom-right).
 
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { stageButtonHostsForKey } from './midi-learn.js?v=6';
 
 /** @type {(key: string) => boolean} */

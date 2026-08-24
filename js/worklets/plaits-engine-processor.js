@@ -2457,7 +2457,6 @@ class PlaitsEngineProcessor extends AudioWorkletProcessor {
         const meta = ENGINE_META[engine] || ENGINE_META.wavetable;
         const gate0 = parameters.gate[0] ?? 0;
 
-
         if (meta.triggered) {
             if (!this.ringing && gate0 < 0.0001) {
                 out.fill(0);

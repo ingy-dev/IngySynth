@@ -337,6 +337,7 @@ export function renderNoteVfd(host, text, { preview = false } = {}) {
         return;
     }
 
+    const t0 = performance.now();
     host.classList.toggle('note-vfd--preview', previewOn);
     host.dataset.text = next;
     charsEl.dataset.painted = next;
@@ -353,4 +354,8 @@ export function renderNoteVfd(host, text, { preview = false } = {}) {
             dot.classList.toggle('on', on);
         });
     });
+    const ms = performance.now() - t0;
+    const p = (window.__ingyProf ||= {});
+    p.vfdN = (p.vfdN || 0) + 1;
+    if (ms > (p.vfdMax || 0)) p.vfdMax = ms;
 }

@@ -8,6 +8,44 @@
 //     </button>
 //   </legend>
 //   <div id="panelId" class="collapsible-panel">...</div>
+// Add collapsible-mobile-only to collapse only at max-width 768px;
+// desktop stays expanded with no toggle.
+
+const MOBILE_COLLAPSE_MQ = '(max-width: 768px)';
+
+function isMobileCollapseViewport() {
+    return window.matchMedia(MOBILE_COLLAPSE_MQ).matches;
+}
+
+function applyMobileOnlyCollapsible(fieldset) {
+    if (!fieldset.classList.contains('collapsible-mobile-only')) return;
+    const toggle = fieldset.querySelector('.collapsible-toggle');
+    if (isMobileCollapseViewport()) {
+        if (toggle) toggle.tabIndex = 0;
+        if (fieldset.dataset.mobileExpanded === 'false') {
+            setCollapsibleExpanded(fieldset, false);
+        }
+        return;
+    }
+    fieldset.dataset.mobileExpanded = fieldset.classList.contains('collapsed') ? 'false' : 'true';
+    setCollapsibleExpanded(fieldset, true);
+    if (toggle) toggle.tabIndex = -1;
+}
+
+let mobileOnlyMqBound = false;
+
+function ensureMobileOnlyMediaListener() {
+    if (mobileOnlyMqBound || typeof window === 'undefined' || !window.matchMedia) return;
+    mobileOnlyMqBound = true;
+    const mq = window.matchMedia(MOBILE_COLLAPSE_MQ);
+    const syncAll = () => {
+        document.querySelectorAll('.collapsible-fieldset.collapsible-mobile-only').forEach(
+            applyMobileOnlyCollapsible
+        );
+    };
+    if (typeof mq.addEventListener === 'function') mq.addEventListener('change', syncAll);
+    else mq.addListener(syncAll);
+}
 
 /**
  * Sync a single collapsible fieldset's expanded/collapsed UI.
@@ -75,14 +113,20 @@ export function initCollapsibles(root = document, options = {}) {
         const getExpanded = () => !fieldset.classList.contains('collapsed');
         const setExpanded = (expanded) => {
             setCollapsibleExpanded(fieldset, expanded);
+            if (fieldset.classList.contains('collapsible-mobile-only') && isMobileCollapseViewport()) {
+                fieldset.dataset.mobileExpanded = expanded ? 'true' : 'false';
+            }
             if (typeof onToggle === 'function') onToggle(fieldset, expanded);
         };
 
         // Honor initial .collapsed class from markup
         setCollapsibleExpanded(fieldset, getExpanded());
+        applyMobileOnlyCollapsible(fieldset);
+        ensureMobileOnlyMediaListener();
 
         toggle.addEventListener('click', () => {
             if (fieldset.classList.contains('collapse-locked') || toggle.disabled) return;
+            if (fieldset.classList.contains('collapsible-mobile-only') && !isMobileCollapseViewport()) return;
             setExpanded(!getExpanded());
         });
 

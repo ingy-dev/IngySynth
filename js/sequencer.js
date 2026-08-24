@@ -1,4 +1,4 @@
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=13';
 import {
     getStepTotalTune,
@@ -11,15 +11,17 @@ import {
     getGlobalTune,
     semitonesToFrequency,
 } from './tuning.js?v=80';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=101';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=110';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { forceNoteOff } from './voice.js?v=130';
-import { getLfoRateHz } from './lfo-rate.js?v=18';
-import { bentFrequency } from './pitch-bend.js?v=92';
+import { forceNoteOff } from './voice.js?v=138';
+import { getLfoRateHz } from './lfo-rate.js?v=20';
+import { bentFrequency } from './pitch-bend.js?v=96';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=166';
-import { createOscSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX } from './osc-source.js?v=98';
-import { notifyAutomationLoopAnchor } from './automation.js?v=44';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=121';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=173';
+import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=121';
+import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=16';
+import { notifyAutomationLoopAnchor } from './automation.js?v=50';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=8';
 import {
     scheduleAcidAmpEnvelope,
@@ -33,6 +35,9 @@ import {
     ensurePlayheads,
     resetBerlinPlayheads,
     advancePlayhead,
+    ensureDrumPlayheads,
+    resetDrumPlayheads,
+    advanceDrumPlayhead,
     rowStepDuration,
     masterLoopSeconds,
     keyboardHighlightRow,
@@ -46,8 +51,10 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=46';
-import { getPattern, snapshotStepNeighborhood } from './pattern-bank.js?v=12';
+} from './berlin.js?v=69';
+import { getPattern, getDrumPattern, snapshotStepNeighborhood, isAnalogDrumEngine } from './pattern-bank.js?v=15';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=4';
+import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=1';
 import {
     clampRatch,
     nextRatch,
@@ -710,7 +717,9 @@ function spawnRatchVoice({
     nextFreqForOsc = null,
 }) {
     const ctx = state.audioContext;
-    if (!ctx || !state.distortion || typeof freqForOsc !== 'function') return;
+    // Dist off true-bypasses the WaveShaper; distInput is the live FX tap.
+    const dest = state.distInput || state.distortion;
+    if (!ctx || !dest || typeof freqForOsc !== 'function') return;
 
     const mix = ctx.createGain();
     mix.gain.value = 1;
@@ -726,11 +735,11 @@ function spawnRatchVoice({
     const amp = ctx.createGain();
     amp.gain.value = 0;
 
-    // Match main chain order: LP → HP → amp (VCA) → distortion
+    // LP → HP → amp (VCA) → distInput (dry/wet FX), not the bypassed shaper
     mix.connect(filter);
     filter.connect(highPass);
     highPass.connect(amp);
-    amp.connect(state.distortion);
+    amp.connect(dest);
 
     const oscs = [];
     const oscCount = state.oscStates?.length || 0;
@@ -745,6 +754,7 @@ function spawnRatchVoice({
             oscIndex: i,
             wave,
             frequency: fromHz,
+            pooled: true,
         });
         osc.frequency.setValueAtTime(fromHz, Math.max(ctx.currentTime, startTime));
         if (glissRoll && typeof nextFreqForOsc === 'function') {
@@ -770,7 +780,8 @@ function spawnRatchVoice({
             wavetable: !!osc.isWavetable,
             triggered: !!osc.isTriggered,
         });
-        osc.start(oscStart);
+        if (osc.isWavetable) osc.start(oscStart);
+        else startAnalogOsc(osc, oscStart);
         oscs.push({ osc, gain: g });
     }
 
@@ -958,6 +969,7 @@ function stopActiveVoices(now) {
     state.envelope.gain.exponentialRampToValueAtTime(0.00001, now + fadeOutTime);
     releaseRatchVoices(now);
     releaseBerlinOscVoices(now);
+    releaseBerlinDrumVoices(now);
 
     if (state.filterEnvGain) {
         const baseCutoff = Math.max(40, getNumber('cutoff', 1000));
@@ -1049,12 +1061,16 @@ function setKeyboardStepDigits(pair, { lit = true, label = '', brand = false, cy
     const text = String(pair).padEnd(2, ' ').slice(0, 2);
     el.dataset.value = text;
     if (label) el.setAttribute('aria-label', label);
+    const t0 = performance.now();
     const digits = el.querySelectorAll('.sixteen-seg');
     applyVfdChar(digits[0], text[0], { brand });
     applyVfdChar(digits[1], text[1], { brand });
     el.classList.toggle('lit', lit);
-    // Cyan = Write / Arp / Scale prompts & write cursor; green = playback & brand
     el.classList.toggle('vfd-cyan', !!cyan);
+    const ms = performance.now() - t0;
+    const p = (window.__ingyProf ||= {});
+    p.dispN = (p.dispN || 0) + 1;
+    if (ms > (p.dispMax || 0)) p.dispMax = ms;
 }
 
 function stopIdleMarquee() {
@@ -1274,6 +1290,33 @@ export function previewStepsOnVfd(stepCount) {
     }, STEPS_PREVIEW_MS);
 }
 
+function warmBerlinAnalogDrums() {
+    const ctx = state.audioContext;
+    if (!ctx) return;
+    routeBerlinDrumPanners();
+    if (!Array.isArray(state.berlinDrumVoices)) state.berlinDrumVoices = [];
+    for (let lane = 0; lane < 3; lane++) {
+        const patch = state.berlinDrum?.[lane];
+        if (!isAnalogDrumEngine(patch)) continue;
+        const panner = state.berlinDrumPanners?.[lane];
+        if (!panner) continue;
+        if (state.berlinDrumVoices.some((v) => v.lane === lane && v.isAnalog && !v.dead)) continue;
+        const model = patch.model === 'bass_drum' || patch.model === 'snare' ? patch.model : 'hihat';
+        const voice = createAnalog808Voice(ctx, {
+            model,
+            patch: { ...patch },
+            panner,
+            hz: analogKitHz(model, patch.tune, 0, 0),
+            startTime: ctx.currentTime,
+            warm: true,
+        });
+        if (!voice) continue;
+        voice.lane = lane;
+        voice.epoch = 1;
+        state.berlinDrumVoices.push(voice);
+    }
+}
+
 function togglePlay() {
     if (!state.audioContext) return;
 
@@ -1300,6 +1343,8 @@ function togglePlay() {
         forceNoteOff();
         document.dispatchEvent(new CustomEvent('ingysynth:sequencer-start'));
 
+        warmAnalogShells(state.audioContext);
+
         hideLogoOverlay();
 
         const now = state.audioContext.currentTime;
@@ -1319,9 +1364,19 @@ function togglePlay() {
         state.filterEnvelopeHeld = false;
         // Every Berlin row restarts from its own beginning on the same downbeat
         if (isBerlinOn()) {
+            warmPlaitsPool(state.audioContext, 6);
+            warmAnalogShells(state.audioContext);
+            warmBerlinAnalogDrums();
             resetBerlinPlayheads(state.nextStepTime);
             notifyAutomationLoopAnchor(state.nextStepTime);
         }
+        if (state.berlinDrumMode) {
+            warmPlaitsPool(state.audioContext, 6);
+            warmAnalogShells(state.audioContext);
+            warmBerlinAnalogDrums();
+        }
+        resetDrumPlayheads(state.nextStepTime);
+        resetSidechainDucker(state.nextStepTime);
         scheduleNextStep();
         
         // Update all start/stop buttons
@@ -1349,6 +1404,7 @@ function togglePlay() {
         showLogoOverlay(1500);
         
         stopActiveVoices(state.audioContext.currentTime);
+        resetSidechainDucker(state.audioContext.currentTime);
         document.dispatchEvent(new CustomEvent('ingysynth:sequencer-stop'));
         
         // Update all start/stop buttons
@@ -1370,7 +1426,9 @@ function togglePlay() {
         });
 
         clearKeyboardStepDisplay();
+        setKeyboardStepActive(null);
         clearBerlinStepActive();
+        clearDrumStepActive();
         // Idle note matrix: "Note" (cyan knob preview can override while stopped)
         window.noteVisualizerPreviewActive = false;
         if (window.noteVisualizerPreviewTimeout) {
@@ -1385,7 +1443,12 @@ function scheduleNextStep() {
     if (!state.isPlaying || !state.audioContext) return;
 
     if (isBerlinOn()) {
+        const seqT0 = performance.now();
         scheduleBerlinSteps();
+        scheduleDrumLanes();
+        const p = (window.__ingyProf ||= {});
+        const seqMs = performance.now() - seqT0;
+        if (seqMs > (p.seqMax || 0)) p.seqMax = seqMs;
         setTimeout(scheduleNextStep, 25);
         return;
     }
@@ -1395,8 +1458,9 @@ function scheduleNextStep() {
     const bps = 60 / tempo;
     const stepDuration = bps * (4 / division);
     
-    // Look ahead by 100ms to ensure smooth scheduling
-    const lookAheadTime = 0.1; // 100ms
+    // Look ahead far enough to survive Safari main-thread gaps (~200 ms).
+    const lookAheadTime = 0.3; // 300ms
+    const seqT0 = performance.now();
     
     // Schedule notes in the next scheduling window
     while (state.nextStepTime < state.audioContext.currentTime + lookAheadTime) {
@@ -1421,6 +1485,10 @@ function scheduleNextStep() {
         // Calculate time for next step
         state.nextStepTime += stepDuration;
     }
+    scheduleDrumLanes();
+    const seqMs = performance.now() - seqT0;
+    const p = (window.__ingyProf ||= {});
+    if (seqMs > (p.seqMax || 0)) p.seqMax = seqMs;
 
     // Use setTimeout with lookahead for better timing stability
     const timeUntilNextSchedule = 25; // ms
@@ -1430,16 +1498,125 @@ function scheduleNextStep() {
 // --- Berlin Dream-960: one clock, eight independent lanes ---------------------
 
 const BERLIN_LOOKAHEAD = 0.1;
+const UI_DUE_SLACK = 0.008;
 
-/** Highlights land at audio time, not schedule time. */
+let playUiQueue = [];
+let playUiTimer = null;
+let playUiAt = Infinity;
+let berlinHlQueue = [];
+let berlinHlTimer = null;
+let berlinHlAt = Infinity;
+
+function armTimedFlush(queue, timerKey, flush) {
+    if (!queue.length || !state.audioContext) return;
+    let soonest = queue[0].atTime;
+    for (let i = 1; i < queue.length; i++) {
+        if (queue[i].atTime < soonest) soonest = queue[i].atTime;
+    }
+    const armedAt = timerKey === 'play' ? playUiAt : berlinHlAt;
+    const armedId = timerKey === 'play' ? playUiTimer : berlinHlTimer;
+    if (armedId != null && armedAt <= soonest + 0.0005) return;
+    if (armedId != null) clearTimeout(armedId);
+    const delay = Math.max(0, (soonest - state.audioContext.currentTime) * 1000);
+    const id = setTimeout(flush, delay);
+    if (timerKey === 'play') {
+        playUiTimer = id;
+        playUiAt = soonest;
+    } else {
+        berlinHlTimer = id;
+        berlinHlAt = soonest;
+    }
+}
+
+function flushPlayStepUi() {
+    playUiTimer = null;
+    playUiAt = Infinity;
+    if (!state.audioContext) {
+        playUiQueue = [];
+        return;
+    }
+    const t = state.audioContext.currentTime;
+    const due = [];
+    const later = [];
+    for (const item of playUiQueue) {
+        if (item.atTime <= t + UI_DUE_SLACK) due.push(item);
+        else later.push(item);
+    }
+    playUiQueue = later;
+    requestAnimationFrame(() => {
+        const t0 = performance.now();
+        for (const item of due) {
+            if (item.generation !== state.playGeneration) continue;
+            if (!state.isPlaying && !state.isArping) continue;
+            updateKeyboardStepDisplay(item.step);
+            setKeyboardStepActive(item.step);
+            if (item.on && item.tune != null && !window.noteVisualizerPreviewActive) {
+                updateNoteVisualizer(item.tune, item.fine);
+            }
+        }
+        const p = (window.__ingyProf ||= {});
+        const ms = performance.now() - t0;
+        if (ms > (p.domMax || 0)) p.domMax = ms;
+        p.domN = (p.domN || 0) + due.length;
+    });
+    if (playUiQueue.length) armTimedFlush(playUiQueue, 'play', flushPlayStepUi);
+}
+
+function queuePlayStepUi(item) {
+    playUiQueue.push(item);
+    armTimedFlush(playUiQueue, 'play', flushPlayStepUi);
+}
+
+function flushBerlinHighlights() {
+    berlinHlTimer = null;
+    berlinHlAt = Infinity;
+    if (!state.audioContext) {
+        berlinHlQueue = [];
+        return;
+    }
+    const t = state.audioContext.currentTime;
+    const due = [];
+    const later = [];
+    for (const item of berlinHlQueue) {
+        if (item.atTime <= t + UI_DUE_SLACK) due.push(item);
+        else later.push(item);
+    }
+    berlinHlQueue = later;
+    requestAnimationFrame(() => {
+        const t0 = performance.now();
+        let kbStep = null;
+        const lastByRow = new Map();
+        for (const item of due) {
+            if (item.generation !== state.playGeneration) continue;
+            if (!state.berlinMode || !state.isPlaying) continue;
+            lastByRow.set(item.row, item);
+        }
+        lastByRow.forEach((item) => {
+            setBerlinStepActive(item.row, item.step);
+            if (item.syncKeyboard) kbStep = item.step;
+        });
+        if (kbStep != null) {
+            updateKeyboardStepDisplay(kbStep);
+            setKeyboardStepActive(kbStep);
+        }
+        const p = (window.__ingyProf ||= {});
+        const ms = performance.now() - t0;
+        if (ms > (p.domMax || 0)) p.domMax = ms;
+        p.domN = (p.domN || 0) + lastByRow.size;
+    });
+    if (berlinHlQueue.length) armTimedFlush(berlinHlQueue, 'berlin', flushBerlinHighlights);
+}
+
+/** Highlights land at audio time, not schedule time. Coalesce to one rAF. */
 function scheduleBerlinHighlight(row, step, atTime, syncKeyboard) {
-    const generation = state.playGeneration;
-    const delay = Math.max(0, (atTime - state.audioContext.currentTime) * 1000);
-    setTimeout(() => {
-        if (!state.berlinMode || !state.isPlaying || generation !== state.playGeneration) return;
-        setBerlinStepActive(row, step);
-        if (syncKeyboard) updateKeyboardStepDisplay(step);
-    }, delay);
+    berlinHlQueue.push({
+        row,
+        step,
+        atTime,
+        syncKeyboard,
+        generation: state.playGeneration,
+    });
+    armTimedFlush(berlinHlQueue, 'berlin', flushBerlinHighlights);
 }
 
 function disposeBerlinOscVoice(voice) {
@@ -1537,7 +1714,7 @@ function releaseBerlinOscVoices(now, oscIndex = null) {
     const list = state.berlinOscVoices;
     if (!Array.isArray(list) || list.length === 0) {
         state.berlinOscVoices = [];
-        if (oscIndex === null) disarmBerlinSharedAmpPath(now);
+        if (oscIndex === null && !berlinFiltDrumsActive()) disarmBerlinSharedAmpPath(now);
         return;
     }
     const t = now ?? state.audioContext?.currentTime ?? 0;
@@ -1554,10 +1731,10 @@ function releaseBerlinOscVoices(now, oscIndex = null) {
     });
     if (oscIndex === null) {
         state.berlinOscVoices = [];
-        disarmBerlinSharedAmpPath(t);
+        if (!berlinFiltDrumsActive()) disarmBerlinSharedAmpPath(t);
     } else {
         state.berlinOscVoices = list.filter((v) => v.oscIndex !== oscIndex);
-        if (state.berlinOscVoices.length === 0) disarmBerlinSharedAmpPath(t);
+        if (state.berlinOscVoices.length === 0 && !berlinFiltDrumsActive()) disarmBerlinSharedAmpPath(t);
     }
 }
 
@@ -1622,6 +1799,7 @@ function spawnBerlinOscVoice({
             oscIndex,
             wave,
             frequency: voiceTargetFreq({ unisonCents: cents }, fromHz),
+            pooled: true,
         });
         const targetHz = voiceTargetFreq({ unisonCents: cents }, fromHz);
         if (slideFromBase != null) {
@@ -1656,7 +1834,8 @@ function spawnBerlinOscVoice({
             wavetable: !!osc.isWavetable,
             triggered: !!osc.isTriggered,
         });
-        osc.start(oscStart);
+        if (osc.isWavetable) osc.start(oscStart);
+        else startAnalogOsc(osc, oscStart);
         if (lfoGain) {
             try { lfoGain.connect(osc.detune); } catch (_) { /* ignore */ }
         }
@@ -1694,7 +1873,9 @@ function spawnBerlinOscVoice({
     setTimeout(() => {
         if (generation !== state.playGeneration) return;
         disposeBerlinOscVoice(voice);
-        if (!state.berlinOscVoices?.length) disarmBerlinSharedAmpPath(ctx.currentTime);
+        if (!state.berlinOscVoices?.length && !berlinFiltDrumsActive()) {
+            disarmBerlinSharedAmpPath(ctx.currentTime);
+        }
     }, delay);
 }
 
@@ -1760,6 +1941,455 @@ function berlinNextStepIndex(pattern, step) {
     return pattern.reverse ? (step - 1 + n) % n : (step + 1) % n;
 }
 
+const lastDrumFreqs = [0, 0, 0];
+
+function berlinFiltDrumsActive() {
+    return isBerlinOn()
+        && !!state.berlinDrumFilt
+        && Array.isArray(state.berlinDrumVoices)
+        && state.berlinDrumVoices.length > 0;
+}
+
+/** Berlin FILT holds the shared VCA open and mutes main oscs. Main/acid keep oscs. */
+function armDrumFiltSharedPath(atTime) {
+    if (!isBerlinOn() || !state.berlinDrumFilt) return;
+    armBerlinSharedAmpPath(atTime);
+    silenceMainPhaseResetOscs(atTime);
+}
+
+function maybeDisarmBerlinSharedPath(atTime) {
+    if (state.berlinOscVoices?.length) return;
+    if (berlinFiltDrumsActive()) return;
+    disarmBerlinSharedAmpPath(atTime);
+}
+
+/** Retrigger extends `until` + epoch so the previous timer no-ops. */
+function scheduleDrumVoiceUntil(voice, ctx, generation) {
+    const epoch = voice.epoch || 1;
+    const tick = () => {
+        const delay = Math.max(0, (voice.until - ctx.currentTime) * 1000) + 20;
+        setTimeout(() => {
+            if (generation !== state.playGeneration || voice.dead || voice.epoch !== epoch) return;
+            if (ctx.currentTime + 0.015 < voice.until) {
+                tick();
+                return;
+            }
+            disposeBerlinDrumVoice(voice);
+            maybeDisarmBerlinSharedPath(ctx.currentTime);
+        }, delay);
+    };
+    tick();
+}
+
+function applyDigitalDrumPatchLive(osc, patch, when, velocity) {
+    if (!osc) return;
+    try {
+        osc.morphX?.setValueAtTime(patch.morphX, when);
+        osc.morphY?.setValueAtTime(patch.morphY, when);
+        osc.harmonics?.setValueAtTime(patch.harmonics, when);
+        const n = osc._worklet;
+        if (!n?.parameters) return;
+        n.parameters.get('alt')?.setValueAtTime(patch.alt ? 1 : 0, when);
+        n.parameters.get('trigPatched')?.setValueAtTime(patch.trigPatched !== false ? 1 : 0, when);
+        n.parameters.get('velocity')?.setValueAtTime(velocity, when);
+        n.port.postMessage({ alt: !!patch.alt, trigPatched: patch.trigPatched !== false });
+    } catch (_) { /* ignore */ }
+}
+
+function disposeBerlinDrumVoice(voice, { hard = false } = {}) {
+    if (!voice || voice.dead) return;
+    const t = state.audioContext?.currentTime ?? 0;
+    if (voice.isAnalog && typeof voice.dispose === 'function') {
+        voice.dispose(t, { hard });
+        if (Array.isArray(state.berlinDrumVoices)) {
+            state.berlinDrumVoices = state.berlinDrumVoices.filter((v) => v !== voice);
+        }
+        return;
+    }
+    voice.dead = true;
+    try {
+        if (voice.amp) {
+            const cur = Math.max(0.00001, Number(voice.amp.gain.value) || 0.00001);
+            if (typeof voice.amp.gain.cancelAndHoldAtTime === 'function') {
+                voice.amp.gain.cancelAndHoldAtTime(t);
+            } else {
+                voice.amp.gain.cancelScheduledValues(t);
+                voice.amp.gain.setValueAtTime(cur, t);
+            }
+            voice.amp.gain.exponentialRampToValueAtTime(0.00001, t + (hard ? 0.02 : 0.03));
+        }
+    } catch (_) { /* ignore */ }
+    try {
+        voice.osc?.stop(t + 0.03, { hard: true, silent: true, fadeSec: hard ? 0.02 : 0.03 });
+    } catch (_) { /* ignore */ }
+    const ampNode = voice.amp;
+    const oscNode = voice.osc;
+    setTimeout(() => {
+        try { oscNode?.disconnect(); } catch (_) { /* ignore */ }
+        try { ampNode?.disconnect(); } catch (_) { /* ignore */ }
+    }, 50);
+    if (Array.isArray(state.berlinDrumVoices)) {
+        state.berlinDrumVoices = state.berlinDrumVoices.filter((v) => v !== voice);
+    }
+}
+
+/** Fade and drop Berlin drum voices (optionally one D-lane only). */
+function releaseBerlinDrumVoices(now, lane = null) {
+    const list = state.berlinDrumVoices;
+    if (!Array.isArray(list) || list.length === 0) {
+        state.berlinDrumVoices = [];
+        maybeDisarmBerlinSharedPath(now);
+        return;
+    }
+    const t = now ?? state.audioContext?.currentTime ?? 0;
+    const victims = lane == null
+        ? [...list]
+        : list.filter((v) => v.lane === lane);
+    victims.forEach((voice) => {
+        if (voice.isAnalog) {
+            try { voice.choke?.(t); } catch (_) { /* ignore */ }
+            setTimeout(() => {
+                disposeBerlinDrumVoice(voice, { hard: true });
+                maybeDisarmBerlinSharedPath(state.audioContext?.currentTime ?? t);
+            }, 40);
+            return;
+        }
+        try {
+            voice.amp?.gain.cancelScheduledValues(t);
+            const cur = Math.max(0.00001, voice.amp?.gain.value || 0.00001);
+            voice.amp?.gain.setValueAtTime(cur, t);
+            voice.amp?.gain.exponentialRampToValueAtTime(0.00001, t + 0.05);
+        } catch (_) { /* ignore */ }
+        setTimeout(() => {
+            disposeBerlinDrumVoice(voice, { hard: true });
+            maybeDisarmBerlinSharedPath(state.audioContext?.currentTime ?? t);
+        }, 70);
+    });
+    if (lane == null) {
+        state.berlinDrumVoices = [];
+        lastDrumFreqs.fill(0);
+    } else {
+        state.berlinDrumVoices = list.filter((v) => v.lane !== lane);
+        if (lane >= 0 && lane < lastDrumFreqs.length) lastDrumFreqs[lane] = 0;
+    }
+    maybeDisarmBerlinSharedPath(t);
+}
+
+/**
+ * Analog 808: one circuit per lane. RATCH restarts envelopes on that graph.
+ * Envelopes own length; GATE choke-cuts BD/SN. Does not wait on Plaits.
+ */
+function spawnAnalog808DrumVoice({
+    lane,
+    startTime,
+    stepDuration,
+    gateLen,
+    accentThisStep,
+    accentAmount,
+    fromHz,
+    ratchHits = 1,
+    patch,
+    panner,
+}) {
+    const ctx = state.audioContext;
+    if (!ctx || !patch || !panner) return;
+    if (state.berlinDrumFilt) {
+        if (!state.ringModInput) return;
+    } else if (!state.analogDrumInput) return;
+
+    routeBerlinDrumPanners();
+    armDrumFiltSharedPath(startTime);
+
+    const t0 = Math.max(ctx.currentTime, startTime);
+    const accent = accentThisStep ? Math.max(0, Math.min(1, accentAmount)) : 0;
+    const model = patch.model === 'bass_drum' || patch.model === 'snare' ? patch.model : 'hihat';
+    const hits = Math.max(1, ratchHits | 0);
+    const subDur = hits > 1 ? stepDuration / hits : 0;
+    const hitOpts = { patch, accent, gateLen, hz: fromHz, hitDur: subDur };
+
+    (state.berlinDrumVoices || []).forEach((v) => {
+        if (v?.lane !== lane || v.dead) return;
+        if (!v.isAnalog) disposeBerlinDrumVoice(v, { hard: true });
+    });
+
+    let voice = (state.berlinDrumVoices || []).find(
+        (v) => v.lane === lane && v.isAnalog && !v.dead && v.model === model,
+    );
+    const reused = !!(voice && typeof voice.retrigger === 'function');
+    const analogT0 = performance.now();
+    if (reused) {
+        voice.epoch = (voice.epoch || 0) + 1;
+        try {
+            voice.retrigger(t0, hitOpts);
+        } catch (_) { /* keep Berlin clock alive */ }
+        const p = (window.__ingyProf ||= {});
+        const analogMs = performance.now() - analogT0;
+        if (analogMs > (p.analogMax || 0)) p.analogMax = analogMs;
+        p.analogN = (p.analogN || 0) + 1;
+    } else {
+        (state.berlinDrumVoices || []).forEach((v) => {
+            if (v?.lane === lane && v.isAnalog) disposeBerlinDrumVoice(v, { hard: true });
+        });
+        voice = createAnalog808Voice(ctx, {
+            model,
+            patch: { ...patch },
+            accent,
+            gateLen,
+            hz: fromHz,
+            startTime: t0,
+            panner,
+            hitDur: subDur,
+        });
+        const p = (window.__ingyProf ||= {});
+        const analogMs = performance.now() - analogT0;
+        if (analogMs > (p.analogMax || 0)) p.analogMax = analogMs;
+        p.analogN = (p.analogN || 0) + 1;
+        if (!voice) return;
+        voice.lane = lane;
+        voice.epoch = 1;
+        if (!Array.isArray(state.berlinDrumVoices)) state.berlinDrumVoices = [];
+        state.berlinDrumVoices.push(voice);
+    }
+
+    try {
+        panner.pan.setValueAtTime(Math.max(-1, Math.min(1, Number(patch.pan) || 0)), t0);
+    } catch (_) { /* ignore */ }
+
+    if (hits > 1 && typeof voice.retrigger === 'function') {
+        const now = ctx.currentTime;
+        for (let k = 1; k < hits; k++) {
+            const ht = startTime + k * subDur;
+            if (ht < now - 0.001) continue;
+            voice.retrigger(ht, hitOpts);
+        }
+    }
+
+    const gateFrac = Math.max(0.05, Math.min(1, Number(gateLen) || 0.9));
+    const lastHitAt = t0 + (hits - 1) * (stepDuration / hits);
+    const gateOff = Math.max(t0 + stepDuration * gateFrac, lastHitAt + 0.012);
+    const decaySec = Number(voice.decaySec) || 0.3;
+    voice.until = Math.max(t0 + decaySec + 0.08, lastHitAt + decaySec + 0.08);
+
+    const generation = state.playGeneration;
+    const epoch = voice.epoch || 1;
+    // Hats scale DECAY × GATE in the factory. BD: decay owns length.
+    // Snare: GATE choke-cuts when shorter than full. Ratch keeps full analog decay.
+    if (hits === 1 && model === 'snare' && gateFrac < 0.995) {
+        setTimeout(() => {
+            if (generation !== state.playGeneration || voice.dead || voice.epoch !== epoch) return;
+            try { voice.choke?.(Math.max(ctx.currentTime, gateOff)); } catch (_) { /* ignore */ }
+        }, Math.max(0, (gateOff - ctx.currentTime) * 1000));
+        voice.until = Math.max(voice.until, gateOff + 0.05);
+    }
+
+    const scheduleDispose = () => {
+        const delay = Math.max(0, (voice.until - ctx.currentTime) * 1000) + 20;
+        setTimeout(() => {
+            if (generation !== state.playGeneration || voice.dead || voice.epoch !== epoch) return;
+            if (ctx.currentTime + 0.015 < voice.until) {
+                scheduleDispose();
+                return;
+            }
+            disposeBerlinDrumVoice(voice);
+            maybeDisarmBerlinSharedPath(ctx.currentTime);
+        }, delay);
+    };
+    scheduleDispose();
+}
+
+/**
+ * One hit on a D-lane. Analog 808 or Plaits. No unison, OSC1 globals, filter env, or synth ADSR.
+ */
+function spawnBerlinDrumVoice({
+    lane,
+    startTime,
+    stepDuration,
+    gateLen,
+    accentThisStep,
+    accentAmount,
+    glissRoll = false,
+    slideIn = false,
+    slideTime = 0.05,
+    fromHz,
+    toHz = null,
+    stepHz,
+    ratchHits = 1,
+}) {
+    const ctx = state.audioContext;
+    const patch = state.berlinDrum?.[lane];
+    if (!ctx || !patch || !(patch.vol > 0.0001)) return;
+    const panner = state.berlinDrumPanners?.[lane];
+    if (!panner) return;
+
+    if (isAnalogDrumEngine(patch)) {
+        spawnAnalog808DrumVoice({
+            lane,
+            startTime,
+            stepDuration,
+            gateLen,
+            accentThisStep,
+            accentAmount,
+            fromHz,
+            ratchHits,
+            patch,
+            panner,
+        });
+        return;
+    }
+
+    if (!state.plaitsWorkletReady || !state.distortion) return;
+    if (state.berlinDrumFilt) {
+        if (!state.ringModInput) return;
+    } else if (!state.drumFxInput) return;
+
+    (state.berlinDrumVoices || []).forEach((v) => {
+        if (v?.lane === lane && v.isAnalog) disposeBerlinDrumVoice(v, { hard: true });
+    });
+
+    routeBerlinDrumPanners();
+    armDrumFiltSharedPath(startTime);
+
+    const velocity = accentThisStep
+        ? Math.max(0.05, Math.min(1, 0.55 + 0.45 * accentAmount))
+        : 0.8;
+    const liveLane = (state.berlinDrumVoices || []).filter((v) => v?.lane === lane && !v.dead);
+    const t0 = Math.max(ctx.currentTime, startTime);
+    const peak = Math.max(0.00001, Number(patch.vol) || 0.8);
+    const hits = Math.max(1, ratchHits | 0);
+    const model = DRUM_ENGINES.has(patch.model) ? patch.model : 'hihat';
+    const tail = ENGINE_TAIL_SEC[model] || 2.5;
+    const generation = state.playGeneration;
+
+    const applyPitch = (osc) => {
+        const slideFrom = (slideIn && lastDrumFreqs[lane] > 0) ? lastDrumFreqs[lane] : null;
+        try {
+            if (slideFrom != null) {
+                osc.frequency.setValueAtTime(slideFrom, t0);
+                osc.frequency.setTargetAtTime(fromHz, t0, Math.max(0.01, slideTime) / 3);
+            } else {
+                osc.frequency.setValueAtTime(fromHz, t0);
+            }
+            if (glissRoll && toHz != null) {
+                osc.frequency.cancelScheduledValues(t0);
+                osc.frequency.setValueAtTime(fromHz, t0);
+                osc.frequency.linearRampToValueAtTime(toHz, startTime + stepDuration);
+            }
+        } catch (_) { /* ignore */ }
+    };
+
+    const fireRatch = (osc) => {
+        if (hits <= 1 || typeof osc.retrigger !== 'function') return;
+        const subDur = stepDuration / hits;
+        for (let k = 1; k < hits; k++) {
+            const ht = startTime + k * subDur;
+            const hz = glissRoll && toHz != null
+                ? fromHz + (toHz - fromHz) * (k / hits)
+                : fromHz;
+            osc.retrigger(ht, hz);
+        }
+    };
+
+    let voice = liveLane.find((v) => !v.isAnalog && v.osc && typeof v.osc.retrigger === 'function');
+    if (voice) {
+        applyDigitalDrumPatchLive(voice.osc, patch, t0, velocity);
+        const ok = voice.osc.retrigger(t0, fromHz);
+        if (ok) {
+            voice.epoch = (voice.epoch || 0) + 1;
+            voice.startTime = t0;
+            voice.stepHz = stepHz;
+            try {
+                panner.pan.setValueAtTime(Math.max(-1, Math.min(1, Number(patch.pan) || 0)), t0);
+                const g = voice.amp.gain;
+                const cur = Math.max(0.00001, Number(g.value) || peak);
+                try {
+                    if (typeof g.cancelAndHoldAtTime === 'function') g.cancelAndHoldAtTime(t0);
+                    else g.cancelScheduledValues(t0);
+                } catch (_) { /* ignore */ }
+                try { g.setValueAtTime(cur, t0); } catch (_) { /* ignore */ }
+                g.linearRampToValueAtTime(peak, t0 + 0.002);
+            } catch (_) { /* ignore */ }
+            applyPitch(voice.osc);
+            fireRatch(voice.osc);
+            voice.until = t0 + tail;
+            scheduleDrumVoiceUntil(voice, ctx, generation);
+            return;
+        }
+        disposeBerlinDrumVoice(voice, { hard: true });
+        voice = null;
+    }
+
+    const osc = createPlaitsSource(ctx, fromHz, { ...patch, velocity });
+    if (!osc) return;
+
+    const amp = ctx.createGain();
+    amp.gain.value = 0;
+    osc.connect(amp);
+    amp.connect(panner);
+
+    try {
+        amp.gain.cancelScheduledValues(t0);
+        amp.gain.setValueAtTime(0, t0);
+        amp.gain.linearRampToValueAtTime(peak, t0 + 0.002);
+    } catch (_) { /* ignore */ }
+
+    try {
+        panner.pan.setValueAtTime(Math.max(-1, Math.min(1, Number(patch.pan) || 0)), t0);
+    } catch (_) { /* ignore */ }
+
+    applyPitch(osc);
+    osc.start(t0);
+    fireRatch(osc);
+
+    voice = { lane, osc, amp, startTime: t0, stepHz, isAnalog: false, epoch: 1, until: t0 + tail };
+    if (!Array.isArray(state.berlinDrumVoices)) state.berlinDrumVoices = [];
+    state.berlinDrumVoices.push(voice);
+    scheduleDrumVoiceUntil(voice, ctx, generation);
+}
+
+function triggerBerlinDrumLane(lane, pattern, startTime, stepDuration, data, playhead, nextPitch) {
+    lane = lane | 0;
+    if (lane < 0 || lane > 2) return;
+    const patch = state.berlinDrum?.[lane];
+    if (!patch) return;
+    const analog = isAnalogDrumEngine(patch);
+    const prevGliss = !!playhead.prevGliss;
+    const slideIn = !!playhead.sounded && !!playhead.prevSlide && !prevGliss;
+    const ratchN = state.acidMode ? 1 : clampRatch(data.ratch);
+    const glissRoll = !analog && ratchN > 1 && !!data.slide;
+    const accentAmount = getAccentAmount();
+    const accentThisStep = !!data.accent && !slideIn;
+    const gateLen = Math.max(0.05, Math.min(1, patternGate(pattern) * getGateLength()));
+    const stepHz = berlinFrequency(playhead.semi, playhead.fine, undefined);
+    const stepToHz = nextPitch
+        ? berlinFrequency(nextPitch.semi, nextPitch.fine, undefined)
+        : stepHz;
+    const fromHz = analog
+        ? analogKitHz(patch.model, patch.tune, playhead.semi, playhead.fine)
+        : digitalDrumTuneHz(stepHz, patch.tune);
+    const toHz = analog
+        ? (nextPitch
+            ? analogKitHz(patch.model, patch.tune, nextPitch.semi, nextPitch.fine)
+            : fromHz)
+        : digitalDrumTuneHz(stepToHz, patch.tune);
+
+    spawnBerlinDrumVoice({
+        lane,
+        startTime,
+        stepDuration,
+        gateLen,
+        accentThisStep,
+        accentAmount,
+        glissRoll,
+        slideIn: !analog && ratchN === 1 && slideIn,
+        slideTime: getSlideTime(),
+        fromHz,
+        toHz: glissRoll ? toHz : null,
+        stepHz,
+        ratchHits: ratchN > 1 ? ratchN : 1,
+    });
+    lastDrumFreqs[lane] = glissRoll ? toHz : fromHz;
+}
+
 function fireBerlinRow(row, pattern, playhead, startTime, stepDuration, syncKeyboard) {
     const step = playhead.currentStep;
     const data = rowStepValue(pattern, step, row);
@@ -1800,6 +2430,88 @@ function fireBerlinRow(row, pattern, playhead, startTime, stepDuration, syncKeyb
     playhead.sounded = !!data.on;
 }
 
+function scheduleDrumHighlight(lane, step, atTime) {
+    const generation = state.playGeneration;
+    const delayMs = Math.max(0, (atTime - state.audioContext.currentTime) * 1000);
+    setTimeout(() => {
+        if (generation !== state.playGeneration || !state.isPlaying) return;
+        if (!state.berlinDrumMode) return;
+        setDrumStepActive(lane, step);
+    }, delayMs);
+}
+
+function fireDrumLane(lane, pattern, playhead, startTime, stepDuration) {
+    const step = playhead.currentStep;
+    const data = rowStepValue(pattern, step, 0);
+    scheduleDrumHighlight(lane, step, startTime);
+    if (data.on) {
+        playhead.semi = data.semi;
+        playhead.fine = data.fine;
+    }
+    const nextIdx = berlinNextStepIndex(pattern, step);
+    const nextData = rowStepValue(pattern, nextIdx, 0);
+    const nextPitch = { semi: nextData.semi, fine: nextData.fine };
+    const ratchN = state.acidMode ? 1 : clampRatch(data.ratch);
+    const glissRoll = data.on && ratchN > 1 && !!data.slide;
+    const enabled = pattern.enabled !== false;
+    if (state.berlinDrumMode && enabled && data.on) {
+        triggerBerlinDrumLane(lane, pattern, startTime, stepDuration, data, playhead, nextPitch);
+    }
+    const src = parseScSource();
+    if (enabled && data.on && src.kind === 'drum' && src.index === lane) {
+        scheduleSidechainDuck(startTime);
+    }
+    playhead.prevSlide = !!data.slide;
+    playhead.prevGliss = glissRoll;
+    playhead.sounded = !!data.on;
+}
+
+function scheduleScOscSource(oscIndex, tempo, lookAhead) {
+    const ctx = state.audioContext;
+    const pattern = getPattern(oscIndex);
+    ensureDrumPlayheads();
+    const playhead = state.scSourcePlayhead;
+    const stepDuration = rowStepDuration(pattern, tempo);
+    if (!(stepDuration > 0)) return;
+    if (playhead.nextStepTime < ctx.currentTime - 1) playhead.nextStepTime = ctx.currentTime;
+    let guard = 0;
+    while (playhead.nextStepTime < ctx.currentTime + lookAhead && guard++ < 64) {
+        const startTime = playhead.nextStepTime;
+        const step = playhead.currentStep;
+        const data = rowStepValue(pattern, step, oscIndex);
+        const enabled = pattern.enabled !== false;
+        if (enabled && data.on) scheduleSidechainDuck(startTime);
+        const n = Math.max(1, Math.round(pattern.stepCount) || 8);
+        playhead.currentStep = pattern.reverse
+            ? (playhead.currentStep - 1 + n) % n
+            : (playhead.currentStep + 1) % n;
+        playhead.nextStepTime += stepDuration;
+    }
+}
+
+function scheduleDrumLanes() {
+    const ctx = state.audioContext;
+    if (!ctx) return;
+    const tempo = getNumber('tempo', 120);
+    ensureDrumPlayheads();
+    const lookAhead = 0.3;
+    for (let lane = 0; lane < 3; lane++) {
+        const pattern = getDrumPattern(lane);
+        const playhead = state.drumPlayheads[lane];
+        const stepDuration = rowStepDuration(pattern, tempo);
+        if (!(stepDuration > 0)) continue;
+        if (playhead.nextStepTime < ctx.currentTime - 1) playhead.nextStepTime = ctx.currentTime;
+        let guard = 0;
+        while (playhead.nextStepTime < ctx.currentTime + lookAhead && guard++ < 64) {
+            fireDrumLane(lane, pattern, playhead, playhead.nextStepTime, stepDuration);
+            advanceDrumPlayhead(lane);
+            playhead.nextStepTime += stepDuration;
+        }
+    }
+    const src = parseScSource();
+    if (get('scToggle') && src.kind === 'osc') scheduleScOscSource(src.index, tempo, lookAhead);
+}
+
 function scheduleBerlinSteps() {
     const ctx = state.audioContext;
     const tempo = getNumber('tempo', 120);
@@ -1837,7 +2549,9 @@ function scheduleBerlinSteps() {
         while (playhead.nextStepTime < ctx.currentTime + BERLIN_LOOKAHEAD && guard++ < 64) {
             // Mute / Solo silence skips CV/pitch only — playhead keeps phase
             if (isRowSounding(row)) {
-                fireBerlinRow(row, pattern, playhead, playhead.nextStepTime, stepDuration, row === kbRow);
+                try {
+                    fireBerlinRow(row, pattern, playhead, playhead.nextStepTime, stepDuration, row === kbRow);
+                } catch (_) { /* keep Berlin clock alive */ }
             } else {
                 scheduleBerlinHighlight(row, playhead.currentStep, playhead.nextStepTime, false);
             }
@@ -1847,12 +2561,35 @@ function scheduleBerlinSteps() {
     });
 }
 
-// Osc lane muted / solo-silenced — release that osc's independent voices
+// Osc / drum lane muted / solo-silenced — release that row's independent voices
 document.addEventListener('ingysynth:berlin-osc-muted', (e) => {
     if (!state.berlinMode || !state.audioContext) return;
     const oscIndex = e.detail?.oscIndex;
     if (oscIndex === null || oscIndex === undefined) return;
     releaseBerlinOscVoices(state.audioContext.currentTime, oscIndex | 0);
+});
+
+document.addEventListener('ingysynth:berlin-drum-muted', (e) => {
+    if (!state.audioContext) return;
+    const now = state.audioContext.currentTime;
+    if (e.detail?.all) {
+        releaseBerlinDrumVoices(now);
+        return;
+    }
+    const lane = e.detail?.lane;
+    if (lane === null || lane === undefined) return;
+    releaseBerlinDrumVoices(now, lane | 0);
+});
+
+document.addEventListener('ingysynth:berlin-drum-filt', (e) => {
+    if (!state.audioContext) return;
+    const now = state.audioContext.currentTime;
+    routeBerlinDrumPanners();
+    if (e.detail?.on && isBerlinOn()) {
+        if (state.berlinDrumVoices?.length) armDrumFiltSharedPath(now);
+    } else {
+        maybeDisarmBerlinSharedPath(now);
+    }
 });
 
 document.addEventListener('ingysynth:berlin-mode', (e) => {
@@ -1861,9 +2598,15 @@ document.addEventListener('ingysynth:berlin-mode', (e) => {
         // Shared path arms on first osc-lane hit so mod CV can reach the filter
         clearStepsPreviewTimer();
         showBerlinBdOnVfd();
+        if (state.audioContext) {
+            warmPlaitsPool(state.audioContext, 6);
+            warmBerlinAnalogDrums();
+        }
     } else {
-        releaseBerlinOscVoices(state.audioContext?.currentTime ?? 0);
-        disarmBerlinSharedAmpPath(state.audioContext?.currentTime ?? 0);
+        const now = state.audioContext?.currentTime ?? 0;
+        releaseBerlinOscVoices(now);
+        if (!state.berlinDrumMode) releaseBerlinDrumVoices(now);
+        maybeDisarmBerlinSharedPath(now);
         if (state.isPlaying) {
             updateKeyboardStepDisplay(lastVfdStepIndex);
         } else {
@@ -2057,8 +2800,7 @@ function stopArp() {
         stopActiveVoices(state.audioContext.currentTime);
     }
 
-    document.querySelectorAll('.sequencer-step').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.keyboard-step').forEach(el => el.classList.remove('active'));
+    setKeyboardStepActive(null);
     clearKeyboardStepDisplay();
 
     if (!state.isPlaying) {
@@ -2083,9 +2825,6 @@ function releasePolyArpNote() {
  */
 function playPolyArpNote(cellSemitone, startTime, stepDuration) {
     if (!state.isArping || state.isPlaying || !(state.keyboardPoly || state.keyboardMultitudes)) return;
-
-    document.querySelectorAll('.sequencer-step').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.keyboard-step').forEach(el => el.classList.remove('active'));
 
     const sounding = cellSemitone + getGlobalTune();
     if (!window.noteVisualizerPreviewActive) {
@@ -2140,9 +2879,6 @@ function playPolyArpNote(cellSemitone, startTime, stepDuration) {
 /** Classic chord-arp tick: one held-key pitch gated to stepDuration (no pattern/slide). */
 function playChordArpNote(cellSemitone, startTime, stepDuration) {
     if (!state.isArping || state.isPlaying) return;
-
-    document.querySelectorAll('.sequencer-step').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.keyboard-step').forEach(el => el.classList.remove('active'));
 
     const sounding = cellSemitone + getGlobalTune();
     if (!window.noteVisualizerPreviewActive) {
@@ -2273,10 +3009,14 @@ function playStep(step, startTime, stepDuration, scheduled) {
         document.dispatchEvent(new CustomEvent('ingysynth:loop-start', { detail: { startTime } }));
     }
 
-    updateKeyboardStepDisplay(step);
-
-    document.querySelectorAll('.sequencer-step').forEach(stepEl => stepEl.classList.remove('active'));
-    document.querySelectorAll('.keyboard-step').forEach(el => el.classList.remove('active'));
+    queuePlayStepUi({
+        step,
+        atTime: startTime,
+        generation: state.playGeneration,
+        on: data.on !== false,
+        tune: data.on === false ? null : getStepTotalTuneFromRaw(data.tune),
+        fine: data.on === false ? 0 : Math.round(Number(data.fine) || 0),
+    });
 
     if (data.on === false) {
         // Drum-machine model: an OFF step means "no new trigger", not "mute".
@@ -2319,11 +3059,6 @@ function playStep(step, startTime, stepDuration, scheduled) {
         return;
     }
 
-    const currentStepElement = document.querySelector(`.sequencer-step[data-step="${step}"]`);
-    currentStepElement?.classList.add('active');
-    const kbStep = document.querySelector(`.keyboard-step[data-step="${step}"]`);
-    if (kbStep) kbStep.classList.add('active');
-
     // Slide (TB-303 + compat):
     // - Prefer Sld on step N = glide into N+1 (accent OK on N with Acc+Sld).
     // - Also accept Sld on the destination (older UI habit) so slides still work.
@@ -2353,16 +3088,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
     const accentThisStep = !!data.accent && !isSlideContinuation;
     const hits = clampRatch(ratch);
     const subDur = stepDuration / hits;
-
-    // Get note information for the visualizer
-    const totalTune = getStepTotalTuneFromRaw(data.tune);
     const fineCents = Math.round(Number(data.fine) || 0);
-
-    // Only update the visualizer if we're not in preview mode
-    if (!window.noteVisualizerPreviewActive) {
-        // Update note visualizer
-        updateNoteVisualizer(totalTune, fineCents);
-    }
 
     // Send MIDI if enabled (static ratch / gliss: repeated gates at this step's note)
     if (state.sendMidiEnabled && state.selectedMidiOutput) {

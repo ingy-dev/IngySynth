@@ -1,7 +1,7 @@
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { semitonesToNoteName } from './tuning.js?v=80';
-import { initAudio } from './audio-engine.js?v=157';
-import { togglePlay } from './sequencer.js?v=263';
+import { initAudio } from './audio-engine.js?v=178';
+import { togglePlay } from './sequencer.js?v=301';
 import {
     pressKey,
     releaseKey,
@@ -12,7 +12,7 @@ import {
     syncVisibilityUI,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=191';
+} from './keyboard.js?v=199';
 import { needsHeldNoteSet } from './held-notes.js?v=8';
 
 /** Ableton home-row octave: relative semitones from A-key root. */
@@ -118,12 +118,9 @@ function syncToggleUI() {
     const btn = document.getElementById('computerKeyboardToggle');
     if (!btn) return;
     const on = !!state.computerKeyboardEnabled;
-    const label = on ? 'Computer Keys: On' : 'Computer Keys: Off';
-    const front = btn.querySelector('.front');
-    if (front) front.textContent = label;
-    else btn.textContent = label;
     btn.classList.toggle('off', !on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.setAttribute('aria-label', on ? 'Exit computer keyboard mode' : 'Computer keyboard mode');
 }
 
 function syncSpaceTransportUI() {
@@ -238,6 +235,13 @@ function makeSpaceKey() {
     return btn;
 }
 
+function makeModelMLogo() {
+    const el = document.createElement('span');
+    el.className = 'ckb-model-m-logo';
+    el.setAttribute('aria-hidden', 'true');
+    return el;
+}
+
 function buildBoard() {
     const board = document.getElementById('computerKeyboardBoard');
     if (!board) return;
@@ -259,6 +263,7 @@ function buildBoard() {
     modRow.appendChild(makeOctaveKey('KeyZ', 'down'));
     modRow.appendChild(makeOctaveKey('KeyX', 'up'));
     modRow.appendChild(makeSpaceKey());
+    modRow.appendChild(makeModelMLogo());
 
     board.appendChild(sharpRow);
     board.appendChild(naturalRow);

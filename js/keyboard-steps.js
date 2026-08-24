@@ -2,10 +2,10 @@
 // Each step mirrors the Sequencer section: semitone knob → .step-tune,
 // tiny microtune → .step-fine, Acc/Sld/On → accent/slide/toggle.
 
-import { state } from './state.js?v=114';
+import { state } from './state.js?v=116';
 import { getQuantizedStepTune } from './tuning.js?v=80';
-import { bindKnob } from './knobs.js?v=122';
-import { setCollapsibleExpanded } from './collapsible.js?v=74';
+import { bindKnob } from './knobs.js?v=124';
+import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import {
     click,
     elementFor,
@@ -18,7 +18,7 @@ import {
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=103';
+} from './pattern-write.js?v=105';
 import { syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;
@@ -92,12 +92,31 @@ export function refreshKeyboardStepTuneReadouts() {
     for (let i = 0; i < STEP_COUNT; i++) refreshKbStepTuneValue(i);
 }
 
+let keyboardStepCache = null;
+let lastKeyboardActive = null;
+
+export function invalidateKeyboardStepCache() {
+    keyboardStepCache = null;
+    lastKeyboardActive = null;
+}
+
+function ensureKeyboardStepCache() {
+    if (keyboardStepCache) return keyboardStepCache;
+    keyboardStepCache = [];
+    document.querySelectorAll('.keyboard-step').forEach((el) => {
+        const i = parseInt(el.dataset.step, 10);
+        if (Number.isFinite(i)) keyboardStepCache[i] = el;
+    });
+    return keyboardStepCache;
+}
+
 export function updateKeyboardStepVisibility(stepCount) {
     const count = Math.max(1, Math.min(STEP_COUNT, Math.round(Number(stepCount)) || 1));
-    document.querySelectorAll('.keyboard-step').forEach((stepEl) => {
-        const stepIndex = parseInt(stepEl.dataset.step, 10);
-        stepEl.classList.toggle('hidden', stepIndex >= count);
-    });
+    const cache = ensureKeyboardStepCache();
+    for (let i = 0; i < cache.length; i++) {
+        const stepEl = cache[i];
+        if (stepEl) stepEl.classList.toggle('hidden', i >= count);
+    }
 
     const grid = document.getElementById('keyboardStepsGrid')
         || document.getElementById('keyboardStepsPanel');
@@ -110,11 +129,17 @@ export function updateKeyboardStepVisibility(stepCount) {
 }
 
 export function setKeyboardStepActive(step) {
-    document.querySelectorAll('.keyboard-step').forEach((el) => el.classList.remove('active'));
+    const cache = ensureKeyboardStepCache();
+    if (lastKeyboardActive === step) return;
+    if (lastKeyboardActive != null) {
+        cache[lastKeyboardActive]?.classList.remove('active');
+    }
+    lastKeyboardActive = null;
     if (step === null || step === undefined) return;
-    const current = document.querySelector(`.keyboard-step[data-step="${step}"]`);
+    const current = cache[step];
     if (current && !current.classList.contains('hidden')) {
         current.classList.add('active');
+        lastKeyboardActive = step;
     }
 }
 
@@ -263,9 +288,11 @@ export function initKeyboardSteps() {
     if (!grid) return;
 
     grid.innerHTML = '';
+    invalidateKeyboardStepCache();
     for (let i = 0; i < STEP_COUNT; i++) {
         grid.appendChild(buildStep(i));
     }
+    ensureKeyboardStepCache();
     for (let i = 0; i < STEP_COUNT; i++) {
         wireStep(i);
     }

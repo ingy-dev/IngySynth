@@ -3,10 +3,10 @@
 
 import { state } from './state.js?v=116';
 import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=80';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=110';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=113';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { setPolyMode } from './poly-voice.js?v=80';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=36';
+import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=94';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=37';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=17';
 import { bindKnob, refreshKnobDial } from './knobs.js?v=124';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=7';
@@ -1336,7 +1336,10 @@ export function setDrumMode(on) {
 export const setBerlinDrumMode = setDrumMode;
 
 export function setBerlinDrumFilt(on) {
-    const next = !!on;
+    let next = !!on;
+    if (next && (state.keyboardPoly || state.keyboardMultitudes)) {
+        next = false;
+    }
     state.berlinDrumFilt = next;
     if (get('drumFiltToggle') !== next) set('drumFiltToggle', next);
     routeBerlinDrumPanners();
@@ -1406,8 +1409,6 @@ function applyBerlinMasterGateExit() {
 function setBerlinLockedUi(on) {
     document.body.classList.toggle('berlin-mode', !!on);
     [
-        'keyboardPolyToggle',
-        'keyboardMultitudesToggle',
         'kbWrite',
         'kbRev',
         'patternShiftBack',
@@ -1450,6 +1451,7 @@ export function setBerlinMode(on) {
         forceAcidOffForPoly();
         if (state.keyboardPoly) setPolyMode(false);
         if (state.keyboardMultitudes) setMultitudesMode(false);
+        bumpSeqEngine();
         // The single strip is a view of the edit slot — bank it before hiding.
         flushDomToPattern(state.editSlot);
         state.pendingEditSlot = null;
@@ -1466,6 +1468,7 @@ export function setBerlinMode(on) {
         // Master GATE at 100% = unity over per-lane gates (stash for exit)
         applyBerlinMasterGateEnter();
     } else {
+        bumpSeqEngine();
         state.berlinMode = false;
         state.berlinSoloRow = null;
         setBerlinLockedUi(false);

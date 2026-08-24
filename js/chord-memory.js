@@ -77,12 +77,17 @@ export function clearPolyChordMemory() {
     syncChordMemUI();
 }
 
+function isPolyStyleMode() {
+    return !!(state.keyboardPoly || state.keyboardMultitudes);
+}
+
 export function syncChordMemUI() {
     const btn = document.getElementById('keyboardChordMemToggle');
     if (!btn) return;
     const learning = !!state.chordMemoryLearning;
     const armed = isPolyChordMemoryOn() && !learning;
-    const locked = !!(state.isPlaying || state.keyboardWrite);
+    const canToggleWhilePlaying = isPolyStyleMode() && polyChordIntervals.length > 0;
+    const locked = !!state.keyboardWrite || (!!state.isPlaying && !canToggleWhilePlaying);
     // Idle = grey SVG; learning = flashing green rec dot; armed = solid green SVG
     btn.classList.toggle('off', !learning && !armed);
     btn.classList.toggle('active', learning);
@@ -135,20 +140,29 @@ export function beginChordMemoryLearn() {
 }
 
 export function toggleChordMemoryLearn() {
-    if (state.isPlaying || state.keyboardWrite) return;
+    if (state.keyboardWrite) return;
     if (state.chordMemoryLearning) {
         cancelChordMemoryLearn();
+        return;
+    }
+    // Sequencer running: arm/disarm the stored voicing only. Never Learn, never wipe.
+    if (state.isPlaying) {
+        if (!isPolyStyleMode() || !polyChordIntervals.length) return;
+        polyChordOn = !polyChordOn;
+        syncChordMemUI();
         return;
     }
     if (isPolyChordMemoryOn()) {
         clearPolyChordMemory();
         return;
     }
+    // Disarmed during play leaves intervals intact — re-arm without re-learning.
+    if (polyChordIntervals.length) {
+        polyChordOn = true;
+        syncChordMemUI();
+        return;
+    }
     beginChordMemoryLearn();
-}
-
-function isPolyStyleMode() {
-    return !!(state.keyboardPoly || state.keyboardMultitudes);
 }
 
 /**

@@ -8,8 +8,10 @@ import {
     forcePolyAllOff,
     ensureMultitudesPolyReady,
     syncMultitudesPolyLocks,
-} from './poly-voice.js?v=80';
-import { clearPolyChordMemory } from './chord-memory.js?v=20';
+    bumpSeqEngine,
+    forceDrumFiltOffForPoly,
+} from './poly-voice.js?v=94';
+import { clearPolyChordMemory } from './chord-memory.js?v=21';
 import { getParam } from './param-catalog.js?v=2';
 import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=13';
 
@@ -168,6 +170,9 @@ export function syncMultitudesPanelUi() {
     const btn = document.getElementById('keyboardMultitudesToggle');
     if (btn) {
         btn.classList.toggle('off', !on);
+        btn.classList.remove('is-locked');
+        btn.disabled = false;
+        btn.setAttribute('aria-disabled', 'false');
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         btn.setAttribute(
             'aria-label',
@@ -203,13 +208,12 @@ export function setMultitudesMode(on) {
         return;
     }
 
+    bumpSeqEngine();
+
     if (next) {
-        if (state.isPlaying || state.keyboardWrite) {
-            syncMultitudesPanelUi();
-            return;
-        }
         forceAcidOffForPoly();
         document.dispatchEvent(new CustomEvent('ingysynth:exit-berlin'));
+        forceDrumFiltOffForPoly();
         state.keyboardMultitudes = true;
         clearPolyChordMemory();
         forceDigitalOn();

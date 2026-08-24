@@ -11,13 +11,13 @@ import {
     getGlobalTune,
     semitonesToFrequency,
 } from './tuning.js?v=80';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=110';
+import { updateNoteVisualizer, clearNoteVisualizer, previewNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=113';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=82';
 import { forceNoteOff } from './voice.js?v=138';
 import { getLfoRateHz } from './lfo-rate.js?v=20';
 import { bentFrequency } from './pitch-bend.js?v=96';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { setKeyboardStepActive } from './keyboard-steps.js?v=121';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=125';
 import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=173';
 import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=121';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=16';
@@ -51,8 +51,19 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=69';
-import { getPattern, getDrumPattern, snapshotStepNeighborhood, isAnalogDrumEngine } from './pattern-bank.js?v=15';
+} from './berlin.js?v=72';
+import {
+    getPattern,
+    getDrumPattern,
+    snapshotStepNeighborhood,
+    isAnalogDrumEngine,
+    soundingIntervalsFromStep,
+    stepCellNotes,
+    stepChordCount,
+    getLiveStep,
+} from './pattern-bank.js?v=15';
+import { schedulePolySeqVoicing, bumpSeqEngine } from './poly-voice.js?v=94';
+import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=21';
 import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=4';
 import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=1';
 import {
@@ -106,31 +117,7 @@ function getGateLength() {
 
 // Note preview shared by the tune and fine sliders
 function previewStepNote(step) {
-    const totalTune = getStepTotalTune(step);
-    const cents = getStepFineCents(step);
-
-    // Preview the note in the visualizer
-    updateNoteVisualizer(totalTune, cents);
-
-    // Set a flag to indicate we're in preview mode
-    window.noteVisualizerPreviewActive = true;
-
-    // Clear any existing timeout
-    if (window.noteVisualizerPreviewTimeout) {
-        clearTimeout(window.noteVisualizerPreviewTimeout);
-    }
-
-    // Set timeout to clear preview mode after 2 seconds
-    window.noteVisualizerPreviewTimeout = setTimeout(() => {
-        window.noteVisualizerPreviewActive = false;
-
-        // If playing or arping, show the current playing note
-        if (state.isPlaying || state.isArping) {
-            updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
-        } else {
-            clearNoteVisualizer();
-        }
-    }, 2000); // 2 seconds delay
+    previewNoteVisualizer(getStepTotalTune(step), getStepFineCents(step));
 }
 
 // Add event listeners to step tune sliders for note preview
@@ -1204,10 +1191,12 @@ export function showWriteStepOnVfd() {
         return;
     }
     stopIdleMarquee();
-    const text = String(state.writeStep + 1).padStart(2, '0');
+    const live = getLiveStep(state.writeStep);
+    const n = live.on === false ? 0 : stepChordCount(live);
+    const text = n > 1 ? (n >= 3 ? `${n}n` : 'Cd') : String(state.writeStep + 1).padStart(2, '0');
     setKeyboardStepDigits(text, {
         lit: true,
-        label: `Write step ${text}`,
+        label: n > 1 ? `Write chord ${n}` : `Write step ${String(state.writeStep + 1).padStart(2, '0')}`,
         cyan: true,
     });
 }
@@ -1223,7 +1212,7 @@ function clearStepsPreviewTimer() {
     }
 }
 
-function updateKeyboardStepDisplay(stepIndex) {
+function updateKeyboardStepDisplay(stepIndex, { chordCount = 0 } = {}) {
     lastVfdStepIndex = stepIndex;
     // Keep STEPS knob preview on the VFD until its timeout ends
     if (stepsPreviewTimer !== null) return;
@@ -1243,8 +1232,13 @@ function updateKeyboardStepDisplay(stepIndex) {
     }
     // Always kill marquee before painting step digits (covers stray duplicate timers)
     stopIdleMarquee();
-    const text = String(stepIndex + 1).padStart(2, '0');
-    setKeyboardStepDigits(text, { lit: true, label: `Step ${text}`, cyan: false });
+    const n = Number(chordCount) || 0;
+    const text = n > 1 ? (n >= 3 ? `${n}n` : 'Cd') : String(stepIndex + 1).padStart(2, '0');
+    setKeyboardStepDigits(text, {
+        lit: true,
+        label: n > 1 ? `Chord ${n}` : `Step ${String(stepIndex + 1).padStart(2, '0')}`,
+        cyan: false,
+    });
 }
 
 function clearKeyboardStepDisplay() {
@@ -1340,6 +1334,7 @@ function togglePlay() {
         clearStopCleanup();
         stopArp();
         state.playGeneration += 1;
+        bumpSeqEngine();
         forceNoteOff();
         document.dispatchEvent(new CustomEvent('ingysynth:sequencer-start'));
 
@@ -1398,6 +1393,9 @@ function togglePlay() {
         });
     } else {
         state.playGeneration += 1;
+        bumpSeqEngine();
+        midiAllNotesOff();
+        lastPolySoundingRoot = null;
         clearStopCleanup();
 
         // Show logo again when stopping, but with a delay
@@ -1503,6 +1501,81 @@ const UI_DUE_SLACK = 0.008;
 let playUiQueue = [];
 let playUiTimer = null;
 let playUiAt = Infinity;
+/** Last sequenced poly root (sounding semis) for slide into the next poly step. */
+let lastPolySoundingRoot = null;
+
+function midiChannelNibble() {
+    return ((state.selectedMidiChannel || 1) - 1) & 0x0f;
+}
+
+function midiAllNotesOff() {
+    const out = state.selectedMidiOutput;
+    if (!state.sendMidiEnabled || !out) return;
+    try {
+        out.send([0xB0 | midiChannelNibble(), 123, 0]);
+    } catch (_) { /* ignore */ }
+}
+
+function seqMidiStillValid(playGen, engineGen) {
+    return playGen === state.playGeneration
+        && engineGen === state.seqEngineGeneration;
+}
+
+/** N note-on/off for a sequenced poly voicing. Timeouts are play + engine keyed. */
+function seqMidiChord({
+    soundingRoot,
+    intervals,
+    startTime,
+    gateSec,
+    accentThisStep,
+    fineCents,
+    engineGen,
+}) {
+    if (!state.sendMidiEnabled || !state.selectedMidiOutput || !state.audioContext) return;
+    const playGen = state.playGeneration;
+    const eng = engineGen ?? state.seqEngineGeneration;
+    const ch = midiChannelNibble();
+    const vel = accentThisStep ? 127 : 100;
+    const ivs = (Array.isArray(intervals) && intervals.length) ? intervals : [0];
+    const bendRangeEl = document.getElementById('bendRange');
+    const bendRange = bendRangeEl ? parseInt(bendRangeEl.value, 10) : 2;
+    const onDelay = Math.max(0, (startTime - state.audioContext.currentTime) * 1000);
+    const offDelay = Math.max(0, (startTime + gateSec - state.audioContext.currentTime) * 1000);
+    setTimeout(() => {
+        if (!seqMidiStillValid(playGen, eng) || !state.selectedMidiOutput) return;
+        if (fineCents != null && fineCents !== state.lastSentBendCents) {
+            const bend = midiPitchBendValue(fineCents, bendRange);
+            state.selectedMidiOutput.send([0xE0 | ch, bend & 0x7F, bend >> 7]);
+            state.lastSentBendCents = fineCents;
+        }
+        for (const iv of ivs) {
+            const n = Math.min(127, Math.max(0, state.midiBaseNote + soundingRoot + iv));
+            state.selectedMidiOutput.send([0x90 | ch, n, vel]);
+        }
+    }, onDelay);
+    setTimeout(() => {
+        if (!seqMidiStillValid(playGen, eng) || !state.selectedMidiOutput) return;
+        for (const iv of ivs) {
+            const n = Math.min(127, Math.max(0, state.midiBaseNote + soundingRoot + iv));
+            state.selectedMidiOutput.send([0x80 | ch, n, 0]);
+        }
+    }, offDelay);
+}
+
+function onSeqEngineBump() {
+    const now = state.audioContext?.currentTime ?? 0;
+    silenceMainPhaseResetOscs(now);
+    releaseRatchVoices(now);
+    midiAllNotesOff();
+    lastPolySoundingRoot = null;
+    if (!state.isPlaying || !state.audioContext) return;
+    if (isBerlinOn()) {
+        resetBerlinPlayheads(now);
+    } else {
+        state.nextStepTime = now;
+    }
+    state.lastStepSounded = false;
+}
 let berlinHlQueue = [];
 let berlinHlTimer = null;
 let berlinHlAt = Infinity;
@@ -1548,8 +1621,16 @@ function flushPlayStepUi() {
         for (const item of due) {
             if (item.generation !== state.playGeneration) continue;
             if (!state.isPlaying && !state.isArping) continue;
-            updateKeyboardStepDisplay(item.step);
+            updateKeyboardStepDisplay(item.step, { chordCount: item.chordCount || 0 });
             setKeyboardStepActive(item.step);
+            document.dispatchEvent(new CustomEvent('ingysynth:seq-step-ui', {
+                detail: {
+                    step: item.step,
+                    on: item.on,
+                    cellNotes: item.cellNotes || [],
+                    chordCount: item.chordCount || 0,
+                },
+            }));
             if (item.on && item.tune != null && !window.noteVisualizerPreviewActive) {
                 updateNoteVisualizer(item.tune, item.fine);
             }
@@ -2990,6 +3071,111 @@ function playChordArpNote(cellSemitone, startTime, stepDuration) {
     state.lastStepSounded = true;
 }
 
+function seqPolyVoiceMode() {
+    return !isBerlinOn() && !!(state.keyboardPoly || state.keyboardMultitudes) && !!state.isPlaying;
+}
+
+function firePolySeqHit({
+    startTime,
+    gateSec,
+    soundingRoot,
+    intervals,
+    cellRoot,
+    accentScale,
+    slideFromSounding,
+    slideTime,
+    engineGen,
+    unison,
+    accentThisStep,
+    fineCents,
+}) {
+    schedulePolySeqVoicing({
+        startTime,
+        gateSec,
+        soundingRoot,
+        intervals,
+        cellRoot,
+        accentScale,
+        slideFromSounding,
+        slideTime,
+        engineGen,
+        unison,
+    });
+    seqMidiChord({
+        soundingRoot,
+        intervals,
+        startTime,
+        gateSec,
+        accentThisStep,
+        fineCents,
+        engineGen,
+    });
+}
+
+function polySeqSoundingIntervals(data) {
+    if (isPolyChordMemoryOn()) {
+        const mem = getPolyChordIntervals();
+        return mem.length ? mem : [0];
+    }
+    return soundingIntervalsFromStep(data);
+}
+
+function polySeqPlaybackCellNotes(data) {
+    if (!isPolyChordMemoryOn()) return stepCellNotes(data);
+    const root = Math.round(Number(data?.tune) || 0);
+    return getPolyChordIntervals().map((iv) => root + iv);
+}
+
+function polySeqPlaybackChordCount(data) {
+    if (!isPolyChordMemoryOn()) return stepChordCount(data);
+    const n = getPolyChordIntervals().length;
+    return n > 0 ? n : 1;
+}
+
+/** Sequenced Ingy-6 / Multitudes branch of playStep. Never spawnOscStack / master env / ratch. */
+function playPolySeqStep({
+    data,
+    startTime,
+    stepDuration,
+    slideThisStep,
+    accentThisStep,
+    accentAmount,
+    ratchHits,
+    fineCents,
+}) {
+    const engineGen = state.seqEngineGeneration;
+    const soundingRoot = getStepTotalTuneFromRaw(data.tune);
+    const intervals = polySeqSoundingIntervals(data);
+    const cellRoot = Math.round(Number(data.tune) || 0);
+    const isChord = intervals.length > 1;
+    const gateFrac = getGateLength();
+    const slideTime = getSlideTime();
+    const accentScale = accentThisStep ? Math.min(1.5, 1 + accentAmount * 0.5) : 1;
+    const slideFrom = (slideThisStep && lastPolySoundingRoot != null) ? lastPolySoundingRoot : null;
+
+    const hits = Math.max(1, ratchHits | 0);
+    const subDur = stepDuration / hits;
+    const unison = !isChord && !!state.keyboardPolyUnison && !!state.keyboardPoly;
+    for (let k = 0; k < hits; k++) {
+        firePolySeqHit({
+            startTime: startTime + k * subDur,
+            gateSec: subDur * gateFrac,
+            soundingRoot,
+            intervals,
+            cellRoot,
+            accentScale,
+            slideFromSounding: k === 0 ? slideFrom : null,
+            slideTime,
+            engineGen,
+            unison,
+            accentThisStep,
+            fineCents: k === 0 ? fineCents : null,
+        });
+    }
+    lastPolySoundingRoot = soundingRoot;
+    state.lastStepSounded = true;
+}
+
 function playStep(step, startTime, stepDuration, scheduled) {
     if (!state.isPlaying && !state.isArping) return;
 
@@ -3009,6 +3195,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
         document.dispatchEvent(new CustomEvent('ingysynth:loop-start', { detail: { startTime } }));
     }
 
+    const polySeq = seqPolyVoiceMode();
     queuePlayStepUi({
         step,
         atTime: startTime,
@@ -3016,6 +3203,8 @@ function playStep(step, startTime, stepDuration, scheduled) {
         on: data.on !== false,
         tune: data.on === false ? null : getStepTotalTuneFromRaw(data.tune),
         fine: data.on === false ? 0 : Math.round(Number(data.fine) || 0),
+        cellNotes: data.on === false ? [] : (polySeq ? polySeqPlaybackCellNotes(data) : stepCellNotes(data)),
+        chordCount: data.on === false ? 0 : (polySeq ? polySeqPlaybackChordCount(data) : stepChordCount(data)),
     });
 
     if (data.on === false) {
@@ -3024,37 +3213,41 @@ function playStep(step, startTime, stepDuration, scheduled) {
         // empty steps; the next note-on / ratch hit is what resets them.
         // HEAD only released a held shared VCA for stuck-note/slide guards —
         // never tore down oscs or ratch voices here.
-        const drumVoice = !!(
-            state.osc4Wavetable
-            && state.oscStates?.[OSC4_INDEX]
-            && DRUM_ENGINES.has(state.osc4Model)
-        );
-        if (state.envelopeHeld) {
-            if (drumVoice) {
-                // Keep shared VCA open so the kick/snare/hat can finish its
-                // internal decay across empty steps. Clear the held flag so we
-                // don't treat this as a stuck slide note.
-                state.envelopeHeld = false;
-            } else {
-                const release = getNumber('release');
-                const releaseTime = Math.max(0.005, release * 0.3);
+        // Poly owns the master VCA at 1 — rest must not gate it.
+        if (!polySeq) {
+            const drumVoice = !!(
+                state.osc4Wavetable
+                && state.oscStates?.[OSC4_INDEX]
+                && DRUM_ENGINES.has(state.osc4Model)
+            );
+            if (state.envelopeHeld) {
+                if (drumVoice) {
+                    // Keep shared VCA open so the kick/snare/hat can finish its
+                    // internal decay across empty steps. Clear the held flag so we
+                    // don't treat this as a stuck slide note.
+                    state.envelopeHeld = false;
+                } else {
+                    const release = getNumber('release');
+                    const releaseTime = Math.max(0.005, release * 0.3);
+                    const t = Math.max(state.audioContext.currentTime, startTime);
+                    state.envelope.gain.cancelScheduledValues(t);
+                    state.envelope.gain.setValueAtTime(state.envelope.gain.value || 0.00001, t);
+                    state.envelope.gain.exponentialRampToValueAtTime(0.00001, t + releaseTime);
+                    state.envelopeHeld = false;
+                }
+            }
+            if (state.filterEnvelopeHeld) {
+                const filterRelease = getNumber('filterRelease');
+                const filterReleaseTime = Math.max(0.005, filterRelease * 0.3);
                 const t = Math.max(state.audioContext.currentTime, startTime);
-                state.envelope.gain.cancelScheduledValues(t);
-                state.envelope.gain.setValueAtTime(state.envelope.gain.value || 0.00001, t);
-                state.envelope.gain.exponentialRampToValueAtTime(0.00001, t + releaseTime);
-                state.envelopeHeld = false;
+                state.filterEnvGain.gain.cancelScheduledValues(t);
+                state.filterEnvGain.gain.setValueAtTime(state.filterEnvGain.gain.value || 0.00001, t);
+                state.filterEnvGain.gain.exponentialRampToValueAtTime(0.00001, t + filterReleaseTime);
+                state.filterEnvelopeHeld = false;
             }
         }
-        if (state.filterEnvelopeHeld) {
-            const filterRelease = getNumber('filterRelease');
-            const filterReleaseTime = Math.max(0.005, filterRelease * 0.3);
-            const t = Math.max(state.audioContext.currentTime, startTime);
-            state.filterEnvGain.gain.cancelScheduledValues(t);
-            state.filterEnvGain.gain.setValueAtTime(state.filterEnvGain.gain.value || 0.00001, t);
-            state.filterEnvGain.gain.exponentialRampToValueAtTime(0.00001, t + filterReleaseTime);
-            state.filterEnvelopeHeld = false;
-        }
         // Intentionally do NOT stop activeOscillators or duck ratchVoices.
+        lastPolySoundingRoot = null;
         state.lastStepSounded = false;
         return;
     }
@@ -3090,6 +3283,20 @@ function playStep(step, startTime, stepDuration, scheduled) {
     const subDur = stepDuration / hits;
     const fineCents = Math.round(Number(data.fine) || 0);
 
+    if (polySeq) {
+        playPolySeqStep({
+            data,
+            startTime,
+            stepDuration,
+            slideThisStep,
+            accentThisStep,
+            accentAmount,
+            ratchHits: hits,
+            fineCents,
+        });
+        return;
+    }
+
     // Send MIDI if enabled (static ratch / gliss: repeated gates at this step's note)
     if (state.sendMidiEnabled && state.selectedMidiOutput) {
         const safeNote = midiNoteFromStepData(data);
@@ -3098,6 +3305,8 @@ function playStep(step, startTime, stepDuration, scheduled) {
         const bendRange = bendRangeEl ? parseInt(bendRangeEl.value) : 2;
         const gateLen = getGateLength();
         const overlapForSlide = hits === 1 && nextStepWillSlide && nextNote !== safeNote;
+        const playGen = state.playGeneration;
+        const engineGen = state.seqEngineGeneration;
 
         for (let k = 0; k < hits; k++) {
             const hitStart = startTime + k * subDur;
@@ -3108,6 +3317,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
             const noteOnDelay = Math.max(0, (hitStart - state.audioContext.currentTime) * 1000);
             const noteOffDelay = Math.max(0, (hitStart + hitDur - state.audioContext.currentTime) * 1000);
             setTimeout(() => {
+                if (!seqMidiStillValid(playGen, engineGen) || !state.selectedMidiOutput) return;
                 if (k === 0 && fineCents !== state.lastSentBendCents) {
                     const bend = midiPitchBendValue(fineCents, bendRange);
                     state.selectedMidiOutput.send([0xE0 | (state.selectedMidiChannel - 1), bend & 0x7F, bend >> 7]);
@@ -3116,6 +3326,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
                 state.selectedMidiOutput.send([0x90 | (state.selectedMidiChannel - 1), safeNote, accentThisStep ? 127 : 100]);
             }, noteOnDelay);
             setTimeout(() => {
+                if (!seqMidiStillValid(playGen, engineGen) || !state.selectedMidiOutput) return;
                 state.selectedMidiOutput.send([0x80 | (state.selectedMidiChannel - 1), safeNote, 0]);
             }, noteOffDelay);
         }
@@ -3312,6 +3523,10 @@ function playStep(step, startTime, stepDuration, scheduled) {
 // Bulk step changes (bank load, pattern shift, write mode) repaint the readouts
 document.addEventListener('ingysynth-kb-steps-sync', () => {
     refreshStepTuneReadouts();
+});
+
+document.addEventListener('ingysynth:seq-engine-bump', () => {
+    onSeqEngineBump();
 });
 
 document.addEventListener('ingysynth:live-note-on', () => {

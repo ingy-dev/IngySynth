@@ -1,5 +1,5 @@
 import { state } from './state.js?v=116';
-import { semitonesToNoteName } from './tuning.js?v=80';
+import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=80';
 import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=4';
 import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=6';
 import { getNumber, set } from './params.js?v=13';
@@ -538,6 +538,23 @@ function updateNoteVisualizer(totalTune, cents = 0) {
     noteVfdHosts().forEach((host) => renderNoteVfd(host, noteName, { preview }));
 }
 
+/** Cyan root-note preview while a step knob / µtune is being edited. */
+function previewNoteVisualizer(totalTune, cents = 0) {
+    window.noteVisualizerPreviewActive = true;
+    if (window.noteVisualizerPreviewTimeout) {
+        clearTimeout(window.noteVisualizerPreviewTimeout);
+    }
+    updateNoteVisualizer(totalTune, cents);
+    window.noteVisualizerPreviewTimeout = setTimeout(() => {
+        window.noteVisualizerPreviewActive = false;
+        if (state.isPlaying || state.isArping) {
+            updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
+        } else {
+            clearNoteVisualizer();
+        }
+    }, 2000);
+}
+
 /** Idle note screen (fixed 12-cell matrix, centered "Note"). */
 function clearNoteVisualizer() {
     noteVfdHosts().forEach((host) => renderNoteVfd(host, NOTE_VFD_IDLE_TEXT, { preview: false }));
@@ -654,4 +671,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-export { drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay };
+export { drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, clearNoteVisualizer, previewNoteVisualizer, hideLogoOverlay, showLogoOverlay };

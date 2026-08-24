@@ -1,17 +1,135 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
 import { state } from './state.js?v=116';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=301';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=314';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import { bindKnob } from './knobs.js?v=124';
-import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=20';
+import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=21';
 import { forceNoteOff } from './voice.js?v=138';
-import { setPolyMode, forcePolyAllOff } from './poly-voice.js?v=80';
+import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=94';
 import { getNumber, set, subscribe } from './params.js?v=13';
-import { getLiveStep } from './pattern-bank.js?v=15';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=36';
+import { getGlobalTune } from './tuning.js?v=80';
+import {
+    getLiveStep,
+    chordFromCellNotes,
+    clampChord,
+    paintStepChordMarker,
+} from './pattern-bank.js?v=15';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8
+
+const polyWriteHeld = new Set();
+const polyWriteSession = new Set();
+let polyWriteTargetStep = null;
+let polyWriteIgnoreUntilEmpty = false;
+
+export function isPolyWriteMode() {
+    return !!(state.keyboardWrite && (state.keyboardPoly || state.keyboardMultitudes));
+}
+
+export function getPolyWriteHeldNotes() {
+    return [...polyWriteSession];
+}
+
+function clampWriteSemi(cellSemitone) {
+    return Math.max(WRITE_TUNE_MIN, Math.min(WRITE_TUNE_MAX, Math.round(cellSemitone)));
+}
+
+function previewPolyWrite(semi, on) {
+    if (state.isPlaying || !Number.isFinite(semi)) return;
+    const sounding = semi + getGlobalTune();
+    if (on) polyNoteOn(semi, sounding);
+    else polyNoteOff(semi);
+}
+
+function applyChordToLiveStep(step, notes) {
+    const { tune, chord } = chordFromCellNotes(notes);
+    setStepTune(step, tune);
+    setStepOn(step, true);
+    const live = getLiveStep(step);
+    live.chord = clampChord(chord);
+    paintStepChordMarker(step, live);
+}
+
+function clearLiveChord(step) {
+    const live = getLiveStep(step);
+    live.chord = [];
+    paintStepChordMarker(step, live);
+}
+
+function commitPolyWrite({ advance = false } = {}) {
+    if (polyWriteSession.size === 0) return false;
+    const step = polyWriteTargetStep != null
+        ? clampWriteStep(polyWriteTargetStep)
+        : clampWriteStep(state.writeStep);
+    const notes = [...polyWriteSession];
+    if (!state.isPlaying) {
+        for (const n of polyWriteHeld) polyNoteOff(n);
+    }
+    applyChordToLiveStep(step, notes);
+    polyWriteSession.clear();
+    polyWriteTargetStep = null;
+    requestKeyboardStepsSync();
+    markWriteStepProgrammed();
+    if (advance) advanceAfterWrite();
+    else {
+        syncWriteToolbarFromStep();
+        syncWriteCursorHighlight();
+    }
+    return true;
+}
+
+export function commitPolyWriteIfHolding({ advance = false } = {}) {
+    if (polyWriteSession.size === 0) return false;
+    const ok = commitPolyWrite({ advance });
+    polyWriteIgnoreUntilEmpty = polyWriteHeld.size > 0;
+    return ok;
+}
+
+function resetPolyWriteCapture() {
+    if (!state.isPlaying) {
+        for (const n of polyWriteHeld) polyNoteOff(n);
+    }
+    polyWriteHeld.clear();
+    polyWriteSession.clear();
+    polyWriteTargetStep = null;
+    polyWriteIgnoreUntilEmpty = false;
+}
+
+export function polyWriteNoteDown(cellSemitone) {
+    if (!isPolyWriteMode() || !Number.isFinite(cellSemitone)) return false;
+    const semi = clampWriteSemi(cellSemitone);
+    polyWriteHeld.add(semi);
+    if (polyWriteIgnoreUntilEmpty) return true;
+    if (polyWriteSession.size === 0) {
+        polyWriteTargetStep = clampWriteStep(state.writeStep);
+    }
+    polyWriteSession.add(semi);
+    previewPolyWrite(semi, true);
+    document.dispatchEvent(new CustomEvent('ingysynth:poly-write-keys'));
+    return true;
+}
+
+export function polyWriteNoteUp(cellSemitone) {
+    if (!Number.isFinite(cellSemitone)) return false;
+    const semi = clampWriteSemi(cellSemitone);
+    polyWriteHeld.delete(semi);
+    previewPolyWrite(semi, false);
+    if (polyWriteIgnoreUntilEmpty) {
+        if (polyWriteHeld.size === 0) polyWriteIgnoreUntilEmpty = false;
+        return true;
+    }
+    if (!isPolyWriteMode()) {
+        polyWriteSession.clear();
+        polyWriteTargetStep = null;
+        return false;
+    }
+    if (polyWriteHeld.size === 0 && polyWriteSession.size > 0) {
+        commitPolyWrite({ advance: true });
+    }
+    document.dispatchEvent(new CustomEvent('ingysynth:poly-write-keys'));
+    return true;
+}
 
 let writeFineBound = false;
 let syncingWriteFineFromStep = false;
@@ -268,6 +386,7 @@ function restoreWriteTemporaryView() {
 }
 
 export function setWriteCursor(step) {
+    if (state.keyboardWrite) commitPolyWriteIfHolding({ advance: false });
     state.writeStep = clampWriteStep(step);
     syncWriteCursorHighlight();
     syncWriteFineKnob();
@@ -299,15 +418,10 @@ export function setWriteMode(on, { refreshKeyboard } = {}) {
             stopArp();
             syncArpButtonOff();
         }
-        if (state.keyboardPoly) {
+        if (state.keyboardPoly || state.keyboardMultitudes) {
             forceNoteOff();
             forcePolyAllOff();
-            setPolyMode(false);
-        }
-        if (state.keyboardMultitudes) {
-            forceNoteOff();
-            forcePolyAllOff();
-            setMultitudesMode(false);
+            resetPolyWriteCapture();
         }
         cancelChordMemoryLearn();
         syncChordMemUI();
@@ -322,6 +436,8 @@ export function setWriteMode(on, { refreshKeyboard } = {}) {
         requestKeyboardStepsSync();
         beginWriteVfdPrompt();
     } else {
+        commitPolyWriteIfHolding({ advance: false });
+        resetPolyWriteCapture();
         restoreWriteTemporaryView();
         syncWriteButton();
         syncWriteNavEnabled();
@@ -366,6 +482,7 @@ function advanceAfterWrite() {
 export function writeNote(cellSemitone) {
     if (!state.keyboardWrite) return false;
     if (!Number.isFinite(cellSemitone)) return false;
+    if (isPolyWriteMode()) return polyWriteNoteDown(cellSemitone);
 
     // Keep within step-tune range (same span as chromatic / computer keyboard)
     const semi = Math.max(WRITE_TUNE_MIN, Math.min(WRITE_TUNE_MAX, Math.round(cellSemitone)));
@@ -375,6 +492,7 @@ export function writeNote(cellSemitone) {
 
     setStepTune(step, semi);
     setStepOn(step, true);
+    clearLiveChord(step);
     // Acc/Sld are per-step edits via the toolbar — don't overwrite when entering pitch
     requestKeyboardStepsSync();
     markWriteStepProgrammed();
@@ -386,6 +504,7 @@ export function writeNote(cellSemitone) {
 
 export function toggleWriteRest() {
     if (!state.keyboardWrite) return false;
+    commitPolyWriteIfHolding({ advance: false });
     const step = clampWriteStep(state.writeStep);
     state.writeStep = step;
 
@@ -393,8 +512,10 @@ export function toggleWriteRest() {
         setStepOn(step, false);
         setStepFlag('accent', step, false);
         setStepFlag('slide', step, false);
+        clearLiveChord(step);
     } else {
         setStepOn(step, true);
+        clearLiveChord(step);
     }
 
     requestKeyboardStepsSync();

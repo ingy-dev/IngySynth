@@ -129,12 +129,77 @@ function clampGate(n) {
     return Math.max(0.05, Math.min(1, v));
 }
 
+/** 1 root + extras. Drop highest when a capture exceeds this. */
+export const POLY_CHORD_MAX = 6;
+
+export function clampChord(src) {
+    if (!Array.isArray(src)) return [];
+    const seen = new Set();
+    const out = [];
+    for (const n of src) {
+        const iv = Math.round(Number(n));
+        if (!Number.isFinite(iv) || iv === 0) continue;
+        if (seen.has(iv)) continue;
+        seen.add(iv);
+        out.push(iv);
+    }
+    out.sort((a, b) => a - b);
+    return out.slice(0, POLY_CHORD_MAX - 1);
+}
+
+/** Lowest note = root; extras relative. Drops highest if more than 6 pitches. */
+export function chordFromCellNotes(notes) {
+    const uniq = [...new Set(
+        (notes || [])
+            .map((n) => Math.round(Number(n)))
+            .filter((n) => Number.isFinite(n)),
+    )].sort((a, b) => a - b);
+    if (!uniq.length) return { tune: 0, chord: [] };
+    const kept = uniq.slice(0, POLY_CHORD_MAX);
+    const tune = kept[0];
+    return { tune, chord: kept.slice(1).map((n) => n - tune) };
+}
+
+export function stepCellNotes(data) {
+    const root = Math.round(Number(data?.tune) || 0);
+    return [root, ...clampChord(data?.chord).map((iv) => root + iv)];
+}
+
+export function stepChordCount(data) {
+    return 1 + clampChord(data?.chord).length;
+}
+
+export function soundingIntervalsFromStep(data) {
+    return [0, ...clampChord(data?.chord)];
+}
+
+export function paintStepChordMarker(index, data) {
+    const i = Math.max(0, Math.min(STEP_SLOTS - 1, index | 0));
+    const extras = clampChord(data?.chord);
+    const has = extras.length > 0;
+    const n = 1 + extras.length;
+    document.querySelectorAll(
+        `.keyboard-step[data-step="${i}"], .sequencer-step[data-step="${i}"]`,
+    ).forEach((el) => {
+        el.classList.toggle('has-chord', has);
+        if (has) el.dataset.chordCount = String(n);
+        else el.removeAttribute('data-chord-count');
+    });
+}
+
+export function paintAllStepChordMarkers(steps) {
+    const list = Array.isArray(steps) ? steps : getPattern(state.editSlot).steps;
+    for (let i = 0; i < STEP_SLOTS; i++) {
+        paintStepChordMarker(i, list[i]);
+    }
+}
+
 function emptyStep() {
-    return { tune: 0, fine: 0, on: true, accent: false, slide: false, ratch: 1 };
+    return { tune: 0, fine: 0, on: true, accent: false, slide: false, ratch: 1, chord: [] };
 }
 
 function restStep() {
-    return { tune: 0, fine: 0, on: false, accent: false, slide: false, ratch: 1 };
+    return { tune: 0, fine: 0, on: false, accent: false, slide: false, ratch: 1, chord: [] };
 }
 
 function factoryDrumSteps(ones) {
@@ -180,6 +245,7 @@ export function ensureDrumPatterns() {
         if (Array.isArray(p.steps)) {
             p.steps.forEach((s) => {
                 if (s && s.ratch === undefined) s.ratch = 1;
+                if (s) s.chord = clampChord(s.chord);
             });
             while (p.steps.length < STEP_SLOTS) p.steps.push(restStep());
         } else {
@@ -267,6 +333,7 @@ export function ensureBank() {
         if (Array.isArray(p.steps)) {
             p.steps.forEach((s) => {
                 if (s && s.ratch === undefined) s.ratch = 1;
+                if (s) s.chord = clampChord(s.chord);
             });
         } else {
             p.steps = Array.from({ length: STEP_SLOTS }, emptyStep);
@@ -306,6 +373,7 @@ export function cloneStep(s) {
         accent: !!src.accent,
         slide: !!src.slide,
         ratch: clampRatch(src.ratch),
+        chord: clampChord(src.chord),
     };
 }
 
@@ -506,6 +574,7 @@ export function captureStepFromDom(i) {
     const slide = slideBtn(i);
     const ratch = ratchBtn(i);
     const front = toggleBtn(i)?.querySelector('.front');
+    const live = getPattern(state.editSlot).steps[i];
     return {
         tune: tune ? (parseInt(tune.value, 10) || 0) : 0,
         fine: fine ? (parseInt(fine.value, 10) || 0) : 0,
@@ -513,6 +582,7 @@ export function captureStepFromDom(i) {
         slide: slide ? !slide.classList.contains('off') : false,
         on: front ? front.textContent.trim() === 'On' : true,
         ratch: clampRatch(parseInt(ratch?.dataset?.ratch, 10) || 1),
+        chord: clampChord(live?.chord),
     };
 }
 
@@ -552,6 +622,7 @@ function applyStepToDomUnguarded(i, data) {
     if (front) front.textContent = data.on ? 'On' : 'Off';
     if (toggle) toggle.classList.toggle('off', !data.on);
     syncRatchButton(ratchBtn(i), data.ratch);
+    paintStepChordMarker(i, data);
 }
 
 function stepBusPresent() {
@@ -611,6 +682,7 @@ export function hydratePatternToDom(slot = state.editSlot, { clock = true } = {}
         }
     }
     if (clock) writeClockToStore(pattern);
+    paintAllStepChordMarkers(pattern.steps);
     document.dispatchEvent(new CustomEvent('ingysynth-kb-steps-sync'));
     return pattern;
 }

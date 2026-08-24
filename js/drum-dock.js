@@ -25,7 +25,7 @@ import {
     setDrumMode,
     setBerlinDrumFilt,
     setDrumLanesHidden,
-} from './berlin.js?v=69';
+} from './berlin.js?v=72';
 import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=10';
 

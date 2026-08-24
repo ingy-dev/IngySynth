@@ -10,19 +10,19 @@ import {
 import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=29';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
 import { clearAccentSweep } from './acid-env.js?v=14';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=301';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=110';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=314';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=113';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=80';
-import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=103';
-import { applyScaleState } from './keyboard.js?v=199';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=121';
+import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=104';
+import { applyScaleState } from './keyboard.js?v=204';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=125';
 import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=173';
 import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=124';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=26';
 import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=20';
 import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=17';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc } from './poly-voice.js?v=80';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=36';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=94';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=37';
 import {
     ensurePlaitsWorklet,
     createOscSource,
@@ -64,6 +64,7 @@ export function setAcidMode(next) {
         // Acid needs analog saw/square on OSC1 — drop digital engine
         void applyDigitalEngine(false);
     }
+    bumpSeqEngine();
     state.acidMode = on;
     syncAcidModeUi();
     applyAcidOscLock(on);

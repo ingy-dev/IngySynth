@@ -180,6 +180,7 @@ export const state = {
     logoDisplayTimeout: undefined,
     stopCleanupTimeout: undefined,
     playGeneration: 0,
+    seqEngineGeneration: 0,            // invalidates lookahead voices / MIDI on mode hot-swap
 
     // Pattern bank (P1–P8) + Berlin Dream-960 (8 lanes)
     patterns: [],                      // 8 × Pattern (see pattern-bank.js)

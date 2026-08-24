@@ -2,7 +2,7 @@ import { state } from './state.js?v=116';
 import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=80';
 import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=138';
 import { initAudio } from './audio-engine.js?v=178';
-import { updateNoteVisualizer } from './visualizers.js?v=110';
+import { updateNoteVisualizer } from './visualizers.js?v=113';
 import {
     refreshStepTuneReadouts,
     startArp,
@@ -12,13 +12,17 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=301';
+} from './sequencer.js?v=314';
 import { refreshXYPad } from './xy-pad.js?v=78';
 import {
     initPatternWrite,
     writeNote,
     setWriteMode,
-} from './pattern-write.js?v=105';
+    isPolyWriteMode,
+    polyWriteNoteDown,
+    polyWriteNoteUp,
+    getPolyWriteHeldNotes,
+} from './pattern-write.js?v=106';
 import {
     addHeldNote,
     removeHeldNote,
@@ -32,6 +36,7 @@ import {
     recordArpChordSessionNote,
     freezeArpChordSession,
 } from './held-notes.js?v=8';
+import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=15';
 import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=13';
 import {
     toggleChordMemoryLearn,
@@ -41,15 +46,14 @@ import {
     recordLearnNote,
     getLearnSessionNotes,
     isPolyChordMemoryOn,
-} from './chord-memory.js?v=20';
+} from './chord-memory.js?v=21';
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=36';
+} from './keyboard-multitudes-panel.js?v=37';
 import {
     togglePolyMode,
     togglePolyUnison,
-    setPolyMode,
     syncPolyModeUI,
     polyNoteOn,
     polyNoteOff,
@@ -57,7 +61,8 @@ import {
     retunePolyVoices,
     hasPolyVoices,
     initPolyVoice,
-} from './poly-voice.js?v=80';
+    forceDrumFiltOffForPoly,
+} from './poly-voice.js?v=94';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];
@@ -184,6 +189,21 @@ function highlightHeldOrFrozen() {
 }
 
 function highlightFromState() {
+    if (state.keyboardWrite && !state.isPlaying) {
+        const held = getPolyWriteHeldNotes();
+        if (held.length) {
+            highlightNotes(held);
+            updateTransposeReadout();
+            return;
+        }
+        if (state.keyboardPoly || state.keyboardMultitudes) {
+            const data = getLiveStep(state.writeStep);
+            if (data.on !== false) highlightNotes(stepCellNotes(data));
+            else clearKeyHighlights();
+            updateTransposeReadout();
+            return;
+        }
+    }
     if (!state.isPlaying && (needsHeldNoteSet() || state.arpFrozenNotes?.length)) {
         highlightHeldOrFrozen();
         updateTransposeReadout();
@@ -375,6 +395,13 @@ function handlePress(cellSemitone) {
     pressedSemitone = cellSemitone;
 
     if (state.keyboardWrite) {
+        if (isPolyWriteMode()) {
+            polyWriteNoteDown(cellSemitone);
+            state.keyboardHeldSemitone = cellSemitone;
+            highlightFromState();
+            if (!state.isPlaying) updateNoteVisualizer(sounding);
+            return;
+        }
         writeNote(cellSemitone);
         state.keyboardHeldSemitone = cellSemitone;
         if (!state.isPlaying) {
@@ -450,7 +477,8 @@ function handlePointerMove(e) {
 function polyPointerDown(pointerId, cellSemitone) {
     if (polyPointers.has(pointerId)) return;
     polyPointers.set(pointerId, cellSemitone);
-    heldNoteDown(cellSemitone);
+    if (isPolyWriteMode()) polyWriteNoteDown(cellSemitone);
+    else heldNoteDown(cellSemitone);
 }
 
 function polyPointerUp(pointerId) {
@@ -461,7 +489,8 @@ function polyPointerUp(pointerId) {
     for (const s of polyPointers.values()) {
         if (s === semi) return;
     }
-    heldNoteUp(semi);
+    if (isPolyWriteMode()) polyWriteNoteUp(semi);
+    else heldNoteUp(semi);
 }
 
 /** Drop multi-touch tracking without note-off/on side effects (teardown-safe). */
@@ -474,6 +503,11 @@ function handleRelease() {
     pressedSemitone = null;
 
     if (state.keyboardWrite) {
+        if (isPolyWriteMode()) {
+            if (released != null) polyWriteNoteUp(released);
+            highlightFromState();
+            return;
+        }
         state.keyboardHeldSemitone = null;
         if (!state.isPlaying) noteOff();
         clearKeyHighlights();
@@ -611,9 +645,12 @@ export function refreshKeyboard() {
             if (boardEl) {
                 try { boardEl.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
             }
-            if ((state.keyboardPoly || state.keyboardMultitudes) && !state.isPlaying && !state.keyboardWrite
+            const polyStyle = state.keyboardPoly || state.keyboardMultitudes;
+            const polyWrite = polyStyle && state.keyboardWrite;
+            const polyLiveHold = polyStyle && !state.isPlaying && !state.keyboardWrite
                 && !state.chordMemoryLearning
-                && !(state.keyboardArp && state.keyboardArpChord)) {
+                && !(state.keyboardArp && state.keyboardArpChord);
+            if (polyWrite || polyLiveHold) {
                 polyPointerDown(e.pointerId, semi);
                 return;
             }
@@ -737,7 +774,7 @@ function syncArpUI() {
     else btn.textContent = label;
     btn.classList.toggle('off', !state.keyboardArp);
     btn.setAttribute('aria-pressed', state.keyboardArp ? 'true' : 'false');
-    setToolbarButtonLocked(btn, state.isPlaying);
+    setToolbarButtonLocked(btn, !!state.isPlaying);
     refreshIdleVfd();
 }
 
@@ -754,7 +791,7 @@ function syncArpChordUI() {
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     // Locked off when Arp off / playing; locked on (forced) in Poly/Multitudes Arp
     const polyForced = isPolyArpMode();
-    setToolbarButtonLocked(btn, state.isPlaying || !state.keyboardArp || polyForced);
+    setToolbarButtonLocked(btn, !!state.isPlaying || !state.keyboardArp || polyForced);
 }
 
 function syncArpOrderUI() {
@@ -769,7 +806,7 @@ function syncArpOrderUI() {
     const active = !!(state.keyboardArp && state.keyboardArpChord);
     btn.classList.toggle('off', !active);
     btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-    setToolbarButtonLocked(btn, state.isPlaying || !active);
+    setToolbarButtonLocked(btn, !!state.isPlaying || !active);
 }
 
 function syncArpRangeUI() {
@@ -784,7 +821,7 @@ function syncArpRangeUI() {
     const active = !!(state.keyboardArp && state.keyboardArpChord);
     btn.classList.toggle('off', !active);
     btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-    setToolbarButtonLocked(btn, state.isPlaying || !active);
+    setToolbarButtonLocked(btn, !!state.isPlaying || !active);
 }
 
 /** Refresh Arp / Arp Chord / Order / Range / Chord Mem / Poly enable + labels. */
@@ -1061,9 +1098,7 @@ export function onSequencerStart() {
     clearHeldNotes();
     forceNoteOff();
     forcePolyAllOff({ silent: true });
-    // Play forces Poly / Multitudes off; Acid stays (acid seq is valid)
-    if (state.keyboardPoly) setPolyMode(false);
-    if (state.keyboardMultitudes) setMultitudesMode(false);
+    if (state.keyboardPoly || state.keyboardMultitudes) forceDrumFiltOffForPoly();
     cancelChordMemoryLearn();
     clearFrozenArpNotes();
     clearArpChordSession();
@@ -1080,16 +1115,11 @@ export function onSequencerStart() {
 
 export function onSequencerStop() {
     // Do not resume a latched live note after stop — release any keyboard voice.
+    // Do not exit Poly / Multitudes — that restores polySnapshot and wipes Ingy-6.
     clearPolyPointers();
     clearHeldNotes();
     forceNoteOff();
     forcePolyAllOff({ silent: true });
-    // Poly / Multitudes stay off after play; ensure lock class / disabled are cleared when idle
-    if (state.keyboardPoly) setPolyMode(false);
-    if (state.keyboardMultitudes) setMultitudesMode(false);
-    else syncPolyModeUI();
-    // Keep transpose for the next run, but clear the live/latch hold so nothing
-    // keeps sounding until the user presses a key again.
     state.keyboardHeldSemitone = state.keyboardTranspose !== 0 ? state.keyboardTranspose : null;
     highlightFromState();
     syncTransposeDimUI();
@@ -1153,12 +1183,14 @@ export function initKeyboard() {
         if (state.keyboardArp && isPolyStyleMode()) {
             // Enter Poly/Multitudes Arp: silence sustained chord; keys become the pool
             ensurePolyChordArp();
-            clearPolyPointers();
-            forcePolyAllOff({ silent: true });
-            for (const semi of getHeldNotes()) {
-                recordArpChordSessionNote(semi);
+            if (!state.isPlaying) {
+                clearPolyPointers();
+                forcePolyAllOff({ silent: true });
+                for (const semi of getHeldNotes()) {
+                    recordArpChordSessionNote(semi);
+                }
+                if (heldNoteCount() > 0 && !state.isArping) startArp();
             }
-            if (heldNoteCount() > 0 && !state.isArping) startArp();
         }
         if (!state.keyboardArp) {
             state.keyboardArpChord = false;
@@ -1166,7 +1198,7 @@ export function initKeyboard() {
             if (wasArping) stopArp();
             clearFrozenArpNotes();
             clearArpChordSession();
-            if (isPolyStyleMode()) {
+            if (isPolyStyleMode() && !state.isPlaying) {
                 // Restore normal poly holding for any keys still down
                 forcePolyAllOff({ silent: true });
                 for (const semi of getHeldNotes()) {
@@ -1226,9 +1258,10 @@ export function initKeyboard() {
     });
 
     document.getElementById('keyboardChordMemToggle')?.addEventListener('click', () => {
-        if (state.isPlaying || state.keyboardWrite) return;
+        if (state.keyboardWrite) return;
         const wasArmed = isPolyChordMemoryOn();
         toggleChordMemoryLearn();
+        if (state.isPlaying) return;
         if (wasArmed && !isPolyChordMemoryOn()) {
             forcePolyAllOff();
             clearPolyPointers();
@@ -1252,7 +1285,6 @@ export function initKeyboard() {
     });
 
     document.getElementById('keyboardPolyToggle')?.addEventListener('click', () => {
-        if (state.isPlaying || state.keyboardWrite) return;
         if (!state.keyboardPoly && state.chordMemoryLearning) {
             cancelChordMemoryLearn();
         }
@@ -1263,28 +1295,25 @@ export function initKeyboard() {
         // Always clear holds before mode flip so unison last-note logic can't respawn
         clearPolyPointers();
         if (enabling && state.keyboardArp) {
-            // Entering Poly while Arp on → Poly Arp
             ensurePolyChordArp();
             forceNoteOff();
             forcePolyAllOff({ silent: true });
-            // Keep held/frozen pool; restart arp on poly voice path
-            if (state.isArping) {
-                stopArp();
-            }
+            if (state.isArping) stopArp();
             togglePolyMode();
-            if (heldNoteCount() > 0 || (state.arpFrozenNotes && state.arpFrozenNotes.length)) {
+            if (!state.isPlaying
+                && (heldNoteCount() > 0 || (state.arpFrozenNotes && state.arpFrozenNotes.length))) {
                 startArp();
             }
         } else if (!enabling && state.keyboardArp) {
-            // Leaving Poly while Arp on → fall back to mono chord arp
             if (state.isArping) stopArp();
             forcePolyAllOff({ silent: true });
             togglePolyMode();
-            if (heldNoteCount() > 0 || (state.arpFrozenNotes && state.arpFrozenNotes.length)) {
+            if (!state.isPlaying
+                && (heldNoteCount() > 0 || (state.arpFrozenNotes && state.arpFrozenNotes.length))) {
                 startArp();
             }
         } else {
-            clearHeldNotes();
+            if (!state.isPlaying) clearHeldNotes();
             forceNoteOff();
             forcePolyAllOff();
             togglePolyMode();
@@ -1294,13 +1323,11 @@ export function initKeyboard() {
     });
 
     document.getElementById('keyboardMultitudesToggle')?.addEventListener('click', () => {
-        if (state.isPlaying || state.keyboardWrite) return;
         if (state.chordMemoryLearning) cancelChordMemoryLearn();
         const enabling = !state.keyboardMultitudes;
         if (enabling && state.keyboardPoly) {
             clearPolyPointers();
-            // Keep held/frozen arp pool when transferring into Multitudes Arp
-            if (!state.keyboardArp) clearHeldNotes();
+            if (!state.keyboardArp && !state.isPlaying) clearHeldNotes();
             forceNoteOff();
             forcePolyAllOff({ silent: true });
             togglePolyMode();
@@ -1309,32 +1336,32 @@ export function initKeyboard() {
             void initAudio();
             clearPolyPointers();
             if (state.keyboardArp) {
-                // Entering Multitudes while Arp on → Multitudes Arp
                 forceNoteOff();
                 forcePolyAllOff({ silent: true });
                 if (state.isArping) stopArp();
                 setMultitudesMode(true);
                 ensurePolyChordArp();
-                if (heldNoteCount() > 0 || (state.arpFrozenNotes && state.arpFrozenNotes.length)) {
+                if (!state.isPlaying
+                    && (heldNoteCount() > 0 || (state.arpFrozenNotes && state.arpFrozenNotes.length))) {
                     startArp();
                 }
             } else {
-                clearHeldNotes();
+                if (!state.isPlaying) clearHeldNotes();
                 forcePolyAllOff({ silent: true });
                 setMultitudesMode(true);
             }
         } else if (state.keyboardArp) {
-            // Leaving Multitudes while Arp on → fall back to mono chord arp
             clearPolyPointers();
             if (state.isArping) stopArp();
             forcePolyAllOff({ silent: true });
             setMultitudesMode(false);
-            if (heldNoteCount() > 0 || (state.arpFrozenNotes && state.arpFrozenNotes.length)) {
+            if (!state.isPlaying
+                && (heldNoteCount() > 0 || (state.arpFrozenNotes && state.arpFrozenNotes.length))) {
                 startArp();
             }
         } else {
             clearPolyPointers();
-            clearHeldNotes();
+            if (!state.isPlaying) clearHeldNotes();
             forcePolyAllOff({ silent: true });
             setMultitudesMode(false);
         }
@@ -1449,6 +1476,16 @@ export function initKeyboard() {
 
     document.addEventListener('ingysynth:sequencer-start', () => onSequencerStart());
     document.addEventListener('ingysynth:sequencer-stop', () => onSequencerStop());
+    document.addEventListener('ingysynth:seq-step-ui', (e) => {
+        if (!state.isPlaying) return;
+        const notes = e.detail?.cellNotes;
+        if (Array.isArray(notes) && notes.length) highlightNotes(notes);
+        else highlightFromState();
+    });
+    document.addEventListener('ingysynth-kb-steps-sync', () => {
+        if (state.keyboardWrite && !state.isPlaying) highlightFromState();
+    });
+    document.addEventListener('ingysynth:poly-write-keys', () => highlightFromState());
 
     // Match keyboard scale UI to the param Map (catalog default is off)
     applyScaleState(

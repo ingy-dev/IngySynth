@@ -1,7 +1,7 @@
 import { state } from './state.js?v=116';
 import { semitonesToNoteName } from './tuning.js?v=80';
 import { initAudio } from './audio-engine.js?v=178';
-import { togglePlay } from './sequencer.js?v=301';
+import { togglePlay } from './sequencer.js?v=314';
 import {
     pressKey,
     releaseKey,
@@ -12,8 +12,9 @@ import {
     syncVisibilityUI,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=199';
+} from './keyboard.js?v=204';
 import { needsHeldNoteSet } from './held-notes.js?v=8';
+import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=106';
 
 /** Ableton home-row octave: relative semitones from A-key root. */
 const NOTE_CODES = {
@@ -288,7 +289,9 @@ function tryNoteDown(code) {
     cancelLegatoRelease();
     pressedCodes.add(code);
     setKeyDownVisual(code, true);
-    if (needsHeldNoteSet()) {
+    if (isPolyWriteMode()) {
+        polyWriteNoteDown(semi);
+    } else if (needsHeldNoteSet()) {
         heldNoteDown(semi);
     } else {
         pressKey(semi);
@@ -300,6 +303,11 @@ function tryNoteUp(code) {
     if (!pressedCodes.has(code)) return false;
     pressedCodes.delete(code);
     setKeyDownVisual(code, false);
+    if (isPolyWriteMode()) {
+        const semi = semiForCode(code);
+        if (semi != null) polyWriteNoteUp(semi);
+        return true;
+    }
     if (needsHeldNoteSet()) {
         const semi = semiForCode(code);
         if (semi != null) heldNoteUp(semi);

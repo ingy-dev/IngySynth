@@ -12,7 +12,7 @@ import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=7';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=69';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=72';
 import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=13';
 import { clampToCatalog, getParam } from './param-catalog.js?v=2';
 

@@ -7,8 +7,9 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=199';
+} from './keyboard.js?v=204';
 import { needsHeldNoteSet } from './held-notes.js?v=8';
+import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=106';
 import {
     catalogKeyFromLearn,
     clearMappingHighlight,
@@ -27,7 +28,7 @@ function midiNoteToCellSemitone(note) {
 }
 
 function handleMidiHeldNote(note, isNoteOn) {
-    if (state.midiMappingMode || state.isPlaying || !needsHeldNoteSet()) return false;
+    if (state.midiMappingMode || state.isPlaying || state.keyboardWrite || !needsHeldNoteSet()) return false;
     const semi = midiNoteToCellSemitone(note);
     if (semi < KEYBOARD_SEMI_MIN || semi > KEYBOARD_SEMI_MAX) return false;
     if (isNoteOn) {
@@ -42,12 +43,24 @@ function handleMidiHeldNote(note, isNoteOn) {
     return true;
 }
 
-/** Write mode only: MIDI notes → keyboard press/release (program steps). */
+/** Write mode: MIDI notes program steps (poly: last-key-up capture). Allowed during Play. */
 function handleMidiPlayOrWrite(note, isNoteOn) {
-    if (state.midiMappingMode || state.isPlaying || !state.keyboardWrite) return false;
-    if (needsHeldNoteSet()) return false;
+    if (state.midiMappingMode || !state.keyboardWrite) return false;
     const semi = midiNoteToCellSemitone(note);
     if (semi < KEYBOARD_SEMI_MIN || semi > KEYBOARD_SEMI_MAX) return false;
+
+    if (isPolyWriteMode()) {
+        if (isNoteOn) {
+            if (midiHeldNotes.has(note)) return true;
+            midiHeldNotes.set(note, semi);
+            polyWriteNoteDown(semi);
+        } else if (midiHeldNotes.has(note)) {
+            const s = midiHeldNotes.get(note);
+            midiHeldNotes.delete(note);
+            polyWriteNoteUp(s);
+        }
+        return true;
+    }
 
     if (isNoteOn) {
         if (midiPlayNotes.has(note)) return true;
@@ -57,6 +70,22 @@ function handleMidiPlayOrWrite(note, isNoteOn) {
         midiPlayNotes.delete(note);
         if (midiPlayNotes.size === 0) releaseKey();
         // Don't legato-retune in Write — each note-on already wrote a step
+    }
+    return true;
+}
+
+/** Phase 2: MIDI during Play (not Write) sets keyboard transpose like the piano. */
+function handleMidiPlayTranspose(note, isNoteOn) {
+    if (state.midiMappingMode || !state.isPlaying || state.keyboardWrite) return false;
+    const semi = midiNoteToCellSemitone(note);
+    if (semi < KEYBOARD_SEMI_MIN || semi > KEYBOARD_SEMI_MAX) return false;
+    if (isNoteOn) {
+        if (midiPlayNotes.has(note)) return true;
+        midiPlayNotes.add(note);
+        pressKey(semi);
+    } else if (midiPlayNotes.has(note)) {
+        midiPlayNotes.delete(note);
+        if (midiPlayNotes.size === 0) releaseKey();
     }
     return true;
 }
@@ -249,10 +278,12 @@ function onMIDIMessage(message) {
         }
 
         // Chord arp / Chord Mem learn: play notes into the held-note set
-        if (handleMidiHeldNote(note, isNoteOn)) {
-            // Still allow mapped note→button clicks below when mapping is off
-        } else if (handleMidiPlayOrWrite(note, isNoteOn)) {
-            // Write mode + mono live play from MIDI keyboard
+        if (handleMidiPlayOrWrite(note, isNoteOn)) {
+            // Write mode (poly last-key-up or mono 303-advance)
+        } else if (handleMidiHeldNote(note, isNoteOn)) {
+            // Chord arp / Chord Mem learn / live poly
+        } else if (handleMidiPlayTranspose(note, isNoteOn)) {
+            // Sequencer play: MIDI keys transpose like the piano
         }
 
         if (isNoteOn) {
@@ -271,6 +302,11 @@ function setupMappingListeners(enable) {
 
 document.addEventListener('ingysynth:sequencer-start', () => {
     midiHeldNotes.clear();
+    midiPlayNotes.clear();
+});
+document.addEventListener('ingysynth:sequencer-stop', () => {
+    midiHeldNotes.clear();
+    midiPlayNotes.clear();
 });
 
 export { onMIDISuccess, onMIDIFailure, onMIDIMessage, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight };

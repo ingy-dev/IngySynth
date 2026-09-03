@@ -3,7 +3,7 @@
 
 import { state } from './state.js?v=116';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
-import { getNumber, getString, set } from './params.js?v=13';
+import { getNumber, getString, set } from './params.js?v=14';
 
 /** Total Berlin lanes (and bank array length). */
 export const PATTERN_COUNT = 8;
@@ -573,14 +573,14 @@ export function captureStepFromDom(i) {
     const accent = accentBtn(i);
     const slide = slideBtn(i);
     const ratch = ratchBtn(i);
-    const front = toggleBtn(i)?.querySelector('.front');
+    const toggle = toggleBtn(i);
     const live = getPattern(state.editSlot).steps[i];
     return {
         tune: tune ? (parseInt(tune.value, 10) || 0) : 0,
         fine: fine ? (parseInt(fine.value, 10) || 0) : 0,
         accent: accent ? !accent.classList.contains('off') : false,
         slide: slide ? !slide.classList.contains('off') : false,
-        on: front ? front.textContent.trim() === 'On' : true,
+        on: toggle ? !toggle.classList.contains('off') : (live?.on !== false),
         ratch: clampRatch(parseInt(ratch?.dataset?.ratch, 10) || 1),
         chord: clampChord(live?.chord),
     };
@@ -620,7 +620,10 @@ function applyStepToDomUnguarded(i, data) {
     if (accent) accent.classList.toggle('off', !data.accent);
     if (slide) slide.classList.toggle('off', !data.slide);
     if (front) front.textContent = data.on ? 'On' : 'Off';
-    if (toggle) toggle.classList.toggle('off', !data.on);
+    if (toggle) {
+        toggle.classList.toggle('off', !data.on);
+        toggle.setAttribute('aria-pressed', data.on ? 'true' : 'false');
+    }
     syncRatchButton(ratchBtn(i), data.ratch);
     paintStepChordMarker(i, data);
 }

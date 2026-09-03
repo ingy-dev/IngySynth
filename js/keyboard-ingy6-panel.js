@@ -2,11 +2,11 @@
 
 import { state } from './state.js?v=116';
 import { beginMidiLearn } from './midi-learn.js?v=6';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
 import { updateLfoCutoffSafety } from './lfo-strip.js?v=26';
-import { refreshFilterInputDrive } from './filter-drive.js?v=29';
+import { refreshFilterInputDrive } from './filter-drive.js?v=30';
 import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=89';
-import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=13';
+import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=14';
 
 const HPF_HZ = [20, 250, 700, 1400];
 

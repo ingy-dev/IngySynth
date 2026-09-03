@@ -11,15 +11,15 @@ import {
     getOscPan,
     subscribe,
     notifyKey,
-} from './params.js?v=13';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=29';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { previewStepsOnVfd } from './sequencer.js?v=314';
-import { resetSidechainDucker } from './sc-time.js?v=1';
-import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer } from './visualizers.js?v=113';
+} from './params.js?v=14';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=30';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
+import { previewStepsOnVfd } from './sequencer.js?v=383';
+import { resetSidechainDucker } from './sc-time.js?v=3';
+import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer } from './visualizers.js?v=114';
 import { calculateSemitoneShift, getQuantizedStepTune } from './tuning.js?v=80';
-import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=125';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=124';
+import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=129';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=130';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -28,9 +28,9 @@ import {
     updateLfoCutoffSafety,
     updateLfoHighpassSafety,
 } from './lfo-strip.js?v=26';
-import { applyLfoRate } from './lfo-rate.js?v=20';
-import { applyPolyOscPan, forEachPolyOsc } from './poly-voice.js?v=94';
-import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=121';
+import { applyLfoRate } from './lfo-rate.js?v=22';
+import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=111';
+import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=122';
 
 let wired = false;
 let rebuildReverbIr = null;
@@ -237,22 +237,39 @@ function applyOscToggle(index, on) {
     refreshFilterInputDrive();
 }
 
+function applyLiveNoiseLevel(volume) {
+    if (!state.audioContext) return;
+    const now = state.audioContext.currentTime;
+    const level = Math.max(0, Number(volume) || 0);
+    if (state.berlinSharedPathArmed) {
+        state.berlinOscVoices?.forEach((voice) => {
+            if (!voice?.isNoise || !voice.noiseGain) return;
+            try {
+                const g = voice.noiseGain.gain;
+                g.cancelScheduledValues(now);
+                g.setValueAtTime(Math.max(0, Number(g.value) || 0), now);
+                g.linearRampToValueAtTime(level, now + 0.012);
+            } catch (_) { /* ignore */ }
+        });
+        return;
+    }
+    if (!state.noiseGain) return;
+    state.noiseGain.gain.cancelScheduledValues(now);
+    state.noiseGain.gain.setValueAtTime(level, now);
+}
+
 function applyNoiseEnabled(on) {
     state.noiseState = !!on;
     syncButton('noiseToggle', on);
-    if (!state.audioContext || !state.noiseGain) return;
-    const volume = on ? getNumber('noiseVol', 0) : 0;
-    state.noiseGain.gain.cancelScheduledValues(state.audioContext.currentTime);
-    state.noiseGain.gain.setValueAtTime(volume, state.audioContext.currentTime);
+    applyLiveNoiseLevel(on ? getNumber('noiseVol', 0) : 0);
     refreshFilterInputDrive();
 }
 
 function applyNoiseVol() {
     const el = document.getElementById('noiseVol');
     if (el?.nextElementSibling) el.nextElementSibling.textContent = formatRangeValue(el);
-    if (!state.audioContext || !state.noiseGain || !state.noiseState) return;
-    state.noiseGain.gain.cancelScheduledValues(state.audioContext.currentTime);
-    state.noiseGain.gain.setValueAtTime(getNumber('noiseVol', 0), state.audioContext.currentTime);
+    if (!state.audioContext || !state.noiseState) return;
+    applyLiveNoiseLevel(getNumber('noiseVol', 0));
     refreshFilterInputDrive();
 }
 
@@ -725,13 +742,22 @@ export function applyStoreToAudio() {
 }
 
 export function applyMixerMutes() {
-    const ctx = state.audioContext;
-    if (!ctx) return;
     const mix = state.mixer || {};
-    const t = ctx.currentTime;
     const anySolo = (mix.oscSolo || []).some(Boolean)
         || !!mix.noiseSolo
         || (mix.drumSolo || []).some(Boolean);
+    const oscOpen = [];
+    for (let i = 0; i < OSC_COUNT; i++) {
+        let on = !mix.oscMute?.[i];
+        if (anySolo) on = on && !!mix.oscSolo?.[i];
+        oscOpen[i] = on;
+    }
+    let noiseOn = !mix.noiseMute;
+    if (anySolo) noiseOn = noiseOn && !!mix.noiseSolo;
+    applyPolyMixerMutes(oscOpen);
+    const ctx = state.audioContext;
+    if (!ctx) return;
+    const t = ctx.currentTime;
     const ramp = (node, open) => {
         if (!node) return;
         const v = open ? 1 : 0;
@@ -742,12 +768,8 @@ export function applyMixerMutes() {
         } catch (_) { /* ignore */ }
     };
     for (let i = 0; i < OSC_COUNT; i++) {
-        let on = !mix.oscMute?.[i];
-        if (anySolo) on = on && !!mix.oscSolo?.[i];
-        ramp(state.oscMuteGains?.[i], on);
+        ramp(state.oscMuteGains?.[i], oscOpen[i]);
     }
-    let noiseOn = !mix.noiseMute;
-    if (anySolo) noiseOn = noiseOn && !!mix.noiseSolo;
     ramp(state.noiseMuteGain, noiseOn);
     for (let i = 0; i < 3; i++) {
         let on = !mix.drumMute?.[i];

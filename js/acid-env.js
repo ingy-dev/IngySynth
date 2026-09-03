@@ -1,21 +1,19 @@
 // ACID mode: TB-303-style AD envelopes + accent sweep (Robin Whittle MEG/VEG).
 // When Off, callers keep the normal ADSR path untouched.
+// Envelope timings restored from local commit f618f51.
 
 import { state } from './state.js?v=116';
-import { getNumber } from './params.js?v=13';
+import { getNumber } from './params.js?v=14';
 import {
     getFilterEnvAmount,
     getFilterCutoffRange,
     updateFilterCutoffRange,
-} from './filter-cutoff.js?v=82';
+} from './filter-cutoff.js?v=84';
 
 const MIN = 0.00001;
 const ACCENT_MEG_SEC = 0.2; // fixed MEG decay on accent (~200 ms)
 /** Slide-chain end: short release so the glide doesn't leave a long VEG/MEG tail. */
 const SLIDE_END_RELEASE_SEC = 0.12;
-/** Fade previous note before attack — avoids hard-zero clicks on long VEG tails. */
-const RETRIG_CLOSE_SEC = 0.004;
-const RETRIG_CLOSE_HOT_SEC = 0.008;
 
 /* Hotter TB-303-style accent (this module is Acid-only). */
 const ACCENT_SWEEP_BASE_HZ = 800;
@@ -26,19 +24,53 @@ const ACCENT_AMP_BOOST = 0.85;
 /** Env Mod depth multiplier on accent: base * (1 + ACCENT_ENV_DEPTH * amt) */
 const ACCENT_ENV_DEPTH = 1.35;
 
+/** VEG (amp) attack — TB-303 is effectively instant. */
+export const ACID_VEG_ATTACK_SEC = 0.003;
+/** MEG (filter) attack — TB-303 is effectively instant. */
+export const ACID_MEG_ATTACK_SEC = 0.004;
+
+export const ACID_MEG_DECAY_MIN_SEC = 0.2;
+export const ACID_MEG_DECAY_MAX_SEC = 2.0;
+export const ACID_VEG_DECAY_MIN_SEC = 0.5;
+export const ACID_VEG_DECAY_MAX_SEC = 3.5;
+
+function clampDecayKnob(raw, fallback) {
+    const v = Number.isFinite(raw) ? raw : fallback;
+    return Math.max(0, Math.min(2, v));
+}
+
 /** Map filter Decay knob (0–2) → MEG decay seconds (~0.2–2 s). */
 export function acidMegDecaySec(accentThisStep) {
     if (accentThisStep) return ACCENT_MEG_SEC;
-    const raw = getNumber('filterDecay', 0.3);
-    const v = Number.isFinite(raw) ? raw : 0.3;
-    return 0.2 + (Math.max(0, Math.min(2, v)) / 2) * 1.8;
+    const t = clampDecayKnob(getNumber('filterDecay', 0.3), 0.3) / 2;
+    return ACID_MEG_DECAY_MIN_SEC + t * (ACID_MEG_DECAY_MAX_SEC - ACID_MEG_DECAY_MIN_SEC);
 }
 
 /** Map amp Decay knob (0–2) → VEG decay seconds (~0.5–3.5 s). */
 export function acidVegDecaySec() {
-    const raw = getNumber('decay', 0.5);
-    const v = Number.isFinite(raw) ? raw : 0.5;
-    return 0.5 + (Math.max(0, Math.min(2, v)) / 2) * 3.0;
+    const t = clampDecayKnob(getNumber('decay', 0.5), 0.5) / 2;
+    return ACID_VEG_DECAY_MIN_SEC + t * (ACID_VEG_DECAY_MAX_SEC - ACID_VEG_DECAY_MIN_SEC);
+}
+
+/**
+ * Shape the Filter / Amp canvases should draw in Acid (A/S/R knobs are ignored).
+ * `window` is a stable time axis so Decay stretches instead of rescaling Attack.
+ */
+export function acidEnvelopeDisplay(kind) {
+    const filter = kind === 'filter';
+    const attack = filter ? ACID_MEG_ATTACK_SEC : ACID_VEG_ATTACK_SEC;
+    const decay = filter ? acidMegDecaySec(false) : acidVegDecaySec();
+    const decayMax = filter ? ACID_MEG_DECAY_MAX_SEC : ACID_VEG_DECAY_MAX_SEC;
+    return { attack, decay, window: attack + decayMax };
+}
+
+/** Inverse of MEG/VEG decay mapping — display seconds → Decay knob (0–2). */
+export function acidDecayKnobFromSec(kind, sec) {
+    const filter = kind === 'filter';
+    const min = filter ? ACID_MEG_DECAY_MIN_SEC : ACID_VEG_DECAY_MIN_SEC;
+    const max = filter ? ACID_MEG_DECAY_MAX_SEC : ACID_VEG_DECAY_MAX_SEC;
+    const t = (Math.max(min, Math.min(max, Number(sec) || 0)) - min) / Math.max(1e-6, max - min);
+    return t * 2;
 }
 
 function decayTau(sec) {
@@ -56,10 +88,14 @@ function acidGateFrac() {
  * Dump a VEG/MEG gain at GATE close. Slide hold skips this (gate stays open).
  * Clamped so a full GATE still leaves a hair before the next step's retrigger.
  */
+function gateDumpAt(t0, stepDuration) {
+    const raw = t0 + stepDuration * acidGateFrac();
+    return Math.min(t0 + stepDuration - 0.005, Math.max(t0 + 0.012, raw));
+}
+
 function scheduleGateDump(gainParam, t0, stepDuration) {
     if (!gainParam || !(stepDuration > 0)) return;
-    const raw = t0 + stepDuration * acidGateFrac();
-    const dumpAt = Math.min(t0 + stepDuration - 0.005, Math.max(t0 + 0.012, raw));
+    const dumpAt = gateDumpAt(t0, stepDuration);
     try {
         if (typeof gainParam.cancelAndHoldAtTime === 'function') {
             gainParam.cancelAndHoldAtTime(dumpAt);
@@ -78,34 +114,28 @@ function resonanceNorm() {
     return Math.max(0, Math.min(1, v / max));
 }
 
-function cutModHot() {
-    return state.lfoState
-        && Math.abs(getNumber('cutoffMod', 0)) > 80
-        && (Number(state.lfoAmount) || 0) > 0.02;
-}
-
 /**
- * Soft-close then attack on an AudioParam. Never hard-jumps to 0 while signal is open
- * (that was the main ACID click with long VEG overlapping the next step).
+ * Retrigger from the held level (BA662 / dest-clean path).
+ * linearRamp after setTarget(MIN) jumps to the target (silence) in Chrome —
+ * dest skips this and stays clean. setTarget attack continues from the hold.
  */
 function softRetriggerGain(gainParam, t0, peak, attackSec, decayTauSec) {
-    const cur = Math.max(MIN, Number(gainParam.value) || MIN);
-    const closeT = cur > MIN * 2
-        ? (cutModHot() ? RETRIG_CLOSE_HOT_SEC : RETRIG_CLOSE_SEC)
-        : 0;
-    let attackStart = t0;
-
-    gainParam.cancelScheduledValues(t0);
-    gainParam.setValueAtTime(cur, t0);
-    if (closeT > 0) {
-        gainParam.linearRampToValueAtTime(MIN, t0 + closeT);
-        attackStart = t0 + closeT;
-    } else {
-        gainParam.setValueAtTime(MIN, t0);
+    let held = false;
+    if (typeof gainParam.cancelAndHoldAtTime === 'function') {
+        try {
+            gainParam.cancelAndHoldAtTime(t0);
+            held = true;
+        } catch (_) { /* fall through */ }
     }
+    if (!held) gainParam.cancelScheduledValues(t0);
     const attack = Math.max(0.002, attackSec);
-    gainParam.linearRampToValueAtTime(peak, attackStart + attack);
-    gainParam.setTargetAtTime(MIN, attackStart + attack, decayTauSec);
+    const attackTau = Math.max(0.0008, attack / 3);
+    gainParam.setTargetAtTime(peak, t0, attackTau);
+    const decayStart = t0 + attack;
+    if (typeof gainParam.cancelAndHoldAtTime === 'function') {
+        try { gainParam.cancelAndHoldAtTime(decayStart); } catch (_) { /* ignore */ }
+    }
+    gainParam.setTargetAtTime(MIN, decayStart, decayTauSec);
     return attack;
 }
 
@@ -130,14 +160,11 @@ export function chargeAccentSweep(t0, accentAmount) {
     if (amt <= 0.001) return;
 
     const resN = resonanceNorm();
-    // Peak add in Hz — stronger at high resonance; short bleed so it doesn't paint the next steps
     const pulseHz = amt * (ACCENT_SWEEP_BASE_HZ + resN * ACCENT_SWEEP_RES_HZ);
-    // ~60–220 ms τ → ~95% gone in ~0.2–0.65 s (was up to ~1.2 s τ)
     const sweepTau = 0.06 + resN * 0.16;
     const g = state.accentSweepGain.gain;
     const cur = Math.max(0, Number(g.value) || 0);
     const charged = Math.min(ACCENT_SWEEP_CAP_HZ, cur + pulseHz);
-    // Softer charge edge — fast Hz jumps into a resonant LP click hard
     const chargeT = 0.012 + resN * 0.02;
 
     g.cancelScheduledValues(t0);
@@ -194,10 +221,10 @@ export function scheduleAcidFilterEnvelope({
     nextStepWillSlide,
     accentThisStep,
     accentAmount,
+    nextIsRest = false,
 }) {
     if (!state.filterEnvGain) return;
 
-    // Ensure Env Mod path has depth when ACID is on
     const amount = getFilterEnvAmount();
     if (amount === 0) return;
 
@@ -211,17 +238,13 @@ export function scheduleAcidFilterEnvelope({
         chargeAccentSweep(t0, accentAmount);
         applyAccentEnvDepthBoost(t0, accentAmount, stepDuration);
     } else {
-        // Consecutive Accents may still stack via chargeAccentSweep; Acc→normal clears
         decayAccentSweep(t0, 0.03);
     }
 
     if (slideThisStep) {
-        // Gate held open — keep decaying / sustained schedule; release only if chain ends
+        // Dest is still gated: do not dump MEG at dest start.
         if (!nextStepWillSlide) {
-            const cur = Math.max(MIN, Number(gainParam.value) || MIN);
-            gainParam.cancelScheduledValues(t0);
-            gainParam.setValueAtTime(cur, t0);
-            gainParam.setTargetAtTime(MIN, t0, decayTau(SLIDE_END_RELEASE_SEC));
+            scheduleGateDump(gainParam, t0, stepDuration);
             state.filterEnvelopeHeld = false;
         } else {
             state.filterEnvelopeHeld = true;
@@ -233,7 +256,7 @@ export function scheduleAcidFilterEnvelope({
         gainParam,
         t0,
         1,
-        0.004,
+        ACID_MEG_ATTACK_SEC,
         decayTau(acidMegDecaySec(!!accentThisStep)),
     );
 
@@ -256,23 +279,21 @@ export function scheduleAcidAmpEnvelope({
     nextStepWillSlide,
     accentThisStep,
     accentAmount,
+    nextIsRest = false,
 }) {
     if (!state.envelope) return 0.002;
 
     const now = state.audioContext.currentTime;
     const t0 = Math.max(now, startTime);
     const amt = Math.max(0, Math.min(1, accentAmount ?? 0));
-    // Accent raises VEG peak (MEG→VCA); soft-retrigger prevents the click
     const peak = accentThisStep ? 1 + ACCENT_AMP_BOOST * amt : 1;
     const tau = decayTau(acidVegDecaySec());
     const g = state.envelope.gain;
 
     if (slideThisStep) {
+        // Dest is still gated: leave VEG decaying; dump at dest gate end.
         if (!nextStepWillSlide) {
-            const cur = Math.max(MIN, Number(g.value) || MIN);
-            g.cancelScheduledValues(t0);
-            g.setValueAtTime(cur, t0);
-            g.setTargetAtTime(MIN, t0, decayTau(SLIDE_END_RELEASE_SEC));
+            scheduleGateDump(g, t0, stepDuration);
             state.envelopeHeld = false;
         } else {
             state.envelopeHeld = true;
@@ -280,9 +301,8 @@ export function scheduleAcidAmpEnvelope({
         return 0.002;
     }
 
-    const attack = softRetriggerGain(g, t0, peak, 0.003, tau);
+    const attack = softRetriggerGain(g, t0, peak, ACID_VEG_ATTACK_SEC, tau);
     if (!nextStepWillSlide) {
-        // GATE chops the VCA; Decay still shapes the fall during the gate window
         scheduleGateDump(g, t0, stepDuration);
         state.envelopeHeld = false;
     } else {
@@ -296,11 +316,7 @@ export function triggerAcidLiveAmp(now, { fromCurrent = false } = {}) {
     if (!state.envelope) return;
     const tau = decayTau(acidVegDecaySec());
     const g = state.envelope.gain;
-    if (fromCurrent) {
-        softRetriggerGain(g, now, 1, 0.003, tau);
-    } else {
-        softRetriggerGain(g, now, 1, 0.003, tau);
-    }
+    softRetriggerGain(g, now, 1, ACID_VEG_ATTACK_SEC, tau);
     state.envelopeHeld = true;
 }
 
@@ -312,7 +328,7 @@ export function triggerAcidLiveFilter(now, { fromCurrent = false } = {}) {
         state.filterEnvGain.gain,
         now,
         1,
-        0.004,
+        ACID_MEG_ATTACK_SEC,
         decayTau(acidMegDecaySec(false)),
     );
     state.filterEnvelopeHeld = true;
@@ -333,6 +349,28 @@ export function releaseAcidLiveEnvelopes(now) {
         state.filterEnvGain.gain.cancelScheduledValues(now);
         state.filterEnvGain.gain.setValueAtTime(cur, now);
         state.filterEnvGain.gain.setTargetAtTime(minValue, now, decayTau(acidMegDecaySec(false)));
+        state.filterEnvelopeHeld = false;
+    }
+}
+
+/** Rest/OFF: close held VEG/MEG without pinning AudioParam.value (lookahead click). */
+export function releaseAcidHeldEnvelopes(startTime) {
+    if (!state.audioContext) return;
+    const t0 = Math.max(state.audioContext.currentTime, startTime);
+    const dumpNow = (param) => {
+        try {
+            if (typeof param.cancelAndHoldAtTime === 'function') {
+                param.cancelAndHoldAtTime(t0);
+            }
+        } catch (_) { /* ignore */ }
+        param.setTargetAtTime(MIN, t0, decayTau(SLIDE_END_RELEASE_SEC));
+    };
+    if (state.envelopeHeld && state.envelope) {
+        dumpNow(state.envelope.gain);
+        state.envelopeHeld = false;
+    }
+    if (state.filterEnvelopeHeld && state.filterEnvGain) {
+        dumpNow(state.filterEnvGain.gain);
         state.filterEnvelopeHeld = false;
     }
 }

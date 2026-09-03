@@ -1041,6 +1041,10 @@ html {
         padding-top: 8px;
         box-sizing: border-box;
     }
+    .midi-fieldset-body.hidden,
+    .midi-fieldset-body[hidden] {
+        display: none;
+    }
     
     /* XY Pad — base styles (keyboard fullscreen panel) */
     .xy-pad-container {
@@ -2103,7 +2107,7 @@ html {
 .keyboard-section .midi-fieldset .legend-hex {
     --hex-bg: #050805;
     --hex-stroke: #00aa00;
-    color: #00aa00;
+    color: #00ff00;
 }
 .keyboard-section .midi-fieldset.midi-section-on .legend-hex {
     --hex-bg: #050808;
@@ -2151,8 +2155,8 @@ html {
     width: 100%;
 }
 .keyboard-controls-fieldset > .collapsible-legend {
-    color: #00aa00;
-    font-family: 'Michroma', sans-serif;
+    color: #00ff00;
+    font-family: "changeling-neo", sans-serif;
 }
 
 /*
@@ -2207,11 +2211,13 @@ html {
     width: max-content;
     min-width: calc(var(--hex-cut) * 2 + 40px);
     line-height: 1;
-    font-family: 'Michroma', sans-serif;
-    font-size: 10px;
-    font-weight: normal;
+    font-family: "changeling-neo", sans-serif;
+    font-size: 12px;
+    font-weight: 400;
     letter-spacing: 0.04em;
-    color: #00aa00;
+    text-transform: lowercase;
+    color: #00ff00;
+    text-shadow: 0 0 2px #00ff00, 0 0 4px rgba(0, 255, 0, 0.35);
     border: none;
     -webkit-appearance: none;
     appearance: none;
@@ -2221,7 +2227,7 @@ html {
 .midi-fieldset .legend-hex {
     --hex-bg: #0a0a0a;
     --hex-stroke: #00aa00;
-    color: #00aa00;
+    color: #00ff00;
 }
 .midi-fieldset.midi-section-on .legend-hex {
     --hex-bg: #0a0a0a;
@@ -2239,7 +2245,7 @@ html {
 .keyboard-section .keyboard-write-fieldset > legend,
 .keyboard-section .keyboard-arp-panel > legend,
 .keyboard-section .keyboard-mod-matrix > legend,
-.keyboard-section .keyboard-scale-fieldset > legend,
+.keyboard-section .keyboard-scale-fieldset > .collapsible-legend,
 .midi-fieldset > .collapsible-legend {
     --hex-h: 20px;
     --field-border: 1px;
@@ -2292,7 +2298,7 @@ html {
 .midi-fieldset .collapsible-toggle.legend-hex {
     cursor: pointer;
     margin: 0;
-    font-size: 10px;
+    font-size: 12px;
     background-color: transparent;
     -webkit-tap-highlight-color: transparent;
 }
@@ -2654,27 +2660,20 @@ html {
     box-sizing: border-box;
     overflow: visible;
 }
-.keyboard-section .keyboard-scale-fieldset > legend {
-    /* Absolute center — margin:auto is unreliable on <legend> */
-    --hex-h: 20px;
-    --field-border: 1px;
-    position: absolute;
-    left: 50%;
-    top: calc(var(--hex-h) / -2 + var(--field-border) / 2);
-    transform: translateX(-50%);
-    margin: 0;
-    width: max-content;
-    float: unset;
-}
 .keyboard-scale-fieldset-body {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
     padding: 8px 10px 10px;
     box-sizing: border-box;
+}
+.keyboard-scale-fieldset-body.hidden,
+.keyboard-scale-fieldset-body[hidden] {
+    display: none;
 }
 .keyboard-scale-fieldset-body .keyboard-tuning-scale-row {
     width: max-content;
@@ -2738,11 +2737,12 @@ html {
     border: none;
     background: transparent;
     cursor: pointer;
-    font-family: 'Michroma', sans-serif;
-    font-size: 10px;
-    font-weight: normal;
+    font-family: "changeling-neo", sans-serif;
+    font-size: 12px;
+    font-weight: 400;
     letter-spacing: 0.04em;
-    color: #00aa00;
+    text-transform: lowercase;
+    color: #00ff00;
     line-height: 1;
     -webkit-tap-highlight-color: transparent;
 }
@@ -2755,13 +2755,20 @@ html {
 .collapsible-fieldset.collapse-locked > .collapsible-legend .collapsible-toggle:hover,
 .collapsible-fieldset.collapse-locked > .collapsible-legend .collapsible-toggle:focus-visible {
     cursor: default;
-    color: #00aa00;
+    color: #00ff00;
 }
 .collapsible-fieldset.collapse-locked > .collapsible-legend .collapsible-arrow {
     opacity: 0.35;
 }
 .collapsible-label {
     pointer-events: none;
+    font-family: "changeling-neo", sans-serif;
+    font-weight: 400;
+    text-transform: lowercase;
+    text-shadow: 0 0 2px #00ff00, 0 0 4px rgba(0, 255, 0, 0.35);
+}
+.midi-fieldset.midi-section-on .collapsible-label {
+    text-shadow: 0 0 2px #00ffff, 0 0 4px rgba(0, 220, 230, 0.35);
 }
 .collapsible-arrow {
     display: inline-block;
@@ -2793,7 +2800,7 @@ html {
     .keyboard-section .collapsible-mobile-only .collapsible-toggle.legend-hex:hover,
     .keyboard-section .collapsible-mobile-only .collapsible-toggle.legend-hex:focus-visible {
         --hex-stroke: #00aa00;
-        color: #00aa00;
+        color: #00ff00;
     }
 }
 
@@ -2820,6 +2827,7 @@ html {
 .keyboard-automation-fieldset > .collapsible-panel,
 .keyboard-synth-fieldset > .collapsible-panel,
 .keyboard-xy-fieldset > .collapsible-panel,
+.keyboard-scale-fieldset > .collapsible-panel,
 .keyboard-controls-fieldset > .collapsible-panel {
     overflow: hidden;
     max-width: 100%;
@@ -2835,8 +2843,12 @@ html {
 .keyboard-xy-fieldset.collapsed,
 .keyboard-controls-fieldset.collapsed,
 .keyboard-arp-panel.collapsed,
-.keyboard-mod-matrix.collapsed {
+.keyboard-mod-matrix.collapsed,
+.keyboard-scale-fieldset.collapsed {
     padding-bottom: 0;
+}
+.keyboard-scale-fieldset.collapsed {
+    padding-top: 6px;
 }
 .keyboard-tuning-body {
     display: flex;
@@ -3178,11 +3190,12 @@ html {
     height: 100%;
     box-sizing: border-box;
 }
-.keyboard-osc-group > legend,
-.keyboard-filter-section > legend,
-.keyboard-amp-section > legend {
+.keyboard-section fieldset.keyboard-osc-group > legend,
+.keyboard-section fieldset.keyboard-filter-section > legend,
+.keyboard-section fieldset.keyboard-amp-section > legend {
     font-family: 'Michroma', sans-serif;
-    color: #00aa00;
+    color: #00ff00;
+    text-shadow: none;
     font-size: 10px;
     letter-spacing: 0.08em;
     padding: 0 6px;
@@ -4739,7 +4752,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     font-size: 8px;
 }
 .berlin-row-drum legend .legend-hex.berlin-row-enable {
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
 }
 @media (max-width: 768px) {
     .berlin-drum-toolbar {
@@ -4875,9 +4888,12 @@ body.berlin-mode .keyboard-section fieldset.berlin-dream-frame {
     --hex-stroke: var(--berlin-color, #00aa00);
     --hex-bg: rgba(0, 0, 0, 0.72);
     color: var(--berlin-color, #00aa00);
-    font-family: 'Michroma', sans-serif;
-    font-size: 9px;
-    letter-spacing: 0.08em;
+    font-family: "changeling-neo", sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    text-shadow: 0 0 2px color-mix(in srgb, var(--berlin-color, #00aa00) 50%, transparent);
     cursor: pointer;
     margin: 0;
     background-color: transparent;
@@ -8847,7 +8863,7 @@ body.poly-mode {
     box-sizing: border-box;
     color: #00ff00;
 }
-/* Multitudes far left; Poly Mode centered; logo far right */
+/* Poly | Multitudes stay centered as a pair; logo far right */
 .ingy6-brand {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -8875,6 +8891,8 @@ body.poly-mode {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
     min-width: 0;
 }
 .ingy6-logo {
@@ -9651,6 +9669,8 @@ body.multitudes-mode {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
     min-width: 0;
 }
 .multitudes-logo {
@@ -10257,7 +10277,8 @@ body.multitudes-mode {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
     letter-spacing: 0.08em;
-    color: #00aa00;
+    color: #00ff00;
+    text-shadow: none;
     text-align: center;
     line-height: 1;
     white-space: nowrap;
@@ -10292,15 +10313,22 @@ body.multitudes-mode {
     border-color: #00ff00;
 }
 .mixer-name {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
     letter-spacing: 0.06em;
-    color: #00aa00;
+    color: #00ff00;
+    text-shadow: none;
+    text-align: center;
     line-height: 1;
     white-space: nowrap;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #00aa00;
 }
 .mixer-strip-master .mixer-name {
     color: #00ff00;
@@ -10525,6 +10553,8 @@ body .mixer-level::-moz-range-thumb {
     font-size: 7px;
     letter-spacing: 0.04em;
     line-height: 1.15;
+    color: #00ff00;
+    text-shadow: none;
 }
 /* Same chrome as Effects On/Off (Chorus-width toggles). */
 .mixer-strip-comp > .kb-step-btn.mixer-comp-on,

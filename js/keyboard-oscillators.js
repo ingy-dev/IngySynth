@@ -2,7 +2,7 @@
 // Knobs write osc-tune-N / osc-vol-N; pan writes osc-pan-N.
 
 import { state } from './state.js?v=116';
-import { bindKnob } from './knobs.js?v=124';
+import { bindKnob } from './knobs.js?v=130';
 import {
     elementFor,
     get,
@@ -11,7 +11,7 @@ import {
     subscribe,
     wireSelect,
     wireToggle,
-} from './params.js?v=13';
+} from './params.js?v=14';
 
 const OSC_COUNT = 4;
 

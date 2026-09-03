@@ -2,10 +2,10 @@
 // Vertical channel strips; cap hash lines up with scale ticks. INGY6 faders untouched.
 
 import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getOscVol, getOscPan, set, subscribe } from './params.js?v=13';
-import { applyMixerMutes } from './store-engine.js?v=28';
-import { applyBerlinDrumKitToLive } from './osc-source.js?v=121';
-import { ensureBerlinDrumKit } from './pattern-bank.js?v=15';
+import { getNumber, getOscVol, getOscPan, set, subscribe } from './params.js?v=14';
+import { applyMixerMutes } from './store-engine.js?v=36';
+import { applyBerlinDrumKitToLive } from './osc-source.js?v=122';
+import { ensureBerlinDrumKit } from './pattern-bank.js?v=16';
 
 const MIXER_SCALE = ['+10', '5', '0', '-10', '-20', '∞'];
 

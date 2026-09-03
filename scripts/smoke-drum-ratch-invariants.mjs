@@ -117,8 +117,9 @@ ok(
 );
 
 ok(
-    'Ratch path requests holdForDrum: true',
-    /holdForDrum:\s*true/.test(seq),
+    'Berlin/ratch osc holdForDrum is OSC4 only (not every lane)',
+    /holdForDrum:\s*oscIndex === OSC4_INDEX/.test(seq)
+        && !/holdForDrum:\s*true/.test(seq),
 );
 
 ok(
@@ -161,10 +162,11 @@ const berlin = read('js/berlin.js');
 console.log('\n=== Berlin Dream drum-lane contracts ===\n');
 
 ok(
-    'isDrumLane is a live flag overlay, not laneKind drum',
+    'D1–D3 live on drumPatterns; bank isDrumLane is always false',
     /export function isDrumLane/.test(bank)
-        && /state\.berlinDrumMode/.test(bank)
-        && !/laneKind:\s*'drum'/.test(bank),
+        && /Bank rows are never drums/.test(bank)
+        && /state\.drumPatterns/.test(bank)
+        && /laneKind:\s*'drum'/.test(bank),
 );
 
 ok(
@@ -215,13 +217,17 @@ ok(
 
 {
     const fireStart = seq.indexOf('function fireBerlinRow');
-    const fireEnd = seq.indexOf('function scheduleBerlinSteps');
+    const fireEnd = seq.indexOf('function scheduleDrumHighlight');
     const fire = fireStart >= 0 ? seq.slice(fireStart, fireEnd) : '';
-    const drumIdx = fire.search(/isDrumLane\s*\(\s*row\s*\)/);
-    const destIdx = fire.search(/destination === 'off'/);
     ok(
-        'fireBerlinRow isDrumLane wins before dest off (D3 default)',
-        drumIdx >= 0 && destIdx >= 0 && drumIdx < destIdx,
+        'fireBerlinRow is osc/mod only; drums fire from fireDrumLane',
+        /isOscLane\s*\(\s*row\s*\)/.test(fire)
+            && /destination === 'off' && !isOscLane\(row\)/.test(fire)
+            && !/isDrumLane/.test(fire)
+            && /function fireDrumLane/.test(seq)
+            && /triggerBerlinDrumLane/.test(
+                seq.slice(seq.indexOf('function fireDrumLane'), seq.indexOf('function scheduleDrumLanes')),
+            ),
     );
 }
 
@@ -256,18 +262,23 @@ ok(
         && /el\.classList\.toggle\('hidden', !active\.has\(row\)\)/.test(berlin),
 );
 
-// Baseline HEAD: off step must NOT hard-stop main oscs / dispose ratch mid-hold.
-// Current tree accrued off-step voice teardown while chasing clicks — flag it.
-const offStart = seq.indexOf("textContent === 'Off'");
+// Off step inside playStep: no new trigger — do not tear down independent voices.
+const playStart = seq.indexOf('function playStep(');
+const offStart = seq.indexOf('\n    if (data.on === false) {', playStart);
 const offEndMarker = seq.indexOf('state.lastStepSounded = false;\n        return;', offStart);
-const offBlock = offEndMarker > offStart
+const offBlock = offStart >= 0 && offEndMarker > offStart
     ? seq.slice(offStart, offEndMarker + 60)
-    : seq.slice(offStart, offStart + 8000);
+    : '';
 
 ok(
     'BASELINE: off step does not call disposeRatchVoice',
     !/disposeRatchVoice\s*\(/.test(offBlock),
     'off block still tears down ratch voices — this is the loop we fell into',
+);
+
+ok(
+    'off step does not disposeBerlinOscVoice (independent ratch tails)',
+    offBlock.length > 400 && !/disposeBerlinOscVoice\s*\(/.test(offBlock),
 );
 
 ok(
@@ -441,15 +452,105 @@ ok(
 
 ok(
     'analog-808.js?v=16 on both importers',
-    /analog-808\.js\?v=15/.test(seq)
-        && /analog-808\.js\?v=15/.test(osc)
-        && !/analog-808\.js\?v=14/.test(seq)
-        && !/analog-808\.js\?v=14/.test(osc),
+    /analog-808\.js\?v=16/.test(seq)
+        && /analog-808\.js\?v=16/.test(osc)
+        && !/analog-808\.js\?v=15/.test(seq)
+        && !/analog-808\.js\?v=15/.test(osc),
 );
 
 ok(
     'analog-808 does not import filter-drive',
     !/from ['"]\.\/filter-drive/.test(analog),
+);
+
+console.log('\n=== Phase 0: Main ratch uses Berlin mixer path ===\n');
+
+ok(
+    'spawnRatchVoice island is gone',
+    !/function spawnRatchVoice/.test(seq) && !/disposeRatchVoice/.test(seq),
+);
+
+ok(
+    'applyIndependentVoiceMutes is gone',
+    !/applyIndependentVoiceMutes/.test(seq)
+        && !/applyIndependentVoiceMutes/.test(read('js/store-engine.js')),
+);
+
+ok(
+    'scheduleParallelRatchHits spawns Berlin osc + shared noise',
+    (() => {
+        const start = seq.indexOf('function scheduleParallelRatchHits');
+        const end = seq.indexOf('\nfunction clearStopCleanup');
+        const body = start >= 0 && end > start ? seq.slice(start, end) : '';
+        return /spawnBerlinOscVoice/.test(body)
+            && /spawnSharedNoiseVoice/.test(body)
+            && /armBerlinSharedAmpPath/.test(body)
+            && /getGateLength\(\)/.test(body)
+            && !/spawnRatchVoice/.test(body);
+    })(),
+);
+
+ok(
+    'ratch noise taps noiseMuteGain (mixer M/S), not distInput',
+    (() => {
+        const start = seq.indexOf('function spawnSharedNoiseVoice');
+        const end = seq.indexOf('function triggerBerlinOscLane');
+        const body = start >= 0 && end > start ? seq.slice(start, end) : '';
+        return /state\.noiseMuteGain/.test(body) && !/distInput/.test(body);
+    })(),
+);
+
+ok(
+    'mainIndependentVoicesRinging is berlinOscVoices while Berlin is off',
+    /function mainIndependentVoicesRinging/.test(seq)
+        && /!isBerlinOn\(\)/.test(seq.slice(
+            seq.indexOf('function mainIndependentVoicesRinging'),
+            seq.indexOf('function mainIndependentVoicesRinging') + 280,
+        )),
+);
+
+ok(
+    'stop/engine-bump release Berlin osc voices (ratch lives there)',
+    (() => {
+        const stopAt = seq.indexOf('function stopActiveVoices');
+        const bumpAt = seq.indexOf('function onSeqEngineBump');
+        return stopAt >= 0 && bumpAt >= 0
+            && seq.slice(stopAt, stopAt + 1200).includes('releaseBerlinOscVoices')
+            && seq.slice(bumpAt, bumpAt + 400).includes('releaseBerlinOscVoices');
+    })(),
+);
+
+ok(
+    'playStep ratch branch uses scheduleParallelRatchHits',
+    /hits > 1 \|\| mainIndependentVoicesRinging\(\)/.test(seq)
+        && /scheduleParallelRatchHits\(\{/.test(seq),
+);
+
+ok(
+    'state.js has no ratchVoices island',
+    !/ratchVoices/.test(read('js/state.js')),
+);
+
+const oscSrc = read('js/osc-source.js');
+ok(
+    'live fader does not unmute oscGains while Berlin/ratch path is armed',
+    /!state\.berlinSharedPathArmed && state\.oscGains/.test(oscSrc),
+);
+
+ok(
+    'live fader scales each berlinOscVoice stack separately',
+    /laneVol = level \/ stack\.length/.test(oscSrc)
+        && /gain \|\| osc\?\.gainNode/.test(oscSrc),
+);
+
+const storeEng = read('js/store-engine.js');
+ok(
+    'live noise fader does not unmute noiseGain while path is armed',
+    /function applyLiveNoiseLevel/.test(storeEng)
+        && /berlinSharedPathArmed/.test(storeEng.slice(
+            storeEng.indexOf('function applyLiveNoiseLevel'),
+            storeEng.indexOf('function applyNoiseEnabled'),
+        )),
 );
 
 // ─── Summary ────────────────────────────────────────────────────────────────

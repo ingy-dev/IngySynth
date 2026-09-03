@@ -1,8 +1,8 @@
 import { state } from './state.js?v=116';
 import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=80';
-import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=138';
-import { initAudio } from './audio-engine.js?v=178';
-import { updateNoteVisualizer } from './visualizers.js?v=113';
+import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=145';
+import { initAudio } from './audio-engine.js?v=185';
+import { updateNoteVisualizer } from './visualizers.js?v=114';
 import {
     refreshStepTuneReadouts,
     startArp,
@@ -12,7 +12,7 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=314';
+} from './sequencer.js?v=383';
 import { refreshXYPad } from './xy-pad.js?v=78';
 import {
     initPatternWrite,
@@ -22,7 +22,7 @@ import {
     polyWriteNoteDown,
     polyWriteNoteUp,
     getPolyWriteHeldNotes,
-} from './pattern-write.js?v=106';
+} from './pattern-write.js?v=112';
 import {
     addHeldNote,
     removeHeldNote,
@@ -36,8 +36,8 @@ import {
     recordArpChordSessionNote,
     freezeArpChordSession,
 } from './held-notes.js?v=8';
-import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=15';
-import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=13';
+import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=16';
+import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=14';
 import {
     toggleChordMemoryLearn,
     cancelChordMemoryLearn,
@@ -46,11 +46,11 @@ import {
     recordLearnNote,
     getLearnSessionNotes,
     isPolyChordMemoryOn,
-} from './chord-memory.js?v=21';
+} from './chord-memory.js?v=22';
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=37';
+} from './keyboard-multitudes-panel.js?v=41';
 import {
     togglePolyMode,
     togglePolyUnison,
@@ -62,7 +62,7 @@ import {
     hasPolyVoices,
     initPolyVoice,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=94';
+} from './poly-voice.js?v=111';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];

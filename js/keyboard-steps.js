@@ -4,8 +4,8 @@
 
 import { state } from './state.js?v=116';
 import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=80';
-import { bindKnob } from './knobs.js?v=124';
-import { previewNoteVisualizer } from './visualizers.js?v=113';
+import { bindKnob } from './knobs.js?v=130';
+import { previewNoteVisualizer } from './visualizers.js?v=114';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import {
     click,
@@ -15,12 +15,12 @@ import {
     set,
     subscribe,
     toggle,
-} from './params.js?v=13';
+} from './params.js?v=14';
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=106';
-import { paintAllStepChordMarkers } from './pattern-bank.js?v=15';
+} from './pattern-write.js?v=112';
+import { paintAllStepChordMarkers } from './pattern-bank.js?v=16';
 import { syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;

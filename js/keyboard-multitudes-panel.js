@@ -1,8 +1,8 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
 import { state } from './state.js?v=116';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=124';
-import { ensurePlaitsWorklet } from './osc-source.js?v=121';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=130';
+import { ensurePlaitsWorklet } from './osc-source.js?v=122';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=17';
 import {
     forcePolyAllOff,
@@ -10,10 +10,10 @@ import {
     syncMultitudesPolyLocks,
     bumpSeqEngine,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=94';
-import { clearPolyChordMemory } from './chord-memory.js?v=21';
+} from './poly-voice.js?v=111';
+import { syncChordMemUI } from './chord-memory.js?v=22';
 import { getParam } from './param-catalog.js?v=2';
-import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=13';
+import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=14';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */
 const MULTITUDES_DEFAULT_OSC_VOL = 0.1;
@@ -183,14 +183,15 @@ export function syncMultitudesPanelUi() {
     if (state.keyboardPoly) return;
 
     const home = document.getElementById('keyboardPolyToggleHome');
-    const left = document.getElementById('multitudesBrandLeft');
     const toggleSlot = document.getElementById('multitudesToggleSlot');
     const polyBtn = document.getElementById('keyboardPolyToggle');
     const multBtn = document.getElementById('keyboardMultitudesToggle');
 
     if (on) {
-        if (left && polyBtn) left.appendChild(polyBtn);
-        if (toggleSlot && multBtn) toggleSlot.appendChild(multBtn);
+        if (toggleSlot) {
+            if (polyBtn) toggleSlot.appendChild(polyBtn);
+            if (multBtn) toggleSlot.appendChild(multBtn);
+        }
         if (home) home.hidden = true;
     } else {
         placeHomeButtons();
@@ -199,6 +200,7 @@ export function syncMultitudesPanelUi() {
 
 /**
  * Enter/leave Multitudes. Forces digital OSC1; arms 6-voice Plaits poly path.
+ * Parked chord memory stays loaded until reset (shared with Ingy-6).
  * @param {boolean} on
  */
 export function setMultitudesMode(on) {
@@ -215,7 +217,6 @@ export function setMultitudesMode(on) {
         document.dispatchEvent(new CustomEvent('ingysynth:exit-berlin'));
         forceDrumFiltOffForPoly();
         state.keyboardMultitudes = true;
-        clearPolyChordMemory();
         forceDigitalOn();
         void ensurePlaitsWorklet(state.audioContext);
         // Default voice: OSC1 + OSC2
@@ -235,16 +236,17 @@ export function setMultitudesMode(on) {
         syncOsc2ToggleUi();
         syncOsc2WaveUi();
         syncMultitudesPanelUi();
+        syncChordMemUI();
         return;
     }
 
     forcePolyAllOff({ silent: true });
     // Clear mode flag before unlock so syncUnisonControlsEnabled re-enables classic Unison UI
     state.keyboardMultitudes = false;
-    clearPolyChordMemory();
     syncMultitudesPolyLocks(false);
     restoreMultitudesOscDefaults();
     syncMultitudesPanelUi();
+    syncChordMemUI();
 }
 
 export function toggleMultitudesMode() {

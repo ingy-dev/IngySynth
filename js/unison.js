@@ -2,8 +2,8 @@
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
 import { state } from './state.js?v=116';
-import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=13';
-import { createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=121';
+import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=14';
+import { createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=122';
 
 const ALLOWED_VOICES = [3];
 
@@ -133,11 +133,6 @@ export function spawnOscStack(oscIndex, baseFreq, startTime, {
 }
 
 /**
- * Master phase-reset hit for triggered digital engines: retrigger existing
- * worklets in place when the unison stack still matches. Falls back to
- * fadeStop+spawn for analog / non-triggered / first hit / stack-size change.
- */
-/**
  * Stop stacks whose osc has been toggled OFF. Per-index replace never visits
  * disabled indices, so without this sweep their last voices sustain forever.
  */
@@ -155,35 +150,60 @@ export function stopDisabledOscStacks(startTime) {
     state.activeOscillators = keep;
 }
 
+/**
+ * Sequencer / phase-reset hit.
+ * Plaits: retrigger the same worklet (gate edge).
+ * Analog sine/tri/saw/square: retune frequency in place — stop+spawn restarts at
+ * phase 0 into an open filter and clicks hard at high Q (same Multitudes bug).
+ * Falls back to fadeStop+spawn on first hit, type mismatch, or stack-size change.
+ */
 export function firePhaseResetOscStack(oscIndex, baseFreq, startTime, spawnOpts = {}) {
     const n = getUnisonVoices();
     const existing = (state.activeOscillators || []).filter(
         (osc) => osc?.oscIndex === oscIndex && osc.started,
     );
-    // All Plaits worklet engines reset phase on a gate rising edge, so any
-    // worklet proxy can retrigger in place — stop+spawn clicks (logs: FM-STOPSPAWN).
-    const canRetrigger = existing.length === n
-        && existing.every((osc) => osc.isWavetable && typeof osc.retrigger === 'function');
+    const wantWave = getOscType(oscIndex);
+    const canReuse = existing.length === n && existing.every((osc) => {
+        if (osc.isWavetable) return typeof osc.retrigger === 'function';
+        return osc.type === wantWave;
+    });
 
-    if (canRetrigger) {
+    if (canReuse) {
+        const prevBase = state.lastStepFreqs[oscIndex];
+        const sameNote = prevBase != null && Math.abs(baseFreq - prevBase) < 1e-4;
         state.lastStepFreqs[oscIndex] = baseFreq;
         const keep = [];
+        let ok = true;
         for (const osc of existing) {
             const freq = voiceTargetFreq(osc, baseFreq);
-            if (osc.retrigger(startTime, freq)) {
-                keep.push(osc);
+            if (osc.isWavetable && typeof osc.retrigger === 'function') {
+                if (osc.retrigger(startTime, freq)) {
+                    keep.push(osc);
+                } else {
+                    ok = false;
+                    fadeStopOsc(osc, startTime, { fadeSec: 0.055, hard: !!osc.isTriggered });
+                }
             } else {
-                fadeStopOsc(osc, startTime, { fadeSec: 0.055, hard: !!osc.isTriggered });
+                try {
+                    if (!sameNote) {
+                        osc.frequency.cancelScheduledValues(startTime);
+                        osc.frequency.setValueAtTime(freq, startTime);
+                    }
+                } catch (_) { /* ignore */ }
+                keep.push(osc);
             }
         }
-        // Drop this osc's old entries; keep other osc indices
         state.activeOscillators = (state.activeOscillators || []).filter(
             (osc) => osc?.oscIndex !== oscIndex,
         );
         state.activeOscillators.push(...keep);
-        if (keep.length === n) return;
-        // Partial failure — spawn a fresh stack
-        keep.forEach((osc) => fadeStopOsc(osc, startTime, { fadeSec: 0.055, hard: !!osc.isTriggered }));
+        if (ok && keep.length === n) {
+            return { reused: true, sameNote: !!sameNote };
+        }
+        keep.forEach((osc) => fadeStopOsc(osc, startTime, {
+            fadeSec: osc.isWavetable ? 0.055 : 0.022,
+            hard: !!osc.isTriggered,
+        }));
         state.activeOscillators = (state.activeOscillators || []).filter(
             (osc) => osc?.oscIndex !== oscIndex,
         );
@@ -202,6 +222,7 @@ export function firePhaseResetOscStack(oscIndex, baseFreq, startTime, spawnOpts 
     }
 
     spawnOscStack(oscIndex, baseFreq, startTime, spawnOpts);
+    return { reused: false, sameNote: false };
 }
 
 function setUnisonToggleUi(on) {

@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=404">
+    <link rel="stylesheet" href="styles.css?v=415">
 </head>
 <body>
     <div class="container">
@@ -18,13 +18,14 @@
                 <div class="keyboard-stage-scope" id="keyboardStageScope">
                     <div id="midiFieldsetStage" class="midi-fieldset-stage">
 <div id="midiFieldsetHome" class="midi-fieldset-home">
-        <fieldset class="midi-fieldset midi-section-off" id="midiFieldset" aria-hidden="false">
+        <fieldset class="midi-fieldset midi-section-off collapsible-fieldset" id="midiFieldset" aria-hidden="false">
             <legend class="collapsible-legend">
-                <span class="legend-hex">
+                <button id="midiFieldsetToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="midiFieldsetPanel">
                     <span class="collapsible-label">MIDI In/Out</span>
-                </span>
+                    <span class="collapsible-arrow" aria-hidden="true"></span>
+                </button>
             </legend>
-            <div class="midi-fieldset-body">
+            <div id="midiFieldsetPanel" class="midi-fieldset-body collapsible-panel">
                 <div class="midi-logo-toggle-row">
                     <button id="midiLogoToggle" class="pushable off keyboard-midi-logo-toggle" type="button" aria-pressed="false" aria-label="Enable MIDI">
                         <span class="front">
@@ -382,9 +383,14 @@
                             </div>
                         </div>
                     </fieldset>
-                    <fieldset class="keyboard-scale-fieldset" id="keyboardPatternScaleFieldset" aria-label="Scale">
-                        <legend><span class="legend-hex">Scale</span></legend>
-                        <div class="keyboard-scale-fieldset-body">
+                    <fieldset class="keyboard-scale-fieldset collapsible-fieldset" id="keyboardPatternScaleFieldset" aria-label="Scale">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardPatternScaleFieldsetToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardPatternScalePanel">
+                                <span class="collapsible-label">Scale</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardPatternScalePanel" class="keyboard-scale-fieldset-body collapsible-panel">
                             <div class="keyboard-tuning-scale-row" id="kbTuningScaleSelectRow" style="display: none;">
                                 <select id="kbPatternScaleSelect" class="keyboard-scale-select" aria-label="Pattern scale">
                                     <!-- Populated to match sequencer scale list -->
@@ -1611,9 +1617,14 @@
                             </div>
                         </div>
                     </fieldset>
-                    <fieldset class="keyboard-scale-fieldset" id="keyboardXyScaleFieldset" aria-label="Scale">
-                        <legend><span class="legend-hex">Scale</span></legend>
-                        <div class="keyboard-scale-fieldset-body">
+                    <fieldset class="keyboard-scale-fieldset collapsible-fieldset" id="keyboardXyScaleFieldset" aria-label="Scale">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardXyScaleFieldsetToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardXyScalePanel">
+                                <span class="collapsible-label">Scale</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardXyScalePanel" class="keyboard-scale-fieldset-body collapsible-panel">
                             <div class="keyboard-tuning-scale-row" id="kbXyScaleSelectRow" style="display: none;">
                                 <select id="kbXyScaleSelect" class="keyboard-scale-select" aria-label="Keyboard scale">
                                     <!-- Populated to match sequencer scale list -->
@@ -2418,6 +2429,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=243"></script>
+    <script type="module" src="js/main.js?v=321"></script>
 </body>
 </html>

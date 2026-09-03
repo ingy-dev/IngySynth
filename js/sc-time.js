@@ -1,9 +1,9 @@
 // Sidechain TIME: free ms or tempo-synced beat divisions (LFO RATE pattern, shorter list).
 
 import { state } from './state.js?v=116';
-import { get, getNumber, set, subscribe, toggle } from './params.js?v=13';
+import { get, getNumber, set, subscribe, toggle } from './params.js?v=14';
 import { getParam } from './param-catalog.js?v=2';
-import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=124';
+import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=130';
 import { beginMidiLearn } from './midi-learn.js?v=6';
 
 export const SC_SYNC_DIVISIONS = [

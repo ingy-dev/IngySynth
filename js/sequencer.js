@@ -1,5 +1,5 @@
 import { state } from './state.js?v=116';
-import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=13';
+import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=14';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -11,24 +11,25 @@ import {
     getGlobalTune,
     semitonesToFrequency,
 } from './tuning.js?v=80';
-import { updateNoteVisualizer, clearNoteVisualizer, previewNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=113';
-import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { forceNoteOff } from './voice.js?v=138';
-import { getLfoRateHz } from './lfo-rate.js?v=20';
-import { bentFrequency } from './pitch-bend.js?v=96';
+import { updateNoteVisualizer, clearNoteVisualizer, previewNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=114';
+import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=84';
+import { forceNoteOff } from './voice.js?v=145';
+import { getLfoRateHz } from './lfo-rate.js?v=22';
+import { bentFrequency } from './pitch-bend.js?v=97';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { setKeyboardStepActive } from './keyboard-steps.js?v=125';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=173';
-import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=121';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=129';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=184';
+import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=122';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=16';
-import { notifyAutomationLoopAnchor } from './automation.js?v=50';
+import { notifyAutomationLoopAnchor } from './automation.js?v=52';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=8';
 import {
     scheduleAcidAmpEnvelope,
     scheduleAcidFilterEnvelope,
     clearAccentSweep,
     acidVegDecaySec,
-} from './acid-env.js?v=14';
+    releaseAcidHeldEnvelopes,
+} from './acid-env.js?v=48';
 import {
     isBerlinOn,
     berlinActiveRows,
@@ -51,7 +52,7 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=72';
+} from './berlin.js?v=74';
 import {
     getPattern,
     getDrumPattern,
@@ -61,11 +62,11 @@ import {
     stepCellNotes,
     stepChordCount,
     getLiveStep,
-} from './pattern-bank.js?v=15';
-import { schedulePolySeqVoicing, bumpSeqEngine } from './poly-voice.js?v=94';
-import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=21';
-import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=4';
-import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=1';
+} from './pattern-bank.js?v=16';
+import { schedulePolySeqVoicing, bumpSeqEngine } from './poly-voice.js?v=111';
+import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=22';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=6';
+import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=3';
 import {
     clampRatch,
     nextRatch,
@@ -113,6 +114,13 @@ function getAccentAmount() {
 function getGateLength() {
     const v = getNumber('gateLength', 90);
     return Math.max(0.05, Math.min(1, v / 100));
+}
+
+/** Main/Acid independent hits live in `berlinOscVoices` (shared panner/mute path). */
+function mainIndependentVoicesRinging() {
+    return !isBerlinOn()
+        && Array.isArray(state.berlinOscVoices)
+        && state.berlinOscVoices.length > 0;
 }
 
 // Note preview shared by the tune and fine sliders
@@ -220,6 +228,23 @@ const ACCENT_FILTER_DECAY = 0.2; // TB-303 MEG-on-accent ≈ 200 ms (normal ADSR
 /** Accent VEG peak boost mirrored from acid-env for parallel ratch voices. */
 const RATCH_ACCENT_AMP_BOOST = 0.85;
 
+/** Release-knob tau (~95% settle in `seconds`). Do not clamp to the step end. */
+function seqReleaseTau(seconds) {
+    const releaseTime = Math.max(0.02, Number(seconds) || 0);
+    return Math.max(0.008, releaseTime / 3);
+}
+
+/** Start a bus release at `offAt`. No cancelScheduledValues — lookahead already wrote the next ON. */
+function scheduleBusRelease(gainParam, offAt, tau) {
+    if (!gainParam) return;
+    try {
+        if (typeof gainParam.cancelAndHoldAtTime === 'function') {
+            try { gainParam.cancelAndHoldAtTime(offAt); } catch (_) { /* ignore */ }
+        }
+        gainParam.setTargetAtTime(0.00001, offAt, Math.max(0.008, tau));
+    } catch (_) { /* ignore */ }
+}
+
 // Schedule the per-step filter envelope (0–1 gain scaled by cutoff range).
 function scheduleStepFilterEnvelope({
     startTime,
@@ -230,6 +255,7 @@ function scheduleStepFilterEnvelope({
     accentAmount,
     releaseUntil = null,
     gateLen = null,
+    nextIsRest = false,
 }) {
     if (state.acidMode) {
         scheduleAcidFilterEnvelope({
@@ -239,6 +265,7 @@ function scheduleStepFilterEnvelope({
             nextStepWillSlide,
             accentThisStep,
             accentAmount,
+            nextIsRest,
         });
         return;
     }
@@ -281,7 +308,7 @@ function scheduleStepFilterEnvelope({
 
     // Lookahead-safe boundary (same stale-.value bug as amp env — logs: R)
     let heldAtBoundary = false;
-    if (!slideThisStep && typeof gainParam.cancelAndHoldAtTime === 'function') {
+    if (typeof gainParam.cancelAndHoldAtTime === 'function') {
         try {
             gainParam.cancelAndHoldAtTime(t0);
             heldAtBoundary = true;
@@ -290,14 +317,15 @@ function scheduleStepFilterEnvelope({
     if (!heldAtBoundary) gainParam.cancelScheduledValues(t0);
 
     if (slideThisStep) {
+        const gateFrac = gateLen == null
+            ? getGateLength()
+            : Math.max(0.05, Math.min(1, Number(gateLen) || 0.9));
+        if (!heldAtBoundary) {
+            gainParam.setValueAtTime(Math.max(minValue, sustain), t0);
+        }
         if (!nextStepWillSlide) {
-            const releaseStart = Math.min(
-                stepEnd - 0.005,
-                Math.max(stepEnd - Math.min(releaseTime, stepDuration - 0.01) - 0.001, stepEnd - releaseTime - 0.001)
-            );
-            const effectiveRelease = Math.min(releaseTime, Math.max(0.005, stepEnd - releaseStart - 0.001));
-            gainParam.setValueAtTime(Math.max(minValue, sustain), releaseStart);
-            gainParam.exponentialRampToValueAtTime(minValue, releaseStart + effectiveRelease);
+            const offAt = Math.max(t0 + 0.02, t0 + stepDuration * gateFrac);
+            scheduleBusRelease(gainParam, offAt, seqReleaseTau(release));
             state.filterEnvelopeHeld = false;
         } else {
             state.filterEnvelopeHeld = true;
@@ -320,19 +348,13 @@ function scheduleStepFilterEnvelope({
     const decaySource = accentThisStep ? ACCENT_FILTER_DECAY : scaleAdsrTime(decay);
     const safeDecayTime = Math.max(0.002, Math.min(decaySource, availableDecayTime));
 
-    // Soft retrigger from the held boundary value (no stale-.value pinning)
-    let attackStart = t0;
-    const closeT = Math.max(cutModHot ? 0.008 : 0.004, qFloor * 0.6);
+    // Hold-then-setTarget: linearRamp after a future hold starts at currentTime (lookahead swell).
     if (!heldAtBoundary) {
-        const cur = Math.max(minValue, Number(gainParam.value) || minValue);
-        gainParam.setValueAtTime(cur, t0);
+        gainParam.setValueAtTime(minValue, t0);
     }
-    gainParam.linearRampToValueAtTime(minValue, t0 + closeT);
-    attackStart = t0 + closeT;
-    gainParam.linearRampToValueAtTime(1, attackStart + safeAttackTime);
-
-    const decayEnd = attackStart + safeAttackTime + safeDecayTime;
-    gainParam.linearRampToValueAtTime(sustain, decayEnd);
+    gainParam.setTargetAtTime(1, t0, Math.max(0.0008, safeAttackTime / 3));
+    const decayStart = t0 + safeAttackTime;
+    gainParam.setTargetAtTime(Math.max(minValue, sustain), decayStart, Math.max(0.004, safeDecayTime / 3));
 
     if (nextStepWillSlide) {
         state.filterEnvelopeHeld = true;
@@ -340,20 +362,13 @@ function scheduleStepFilterEnvelope({
     }
 
     const gateEnd = t0 + gateWindow;
-    const releaseStart = Math.min(
-        hardEnd - 0.005,
-        Math.max(decayEnd + 0.01, gateEnd)
-    );
-    const effectiveRelease = Math.min(releaseTime, Math.max(0.005, hardEnd - releaseStart - 0.001));
-
-    gainParam.setValueAtTime(Math.max(minValue, sustain), releaseStart);
-    gainParam.exponentialRampToValueAtTime(minValue, releaseStart + effectiveRelease);
+    const offAt = Math.max(t0 + 0.008, gateEnd);
+    scheduleBusRelease(gainParam, offAt, seqReleaseTau(release));
     state.filterEnvelopeHeld = false;
 }
 
-// Schedule the per-step amp envelope. Release is clamped so it always finishes
-// before the next step; otherwise a long release keeps pulling gain down through
-// the following step's attack (especially noticeable on Safari).
+// Schedule the per-step amp envelope. Release starts at gate-off and may run
+// into OFF steps; the next ON interrupts from the held level.
 function scheduleStepEnvelope({
     startTime,
     stepDuration,
@@ -363,6 +378,7 @@ function scheduleStepEnvelope({
     accentAmount,
     softRetrigger = false,
     releaseUntil = null,
+    nextIsRest = false,
 }) {
     // Drum models are self-enveloped inside the worklet — keep the shared amp open
     // so ADSR doesn't fight the internal drum envelopes.
@@ -398,6 +414,7 @@ function scheduleStepEnvelope({
             nextStepWillSlide,
             accentThisStep,
             accentAmount,
+            nextIsRest,
         });
     }
 
@@ -420,7 +437,7 @@ function scheduleStepEnvelope({
     // is the remaining click (logs: L). Saw/square mask it — keep them punchy.
     const darkOsc = hasDarkOscActive();
     const clickRisk = darkOsc ? wtFilterClickRisk() : 0;
-    const useSoftRetrigger = !slideThisStep && (softRetrigger || (darkOsc && clickRisk > 0.25));
+    const useSoftRetrigger = !slideThisStep && (softRetrigger || darkOsc || !!state.phaseResetEnabled);
 
     // Note-OFF, not note-on, is where the Master click lives: transients measured
     // at ~77ms into a 125ms step = gate end (logs: phase analysis). Closing the
@@ -434,7 +451,7 @@ function scheduleStepEnvelope({
     // Lookahead-safe boundary: reading .value now and pinning it at future t0
     // jumps when the env is still moving (16ths clicked, 8ths didn't — logs: R).
     let heldAtBoundary = false;
-    if (useSoftRetrigger && typeof state.envelope.gain.cancelAndHoldAtTime === 'function') {
+    if ((useSoftRetrigger || slideThisStep) && typeof state.envelope.gain.cancelAndHoldAtTime === 'function') {
         try {
             state.envelope.gain.cancelAndHoldAtTime(t0);
             heldAtBoundary = true;
@@ -443,14 +460,13 @@ function scheduleStepEnvelope({
     if (!heldAtBoundary) state.envelope.gain.cancelScheduledValues(t0);
 
     if (slideThisStep) {
+        // Dest is a held gate. Release starts at dest gate-off (not clamped to step end).
+        if (!heldAtBoundary) {
+            state.envelope.gain.setValueAtTime(Math.max(minValue, sustain), t0);
+        }
         if (!nextStepWillSlide) {
-            const releaseStart = Math.min(
-                hardEnd - 0.005,
-                Math.max(hardEnd - Math.min(safeReleaseTime, stepDuration - 0.01) - 0.001, hardEnd - safeReleaseTime - 0.001)
-            );
-            const effectiveRelease = Math.min(safeReleaseTime, Math.max(0.005, hardEnd - releaseStart - 0.001));
-            state.envelope.gain.setValueAtTime(Math.max(minValue, sustain), releaseStart);
-            state.envelope.gain.exponentialRampToValueAtTime(minValue, releaseStart + effectiveRelease);
+            const offAt = Math.max(t0 + 0.02, t0 + stepDuration * getGateLength());
+            scheduleBusRelease(state.envelope.gain, offAt, seqReleaseTau(release));
             state.envelopeHeld = false;
         } else {
             state.envelopeHeld = true;
@@ -464,43 +480,22 @@ function scheduleStepEnvelope({
     const safeAttackTime = Math.max(wtAmpFloor, scaleAdsrTime(attack));
     const availableDecayTime = Math.max(0, gateWindow * 0.8 - safeAttackTime);
     const safeDecayTime = Math.max(0.002, Math.min(scaleAdsrTime(decay), availableDecayTime));
+    const attackTau = darkOsc
+        ? Math.max(0.012, safeAttackTime / 3)
+        : Math.max(0.0008, safeAttackTime / 3);
 
-    let attackStart = t0;
-    if (useSoftRetrigger) {
-        // Soft re-articulate without hard duck when click-risk is high
-        const berlinStyle = darkOsc && clickRisk > 0.25;
-        if (!heldAtBoundary) {
-            const cur = Math.max(minValue, Number(state.envelope.gain.value) || minValue);
-            state.envelope.gain.setValueAtTime(cur, t0);
-        }
-        if (berlinStyle) {
-            // Mid-note re-articulation keeps the quick 12ms ramp, but after a
-            // gap the env sits at ~0 and a 12ms 0→1 swing pings a high-Q
-            // filter (logs: SOFT envVal≈0 only on gapped patterns). Starting
-            // from silence gets the full risk-stretched attack instead.
-            const curEnv = Number(state.envelope.gain.value) || 0;
-            const rampLen = curEnv < 0.2 ? safeAttackTime : Math.min(0.012, safeAttackTime);
-            // From silence, cancelAndHold leaves NO anchor (automation already
-            // finished), so the ramp interpolates from the release that ended
-            // mid-gap — env swells BEFORE the step and the osc swap at step
-            // start is audible through the filter (logs: PROBE rising at dt<0).
-            if (curEnv < 0.2) state.envelope.gain.setValueAtTime(Math.max(minValue, curEnv), t0);
-            state.envelope.gain.linearRampToValueAtTime(ampPeak, t0 + rampLen);
-            attackStart = t0;
-        } else {
-            const closeT = darkOsc ? Math.max(0.006, 0.004 + clickRisk * 0.01) : 0.004;
-            state.envelope.gain.linearRampToValueAtTime(minValue, t0 + closeT);
-            attackStart = t0 + closeT;
-            state.envelope.gain.linearRampToValueAtTime(ampPeak, attackStart + safeAttackTime);
-        }
-    } else {
-        // Hard retrigger from silence so attack is audible even after a long release
+    // setTarget after hold (or an explicit 0 pin). linearRamp from a future hold
+    // starts at currentTime — that is the OFF-step swell (analog-808 comment).
+    if (!heldAtBoundary) {
         state.envelope.gain.setValueAtTime(0, t0);
-        state.envelope.gain.linearRampToValueAtTime(ampPeak, t0 + safeAttackTime);
     }
-
-    const decayEnd = attackStart + safeAttackTime + safeDecayTime;
-    state.envelope.gain.linearRampToValueAtTime(Math.max(minValue, ampSustain), decayEnd);
+    state.envelope.gain.setTargetAtTime(ampPeak, t0, attackTau);
+    const decayStart = t0 + safeAttackTime;
+    state.envelope.gain.setTargetAtTime(
+        Math.max(minValue, ampSustain),
+        decayStart,
+        Math.max(0.004, safeDecayTime / 3),
+    );
 
     if (nextStepWillSlide) {
         state.envelopeHeld = true;
@@ -508,41 +503,10 @@ function scheduleStepEnvelope({
     }
 
     const gateEnd = t0 + gateWindow;
-    const darkGateEnd = releaseFloor > 0
-        ? Math.min(gateEnd, hardEnd - releaseFloor - 0.002)
-        : gateEnd;
-    const releaseStart = Math.min(
-        hardEnd - 0.005,
-        Math.max(decayEnd + 0.01, darkGateEnd)
-    );
-    const effectiveRelease = Math.min(safeReleaseTime, Math.max(0.005, hardEnd - releaseStart - 0.001));
-
-    state.envelope.gain.setValueAtTime(Math.max(minValue, ampSustain), releaseStart);
-    state.envelope.gain.exponentialRampToValueAtTime(minValue, releaseStart + effectiveRelease);
+    const offAt = Math.max(t0 + 0.008, gateEnd);
+    scheduleBusRelease(state.envelope.gain, offAt, seqReleaseTau(release));
     state.envelopeHeld = false;
     return safeAttackTime;
-}
-
-/** Keep the shared VCA shut so independent ratch voices own the amp path. */
-function silenceMainEnvelope(atTime) {
-    if (!state.envelope) return;
-    const t = Math.max(state.audioContext.currentTime, atTime);
-    // Drum models may still have the shared VCA open after empty steps
-    // (off = no trigger, not mute). Soft-close before ratch private voices take over.
-    const drumHold = !!(
-        state.osc4Wavetable
-        && state.oscStates?.[OSC4_INDEX]
-        && DRUM_ENGINES.has(state.osc4Model)
-    );
-    const cur = Math.max(0.00001, Number(state.envelope.gain.value) || 0.00001);
-    state.envelope.gain.cancelScheduledValues(t);
-    if (drumHold && cur > 0.001) {
-        state.envelope.gain.setValueAtTime(cur, t);
-        state.envelope.gain.exponentialRampToValueAtTime(0.00001, t + 0.1);
-    } else {
-        state.envelope.gain.setValueAtTime(0, t);
-    }
-    state.envelopeHeld = false;
 }
 
 /** Stop main phase-reset oscs so they don't fight independent ratch voices. */
@@ -670,233 +634,9 @@ function scheduleFullNoteOnGain(gainParam, {
     return releaseStart + effectiveRelease + 0.05;
 }
 
-function ratchFilterSnapshot(accentThisStep, accentAmount) {
-    const cutoff = Math.max(40, getNumber('cutoff', 1000));
-    const q = Math.max(0.0001, getNumber('resonance', 1));
-    const highPass = Math.max(20, getNumber('highPass', 20));
-    const hpQ = state.highPassFilter?.Q?.value ?? 0.7;
-    // Mild accent bump so Acc still reads on independent voices
-    const boost = accentThisStep ? 1 + 0.35 * accentAmount : 1;
-    return {
-        cutoff: Math.min(12000, cutoff * boost),
-        q: Math.min(20, q * (accentThisStep ? 1 + 0.15 * accentAmount : 1)),
-        highPass: Math.min(2000, highPass),
-        hpQ: Math.max(0.0001, Number(hpQ) || 0.7),
-    };
-}
-
-/**
- * Self-contained ratch voice: own oscs + per-step noise + LP/HP snapshot + amp → distortion.
- * Lives until its envelope ends — next step cannot retune/stop it.
- *
- * @param {object} opts
- * @param {(oscIndex: number) => number} opts.freqForOsc  base Hz at hit start
- * @param {(oscIndex: number) => number} [opts.nextFreqForOsc]  gliss target Hz
- */
-function spawnRatchVoice({
-    startTime,
-    stepDuration,
-    accentThisStep,
-    accentAmount,
-    peakScale,
-    glissRoll = false,
-    freqForOsc,
-    nextFreqForOsc = null,
-}) {
-    const ctx = state.audioContext;
-    // Dist off true-bypasses the WaveShaper; distInput is the live FX tap.
-    const dest = state.distInput || state.distortion;
-    if (!ctx || !dest || typeof freqForOsc !== 'function') return;
-
-    const mix = ctx.createGain();
-    mix.gain.value = 1;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    const highPass = ctx.createBiquadFilter();
-    highPass.type = 'highpass';
-    const snap = ratchFilterSnapshot(accentThisStep, accentAmount);
-    filter.frequency.value = snap.cutoff;
-    filter.Q.value = snap.q;
-    highPass.frequency.value = snap.highPass;
-    highPass.Q.value = snap.hpQ;
-    const amp = ctx.createGain();
-    amp.gain.value = 0;
-
-    // LP → HP → amp (VCA) → distInput (dry/wet FX), not the bypassed shaper
-    mix.connect(filter);
-    filter.connect(highPass);
-    highPass.connect(amp);
-    amp.connect(dest);
-
-    const oscs = [];
-    const oscCount = state.oscStates?.length || 0;
-    for (let i = 0; i < oscCount; i++) {
-        if (!state.oscStates[i]) continue;
-        const wave = getOscType(i);
-        const vol = getOscVol(i);
-        if (!(vol > 0.0001)) continue;
-
-        const fromHz = Math.max(20, bentFrequency(freqForOsc(i)));
-        const osc = createOscSource(ctx, {
-            oscIndex: i,
-            wave,
-            frequency: fromHz,
-            pooled: true,
-        });
-        osc.frequency.setValueAtTime(fromHz, Math.max(ctx.currentTime, startTime));
-        if (glissRoll && typeof nextFreqForOsc === 'function') {
-            const toHz = Math.max(20, bentFrequency(nextFreqForOsc(i)));
-            try {
-                osc.frequency.linearRampToValueAtTime(toHz, startTime + stepDuration);
-            } catch (_) { /* ignore */ }
-        }
-
-        const g = ctx.createGain();
-        g.gain.value = 0;
-        // Private panner — overlapping ratches can't share state.oscPanners
-        const panNode = ctx.createStereoPanner();
-        panNode.pan.value = readOscPanValue(i);
-        osc.connect(g);
-        g.connect(panNode);
-        panNode.connect(mix);
-        const tHit = Math.max(ctx.currentTime, startTime);
-        const oscStart = osc.isWavetable
-            ? tHit
-            : Math.max(ctx.currentTime, startTime - 0.002);
-        softStartVoiceGain(g.gain, vol, Math.max(tHit, oscStart), {
-            wavetable: !!osc.isWavetable,
-            triggered: !!osc.isTriggered,
-        });
-        if (osc.isWavetable) osc.start(oscStart);
-        else startAnalogOsc(osc, oscStart);
-        oscs.push({ osc, gain: g });
-    }
-
-    // Per-step noise: same treatment as a normal step hit, gated by this voice's amp
-    let noiseSource = null;
-    let noiseGain = null;
-    const noiseVol = state.noiseState
-        ? getNumber('noiseVol', 0)
-        : 0;
-    if (noiseVol > 0.0001 && state.noiseBuffers) {
-        const noiseType = getString('noiseType', 'white');
-        const buf = state.noiseBuffers[noiseType] || state.noiseBuffers.white;
-        if (buf) {
-            noiseSource = ctx.createBufferSource();
-            noiseSource.buffer = buf;
-            noiseSource.loop = true;
-            noiseGain = ctx.createGain();
-            noiseGain.gain.value = noiseVol;
-            noiseSource.connect(noiseGain);
-            noiseGain.connect(mix);
-            const nStart = Math.max(ctx.currentTime, startTime - 0.002);
-            try { noiseSource.start(nStart); } catch (_) { /* ignore */ }
-        }
-    }
-
-    if (oscs.length === 0 && !noiseSource) {
-        try { mix.disconnect(); } catch (_) { /* ignore */ }
-        try { filter.disconnect(); } catch (_) { /* ignore */ }
-        try { highPass.disconnect(); } catch (_) { /* ignore */ }
-        try { amp.disconnect(); } catch (_) { /* ignore */ }
-        return;
-    }
-
-    const doneAt = scheduleFullNoteOnGain(amp.gain, {
-        startTime,
-        stepDuration,
-        accentThisStep,
-        accentAmount,
-        peakScale,
-        holdForDrum: true,
-    });
-
-    const voice = { oscs, noiseSource, noiseGain, mix, filter, highPass, amp };
-    if (!Array.isArray(state.ratchVoices)) state.ratchVoices = [];
-    state.ratchVoices.push(voice);
-
-    const generation = state.playGeneration;
-    const delay = Math.max(0, (doneAt - ctx.currentTime) * 1000) + 40;
-    setTimeout(() => {
-        if (generation !== state.playGeneration) return;
-        disposeRatchVoice(voice);
-    }, delay);
-}
-
-function disposeRatchVoice(voice) {
-    if (!voice) return;
-    const t = state.audioContext?.currentTime ?? 0;
-    const ampVal = Number(voice.amp?.gain?.value) || 0;
-    const ampSilent = ampVal < 0.002;
-    voice.oscs?.forEach(({ osc, gain }) => {
-        try {
-            if (gain) {
-                gain.gain.cancelScheduledValues(t);
-                // If the voice amp already rang out, don't hard-zero the osc
-                // gain into a live filter — that was the off-step click.
-                if (!ampSilent) {
-                    gain.gain.setValueAtTime(Math.max(0.00001, Number(gain.gain.value) || 0.00001), t);
-                    gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.02);
-                } else {
-                    gain.gain.setValueAtTime(0, t);
-                }
-            }
-            if (osc?.isTriggered) {
-                osc.stop(t + 0.01, { hard: true, silent: true, fadeSec: ampSilent ? 0.02 : 0.05 });
-            } else {
-                osc.stop(t + 0.01);
-            }
-            if (ampSilent) {
-                osc.disconnect();
-                gain?.disconnect();
-            } else {
-                setTimeout(() => {
-                    try { osc.disconnect(); } catch (_) { /* ignore */ }
-                    try { gain?.disconnect(); } catch (_) { /* ignore */ }
-                }, 40);
-            }
-        } catch (_) { /* ignore */ }
-    });
-    if (voice.noiseSource) {
-        try {
-            voice.noiseGain?.gain.cancelScheduledValues(t);
-            voice.noiseGain?.gain.setValueAtTime(0, t);
-            voice.noiseSource.stop(t + 0.01);
-            voice.noiseSource.disconnect();
-            voice.noiseGain?.disconnect();
-        } catch (_) { /* ignore */ }
-    }
-    try { voice.amp?.disconnect(); } catch (_) { /* ignore */ }
-    try { voice.highPass?.disconnect(); } catch (_) { /* ignore */ }
-    try { voice.filter?.disconnect(); } catch (_) { /* ignore */ }
-    try { voice.mix?.disconnect(); } catch (_) { /* ignore */ }
-    if (Array.isArray(state.ratchVoices)) {
-        state.ratchVoices = state.ratchVoices.filter((v) => v !== voice);
-    }
-}
-
-/** Fade and drop any lingering independent ratch voices (stop / mode change). */
-function releaseRatchVoices(now) {
-    const list = state.ratchVoices;
-    if (!Array.isArray(list) || list.length === 0) {
-        state.ratchVoices = [];
-        return;
-    }
-    const t = now ?? state.audioContext?.currentTime ?? 0;
-    list.forEach((voice) => {
-        try {
-            voice.amp?.gain.cancelScheduledValues(t);
-            voice.amp?.gain.setValueAtTime(Math.max(0.00001, voice.amp.gain.value || 0.00001), t);
-            voice.amp?.gain.exponentialRampToValueAtTime(0.00001, t + 0.05);
-        } catch (_) { /* ignore */ }
-        setTimeout(() => disposeRatchVoice(voice), 70);
-    });
-    state.ratchVoices = [];
-}
-
 /**
  * Fire N independent full-note voices on the ratchet grid.
- * Each voice has its own oscs + amp and outlives the next sequencer step.
+ * Per enabled OSC (and noise) → Berlin shared panner/mute → ring/filter/SC/dirt.
  */
 function scheduleParallelRatchHits({
     startTime,
@@ -905,17 +645,54 @@ function scheduleParallelRatchHits({
     accentThisStep,
     accentAmount,
     glissRoll = false,
+    slideIn = false,
+    slideTime = 0.05,
     freqForOsc,
     nextFreqForOsc = null,
 }) {
-    silenceMainEnvelope(startTime);
+    if (typeof freqForOsc !== 'function') return;
+    const before = state.berlinOscVoices?.length || 0;
+    armBerlinSharedAmpPath(startTime);
     silenceMainPhaseResetOscs(startTime);
-    const peakScale = 1 / Math.sqrt(hits);
-    const subDur = stepDuration / hits;
+    const peakScale = 1 / Math.sqrt(Math.max(1, hits));
+    const subDur = stepDuration / Math.max(1, hits);
+    const gateLen = getGateLength();
+    const oscCount = state.oscStates?.length || 0;
 
-    // Remember pitch for a possible slide into the following main-path step
-    if (typeof freqForOsc === 'function' && state.oscStates) {
-        for (let i = 0; i < state.oscStates.length; i++) {
+    for (let k = 0; k < hits; k++) {
+        const tHit = startTime + k * subDur;
+        for (let i = 0; i < oscCount; i++) {
+            if (!state.oscStates[i]) continue;
+            const fromHz = freqForOsc(i);
+            spawnBerlinOscVoice({
+                oscIndex: i,
+                startTime: tHit,
+                stepDuration,
+                gateLen,
+                accentThisStep,
+                accentAmount,
+                peakScale,
+                glissRoll,
+                slideIn: hits === 1 && slideIn && k === 0,
+                slideTime,
+                fromHz,
+                toHz: glissRoll && typeof nextFreqForOsc === 'function'
+                    ? nextFreqForOsc(i)
+                    : null,
+            });
+        }
+        spawnSharedNoiseVoice({
+            startTime: tHit,
+            stepDuration,
+            accentThisStep,
+            accentAmount,
+            peakScale,
+            gateLen,
+        });
+    }
+    // After spawn so slide-in still reads the previous step's pitch (Berlin does the same).
+    if (state.oscStates) {
+        for (let i = 0; i < oscCount; i++) {
             if (!state.oscStates[i]) continue;
             const endFreq = glissRoll && typeof nextFreqForOsc === 'function'
                 ? nextFreqForOsc(i)
@@ -923,18 +700,8 @@ function scheduleParallelRatchHits({
             state.lastStepFreqs[i] = endFreq;
         }
     }
-
-    for (let k = 0; k < hits; k++) {
-        spawnRatchVoice({
-            startTime: startTime + k * subDur,
-            stepDuration,
-            accentThisStep,
-            accentAmount,
-            peakScale,
-            glissRoll,
-            freqForOsc,
-            nextFreqForOsc,
-        });
+    if (before === 0 && !(state.berlinOscVoices?.length)) {
+        disarmBerlinSharedAmpPath(startTime);
     }
 }
 
@@ -954,7 +721,6 @@ function stopActiveVoices(now) {
     state.envelope.gain.cancelScheduledValues(now);
     state.envelope.gain.setValueAtTime(Math.max(0.00001, state.envelope.gain.value || 0.00001), now);
     state.envelope.gain.exponentialRampToValueAtTime(0.00001, now + fadeOutTime);
-    releaseRatchVoices(now);
     releaseBerlinOscVoices(now);
     releaseBerlinDrumVoices(now);
 
@@ -1565,7 +1331,7 @@ function seqMidiChord({
 function onSeqEngineBump() {
     const now = state.audioContext?.currentTime ?? 0;
     silenceMainPhaseResetOscs(now);
-    releaseRatchVoices(now);
+    releaseBerlinOscVoices(now);
     midiAllNotesOff();
     lastPolySoundingRoot = null;
     if (!state.isPlaying || !state.audioContext) return;
@@ -1703,6 +1469,15 @@ function scheduleBerlinHighlight(row, step, atTime, syncKeyboard) {
 function disposeBerlinOscVoice(voice) {
     if (!voice) return;
     const t = state.audioContext?.currentTime ?? 0;
+    if (voice.noiseSource) {
+        try {
+            voice.noiseGain?.gain.cancelScheduledValues(t);
+            voice.noiseGain?.gain.setValueAtTime(0, t);
+            voice.noiseSource.stop(t + 0.01);
+            voice.noiseSource.disconnect();
+            voice.noiseGain?.disconnect();
+        } catch (_) { /* ignore */ }
+    }
     voice.oscs?.forEach(({ osc, gain }) => {
         try {
             if (gain) {
@@ -1731,6 +1506,7 @@ function disposeBerlinOscVoice(voice) {
  * Berlin voices gate before the shared filter so mod-lane CV (cutoff/res/HP)
  * is actually audible. Main envelope stays open; main osc/noise gains are muted
  * so persistent oscillators cannot drone through that open VCA.
+ * Main/Acid ratch uses the same bus gate.
  */
 function armBerlinSharedAmpPath(atTime) {
     const ctx = state.audioContext;
@@ -1758,12 +1534,8 @@ function armBerlinSharedAmpPath(atTime) {
     state.berlinSharedPathArmed = true;
 }
 
-function disarmBerlinSharedAmpPath(atTime) {
-    if (!state.berlinSharedPathArmed) return;
-    const ctx = state.audioContext;
-    const t = Math.max(ctx?.currentTime ?? 0, atTime ?? 0);
-    state.berlinSharedPathArmed = false;
-
+function restoreMainBusGains(atTime) {
+    const t = Math.max(state.audioContext?.currentTime ?? 0, atTime ?? 0);
     state.oscGains?.forEach((g, i) => {
         const vol = getOscVol(i);
         const on = !!state.oscStates?.[i];
@@ -1773,14 +1545,19 @@ function disarmBerlinSharedAmpPath(atTime) {
         } catch (_) { /* ignore */ }
     });
     if (state.noiseGain) {
-        const nv = state.noiseState
-            ? (getNumber('noiseVol', 0))
-            : 0;
+        const nv = state.noiseState ? (getNumber('noiseVol', 0)) : 0;
         try {
             state.noiseGain.gain.cancelScheduledValues(t);
             state.noiseGain.gain.setValueAtTime(nv, t);
         } catch (_) { /* ignore */ }
     }
+}
+
+function disarmBerlinSharedAmpPath(atTime) {
+    if (!state.berlinSharedPathArmed) return;
+    const t = Math.max(state.audioContext?.currentTime ?? 0, atTime ?? 0);
+    state.berlinSharedPathArmed = false;
+    restoreMainBusGains(t);
     if (state.envelope) {
         try {
             state.envelope.gain.cancelScheduledValues(t);
@@ -1788,6 +1565,30 @@ function disarmBerlinSharedAmpPath(atTime) {
             state.envelopeHeld = false;
         } catch (_) { /* ignore */ }
     }
+}
+
+/**
+ * Leave the ratch-voice bus without wiping the next main-stage envelope.
+ * Pending ratch dispose timers still call disarm, which no-ops once unarmed.
+ */
+function handOffIndependentVoicesToMain(atTime) {
+    const t = Math.max(state.audioContext?.currentTime ?? 0, atTime ?? 0);
+    const n = state.berlinOscVoices?.length || 0;
+    if (Array.isArray(state.berlinOscVoices)) {
+        state.berlinOscVoices.forEach((voice) => {
+            try {
+                const g = voice.amp?.gain;
+                if (!g) return;
+                if (typeof g.cancelAndHoldAtTime === 'function') {
+                    try { g.cancelAndHoldAtTime(t); } catch (_) { /* ignore */ }
+                }
+                g.setTargetAtTime(0.00001, t, 0.012);
+            } catch (_) { /* ignore */ }
+        });
+    }
+    restoreMainBusGains(t);
+    state.berlinSharedPathArmed = false;
+    return n;
 }
 
 /** Fade and drop Berlin per-osc voices (optionally one osc index only). */
@@ -1820,8 +1621,9 @@ function releaseBerlinOscVoices(now, oscIndex = null) {
 }
 
 /**
- * Independent Berlin osc voice: unison stack → amp → shared ring/filter/HP → open envelope → dist.
- * Lane Gate sets note length; global Gate is ignored. Mod-lane CV hits the shared filter.
+ * Independent osc voice: unison stack → amp → shared panner/mute → ring/filter/HP.
+ * Shared envelope stays open (bus gate). Used by Berlin lanes and Main/Acid ratch.
+ * Berlin: lane Gate × master Gate. Main ratch: master Gate only.
  */
 function spawnBerlinOscVoice({
     oscIndex,
@@ -1938,12 +1740,79 @@ function spawnBerlinOscVoice({
         accentAmount,
         peakScale,
         gateLen,
+        holdForDrum: oscIndex === OSC4_INDEX,
     });
 
     const voice = {
         oscIndex,
         oscs,
         mix,
+        amp,
+    };
+    if (!Array.isArray(state.berlinOscVoices)) state.berlinOscVoices = [];
+    state.berlinOscVoices.push(voice);
+
+    const generation = state.playGeneration;
+    const delay = Math.max(0, (doneAt - ctx.currentTime) * 1000) + 40;
+    setTimeout(() => {
+        if (generation !== state.playGeneration) return;
+        disposeBerlinOscVoice(voice);
+        if (!state.berlinOscVoices?.length && !berlinFiltDrumsActive()) {
+            disarmBerlinSharedAmpPath(ctx.currentTime);
+        }
+    }, delay);
+}
+
+/** Main ratch noise: private amp → shared noiseMuteGain (mixer M/S). */
+function spawnSharedNoiseVoice({
+    startTime,
+    stepDuration,
+    accentThisStep,
+    accentAmount,
+    peakScale = 1,
+    gateLen,
+}) {
+    const ctx = state.audioContext;
+    const dest = state.noiseMuteGain;
+    if (!ctx || !dest) return;
+    if (!state.noiseState) return;
+    const vol = getNumber('noiseVol', 0);
+    if (!(vol > 0.0001) || !state.noiseBuffers) return;
+    const noiseType = getString('noiseType', 'white');
+    const buf = state.noiseBuffers[noiseType] || state.noiseBuffers.white;
+    if (!buf) return;
+
+    armBerlinSharedAmpPath(startTime);
+
+    const amp = ctx.createGain();
+    amp.gain.value = 0;
+    const g = ctx.createGain();
+    g.gain.value = vol;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    src.connect(g);
+    g.connect(amp);
+    amp.connect(dest);
+
+    const nStart = Math.max(ctx.currentTime, startTime - 0.002);
+    try { src.start(nStart); } catch (_) { /* ignore */ }
+
+    const doneAt = scheduleFullNoteOnGain(amp.gain, {
+        startTime,
+        stepDuration,
+        accentThisStep,
+        accentAmount,
+        peakScale,
+        gateLen,
+    });
+
+    const voice = {
+        oscIndex: null,
+        isNoise: true,
+        oscs: [],
+        noiseSource: src,
+        noiseGain: g,
         amp,
     };
     if (!Array.isArray(state.berlinOscVoices)) state.berlinOscVoices = [];
@@ -3176,6 +3045,29 @@ function playPolySeqStep({
     state.lastStepSounded = true;
 }
 
+function retriggerLfoIfNeeded(startTime) {
+    if (!state.lfoState || !state.lfoRetriggerState || !state.lfo?.started) return;
+    state.lfo.stop();
+    state.lfo = state.audioContext.createOscillator();
+    state.lfo.type = getString('lfoWaveform', 'sine');
+    state.lfo.frequency.value = getLfoRateHz();
+    if (state.lfoSmooth) {
+        state.lfo.connect(state.lfoSmooth);
+    } else if (state.lfoMasterGain) {
+        state.lfo.connect(state.lfoMasterGain);
+    } else {
+        state.lfo.connect(state.lfoGainCutoff);
+        state.lfo.connect(state.lfoGainResonance);
+        state.lfo.connect(state.lfoGainHighpass);
+        state.lfo.connect(state.lfoGainOsc1Pitch);
+        state.lfo.connect(state.lfoGainOsc2Pitch);
+        state.lfo.connect(state.lfoGainOsc3Pitch);
+        if (state.lfoGainOsc4Pitch) state.lfo.connect(state.lfoGainOsc4Pitch);
+    }
+    state.lfo.start(startTime);
+    state.lfo.started = true;
+}
+
 function playStep(step, startTime, stepDuration, scheduled) {
     if (!state.isPlaying && !state.isArping) return;
 
@@ -3220,33 +3112,21 @@ function playStep(step, startTime, stepDuration, scheduled) {
                 && state.oscStates?.[OSC4_INDEX]
                 && DRUM_ENGINES.has(state.osc4Model)
             );
-            if (state.envelopeHeld) {
-                if (drumVoice) {
-                    // Keep shared VCA open so the kick/snare/hat can finish its
-                    // internal decay across empty steps. Clear the held flag so we
-                    // don't treat this as a stuck slide note.
-                    state.envelopeHeld = false;
-                } else {
-                    const release = getNumber('release');
-                    const releaseTime = Math.max(0.005, release * 0.3);
-                    const t = Math.max(state.audioContext.currentTime, startTime);
-                    state.envelope.gain.cancelScheduledValues(t);
-                    state.envelope.gain.setValueAtTime(state.envelope.gain.value || 0.00001, t);
-                    state.envelope.gain.exponentialRampToValueAtTime(0.00001, t + releaseTime);
-                    state.envelopeHeld = false;
-                }
+            const independentRinging = mainIndependentVoicesRinging();
+            if (state.acidMode) {
+                if (drumVoice && state.envelopeHeld) state.envelopeHeld = false;
+                releaseAcidHeldEnvelopes(startTime);
+            } else if (state.envelopeHeld && !drumVoice && !independentRinging) {
+                // Slide-hold into a rest. Do not cancel — next ON is already on this param.
+                scheduleBusRelease(state.envelope.gain, startTime, seqReleaseTau(getNumber('release')));
+                state.envelopeHeld = false;
             }
-            if (state.filterEnvelopeHeld) {
-                const filterRelease = getNumber('filterRelease');
-                const filterReleaseTime = Math.max(0.005, filterRelease * 0.3);
-                const t = Math.max(state.audioContext.currentTime, startTime);
-                state.filterEnvGain.gain.cancelScheduledValues(t);
-                state.filterEnvGain.gain.setValueAtTime(state.filterEnvGain.gain.value || 0.00001, t);
-                state.filterEnvGain.gain.exponentialRampToValueAtTime(0.00001, t + filterReleaseTime);
+            if (!state.acidMode && state.filterEnvelopeHeld && !independentRinging) {
+                scheduleBusRelease(state.filterEnvGain.gain, startTime, seqReleaseTau(getNumber('filterRelease')));
                 state.filterEnvelopeHeld = false;
             }
         }
-        // Intentionally do NOT stop activeOscillators or duck ratchVoices.
+        // Intentionally do NOT stop activeOscillators or duck independent voices.
         lastPolySoundingRoot = null;
         state.lastStepSounded = false;
         return;
@@ -3255,7 +3135,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
     // Slide (TB-303 + compat):
     // - Prefer Sld on step N = glide into N+1 (accent OK on N with Acc+Sld).
     // - Also accept Sld on the destination (older UI habit) so slides still work.
-    // - Sld+RATCH (2–8) = gliss-roll: pitch glides this→next during this step.
+    // - Sld+RATCH (2–4) = gliss-roll: pitch glides this→next during this step.
     const slideFromPrev = !!prevData.slide;
     const slideOnThis = !!data.slide;
     const slideOnNext = nextData.on !== false && !!nextData.slide;
@@ -3264,17 +3144,13 @@ function playStep(step, startTime, stepDuration, scheduled) {
     const prevWasGliss = slideFromPrev && clampRatch(prevData.ratch) > 1;
     // 303: arriving because previous step had Slide (not a finished gliss-roll)
     const isSlideContinuation = state.lastStepSounded && slideFromPrev && !prevWasGliss;
-    // Compat: Sld only on destination (older habit) still pitch-glides — not gliss-roll source
-    const isDestSlideCompat = state.lastStepSounded && slideOnThis && !slideFromPrev && !glissRoll;
-    // Pitch ramp (both continuation + dest-compat); gliss-roll uses outbound ramp instead
-    const slideThisStep = (isSlideContinuation || isDestSlideCompat) && !glissRoll;
-    // MIDI / pitch overlap: source Slide or next marked as slide dest (gliss already arrives)
+    // 303: only arriving from prev's Sld skips retrigger / slews pitch.
+    const slideThisStep = isSlideContinuation && !glissRoll;
+    // MIDI overlap still treats Sld-on-next as inbound dest.
     const nextStepWillSlide = !glissRoll && nextData.on !== false && (slideOnThis || slideOnNext);
-    // ACID envs: only true continuation skips retrigger; only source Slide holds into next
-    const slideThisStepEnv = state.acidMode ? isSlideContinuation && !glissRoll : slideThisStep;
-    const nextStepWillSlideEnv = state.acidMode
-        ? (!glissRoll && nextData.on !== false && slideOnThis)
-        : nextStepWillSlide;
+    const slideThisStepEnv = slideThisStep;
+    const nextStepWillSlideEnv = !glissRoll && nextData.on !== false && slideOnThis;
+    const slideThisStepPitch = slideThisStep;
     const slideTime = getSlideTime();
     const accentAmount = getAccentAmount();
     // Accent on Acc+Sld source steps (303). Only blank when arriving via prev's Slide.
@@ -3282,6 +3158,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
     const hits = clampRatch(ratch);
     const subDur = stepDuration / hits;
     const fineCents = Math.round(Number(data.fine) || 0);
+    const indepRinging = mainIndependentVoicesRinging();
 
     if (polySeq) {
         playPolySeqStep({
@@ -3313,7 +3190,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
             // Full-note ratchets: each MIDI gate lasts a whole step (overlapping)
             const hitDur = hits === 1
                 ? stepDuration * (overlapForSlide ? 1.1 : gateLen)
-                : stepDuration * gateLen;
+                : subDur * gateLen;
             const noteOnDelay = Math.max(0, (hitStart - state.audioContext.currentTime) * 1000);
             const noteOffDelay = Math.max(0, (hitStart + hitDur - state.audioContext.currentTime) * 1000);
             setTimeout(() => {
@@ -3332,20 +3209,9 @@ function playStep(step, startTime, stepDuration, scheduled) {
         }
     }
 
-    // Independent ratch voices: own oscs + amp — skip main pitch/env path entirely
-    if (hits > 1) {
-        scheduleParallelRatchHits({
-            startTime,
-            stepDuration,
-            hits,
-            accentThisStep,
-            accentAmount,
-            glissRoll,
-            freqForOsc: freqThis,
-            nextFreqForOsc: glissRoll ? freqNext : null,
-        });
-        state.lastStepSounded = true;
-        return;
+    // Leftover Berlin one-shots (older ratch path) must not mute the main bus.
+    if (indepRinging || state.berlinSharedPathArmed) {
+        handOffIndependentVoicesToMain(startTime);
     }
 
     /** Continuous this→next pitch glide over the full outer step (gliss-roll). */
@@ -3392,7 +3258,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
                 }
             }
             scheduleGlissPitch();
-        } else if (slideThisStep) {
+        } else if (slideThisStepPitch) {
             // Slide (303 RC slew): setTargetAtTime = exponential approach from the
             // oscillator's *current* pitch — chained slides keep slewing like the
             // hardware capacitor, and slides land "just a hair short" like a 303.
@@ -3412,8 +3278,12 @@ function playStep(step, startTime, stepDuration, scheduled) {
                 const i = osc.oscIndex;
                 const baseFreq = freqThis(i);
                 const freq = voiceTargetFreq(osc, baseFreq);
-                osc.frequency.cancelScheduledValues(startTime);
-                osc.frequency.setTargetAtTime(freq, startTime, slideTime / 3);
+                const prevBase = state.lastStepFreqs[i];
+                const sameNote = prevBase != null && Math.abs(baseFreq - prevBase) < 1e-4;
+                if (!sameNote) {
+                    osc.frequency.cancelScheduledValues(startTime);
+                    osc.frequency.setTargetAtTime(freq, startTime, slideTime / 3);
+                }
                 state.lastStepFreqs[i] = baseFreq;
             });
         } else {
@@ -3434,10 +3304,14 @@ function playStep(step, startTime, stepDuration, scheduled) {
         state.oscillators.forEach((osc, i) => {
             const baseFreq = freqThis(i);
             const freq = bentFrequency(baseFreq);
-            if (slideThisStep) {
+            if (slideThisStepPitch) {
                 // Slide (303 RC slew): exponential approach from current pitch
-                osc.frequency.cancelScheduledValues(startTime);
-                osc.frequency.setTargetAtTime(freq, startTime, slideTime / 3);
+                const prevBase = state.lastStepFreqs[i];
+                const sameNote = state.acidMode && prevBase != null && Math.abs(baseFreq - prevBase) < 1e-4;
+                if (!sameNote) {
+                    osc.frequency.cancelScheduledValues(startTime);
+                    osc.frequency.setTargetAtTime(freq, startTime, slideTime / 3);
+                }
             } else {
                 osc.frequency.cancelScheduledValues(startTime);
                 osc.frequency.setValueAtTime(freq, startTime);
@@ -3475,47 +3349,36 @@ function playStep(step, startTime, stepDuration, scheduled) {
         state.noiseGain.gain.linearRampToValueAtTime(targetNoiseVol, startTime + 0.005);
     }
 
-    if (state.lfoState && state.lfoRetriggerState && state.lfo.started) {
-        state.lfo.stop();
-        state.lfo = state.audioContext.createOscillator();
-        state.lfo.type = getString('lfoWaveform', 'sine');
-        state.lfo.frequency.value = getLfoRateHz();
-        // Reconnect into the smoothed LFO chain (smooth → master → depth gains)
-        if (state.lfoSmooth) {
-            state.lfo.connect(state.lfoSmooth);
-        } else if (state.lfoMasterGain) {
-            state.lfo.connect(state.lfoMasterGain);
-        } else {
-            state.lfo.connect(state.lfoGainCutoff);
-            state.lfo.connect(state.lfoGainResonance);
-            state.lfo.connect(state.lfoGainHighpass);
-            state.lfo.connect(state.lfoGainOsc1Pitch);
-            state.lfo.connect(state.lfoGainOsc2Pitch);
-            state.lfo.connect(state.lfoGainOsc3Pitch);
-            if (state.lfoGainOsc4Pitch) state.lfo.connect(state.lfoGainOsc4Pitch);
-        }
-        state.lfo.start(startTime);
-        state.lfo.started = true;
+    retriggerLfoIfNeeded(startTime);
+
+    const nextIsRest = nextData.on === false;
+    // Same oscs / bus as a normal ON. Pulse A/D/R on the ratch grid.
+    // Slide dest stays one held gate (hits ignored for envelopes).
+    const pulseRatch = hits > 1 && !slideThisStepEnv;
+    const envHits = pulseRatch ? hits : 1;
+    const envDur = pulseRatch ? subDur : stepDuration;
+    for (let k = 0; k < envHits; k++) {
+        const tHit = startTime + k * envDur;
+        const last = k === envHits - 1;
+        scheduleStepEnvelope({
+            startTime: tHit,
+            stepDuration: envDur,
+            slideThisStep: !pulseRatch && slideThisStepEnv,
+            nextStepWillSlide: !pulseRatch && nextStepWillSlideEnv,
+            accentThisStep,
+            accentAmount,
+            nextIsRest: last && nextIsRest,
+        });
+        scheduleStepFilterEnvelope({
+            startTime: Math.max(state.audioContext.currentTime, tHit),
+            stepDuration: envDur,
+            slideThisStep: !pulseRatch && slideThisStepEnv,
+            nextStepWillSlide: !pulseRatch && nextStepWillSlideEnv,
+            accentThisStep,
+            accentAmount,
+            nextIsRest: last && nextIsRest,
+        });
     }
-
-    const adjustedStartTime = Math.max(state.audioContext.currentTime, startTime);
-    scheduleStepEnvelope({
-        startTime,
-        stepDuration,
-        slideThisStep: slideThisStepEnv,
-        nextStepWillSlide: nextStepWillSlideEnv,
-        accentThisStep,
-        accentAmount,
-    });
-    scheduleStepFilterEnvelope({
-        startTime: adjustedStartTime,
-        stepDuration,
-        slideThisStep: slideThisStepEnv,
-        nextStepWillSlide: nextStepWillSlideEnv,
-        accentThisStep,
-        accentAmount,
-    });
-
 
     state.lastStepSounded = true;
 }

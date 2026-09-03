@@ -3,8 +3,8 @@
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
 import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getOscType, getString } from './params.js?v=13';
-import { isAnalogDrumEngine } from './pattern-bank.js?v=15';
+import { getNumber, getOscType, getString } from './params.js?v=14';
+import { isAnalogDrumEngine } from './pattern-bank.js?v=16';
 import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=16';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
@@ -1389,14 +1389,20 @@ export function applyLiveOscVolume(oscIndex, volRaw, extraOscs = null) {
     const now = state.audioContext.currentTime;
     const on = !!state.oscStates?.[oscIndexN];
     const level = on ? vol : 0;
-
-    if (state.oscGains?.[oscIndexN]) {
+    const rampGain = (node, target, ms) => {
+        if (!node) return;
         try {
-            const g = state.oscGains[oscIndexN].gain;
+            const g = node.gain;
             g.cancelScheduledValues(now);
             g.setValueAtTime(Math.max(0.00001, Number(g.value) || 0.00001), now);
-            g.linearRampToValueAtTime(Math.max(0.00001, level), now + (level < 0.0001 ? 0.025 : 0.012));
+            g.linearRampToValueAtTime(Math.max(0.00001, target), now + ms);
         } catch (_) { /* ignore */ }
+    };
+
+    // Independent Berlin/ratch voices own the bus; restoring oscGains here
+    // would unmute persistent oscs through the held-open VCA.
+    if (!state.berlinSharedPathArmed && state.oscGains?.[oscIndexN]) {
+        rampGain(state.oscGains[oscIndexN], level, level < 0.0001 ? 0.025 : 0.012);
     }
 
     const list = [];
@@ -1405,23 +1411,19 @@ export function applyLiveOscVolume(oscIndex, volRaw, extraOscs = null) {
         list.push(osc);
     };
     if (Array.isArray(state.activeOscillators)) state.activeOscillators.forEach(push);
-    if (Array.isArray(state.berlinOscVoices)) {
-        state.berlinOscVoices.forEach((voice) => {
-            if (voice?.oscIndex !== oscIndexN) return;
-            voice?.oscs?.forEach(({ osc }) => push(osc));
-        });
-    }
     if (Array.isArray(extraOscs)) extraOscs.forEach(push);
 
     const n = Math.max(1, list.length || 1);
     const voiceVol = level / n;
-    list.forEach((osc) => {
-        try {
-            const g = osc.gainNode.gain;
-            g.cancelScheduledValues(now);
-            g.setValueAtTime(Math.max(0.00001, g.value || 0.00001), now);
-            g.linearRampToValueAtTime(Math.max(0.00001, voiceVol), now + 0.012);
-        } catch (_) { /* ignore */ }
+    list.forEach((osc) => rampGain(osc.gainNode, voiceVol, 0.012));
+
+    // Per independent voice (overlapping ratches): each stack still sums to `level`.
+    state.berlinOscVoices?.forEach((voice) => {
+        if (voice?.oscIndex !== oscIndexN) return;
+        const stack = voice.oscs || [];
+        if (!stack.length) return;
+        const laneVol = level / stack.length;
+        stack.forEach(({ osc, gain }) => rampGain(gain || osc?.gainNode, laneVol, 0.012));
     });
 }
 

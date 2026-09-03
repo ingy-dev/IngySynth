@@ -2,7 +2,7 @@
 // Pointer capture runs in mapping mode so knobs/strips do not scrub while learning.
 
 import { state } from './state.js?v=116';
-import { keyFromElement } from './params.js?v=13';
+import { keyFromElement } from './params.js?v=14';
 import { getParam, isCatalogKey } from './param-catalog.js?v=2';
 
 const IGNORE_IDS = new Set([

@@ -2,17 +2,17 @@
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
 import { state, OSC_COUNT } from './state.js?v=116';
-import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=13';
+import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=14';
 import { semitonesToFrequency } from './tuning.js?v=80';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=82';
-import { refreshFilterInputDrive } from './filter-drive.js?v=29';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=84';
+import { refreshFilterInputDrive } from './filter-drive.js?v=30';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=113';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=173';
+} from './visualizers.js?v=114';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=184';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=17';
 import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=28';
 import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=89';
@@ -27,12 +27,12 @@ import {
     PLAITS_POLY_WARM_COUNT,
     hasDarkOscActive,
     wtAttackSecForFilter,
-} from './osc-source.js?v=121';
+} from './osc-source.js?v=122';
 import {
     isPolyChordMemoryOn,
     getPolyChordIntervals,
-    clearPolyChordMemory,
-} from './chord-memory.js?v=21';
+    syncChordMemUI,
+} from './chord-memory.js?v=22';
 
 /** Local bend helper — avoid circular import with pitch-bend.js. */
 function bentFrequency(baseFreq) {
@@ -44,6 +44,10 @@ export const POLY_VOICE_COUNT = 6;
 const POLY_OSC_MAX = 2; // OSC 1–2 only
 const POLY_DEFAULT_OSC_VOL = 0.1; // stacked chords run hot at normal mono levels
 const BEND_RAMP = 0.01;
+/** Sequenced gate-off tau (~36 ms settle). Not the Release knob — that made a wub. */
+const SEQ_GATE_CLOSE_TAU = 0.012;
+/** Mixer mute/solo open flags — poly oscs bypass shared oscMuteGains. */
+const polyOscBusOpen = [true, true, true, true];
 
 /** Snapshot taken when entering Poly; restored on exit. */
 let polySnapshot = null;
@@ -557,9 +561,20 @@ function releaseSharedFilterIfIdle(now) {
     state.filterEnvelopeHeld = false;
 }
 
+function rampMuteGain(node, open, now) {
+    if (!node) return;
+    const v = open ? 1 : 0;
+    try {
+        node.gain.cancelScheduledValues(now);
+        node.gain.setValueAtTime(node.gain.value, now);
+        node.gain.linearRampToValueAtTime(v, now + 0.02);
+    } catch (_) { /* ignore */ }
+}
+
 function disconnectOscGraph(osc) {
     try { osc.gainNode?.disconnect(); } catch (_) { /* ignore */ }
     try { osc.panNode?.disconnect(); } catch (_) { /* ignore */ }
+    try { osc.muteNode?.disconnect(); } catch (_) { /* ignore */ }
     try { osc.disconnect(); } catch (_) { /* ignore */ }
 }
 
@@ -579,22 +594,18 @@ function stopVoiceOscs(voice, now) {
                     fadeSec: osc.isWavetable ? 0.055 : 0.022,
                     hard: !!osc.isTriggered,
                 });
-                const pan = osc.panNode;
+                const o = osc;
                 const delayMs = Math.max(0, (t - ctxNow) * 1000) + 40;
-                setTimeout(() => {
-                    try { pan?.disconnect(); } catch (_) { /* ignore */ }
-                }, delayMs);
+                setTimeout(() => disconnectOscGraph(o), delayMs);
                 return;
             }
             if (osc.isWavetable) {
                 fadeStopOsc(osc, t, { fadeSec: 0.03, hard: !!osc.isTriggered });
                 if (immediate) disconnectOscGraph(osc);
                 else {
-                    const pan = osc.panNode;
+                    const o = osc;
                     const delayMs = Math.max(0, (t - ctxNow) * 1000) + 30;
-                    setTimeout(() => {
-                        try { pan?.disconnect(); } catch (_) { /* ignore */ }
-                    }, delayMs);
+                    setTimeout(() => disconnectOscGraph(o), delayMs);
                 }
                 return;
             }
@@ -648,7 +659,7 @@ function silenceVoiceAmp(voice, now) {
     } catch (_) { /* ignore */ }
 }
 
-function triggerVoiceAmp(voice, now, { fromCurrent = false, peakScale = 1 } = {}) {
+function triggerVoiceAmp(voice, now, { fromCurrent = false, peakScale = 1, gateOffAt = null } = {}) {
     const g = voice.ampEnv.gain;
     const peak = Math.max(0.00001, peakScale);
     // Ingy 6 VCA GATE: instant open (filter still uses shared ADSR)
@@ -667,13 +678,18 @@ function triggerVoiceAmp(voice, now, { fromCurrent = false, peakScale = 1 } = {}
     if (voice.sequenced) {
         const darkOsc = hasDarkOscActive();
         const seqAttack = Math.max(darkOsc ? Math.max(0.008, wtAttackSecForFilter() * 0.55) : 0.004, safeAttack);
+        let decayStart = now + seqAttack;
+        if (gateOffAt != null && gateOffAt > now + 0.008) {
+            decayStart = Math.min(decayStart, gateOffAt - 0.008);
+        }
         let held = false;
         if (typeof g.cancelAndHoldAtTime === 'function') {
             try { g.cancelAndHoldAtTime(now); held = true; } catch (_) { /* ignore */ }
         }
         if (!held) g.cancelScheduledValues(now);
-        g.linearRampToValueAtTime(peak, now + seqAttack);
-        g.linearRampToValueAtTime(Math.max(0.00001, sustain * peak), now + seqAttack + safeDecay);
+        const attackTau = Math.max(0.0008, seqAttack / 3);
+        g.setTargetAtTime(peak, now, attackTau);
+        g.setTargetAtTime(Math.max(0.00001, sustain * peak), decayStart, Math.max(0.004, safeDecay / 3));
         voice.releasing = false;
         return;
     }
@@ -749,7 +765,10 @@ function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, seque
         const panValue = getOscPan(i);
         const panner = state.audioContext.createStereoPanner();
         panner.pan.value = panValue;
-        panner.connect(dest);
+        const muteGain = state.audioContext.createGain();
+        muteGain.gain.value = polyOscBusOpen[i] !== false ? 1 : 0;
+        panner.connect(muteGain);
+        muteGain.connect(dest);
 
         let osc;
         if (multitudes && i === 0) {
@@ -764,6 +783,7 @@ function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, seque
             gain.connect(panner);
             osc.gainNode = gain;
             osc.panNode = panner;
+            osc.muteNode = muteGain;
             osc.oscIndex = i;
             osc.unisonCents = cents;
             osc.polyBaseFreq = baseFreq;
@@ -788,6 +808,7 @@ function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, seque
             gain.connect(panner);
             osc.gainNode = gain;
             osc.panNode = panner;
+            osc.muteNode = muteGain;
             if (osc.isWavetable) osc.start(now);
             else startAnalogOsc(osc, now);
             osc.started = true;
@@ -804,6 +825,25 @@ function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, seque
     voice.cents = cents;
     voice.oscStartWhen = now;
     return any;
+}
+
+/** Live mixer mute/solo for poly oscs (chord steps + live keys). */
+export function applyPolyMixerMutes(oscOpen) {
+    if (Array.isArray(oscOpen)) {
+        for (let i = 0; i < OSC_COUNT; i++) {
+            polyOscBusOpen[i] = oscOpen[i] !== false;
+        }
+    }
+    const ctx = state.audioContext;
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    voices.forEach((voice) => {
+        voice.oscs.forEach((osc) => {
+            const i = osc?.oscIndex;
+            if (i == null) return;
+            rampMuteGain(osc.muteNode, polyOscBusOpen[i] !== false, now);
+        });
+    });
 }
 
 /** Live-update pan on sounding poly oscs for one OSC slot. */
@@ -1141,18 +1181,105 @@ function seqFingerLiveVoices(finger) {
         .sort((a, b) => (a.chordInterval || 0) - (b.chordInterval || 0) || a.age - b.age);
 }
 
-/** Analog seq retrigger: same stack, free-running oscs (Main phase-reset-off). */
-function canRetuneSeqVoices(existing, nNeeded) {
-    if (!existing.length || existing.length !== nNeeded) return false;
+/** Keep a running voice: analog type match, or Plaits/WT with retrigger (no stop+spawn). */
+function voiceCanRetune(v) {
     const want = wantedPolyOscIndexes();
-    if (!want.length) return false;
-    return existing.every((v) => {
-        if (v.oscs.some((o) => o.isWavetable || !o.started)) return false;
-        if (v.oscs.length !== want.length) return false;
-        return v.oscs.every((osc) => (
-            want.includes(osc.oscIndex) && osc.type === analogWaveForIndex(osc.oscIndex)
-        ));
+    if (!want.length || !v?.oscs?.length) return false;
+    if (v.oscs.some((o) => !o.started)) return false;
+    if (v.oscs.length !== want.length) return false;
+    return v.oscs.every((osc) => {
+        if (!want.includes(osc.oscIndex)) return false;
+        if (osc.isWavetable) return typeof osc.retrigger === 'function';
+        return osc.type === analogWaveForIndex(osc.oscIndex);
     });
+}
+
+function seqVoiceStackVol(oscIndex, stackCount) {
+    const multitudes = !!state.keyboardMultitudes;
+    let fullVol = getOscVol(oscIndex, POLY_DEFAULT_OSC_VOL);
+    if (oscIndex === 1 && state.keyboardPoly && !multitudes) {
+        const subFader = parseFloat(
+            document.querySelector('#ingy6Panel .ingy6-fader[data-param="subOsc"] .ingy6-fader-input')?.value,
+        );
+        const pct = Number.isFinite(subFader) ? Math.max(0, Math.min(1, subFader / 10)) : 0;
+        fullVol *= pct;
+    }
+    const chordN = stackCount > 1 ? stackCount : 1;
+    return Math.max(0.0001, fullVol / (chordN > 1 ? chordN : 1));
+}
+
+function retuneVoiceStackGain(voice, stackCount, when) {
+    voice.oscs.forEach((osc) => {
+        const g = osc.gainNode?.gain;
+        if (!g) return;
+        const target = seqVoiceStackVol(osc.oscIndex, stackCount);
+        try {
+            if (typeof g.cancelAndHoldAtTime === 'function') {
+                try { g.cancelAndHoldAtTime(when); } catch (_) { /* ignore */ }
+            } else {
+                g.cancelScheduledValues(when);
+            }
+            g.setTargetAtTime(target, when, 0.012);
+        } catch (_) { /* ignore */ }
+    });
+}
+
+/** Audio-clock gate close. Oscs stay up; next step's hold+setTarget attack retriggers. */
+function scheduleSeqGateClose(voice, offAt) {
+    const g = voice.ampEnv?.gain;
+    if (!g) return;
+    try {
+        if (typeof g.cancelAndHoldAtTime === 'function') {
+            try { g.cancelAndHoldAtTime(offAt); } catch (_) { /* ignore */ }
+        }
+        g.setTargetAtTime(0.00001, offAt, SEQ_GATE_CLOSE_TAU);
+    } catch (_) { /* ignore */ }
+}
+
+/** Same dump on the shared filter — skipClose left it open for the whole step. */
+function scheduleSeqFilterGateClose(offAt) {
+    const g = state.filterEnvGain?.gain;
+    if (!g) return;
+    try {
+        if (typeof g.cancelAndHoldAtTime === 'function') {
+            try { g.cancelAndHoldAtTime(offAt); } catch (_) { /* ignore */ }
+        }
+        g.setTargetAtTime(0.00001, offAt, SEQ_GATE_CLOSE_TAU);
+    } catch (_) { /* ignore */ }
+}
+
+/** Drop a chord tone: hold+setTarget close (Acid), leave oscs running into the VCA. */
+function releaseSeqSurplus(voice, when) {
+    const g = voice.ampEnv?.gain;
+    const minValue = 0.00001;
+    if (g) {
+        try {
+            if (typeof g.cancelAndHoldAtTime === 'function') {
+                try { g.cancelAndHoldAtTime(when); } catch (_) { /* ignore */ }
+            } else {
+                g.cancelScheduledValues(when);
+            }
+            g.setTargetAtTime(minValue, when, 0.012);
+        } catch (_) { /* ignore */ }
+    }
+    voice.releasing = true;
+    voice.finger = null;
+    voice.sequenced = false;
+    voice.seqId = 0;
+    voice.engineGen = 0;
+    const generation = polyVoiceGeneration;
+    const semi = voice.semi;
+    const ctxNow = state.audioContext?.currentTime ?? when;
+    setTimeout(() => {
+        if (generation !== polyVoiceGeneration) return;
+        if (voice.semi !== semi) return;
+        if (!voice.releasing) return;
+        if (!state.audioContext) return;
+        stopVoiceOscs(voice, state.audioContext.currentTime);
+        voice.semi = null;
+        voice.chordInterval = 0;
+        voice.releasing = false;
+    }, Math.max(20, (when - ctxNow + 0.05) * 1000));
 }
 
 function retuneVoiceOscs(voice, soundingSemi, cents, when) {
@@ -1163,6 +1290,10 @@ function retuneVoiceOscs(voice, soundingSemi, cents, when) {
         osc.unisonCents = cents;
         const freq = applyUnisonCents(bentFrequency(baseFreq), osc.unisonCents || 0);
         freqs.push(baseFreq);
+        if (osc.isWavetable && typeof osc.retrigger === 'function') {
+            osc.retrigger(when, freq);
+            return;
+        }
         try {
             osc.frequency.cancelScheduledValues(when);
             osc.frequency.setValueAtTime(freq, when);
@@ -1221,18 +1352,32 @@ export function schedulePolySeqVoicing({
     const finger = SEQ_FINGER_BASE;
     const spread = getPolyDetuneCents();
     const stackCount = nVoices;
+    const gateFrac = Math.max(0.05, Math.min(1, (Number(getNumber('gateLength', 90)) || 90) / 100));
+    const gateSecN = Math.max(0.02, Number(gateSec) || 0.05);
+    const legato = gateFrac >= 0.98;
+    const offAt = when + gateSecN;
 
     holdMasterEnvelope();
     const existing = seqFingerLiveVoices(finger);
-    const retune = canRetuneSeqVoices(existing, nVoices);
-    if (!retune) {
+    const reusable = existing.filter(voiceCanRetune);
+    const keepN = Math.min(reusable.length, nVoices);
+    const reused = reusable.slice(0, keepN);
+    const reusedSet = new Set(reused);
+    const skipClose = keepN > 0;
+    const hardFree = keepN === 0 && existing.length > 0;
+    if (hardFree) {
         hardFreeFinger(finger, when, { keepAmp: true });
         stealUntilFree(nVoices, finger, when);
     } else {
         existing.forEach((v) => {
-            v.seqId = seqId;
-            v.releasing = false;
+            if (reusedSet.has(v)) {
+                v.seqId = seqId;
+                v.releasing = false;
+            } else {
+                releaseSeqSurplus(v, when);
+            }
         });
+        stealUntilFree(Math.max(0, nVoices - keepN), finger, when);
     }
 
     hideLogoOverlay();
@@ -1246,12 +1391,15 @@ export function schedulePolySeqVoicing({
         voice.seqId = seqId;
         voice.engineGen = engineGen ?? state.seqEngineGeneration;
         const spawnPitch = (slide && slideFromSounding != null) ? slideFromSounding : sounding;
-        if (retune && voice.oscs.length && voice.oscs.every((o) => o.started && !o.isWavetable)) {
+        const doRetune = reusedSet.has(voice) && voiceCanRetune(voice);
+        if (doRetune) {
             retuneVoiceOscs(voice, spawnPitch, cents, when);
+            retuneVoiceStackGain(voice, stackCount, when);
             if (slide && slideFromSounding != null) {
                 slewVoiceToSounding(voice, sounding, when, slideTime);
             }
-            triggerVoiceAmp(voice, when, { peakScale: accentScale });
+            triggerVoiceAmp(voice, when, { peakScale: accentScale, gateOffAt: legato ? null : offAt });
+            if (!legato) scheduleSeqGateClose(voice, offAt);
             return true;
         }
         if (voice.oscs.length) stopVoiceOscs(voice, when);
@@ -1266,23 +1414,22 @@ export function schedulePolySeqVoicing({
         if (slide && slideFromSounding != null) {
             slewVoiceToSounding(voice, sounding, when, slideTime);
         }
-        triggerVoiceAmp(voice, when, { peakScale: accentScale });
+        triggerVoiceAmp(voice, when, { peakScale: accentScale, gateOffAt: legato ? null : offAt });
+        if (!legato) scheduleSeqGateClose(voice, offAt);
         return true;
     };
 
     let any = false;
     if (useUni) {
-        const pool = retune ? existing : null;
         for (let k = 0; k < POLY_VOICE_COUNT; k++) {
-            const voice = (pool && pool[k]) || voices.find((v) => v.semi == null) || allocVoice();
+            const voice = reused[k] || voices.find((v) => v.semi == null) || allocVoice();
             if (!voice) break;
             const cents = unisonCents(k, POLY_VOICE_COUNT, spread);
             if (startOne(voice, soundingRoot, cents, 0, k === 0)) any = true;
         }
     } else {
-        const pool = retune ? existing : null;
         for (let i = 0; i < ivs.length; i++) {
-            const voice = (pool && pool[i]) || voices.find((v) => v.semi == null) || allocVoice();
+            const voice = reused[i] || voices.find((v) => v.semi == null) || allocVoice();
             if (!voice) break;
             const iv = ivs[i];
             const sounding = soundingRoot + iv;
@@ -1292,28 +1439,10 @@ export function schedulePolySeqVoicing({
     }
 
     if (!any) return;
-    triggerSharedFilterEnvelope(when, { skipClose: retune });
+    triggerSharedFilterEnvelope(when, { skipClose });
+    if (!legato) scheduleSeqFilterGateClose(offAt);
     triggerPolyNoiseEnv(when);
     state.keyboardVoiceActive = true;
-
-    const offAt = when + Math.max(0.02, Number(gateSec) || 0.05);
-    const gen = polyVoiceGeneration;
-    const eng = state.seqEngineGeneration;
-    setTimeout(() => {
-        if (gen !== polyVoiceGeneration) return;
-        if (eng !== state.seqEngineGeneration) return;
-        if (!state.audioContext) return;
-        const now = state.audioContext.currentTime;
-        voices.forEach((v) => {
-            if (v.seqId !== seqId) return;
-            releaseVoiceAmp(v, now);
-        });
-        if (activePolyCount() === 0) {
-            state.keyboardVoiceActive = false;
-            releaseSharedFilterIfIdle(now);
-            releasePolyNoiseEnv(now);
-        }
-    }, Math.max(0, (offAt - ctxNow) * 1000));
 }
 
 export function forcePolyAllOff({ silent = false } = {}) {
@@ -1417,17 +1546,16 @@ export function syncPolyModeUI() {
         btn.setAttribute('aria-label', on ? 'Polyphonic mode on' : 'Polyphonic mode');
 
         // Home: Poly | Multitudes. Chord Memory stays left of computer-keys toggle.
-        // Ingy-6 on: Multitudes far left, Poly centered, logo right.
+        // Ingy-6 on: Poly | Multitudes stay centered as a pair; logo far right.
         // Multitudes panel owns docking while Multitudes mode is on (Poly off).
         const home = document.getElementById('keyboardPolyToggleHome');
         const polySlot = document.getElementById('ingy6PolyToggleSlot');
-        const chordSlot = document.getElementById('ingy6ChordMemSlot');
         const multBtn = document.getElementById('keyboardMultitudesToggle');
         if (on) {
-            if (polySlot && btn.parentElement !== polySlot) {
+            if (polySlot) {
                 polySlot.appendChild(btn);
+                if (multBtn) polySlot.appendChild(multBtn);
             }
-            if (chordSlot && multBtn) chordSlot.appendChild(multBtn);
             if (home) home.hidden = true;
         } else if (!state.keyboardMultitudes && home) {
             home.appendChild(btn);
@@ -1569,7 +1697,7 @@ export function setPolyMode(on) {
     bumpSeqEngine();
 
     if (next) {
-        clearPolyChordMemory();
+        // Keep stored chord memory — Ingy-6 / Multitudes share one voicing until reset
         // Multitudes panel is UI-only mutex with Ingy-6 — unlock restores classic Unison/Ring first
         if (state.keyboardMultitudes) {
             syncMultitudesPolyLocks(false);
@@ -1666,11 +1794,11 @@ export function setPolyMode(on) {
             updateFilterCutoffRange(cutoff, state.audioContext.currentTime, 0.01);
         }
         syncPolyModeUI();
+        syncChordMemUI();
         return;
     }
 
-    // Exit — hard-kill voices before restoring patch
-    clearPolyChordMemory();
+    // Exit — restore main-stage oscs (root only). Parked voicing stays until reset.
     forcePolyAllOff({ silent: true });
     stopPolyOwnedNoiseSource();
     state.keyboardPoly = false;
@@ -1720,6 +1848,7 @@ export function setPolyMode(on) {
         updateFilterCutoffRange(cutoff, state.audioContext.currentTime, 0.05);
     }
     syncPolyModeUI();
+    syncChordMemUI();
 }
 
 /** Push morph/harmonics onto Multitudes/Ingy poly wavetable voices. */

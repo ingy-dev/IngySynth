@@ -7,15 +7,15 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=204';
+} from './keyboard.js?v=212';
 import { needsHeldNoteSet } from './held-notes.js?v=8';
-import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=106';
+import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=112';
 import {
     catalogKeyFromLearn,
     clearMappingHighlight,
     setupMappingPointerCapture,
 } from './midi-learn.js?v=6';
-import { click, set, toggle } from './params.js?v=13';
+import { click, set, toggle } from './params.js?v=14';
 import { getParam, isCatalogKey, scaleCcToCatalog } from './param-catalog.js?v=2';
 
 /** MIDI note number → cell semitone while held (for Chord arp / Chord Mem). */

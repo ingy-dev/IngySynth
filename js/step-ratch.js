@@ -1,8 +1,10 @@
-// Per-step Metropolix-style ratcheting: 1 = off, 2–8 = repeats per clock step.
+// Per-step Metropolix-style ratcheting: 1 = off, 2–4 = repeats per clock step.
+
+export const RATCH_MAX = 4;
 
 export function clampRatch(n) {
     const v = Math.round(Number(n) || 1);
-    return Math.max(1, Math.min(8, v));
+    return Math.max(1, Math.min(RATCH_MAX, v));
 }
 
 export function formatRatchLabel(n) {
@@ -10,11 +12,11 @@ export function formatRatchLabel(n) {
     return r <= 1 ? 'Ratch' : `R ${r}`;
 }
 
-/** Off → 2 → … → 8 → Off */
+/** Off → 2 → … → 4 → Off */
 export function nextRatch(n) {
     const r = clampRatch(n);
     if (r <= 1) return 2;
-    if (r >= 8) return 1;
+    if (r >= RATCH_MAX) return 1;
     return r + 1;
 }
 

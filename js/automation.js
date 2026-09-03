@@ -5,15 +5,15 @@
 
 import { state } from './state.js?v=116';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=75';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=96';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=97';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=78';
-import { ensureDisplayStep } from './knobs.js?v=124';
+import { ensureDisplayStep } from './knobs.js?v=130';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=7';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=72';
-import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=13';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=74';
+import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=14';
 import { clampToCatalog, getParam } from './param-catalog.js?v=2';
 
 const PITCH_BEND_KEY = 'pitchBend';

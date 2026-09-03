@@ -115,8 +115,6 @@ export const state = {
     lastStepSounded: false,            // previous step produced a note (slide source exists)
     envelopeHeld: false,               // envelope held at sustain awaiting a slide step
     filterEnvelopeHeld: false,         // filter envelope held at sustain awaiting a slide step
-    /** Independent ratch voices (own oscs + amp) that can outlive the next step. */
-    ratchVoices: [],
     filterEnvState: false,
     filterEnvInvert: false,            // when true, env closes cutoff from knob instead of opening toward it
     lastSentBendCents: 0,              // last pitch bend (in cents) sent over MIDI

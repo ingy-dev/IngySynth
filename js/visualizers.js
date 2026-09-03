@@ -2,8 +2,9 @@ import { state } from './state.js?v=116';
 import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=80';
 import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=4';
 import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=6';
-import { getNumber, set } from './params.js?v=13';
+import { getNumber, set } from './params.js?v=14';
 import { getParam } from './param-catalog.js?v=2';
+import { acidEnvelopeDisplay, acidDecayKnobFromSec } from './acid-env.js?v=48';
 
 const NOTE_VFD_HOSTS = ['kbPatternNoteVisualizer', 'kbXyNoteVisualizer'];
 const NOTE_VFD_IDLE_TEXT = 'Note';
@@ -129,6 +130,8 @@ const ADSR_SUSTAIN_TIME = 0.5;
 const ADSR_HIT_RADIUS = 14;
 /** Floor so AD segments stay visible when knobs are at 0. */
 const ADSR_SEG_FLOOR = 0.02;
+/** Acid attack is ~3–4 ms; this is a vertical tick, not a time-scaled ramp. */
+const ADSR_ACID_ATTACK_PX = 3;
 
 const AMP_ADSR_IDS = {
     attackId: 'attack',
@@ -166,22 +169,19 @@ function setAdsrValue(key, value) {
     set(key, value);
 }
 
+function acidKindFromParams(params) {
+    return (params.attackId === 'filterAttack' || params.decayId === 'filterDecay')
+        ? 'filter'
+        : 'amp';
+}
+
+function adsrInnerWidth(width) {
+    return Math.max(1, width - ADSR_PAD_X * 2);
+}
+
 /** Shared ADSR (or Acid AD) polyline geometry (canvas pixel space). */
 function getAdsrLayout(width, height, params, invert = false) {
     const acid = !!state.acidMode;
-    const attack = Math.max(ADSR_SEG_FLOOR, params.attack);
-    const decay = Math.max(ADSR_SEG_FLOOR, params.decay);
-    const sustain = acid ? 0 : params.sustain;
-    const release = acid ? 0 : Math.max(0, params.release);
-    const sustainTime = acid ? 0 : ADSR_SUSTAIN_TIME;
-
-    const totalDuration = acid
-        ? attack + decay
-        : attack + decay + sustainTime + release;
-    const attackWidth = (attack / totalDuration) * width;
-    const decayWidth = (decay / totalDuration) * width;
-    const sustainWidth = acid ? 0 : (sustainTime / totalDuration) * width;
-    const releaseWidth = acid ? 0 : (release / totalDuration) * width;
     const maxHeight = height - 10;
     const yAt = (level) => invert
         ? 10 + level * (maxHeight - 10)
@@ -193,17 +193,27 @@ function getAdsrLayout(width, height, params, invert = false) {
     };
     const y0 = yAt(0);
     const yPeak = yAt(1);
-    const ySustain = yAt(sustain);
     const x0 = ADSR_PAD_X;
-    const xA = ADSR_PAD_X + attackWidth;
-    const xD = ADSR_PAD_X + attackWidth + decayWidth;
-    const xS = ADSR_PAD_X + attackWidth + decayWidth + sustainWidth;
-    const xR = ADSR_PAD_X + attackWidth + decayWidth + sustainWidth + releaseWidth;
 
     if (acid) {
+        const shape = acidEnvelopeDisplay(acidKindFromParams(params));
+        const inner = adsrInnerWidth(width);
+        // Real acid attack is ~3–4 ms. Draw a 3px tick so it stays vertical at every Decay.
+        const decayMax = Math.max(1e-6, shape.window - shape.attack);
+        const attackWidth = ADSR_ACID_ATTACK_PX;
+        const decayWidth = (shape.decay / decayMax) * (inner - attackWidth);
+        const xA = x0 + attackWidth;
+        const xD = Math.min(x0 + inner, xA + decayWidth);
+        const xEnd = x0 + inner;
+        const path = [
+            { x: x0, y: y0 },
+            { x: xA, y: yPeak },
+            { x: xD, y: y0 },
+        ];
+        if (xEnd > xD + 1) path.push({ x: xEnd, y: y0 });
         return {
             acid: true,
-            totalDuration,
+            totalDuration: shape.window,
             attackWidth,
             decayWidth,
             sustainWidth: 0,
@@ -215,20 +225,32 @@ function getAdsrLayout(width, height, params, invert = false) {
             yPeak,
             ySustain: y0,
             points: {
-                attack: { x: xA, y: yPeak, key: 'attack' },
                 decay: { x: xD, y: y0, key: 'decay' },
             },
-            path: [
-                { x: x0, y: y0 },
-                { x: xA, y: yPeak },
-                { x: xD, y: y0 },
-            ],
+            path,
             labels: [
-                { text: 'A', x: ADSR_PAD_X + attackWidth / 2 },
-                { text: 'D', x: ADSR_PAD_X + attackWidth + decayWidth / 2 },
+                { text: 'A', x: x0 + attackWidth / 2 },
+                { text: 'D', x: xA + decayWidth / 2 },
             ],
         };
     }
+
+    const attack = Math.max(ADSR_SEG_FLOOR, params.attack);
+    const decay = Math.max(ADSR_SEG_FLOOR, params.decay);
+    const sustain = params.sustain;
+    const release = Math.max(0, params.release);
+    const sustainTime = ADSR_SUSTAIN_TIME;
+
+    const totalDuration = attack + decay + sustainTime + release;
+    const attackWidth = (attack / totalDuration) * width;
+    const decayWidth = (decay / totalDuration) * width;
+    const sustainWidth = (sustainTime / totalDuration) * width;
+    const releaseWidth = (release / totalDuration) * width;
+    const ySustain = yAt(sustain);
+    const xA = ADSR_PAD_X + attackWidth;
+    const xD = ADSR_PAD_X + attackWidth + decayWidth;
+    const xS = ADSR_PAD_X + attackWidth + decayWidth + sustainWidth;
+    const xR = ADSR_PAD_X + attackWidth + decayWidth + sustainWidth + releaseWidth;
 
     return {
         acid: false,
@@ -412,19 +434,17 @@ function bindAdsrCanvasDrag(canvasId, ids, { getInvert = () => false } = {}) {
         const u = (x - ADSR_PAD_X) / width;
 
         if (state.acidMode) {
-            // AD only: A and D share the full width
-            if (dragKey === 'attack') {
-                const rest = Math.max(ADSR_SEG_FLOOR, params.decay);
-                const denom = 1 - u;
-                const nextA = denom > 1e-4 ? (u * rest) / denom : adsrKeyMax(ids.attackId, 2);
-                setAdsrValue(ids.attackId, nextA);
-            } else if (dragKey === 'decay') {
-                // Decay corner at u = A/(A+D); keep A fixed → D = A/u - A
-                const nextD = u > 1e-4
-                    ? Math.max(0, params.attack * (1 / u - 1))
-                    : adsrKeyMax(ids.decayId, 2);
-                setAdsrValue(ids.decayId, nextD);
-            }
+            // Acid attack is fixed; only Decay is live. Map x along the stable time window.
+            if (dragKey !== 'decay') return;
+            const kind = acidKindFromParams(params);
+            const shape = acidEnvelopeDisplay(kind);
+            const inner = adsrInnerWidth(width);
+            const attackWidth = ADSR_ACID_ATTACK_PX;
+            const decaySpan = Math.max(1, inner - attackWidth);
+            const t = (x - ADSR_PAD_X - attackWidth) / decaySpan;
+            const decaySec = t * Math.max(1e-6, shape.window - shape.attack);
+            setAdsrValue(ids.decayId, acidDecayKnobFromSec(kind, decaySec));
+            return;
         } else if (dragKey === 'attack') {
             const rest = params.decay + ADSR_SUSTAIN_TIME + params.release;
             const denom = 1 - u;

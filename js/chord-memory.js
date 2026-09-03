@@ -1,11 +1,11 @@
 import { state, OSC_COUNT } from './state.js?v=116';
-import { getOscVol, set } from './params.js?v=13';
+import { getOscVol, set } from './params.js?v=14';
 import {
     clearHeldNotes,
     intervalsFromHeldNotes,
     polyChordIntervalsFromNotes,
 } from './held-notes.js?v=8';
-import { refreshFilterInputDrive } from './filter-drive.js?v=29';
+import { refreshFilterInputDrive } from './filter-drive.js?v=30';
 
 /** Notes heard during the current Learn gesture (survives staggered key-ups). */
 let learnSessionNotes = [];
@@ -63,12 +63,13 @@ export function applyChordMemoryIntervals(intervals) {
     }
 }
 
+/** One-finger stack is live — only in Ingy-6 / Multitudes. Main stage / Berlin stay root-only. */
 export function isPolyChordMemoryOn() {
-    return !!polyChordOn && polyChordIntervals.length > 0;
+    return isPolyStyleMode() && !!polyChordOn && polyChordIntervals.length > 0;
 }
 
 export function getPolyChordIntervals() {
-    return polyChordOn ? [...polyChordIntervals] : [];
+    return isPolyChordMemoryOn() ? [...polyChordIntervals] : [];
 }
 
 export function clearPolyChordMemory() {
@@ -85,7 +86,8 @@ export function syncChordMemUI() {
     const btn = document.getElementById('keyboardChordMemToggle');
     if (!btn) return;
     const learning = !!state.chordMemoryLearning;
-    const armed = isPolyChordMemoryOn() && !learning;
+    // Stay lit on main stage / Berlin so the voicing is visibly loaded until reset
+    const armed = !!polyChordOn && polyChordIntervals.length > 0 && !learning;
     const canToggleWhilePlaying = isPolyStyleMode() && polyChordIntervals.length > 0;
     const locked = !!state.keyboardWrite || (!!state.isPlaying && !canToggleWhilePlaying);
     // Idle = grey SVG; learning = flashing green rec dot; armed = solid green SVG
@@ -126,13 +128,20 @@ export function cancelChordMemoryLearn() {
     state.chordMemoryLearning = false;
     clearLearnSession();
     clearHeldNotes();
+    // Mono learn leaves the poly voicing intact until a new chord is committed
+    if (polyChordIntervals.length) polyChordOn = true;
     syncChordMemUI();
 }
 
 export function beginChordMemoryLearn() {
     if (state.isPlaying || state.keyboardWrite) return;
-    polyChordOn = false;
-    polyChordIntervals = [];
+    // Poly re-learn replaces the stack. Mono learn keeps it until commit.
+    if (isPolyStyleMode()) {
+        polyChordOn = false;
+        polyChordIntervals = [];
+    } else {
+        polyChordOn = false;
+    }
     state.chordMemoryLearning = true;
     clearLearnSession();
     clearHeldNotes();
@@ -152,7 +161,7 @@ export function toggleChordMemoryLearn() {
         syncChordMemUI();
         return;
     }
-    if (isPolyChordMemoryOn()) {
+    if (polyChordOn && polyChordIntervals.length) {
         clearPolyChordMemory();
         return;
     }
@@ -167,7 +176,7 @@ export function toggleChordMemoryLearn() {
 
 /**
  * Commit Learn from the session peak chord (not the last remaining key).
- * Master: writes oscTunes and auto-offs Chord Mem. 4-note chord enables OSC 4.
+ * Master: writes oscTunes, clears the parked poly stack, auto-offs Chord Mem. 4-note chord enables OSC 4.
  * Ingy-6 / Multitudes: stay in mode, arm one-finger stack, solid green SVG.
  */
 export function commitChordMemoryFromNotes(notes) {
@@ -193,6 +202,9 @@ export function commitChordMemoryFromNotes(notes) {
     if (uniqueCount >= 4) {
         enableOscillator(3);
     }
+    // New mono voicing replaces the parked Ingy-6 / Multitudes stack
+    polyChordOn = false;
+    polyChordIntervals = [];
     state.chordMemoryLearning = false;
     clearLearnSession();
     clearHeldNotes();

@@ -1,28 +1,28 @@
 import { state, OSC_COUNT } from './state.js?v=116';
-import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=13';
-import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=28';
+import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=14';
+import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=36';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=178';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=29';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=82';
-import { clearAccentSweep } from './acid-env.js?v=14';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=314';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=113';
+} from './audio-engine.js?v=185';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=30';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
+import { clearAccentSweep } from './acid-env.js?v=48';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=383';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=114';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=80';
-import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=104';
-import { applyScaleState } from './keyboard.js?v=204';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=125';
-import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=173';
-import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=124';
+import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=111';
+import { applyScaleState } from './keyboard.js?v=212';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=129';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=184';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=130';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=26';
-import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=20';
+import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=22';
 import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=17';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=94';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=37';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=111';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=41';
 import {
     ensurePlaitsWorklet,
     createOscSource,
@@ -34,8 +34,8 @@ import {
     applyFm6BankToLive,
     readFm6PatchName,
     fm6PresetFromHarmonics,
-} from './osc-source.js?v=121';
-import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=20';
+} from './osc-source.js?v=122';
+import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=21';
 
 function syncAcidModeUi() {
     syncAcidStripUi();

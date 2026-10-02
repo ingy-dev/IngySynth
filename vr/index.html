@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
+    <title>INGYSYNTH VR</title>
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            background: #111;
+            color: #e8e8e8;
+            font-family: ui-sans-serif, system-ui, sans-serif;
+            overflow: hidden;
+        }
+        canvas { display: block; }
+        #hud {
+            position: absolute;
+            inset: 0 auto auto 0;
+            z-index: 2;
+            max-width: 28rem;
+            padding: 1.25rem 1.4rem;
+            pointer-events: none;
+        }
+        #hud h1 {
+            margin: 0 0 0.4rem;
+            font-size: 1.05rem;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+        }
+        #hud p, #hud ol {
+            margin: 0.35rem 0;
+            font-size: 0.88rem;
+            line-height: 1.45;
+            color: #c8c8c8;
+        }
+        #hud ol { padding-left: 1.2rem; }
+        #status {
+            margin-top: 0.75rem;
+            color: #9fd4ff;
+            font-size: 0.86rem;
+        }
+        #buttons {
+            position: absolute;
+            left: 50%;
+            bottom: 1.5rem;
+            transform: translateX(-50%);
+            z-index: 2;
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #buttons button {
+            pointer-events: auto;
+            appearance: none;
+            border: 0;
+            border-radius: 6px;
+            padding: 0.7rem 1.15rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            background: #d8d8d8;
+            color: #111;
+        }
+        #buttons button.secondary {
+            background: #333;
+            color: #eee;
+        }
+        #buttons button:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+        body.xr-presenting #hud,
+        body.xr-presenting #buttons {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="hud">
+        <h1>INGYSYNTH VR</h1>
+        <p>Left CRT is the Steps fieldset. The hex scope, Scale/Tuning, and XY pad sit on the slanted Main Stage. Mode pads stay on the key deck.</p>
+        <ol>
+            <li>Quest Browser: <code>http://localhost:8000/vr/</code></li>
+            <li>Sit. Enter VR. Keys, modes, knobs, XY, Start/Stop.</li>
+        </ol>
+        <p id="status">Starting…</p>
+    </div>
+    <div id="buttons">
+        <button type="button" id="enterVr" disabled>Enter VR</button>
+        <button type="button" id="testNote" class="secondary" disabled>Test note</button>
+    </div>
+        <script type="module" src="./main.js?v=359"></script>
+</body>
+</html>

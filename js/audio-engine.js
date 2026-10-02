@@ -1,11 +1,11 @@
 import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=14';
-import { wireControls } from './controls.js?v=311';
+import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=15';
+import { wireControls } from './controls.js?v=329';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=84';
-import { updateLfoSmoothing } from './lfo-strip.js?v=26';
-import { getLfoRateHz, applyLfoRate } from './lfo-rate.js?v=22';
+import { updateLfoSmoothing } from './lfo-strip.js?v=35';
+import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=32';
 import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=30';
-import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=122';
+import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=125';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;
@@ -590,6 +590,7 @@ function initAudio() {
     state.lfoGainOsc2Pitch = state.audioContext.createGain();
     state.lfoGainOsc3Pitch = state.audioContext.createGain();
     state.lfoGainOsc4Pitch = state.audioContext.createGain();
+    state.lfoGainRingFreq = state.audioContext.createGain();
 
     // Depths must start at 0 — GainNode defaults to 1 and would slam full LFO into the filter
     state.lfoGainCutoff.gain.value = 0;
@@ -599,6 +600,7 @@ function initAudio() {
     state.lfoGainOsc2Pitch.gain.value = 0;
     state.lfoGainOsc3Pitch.gain.value = 0;
     state.lfoGainOsc4Pitch.gain.value = 0;
+    state.lfoGainRingFreq.gain.value = 0;
 
     state.lfo.connect(state.lfoSmooth);
     state.lfoSmooth.connect(state.lfoShaper);
@@ -614,6 +616,7 @@ function initAudio() {
     state.lfoMasterGain.connect(state.lfoGainOsc2Pitch);
     state.lfoMasterGain.connect(state.lfoGainOsc3Pitch);
     state.lfoMasterGain.connect(state.lfoGainOsc4Pitch);
+    state.lfoMasterGain.connect(state.lfoGainRingFreq);
 
     state.lfoGainCutoff.connect(state.filter.frequency);
     state.lfoGainResonance.connect(state.filter.Q);
@@ -622,10 +625,14 @@ function initAudio() {
     state.lfoGainOsc2Pitch.connect(state.oscillators[1].detune);
     state.lfoGainOsc3Pitch.connect(state.oscillators[2].detune);
     state.lfoGainOsc4Pitch.connect(state.oscillators[3].detune);
+    if (state.ringModulatorOsc) {
+        state.lfoGainRingFreq.connect(state.ringModulatorOsc.frequency);
+    }
 
     // Always start the LFO oscillator; master gain gates audible modulation
     state.lfo.start();
     state.lfo.started = true;
+    registerLfoOsc(state.lfo);
 
     generateNoiseBuffers();
 

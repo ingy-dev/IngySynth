@@ -1,8 +1,8 @@
-// Global D1–D3 dock under PATTERN SHIFT. Bound to state.drumPatterns, not P6–P8.
+// Global D1–D3 dock between Steps and Automation. Bound to state.drumPatterns, not P6–P8.
 
 import { state } from './state.js?v=116';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=130';
-import { get, set, subscribe, wireToggle } from './params.js?v=14';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=147';
+import { get, set, subscribe, wireToggle } from './params.js?v=15';
 import {
     STEP_SLOTS,
     DRUM_LANE_COUNT,
@@ -25,9 +25,9 @@ import {
     setDrumMode,
     setBerlinDrumFilt,
     setDrumLanesHidden,
-} from './berlin.js?v=74';
+} from './berlin.js?v=83';
 import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
-import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=14';
+import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=27';
 
 const DIVISIONS = [
     { value: 2, label: '1/2' },

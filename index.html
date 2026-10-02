@@ -7,7 +7,18 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=415">
+    <link rel="stylesheet" href="styles.css?v=451">
+    <script>
+        // Phone loads this over a LAN IP. That is not a secure page, so Chrome
+        // hides AudioWorklet and the digital engine never arms. localhost is exempt.
+        (function () {
+            if (window.isSecureContext || location.protocol !== 'http:') return;
+            var h = location.hostname;
+            var lan = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || /\.local$/.test(h);
+            if (!lan) return;
+            location.replace('https://' + h + ':8443' + location.pathname + location.search + location.hash);
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -159,6 +170,10 @@
                 </div>
                                         <div class="oscilloscope-border"></div>
                     </div>
+                    <div class="keyboard-view-switch" role="group" aria-label="Layout view">
+                        <button id="viewModeFull" class="kb-step-btn" type="button" aria-pressed="true">Full Screen</button>
+                        <button id="viewModeTabbed" class="kb-step-btn off" type="button" aria-pressed="false">Tabbed</button>
+                    </div>
                 </div>
             </div>
             <div class="chromatic-keyboard-wrap">
@@ -171,9 +186,6 @@
                             <button id="kbStartStop" class="pushable start keyboard-start-stop" type="button" aria-label="Start or stop sequencer">
                                 <span class="front"><span class="kb-transport-icon" aria-hidden="true"></span></span>
                             </button>
-                            </div>
-                            <div class="keyboard-perf-btn-slot">
-                            <button id="keyboardVisibilityToggle" class="kb-step-btn keyboard-toolbar-btn" type="button" aria-pressed="true" aria-label="Hide piano keyboard">Keys</button>
                             </div>
                             <div class="keyboard-perf-btn-slot">
                             <button id="kbRev" class="pushable off keyboard-rev" type="button" aria-label="Reverse sequencer" aria-pressed="false">
@@ -247,7 +259,7 @@
                             </div>
                             </div>
                         </fieldset>
-                        <fieldset class="keyboard-perf-fieldset keyboard-write-fieldset">
+                        <fieldset class="keyboard-perf-fieldset keyboard-write-fieldset" id="keyboardWriteFieldset">
                             <legend><span class="legend-hex">Step Input</span></legend>
                             <div class="keyboard-write-row">
                                 <div class="keyboard-perf-btn-slot">
@@ -265,11 +277,19 @@
                                     <div class="keyboard-write-step-select-btns">
                                         <button id="kbWritePrev" class="pushable keyboard-write-nav" type="button"
                                                 aria-label="Previous write step" disabled>
-                                            <span class="front">◀</span>
+                                            <span class="front">
+                                                <svg class="kb-dir-arrow" width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" focusable="false">
+                                                    <path fill="currentColor" d="M13 1 L3 7 L13 13 Z"/>
+                                                </svg>
+                                            </span>
                                         </button>
                                         <button id="kbWriteNext" class="pushable keyboard-write-nav" type="button"
                                                 aria-label="Next write step" disabled>
-                                            <span class="front">▶</span>
+                                            <span class="front">
+                                                <svg class="kb-dir-arrow" width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" focusable="false">
+                                                    <path fill="currentColor" d="M3 1 L13 7 L3 13 Z"/>
+                                                </svg>
+                                            </span>
                                         </button>
                                     </div>
                                 </div>
@@ -310,10 +330,58 @@
                             </div>
                         </fieldset>
                     </div>
+                    <div id="keyboardMobileTabStrip" class="keyboard-tab-strip keyboard-tab-strip--mobile" role="tablist" aria-label="Performance tabs">
+                        <button type="button" class="keyboard-tab active" role="tab" id="tabStepInput" data-tab="keyboardWriteFieldset" aria-controls="keyboardWriteFieldset" aria-selected="true" tabindex="0"><span class="keyboard-tab-dot" aria-hidden="true"></span>step input</button>
+                        <button type="button" class="keyboard-tab" role="tab" id="tabTuning" data-tab="keyboardTuningFieldset" aria-controls="keyboardTuningFieldset" aria-selected="false" tabindex="-1">scale/tuning</button>
+                        <button type="button" class="keyboard-tab" role="tab" id="tabAutomation" data-tab="keyboardAutomationFieldset" aria-controls="keyboardAutomationFieldset" aria-selected="false" tabindex="-1"><span class="keyboard-tab-dot" aria-hidden="true"></span>automation</button>
+                    </div>
+                    <fieldset class="keyboard-automation-fieldset collapsible-fieldset collapsed" id="keyboardAutomationFieldset">
+                        <legend class="collapsible-legend">
+                            <button id="keyboardAutomationToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardAutomationPanel">
+                                <span class="collapsible-label">Automation</span>
+                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                            </button>
+                        </legend>
+                        <div id="keyboardAutomationPanel" class="keyboard-automation-panel collapsible-panel hidden" hidden>
+                            <div class="keyboard-automation-controls">
+                                <div class="keyboard-perf-btn-slot">
+                                    <button id="kbAutomationRecord" class="pushable off keyboard-automation-btn" type="button" aria-pressed="false" aria-label="Record automation">
+                                        <span class="front">
+                                            <span class="kb-auto-rec-label">Rec</span>
+                                            <span class="kb-auto-rec-dot" aria-hidden="true"></span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                    <button id="kbAutomationUndo" class="pushable keyboard-automation-btn" type="button" aria-label="Undo automation" disabled>
+                                        <span class="front">
+                                            <svg class="kb-auto-history-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                    <button id="kbAutomationRedo" class="pushable keyboard-automation-btn" type="button" aria-label="Redo automation" disabled>
+                                        <span class="front">
+                                            <svg class="kb-auto-history-icon kb-auto-history-icon--redo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                    <button id="kbAutomationClear" class="pushable keyboard-automation-btn" type="button" aria-label="Clear automation">
+                                        <span class="front">Clr</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
                     <fieldset class="keyboard-tuning-fieldset collapsible-fieldset" id="keyboardTuningFieldset">
                         <legend class="collapsible-legend">
                             <button id="keyboardTuningToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardTuningPanel">
-                                <span class="collapsible-label">Tuning</span>
+                                <span class="collapsible-label">Scale / Tuning</span>
                                 <span class="collapsible-arrow" aria-hidden="true"></span>
                             </button>
                         </legend>
@@ -331,8 +399,14 @@
                                     </div>
                                 </div>
                                 <div class="keyboard-tuning-center">
+                                    <div class="keyboard-tuning-scale-row" id="kbTuningScaleSelectRow">
+                                        <select id="kbPatternScaleSelect" class="keyboard-scale-select" aria-label="Pattern scale" style="display: none;">
+                                            <!-- Populated to match sequencer scale list -->
+                                        </select>
+                                        <button id="kbPatternScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Scale Off</button>
+                                    </div>
                                     <div class="keyboard-tuning-note note-vfd" id="kbPatternNoteVisualizer" aria-live="polite" aria-label="Current note" data-text="Note">
-                                        <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
+                                        <!-- Fixed 14-cell 5×7 matrix built by vfd-matrix.js -->
                                     </div>
                                 </div>
                                 <div class="keyboard-tuning-right">
@@ -383,22 +457,6 @@
                             </div>
                         </div>
                     </fieldset>
-                    <fieldset class="keyboard-scale-fieldset collapsible-fieldset" id="keyboardPatternScaleFieldset" aria-label="Scale">
-                        <legend class="collapsible-legend">
-                            <button id="keyboardPatternScaleFieldsetToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardPatternScalePanel">
-                                <span class="collapsible-label">Scale</span>
-                                <span class="collapsible-arrow" aria-hidden="true"></span>
-                            </button>
-                        </legend>
-                        <div id="keyboardPatternScalePanel" class="keyboard-scale-fieldset-body collapsible-panel">
-                            <div class="keyboard-tuning-scale-row" id="kbTuningScaleSelectRow" style="display: none;">
-                                <select id="kbPatternScaleSelect" class="keyboard-scale-select" aria-label="Pattern scale">
-                                    <!-- Populated to match sequencer scale list -->
-                                </select>
-                            </div>
-                            <button id="kbPatternScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Off</button>
-                        </div>
-                    </fieldset>
                     <div class="keyboard-mode-toggle-row" aria-label="Mode toggles">
                         <button id="kbAcidStripToggle" class="pushable off keyboard-acid-strip-toggle" type="button" aria-label="Acid mode on or off" aria-pressed="false">
                             <span class="front">
@@ -412,6 +470,12 @@
                                 <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
                             </span>
                         </button>
+                    </div>
+                    <div id="keyboardTabStrip" class="keyboard-tab-strip" role="tablist" aria-label="Panel tabs">
+                        <button type="button" class="keyboard-tab active" role="tab" id="tabSteps" data-tab="keyboardStepsFieldset" aria-controls="keyboardStepsFieldset" aria-selected="true" tabindex="0">steps</button>
+                        <button type="button" class="keyboard-tab" role="tab" id="tabSynth" data-tab="keyboardSynthFieldset" aria-controls="keyboardSynthFieldset" aria-selected="false" tabindex="-1">synthesizer</button>
+                        <button type="button" class="keyboard-tab" role="tab" id="tabEffects" data-tab="keyboardEffectsFieldset" aria-controls="keyboardEffectsFieldset" aria-selected="false" tabindex="-1">effects</button>
+                        <button type="button" class="keyboard-tab" role="tab" id="tabMixer" data-tab="keyboardMixerFieldset" aria-controls="keyboardMixerFieldset" aria-selected="false" tabindex="-1">mixer</button>
                     </div>
                     <fieldset class="keyboard-steps-fieldset collapsible-fieldset" id="keyboardStepsFieldset">
                         <legend class="collapsible-legend">
@@ -630,74 +694,39 @@
                                 <span class="keyboard-pattern-shift-label">PATTERN SHIFT</span>
                                 <div class="keyboard-pattern-shift-buttons">
                                     <button type="button" id="kbPatternShiftBack" class="pushable keyboard-pattern-shift-btn" aria-label="Shift pattern back">
-                                        <span class="front">◀</span>
+                                        <span class="front">
+                                            <svg class="kb-dir-arrow" width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M13 1 L3 7 L13 13 Z"/>
+                                            </svg>
+                                        </span>
                                     </button>
                                     <button type="button" id="kbPatternShiftForward" class="pushable keyboard-pattern-shift-btn" aria-label="Shift pattern forward">
-                                        <span class="front">▶</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="keyboard-drum-dock" aria-label="Drum machine">
-                                <div class="keyboard-drum-dock-bar">
-                                    <button type="button" id="kbDrumMode" class="pushable off keyboard-drum-mode-toggle"
-                                            aria-label="Drum mode on or off" aria-pressed="false">
                                         <span class="front">
-                                            <span class="kb-drum-mode-label" aria-hidden="true"></span>
-                                            <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
+                                            <svg class="kb-dir-arrow" width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" focusable="false">
+                                                <path fill="currentColor" d="M3 1 L13 7 L3 13 Z"/>
+                                            </svg>
                                         </span>
                                     </button>
-                                    <div class="keyboard-drum-dock-actions">
-                                    <button type="button" id="kbDrumFilt" class="ingy6-switch-btn off" aria-pressed="false" hidden title="Send DRM 1–3 through the main filter">Filter</button>
-                                    <button type="button" id="kbDrumHide" class="ingy6-switch-btn off" aria-pressed="false" hidden title="Hide drum lanes without turning them off">Hide</button>
-                                    </div>
                                 </div>
-                                <div id="keyboardDrumLanes" class="keyboard-drum-lanes" hidden></div>
                             </div>
                         </div>
                     </fieldset>
-                    <fieldset class="keyboard-automation-fieldset collapsible-fieldset collapsed" id="keyboardAutomationFieldset">
-                        <legend class="collapsible-legend">
-                            <button id="keyboardAutomationToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardAutomationPanel">
-                                <span class="collapsible-label">Automation</span>
-                                <span class="collapsible-arrow" aria-hidden="true"></span>
+                    <div class="keyboard-drum-dock" aria-label="Drum machine">
+                        <div class="keyboard-drum-dock-bar">
+                            <button type="button" id="kbDrumMode" class="pushable off keyboard-drum-mode-toggle"
+                                    aria-label="Drum mode on or off" aria-pressed="false">
+                                <span class="front">
+                                    <span class="kb-drum-mode-label" aria-hidden="true"></span>
+                                    <span class="kb-mode-off-label" aria-hidden="true">Exit</span>
+                                </span>
                             </button>
-                        </legend>
-                        <div id="keyboardAutomationPanel" class="keyboard-automation-panel collapsible-panel hidden" hidden>
-                            <div class="keyboard-automation-controls">
-                                <div class="keyboard-perf-btn-slot">
-                                    <button id="kbAutomationRecord" class="pushable off keyboard-automation-btn" type="button" aria-pressed="false" aria-label="Record automation">
-                                        <span class="front">
-                                            <span class="kb-auto-rec-label">Rec</span>
-                                            <span class="kb-auto-rec-dot" aria-hidden="true"></span>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                    <button id="kbAutomationUndo" class="pushable keyboard-automation-btn" type="button" aria-label="Undo automation" disabled>
-                                        <span class="front">
-                                            <svg class="kb-auto-history-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                                <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                                            </svg>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                    <button id="kbAutomationRedo" class="pushable keyboard-automation-btn" type="button" aria-label="Redo automation" disabled>
-                                        <span class="front">
-                                            <svg class="kb-auto-history-icon kb-auto-history-icon--redo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                                <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                                            </svg>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                    <button id="kbAutomationClear" class="pushable keyboard-automation-btn" type="button" aria-label="Clear automation">
-                                        <span class="front">Clr</span>
-                                    </button>
-                                </div>
+                            <div class="keyboard-drum-dock-actions">
+                            <button type="button" id="kbDrumFilt" class="ingy6-switch-btn off" aria-pressed="false" hidden title="Send DRM 1–3 through the main filter">Filter</button>
+                            <button type="button" id="kbDrumHide" class="ingy6-switch-btn off" aria-pressed="false" hidden title="Hide drum lanes without turning them off">Hide</button>
                             </div>
                         </div>
-                    </fieldset>
+                        <div id="keyboardDrumLanes" class="keyboard-drum-lanes" hidden></div>
+                    </div>
                     <fieldset class="keyboard-synth-fieldset collapsible-fieldset" id="keyboardSynthFieldset">
                         <legend class="collapsible-legend">
                             <button id="keyboardSynthToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardSynthPanel">
@@ -722,25 +751,39 @@
                                     <div class="osc4-model-row">
                                         <span class="osc4-model-label">MODEL</span>
                                         <select id="kbOsc4Model" class="osc4-model-select" aria-label="Digital model">
-                                            <option value="wavetable" selected>Wavetable</option>
-                                            <option value="va">Virtual Analog</option>
-                                            <option value="va_vcf">VA + Filter</option>
-                                            <option value="fm">FM</option>
-                                            <option value="fm6">6-op FM</option>
-                                            <option value="waveshaper">Waveshaper</option>
-                                            <option value="additive">Additive</option>
-                                            <option value="grain">Grain / Formant</option>
-                                            <option value="swarm">Swarm</option>
-                                            <option value="noise">Noise</option>
-                                            <option value="particle">Particle</option>
-                                            <option value="pd">Phase Distortion</option>
-                                            <option value="terrain">Wave Terrain</option>
-                                            <option value="string_machine">String Machine</option>
-                                            <option value="chiptune">Chiptune</option>
-                                            <option value="chord">Chord</option>
-                                            <option value="speech">Voice</option>
-                                            <option value="modal">Modal</option>
-                                            <option value="string">Pluck</option>
+                                            <optgroup label="Virtual Analog">
+                                                <option value="va">Virtual Analog</option>
+                                                <option value="va_vcf">VA + Filter</option>
+                                                <option value="waveshaper">Waveshaper</option>
+                                                <option value="pd">Phase Distortion</option>
+                                            </optgroup>
+                                            <optgroup label="FM">
+                                                <option value="fm">FM</option>
+                                                <option value="fm6">6-op FM</option>
+                                            </optgroup>
+                                            <optgroup label="Wavetable">
+                                                <option value="wavetable" selected>Wavetable</option>
+                                                <option value="terrain">Wave Terrain</option>
+                                                <option value="additive">Additive</option>
+                                                <option value="grain">Grain / Formant</option>
+                                            </optgroup>
+                                            <optgroup label="Voice">
+                                                <option value="speech">Voice</option>
+                                            </optgroup>
+                                            <optgroup label="Chords / Arp">
+                                                <option value="chord">Chord</option>
+                                                <option value="string_machine">String Machine</option>
+                                                <option value="chiptune">Chiptune</option>
+                                            </optgroup>
+                                            <optgroup label="Noise">
+                                                <option value="swarm">Swarm</option>
+                                                <option value="noise">Noise</option>
+                                                <option value="particle">Particle</option>
+                                            </optgroup>
+                                            <optgroup label="Resonators">
+                                                <option value="string">Pluck</option>
+                                                <option value="modal">Modal</option>
+                                            </optgroup>
                                             <optgroup label="Drums">
                                                 <option value="bass_drum">Bass Drum</option>
                                                 <option value="snare">Snare</option>
@@ -1547,7 +1590,7 @@
                     <fieldset class="keyboard-tuning-fieldset collapsible-fieldset" id="keyboardXyTuningFieldset">
                         <legend class="collapsible-legend">
                             <button id="keyboardXyTuningToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardXyTuningPanel">
-                                <span class="collapsible-label">Tuning</span>
+                                <span class="collapsible-label">Scale / Tuning</span>
                                 <span class="collapsible-arrow" aria-hidden="true"></span>
                             </button>
                         </legend>
@@ -1565,8 +1608,14 @@
                                     </div>
                                 </div>
                                 <div class="keyboard-tuning-center">
+                                    <div class="keyboard-tuning-scale-row" id="kbXyScaleSelectRow">
+                                        <select id="kbXyScaleSelect" class="keyboard-scale-select" aria-label="Keyboard scale" style="display: none;">
+                                            <!-- Populated to match sequencer scale list -->
+                                        </select>
+                                        <button id="kbXyScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Scale Off</button>
+                                    </div>
                                     <div class="keyboard-tuning-note note-vfd" id="kbXyNoteVisualizer" aria-live="polite" aria-label="Current note" data-text="Note">
-                                        <!-- Fixed 12-cell 5×7 matrix built by vfd-matrix.js -->
+                                        <!-- Fixed 14-cell 5×7 matrix built by vfd-matrix.js -->
                                     </div>
                                 </div>
                                 <div class="keyboard-tuning-right">
@@ -1615,22 +1664,6 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </fieldset>
-                    <fieldset class="keyboard-scale-fieldset collapsible-fieldset" id="keyboardXyScaleFieldset" aria-label="Scale">
-                        <legend class="collapsible-legend">
-                            <button id="keyboardXyScaleFieldsetToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardXyScalePanel">
-                                <span class="collapsible-label">Scale</span>
-                                <span class="collapsible-arrow" aria-hidden="true"></span>
-                            </button>
-                        </legend>
-                        <div id="keyboardXyScalePanel" class="keyboard-scale-fieldset-body collapsible-panel">
-                            <div class="keyboard-tuning-scale-row" id="kbXyScaleSelectRow" style="display: none;">
-                                <select id="kbXyScaleSelect" class="keyboard-scale-select" aria-label="Keyboard scale">
-                                    <!-- Populated to match sequencer scale list -->
-                                </select>
-                            </div>
-                            <button id="kbXyScaleToggle" class="kb-step-btn keyboard-toolbar-btn off" type="button" aria-pressed="false">Off</button>
                         </div>
                     </fieldset>
                     <div id="keyboardPolyToggleHome" class="keyboard-mode-toggle-row keyboard-poly-toggle-row" aria-label="Mode toggles">
@@ -2267,28 +2300,34 @@
                             </button>
                         </legend>
                         <div id="keyboardModMatrixBody" class="keyboard-mod-matrix-body collapsible-panel">
-                            <div class="keyboard-mod-matrix-left">
-                                <div class="keyboard-mod-matrix-lfo-shape">
-                                    <div class="keyboard-lfo-wave" id="kbLfoWave" role="radiogroup" aria-label="LFO waveform"></div>
-                                    <div class="keyboard-mod-matrix-lfo-toggles">
-                                        <button type="button" id="kbLfoToggle" class="kb-step-btn" aria-label="LFO on or off" aria-pressed="true">On</button>
-                                        <button type="button" id="kbLfoRetrigger" class="kb-step-btn off" aria-label="LFO retrigger on or off" aria-pressed="false">Retrig</button>
-                                    </div>
-                                </div>
-                                <div class="keyboard-mod-matrix-rate">
-                                    <div class="synth-knob keyboard-mod-matrix-knob" data-param="lfoSpeed">
-                                        <span class="synth-knob-label">RATE</span>
-                                        <span class="synth-knob-value" id="kbLfoRateValue">1 Hz</span>
-                                        <div class="synth-knob-dial-wrap">
-                                            <div class="synth-knob-dial" id="kbLfoRateKnob" role="slider" aria-label="LFO rate" aria-valuemin="0.1" aria-valuemax="20" tabindex="0">
-                                                <span class="synth-knob-indicator"></span>
-                                            </div>
+                            <fieldset class="keyboard-perf-fieldset keyboard-mod-matrix-lfo">
+                                <legend>LFO</legend>
+                                <div class="keyboard-mod-matrix-left">
+                                    <div class="keyboard-mod-matrix-lfo-shape">
+                                        <div class="keyboard-lfo-wave" id="kbLfoWave" role="radiogroup" aria-label="LFO waveform"></div>
+                                        <div class="keyboard-mod-matrix-lfo-toggles">
+                                            <button type="button" id="kbLfoToggle" class="kb-step-btn" aria-label="LFO on or off" aria-pressed="true">On</button>
+                                            <button type="button" id="kbLfoRetrigger" class="kb-step-btn off" aria-label="LFO retrigger on or off" aria-pressed="false">Retrig</button>
                                         </div>
                                     </div>
-                                    <button type="button" id="kbLfoSync" class="kb-step-btn off" aria-label="LFO rate sync" aria-pressed="false">Hz</button>
+                                    <div class="keyboard-mod-matrix-rate">
+                                        <div class="synth-knob keyboard-mod-matrix-knob" data-param="lfoSpeed">
+                                            <span class="synth-knob-label">RATE</span>
+                                            <span class="synth-knob-value" id="kbLfoRateValue">1 Hz</span>
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbLfoRateKnob" role="slider" aria-label="LFO rate" aria-valuemin="0.1" aria-valuemax="20" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" id="kbLfoSync" class="kb-step-btn off" aria-label="LFO rate sync" aria-pressed="false">Hz</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="keyboard-mod-matrix-dests" aria-label="LFO destinations">
+                            </fieldset>
+                            <fieldset class="keyboard-perf-fieldset keyboard-mod-matrix-dests-field">
+                                <legend>Mod Destination</legend>
+                                <div class="keyboard-mod-matrix-dests" aria-label="LFO destinations">
+                                <div class="keyboard-mod-matrix-dests-row">
                                 <div class="synth-knob keyboard-mod-matrix-knob" data-param="cutoffMod">
                                     <span class="synth-knob-label">CUT</span>
                                     <div class="synth-knob-dial-wrap">
@@ -2313,6 +2352,16 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="synth-knob keyboard-mod-matrix-knob" data-param="ringFreqMod">
+                                    <span class="synth-knob-label">RING</span>
+                                    <div class="synth-knob-dial-wrap">
+                                        <div class="synth-knob-dial" id="kbRingFreqModKnob" role="slider" aria-label="Ring mod frequency" aria-valuemin="-2000" aria-valuemax="2000" tabindex="0">
+                                            <span class="synth-knob-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
+                                <div class="keyboard-mod-matrix-dests-row">
                                 <div class="synth-knob keyboard-mod-matrix-knob" data-param="osc1PitchMod">
                                     <span class="synth-knob-label">OSC 1</span>
                                     <div class="synth-knob-dial-wrap">
@@ -2345,7 +2394,9 @@
                                         </div>
                                     </div>
                                 </div>
+                                </div>
                             </div>
+                            </fieldset>
                         </div>
                     </fieldset>
                 </div>
@@ -2365,6 +2416,11 @@
                 </div>
                 <div id="chromaticKeyboardPanel" class="chromatic-keyboard-panel">
                     <div id="chromaticKeyboard" class="chromatic-keyboard"></div>
+                </div>
+                <div id="chromaticKeyboardScroller" class="chromatic-keyboard-scroller" hidden>
+                    <div class="chromatic-keyboard-scroller-track" role="scrollbar" aria-orientation="horizontal" aria-controls="chromaticKeyboardPanel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Scroll piano keyboard" tabindex="0">
+                        <div class="chromatic-keyboard-scroller-thumb"></div>
+                    </div>
                 </div>
                 <div id="chromaticSpaceBarRow" class="chromatic-spacebar-row" hidden>
                     <button type="button" id="chromaticSpace" class="ckb-key ckb-space pushable start" data-code="Space" aria-label="Start or stop sequencer">
@@ -2429,6 +2485,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=321"></script>
+    <script type="module" src="js/main.js?v=368"></script>
 </body>
 </html>

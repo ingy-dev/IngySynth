@@ -11,15 +11,15 @@ import {
     getOscPan,
     subscribe,
     notifyKey,
-} from './params.js?v=14';
+} from './params.js?v=15';
 import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=30';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
-import { previewStepsOnVfd } from './sequencer.js?v=383';
-import { resetSidechainDucker } from './sc-time.js?v=3';
-import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer } from './visualizers.js?v=114';
-import { calculateSemitoneShift, getQuantizedStepTune } from './tuning.js?v=80';
-import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=129';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=130';
+import { previewStepsOnVfd } from './sequencer.js?v=416';
+import { resetSidechainDucker } from './sc-time.js?v=13';
+import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=121';
+import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=80';
+import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=140';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=147';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -27,10 +27,10 @@ import {
     updateLfoSmoothing,
     updateLfoCutoffSafety,
     updateLfoHighpassSafety,
-} from './lfo-strip.js?v=26';
-import { applyLfoRate } from './lfo-rate.js?v=22';
-import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=111';
-import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=122';
+} from './lfo-strip.js?v=35';
+import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=32';
+import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=129';
+import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=125';
 
 let wired = false;
 let rebuildReverbIr = null;
@@ -251,6 +251,10 @@ function applyLiveNoiseLevel(volume) {
                 g.linearRampToValueAtTime(level, now + 0.012);
             } catch (_) { /* ignore */ }
         });
+        return;
+    }
+    if (state.keyboardPoly) {
+        document.dispatchEvent(new CustomEvent('ingysynth:poly-noise-level'));
         return;
     }
     if (!state.noiseGain) return;
@@ -589,21 +593,23 @@ export function applyChorusFromStore() {
 
 function applyLfoWaveform(wave) {
     const type = String(wave || 'sine');
-    if (!state.lfo || !state.audioContext) return;
+    if (!state.audioContext) return;
     const now = state.audioContext.currentTime;
+    const applyType = () => {
+        forEachLiveLfoOsc((osc) => { osc.type = type; });
+        updateLfoSmoothing();
+    };
     if (state.lfoMasterGain) {
         const g = state.lfoMasterGain.gain;
         const target = state.lfoState ? getLfoAmountAudio() : 0;
         g.cancelScheduledValues(now);
         g.setValueAtTime(g.value, now);
         g.linearRampToValueAtTime(0, now + 0.01);
-        state.lfo.type = type;
-        updateLfoSmoothing();
+        applyType();
         g.setValueAtTime(0, now + 0.012);
         g.linearRampToValueAtTime(target, now + 0.08);
     } else {
-        state.lfo.type = type;
-        updateLfoSmoothing();
+        applyType();
     }
 }
 
@@ -629,6 +635,7 @@ function applyLfoDepths({ ramp = 0.04 } = {}) {
     updateDisplayForKey('osc2PitchMod', 'osc2PitchModValue');
     updateDisplayForKey('osc3PitchMod', 'osc3PitchModValue');
     updateDisplayForKey('osc4PitchMod', 'osc4PitchModValue');
+    updateDisplayForKey('ringFreqMod', 'ringFreqModValue');
     rampLfoDepth(state.lfoGainCutoff, getNumber('cutoffMod', 0), ramp);
     rampLfoDepth(state.lfoGainResonance, getNumber('resonanceMod', 0) * RES_LFO_DEPTH_SCALE, ramp);
     rampLfoDepth(state.lfoGainHighpass, getNumber('highpassMod', 0), ramp);
@@ -636,6 +643,7 @@ function applyLfoDepths({ ramp = 0.04 } = {}) {
     rampLfoDepth(state.lfoGainOsc2Pitch, getNumber('osc2PitchMod', 0) * 100, ramp);
     rampLfoDepth(state.lfoGainOsc3Pitch, getNumber('osc3PitchMod', 0) * 100, ramp);
     rampLfoDepth(state.lfoGainOsc4Pitch, getNumber('osc4PitchMod', 0) * 100, ramp);
+    rampLfoDepth(state.lfoGainRingFreq, getNumber('ringFreqMod', 0), ramp);
     updateLfoCutoffSafety();
     updateLfoHighpassSafety();
     if (state.audioContext) {
@@ -668,11 +676,17 @@ function applyTempo() {
 
 function maybeUpdateNoteVisualizer() {
     if ((state.isPlaying || state.isArping) && !window.noteVisualizerPreviewActive) {
+        const notes = soundingNotesForStep(state.currentStep);
+        const cents = getStepFineCents(state.currentStep);
+        if (notes.length > 1) {
+            updateChordVisualizer(notes, { cents });
+            return;
+        }
         const currentStepTune = getQuantizedStepTune(state.currentStep);
         const masterTune = getNumber('masterTune', 0);
         const octaveSwitch = getNumber('octaveSwitch', 0) * 12;
         const semitoneShift = calculateSemitoneShift();
-        updateNoteVisualizer(currentStepTune + masterTune + octaveSwitch + semitoneShift);
+        updateNoteVisualizer(currentStepTune + masterTune + octaveSwitch + semitoneShift, cents);
     }
 }
 
@@ -828,6 +842,7 @@ export function wireStoreEngine() {
     subscribe('osc2PitchMod', () => applyLfoDepths());
     subscribe('osc3PitchMod', () => applyLfoDepths());
     subscribe('osc4PitchMod', () => applyLfoDepths());
+    subscribe('ringFreqMod', () => applyLfoDepths());
     subscribe('masterTune', () => {
         updateDisplayForKey('masterTune', 'masterTuneValue');
         maybeUpdateNoteVisualizer();

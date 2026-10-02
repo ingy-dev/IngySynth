@@ -3,14 +3,14 @@
 
 import { state } from './state.js?v=116';
 import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=80';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=114';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=121';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
-import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=111';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=41';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=17';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=130';
+import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=129';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=50';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=18';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=147';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=7';
-import { get, getNumber, set } from './params.js?v=14';
+import { get, getNumber, set } from './params.js?v=15';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
@@ -40,7 +40,7 @@ import {
     ensureBerlinDrumKit,
     ensureDrumPatterns,
 } from './pattern-bank.js?v=16';
-import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=122';
+import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=125';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */

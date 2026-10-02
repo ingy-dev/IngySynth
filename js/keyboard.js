@@ -1,8 +1,8 @@
 import { state } from './state.js?v=116';
 import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=80';
-import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=145';
-import { initAudio } from './audio-engine.js?v=185';
-import { updateNoteVisualizer } from './visualizers.js?v=114';
+import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=155';
+import { initAudio } from './audio-engine.js?v=208';
+import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=121';
 import {
     refreshStepTuneReadouts,
     startArp,
@@ -12,8 +12,8 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=383';
-import { refreshXYPad } from './xy-pad.js?v=78';
+} from './sequencer.js?v=416';
+import { refreshXYPad } from './xy-pad.js?v=79';
 import {
     initPatternWrite,
     writeNote,
@@ -22,10 +22,11 @@ import {
     polyWriteNoteDown,
     polyWriteNoteUp,
     getPolyWriteHeldNotes,
-} from './pattern-write.js?v=112';
+} from './pattern-write.js?v=123';
 import {
     addHeldNote,
     removeHeldNote,
+    moveHeldNote,
     getHeldNotes,
     getHeldPressOrder,
     heldNoteCount,
@@ -35,9 +36,10 @@ import {
     clearArpChordSession,
     recordArpChordSessionNote,
     freezeArpChordSession,
-} from './held-notes.js?v=8';
+    getChordArpSourceNotes,
+} from './held-notes.js?v=9';
 import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=16';
-import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=14';
+import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=15';
 import {
     toggleChordMemoryLearn,
     cancelChordMemoryLearn,
@@ -46,23 +48,25 @@ import {
     recordLearnNote,
     getLearnSessionNotes,
     isPolyChordMemoryOn,
-} from './chord-memory.js?v=22';
+    getPolyChordIntervals,
+} from './chord-memory.js?v=23';
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=41';
+} from './keyboard-multitudes-panel.js?v=50';
 import {
     togglePolyMode,
     togglePolyUnison,
     syncPolyModeUI,
     polyNoteOn,
     polyNoteOff,
+    glidePolyFinger,
     forcePolyAllOff,
     retunePolyVoices,
     hasPolyVoices,
     initPolyVoice,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=111';
+} from './poly-voice.js?v=129';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];
@@ -97,6 +101,8 @@ let pressedSemitone = null;
 let hasCenteredOnce = false;
 /** Multi-touch map while Poly On: pointerId → cell semitone */
 const polyPointers = new Map();
+/** Touch gesture on the piano: null until it is clearly sideways or up/down. */
+const touchGesture = new Map();
 
 function pitchClass(semitones) {
     let pc = semitones % 12;
@@ -119,6 +125,44 @@ export function isInActiveScale(semitonesFromC) {
 
 export function soundingSemitones(cellSemitone) {
     return cellSemitone + getGlobalTune();
+}
+
+/** Note VFD: chord from live hold / write / chord-mem / arp pool. */
+function paintLiveChordVfd() {
+    if (window.noteVisualizerPreviewActive) return;
+    if (state.isPlaying) return;
+
+    if (isPolyWriteMode()) {
+        const notes = getPolyWriteHeldNotes();
+        if (notes.length) updateChordVisualizer(notes.map(soundingSemitones));
+        else clearNoteVisualizer();
+        return;
+    }
+
+    if (state.chordMemoryLearning) {
+        const notes = getLearnSessionNotes();
+        if (notes.length) updateChordVisualizer(notes.map(soundingSemitones));
+        else clearNoteVisualizer();
+        return;
+    }
+
+    const pool = getHeldNotes().length ? getHeldNotes() : getChordArpSourceNotes();
+    if (!pool.length) {
+        clearNoteVisualizer();
+        return;
+    }
+
+    if (isPolyChordMemoryOn()) {
+        const root = Math.min(...pool);
+        const ivs = getPolyChordIntervals();
+        if (ivs.length > 1) {
+            const soundingRoot = soundingSemitones(root);
+            updateChordVisualizer(ivs.map((iv) => soundingRoot + iv));
+            return;
+        }
+    }
+
+    updateChordVisualizer(pool.map(soundingSemitones));
 }
 
 export function pressKey(cellSemitone) {
@@ -239,7 +283,7 @@ export function heldNoteDown(cellSemitone) {
         addHeldNote(cellSemitone);
         recordLearnNote(cellSemitone);
         highlightHeldOrFrozen();
-        updateNoteVisualizer(soundingSemitones(cellSemitone));
+        paintLiveChordVfd();
         return;
     }
 
@@ -255,7 +299,7 @@ export function heldNoteDown(cellSemitone) {
         state.keyboardHeldSemitone = cellSemitone;
         invalidateChordArpOrder();
         highlightHeldOrFrozen();
-        updateNoteVisualizer(soundingSemitones(cellSemitone));
+        paintLiveChordVfd();
         if (!state.isArping) startArp();
         return;
     }
@@ -265,6 +309,7 @@ export function heldNoteDown(cellSemitone) {
         state.keyboardHeldSemitone = cellSemitone;
         polyNoteOn(cellSemitone, soundingSemitones(cellSemitone));
         highlightHeldOrFrozen();
+        paintLiveChordVfd();
         return;
     }
 
@@ -273,6 +318,7 @@ export function heldNoteDown(cellSemitone) {
         state.keyboardHeldSemitone = cellSemitone;
         polyNoteOn(cellSemitone, soundingSemitones(cellSemitone));
         highlightHeldOrFrozen();
+        paintLiveChordVfd();
         return;
     }
 
@@ -287,7 +333,7 @@ export function heldNoteDown(cellSemitone) {
         state.keyboardHeldSemitone = cellSemitone;
         invalidateChordArpOrder();
         highlightHeldOrFrozen();
-        updateNoteVisualizer(soundingSemitones(cellSemitone));
+        paintLiveChordVfd();
         if (!state.isArping) startArp();
     }
 }
@@ -305,6 +351,7 @@ export function heldNoteUp(cellSemitone) {
         } else {
             highlightHeldOrFrozen();
         }
+        paintLiveChordVfd();
         return;
     }
 
@@ -327,6 +374,7 @@ export function heldNoteUp(cellSemitone) {
             invalidateChordArpOrder();
             highlightHeldOrFrozen();
         }
+        paintLiveChordVfd();
         return;
     }
 
@@ -349,6 +397,7 @@ export function heldNoteUp(cellSemitone) {
             if (heldNoteCount() === 0) clearKeyHighlights();
             else highlightHeldOrFrozen();
         }
+        paintLiveChordVfd();
         return;
     }
 
@@ -358,6 +407,7 @@ export function heldNoteUp(cellSemitone) {
         state.keyboardHeldSemitone = getHeldPressOrder().at(-1) ?? null;
         if (heldNoteCount() === 0) clearKeyHighlights();
         else highlightHeldOrFrozen();
+        paintLiveChordVfd();
         return;
     }
 
@@ -380,6 +430,7 @@ export function heldNoteUp(cellSemitone) {
             invalidateChordArpOrder();
             highlightHeldOrFrozen();
         }
+        paintLiveChordVfd();
     }
 }
 
@@ -399,7 +450,7 @@ function handlePress(cellSemitone) {
             polyWriteNoteDown(cellSemitone);
             state.keyboardHeldSemitone = cellSemitone;
             highlightFromState();
-            if (!state.isPlaying) updateNoteVisualizer(sounding);
+            if (!state.isPlaying) paintLiveChordVfd();
             return;
         }
         writeNote(cellSemitone);
@@ -455,21 +506,150 @@ function handlePress(cellSemitone) {
     highlightFromState();
 }
 
-function keyFromPoint(clientX, clientY) {
-    const el = document.elementFromPoint(clientX, clientY);
-    if (!el) return null;
-    const key = el.closest?.('.piano-key');
-    if (!key || key.classList.contains('key-out-of-scale')) return null;
-    const semi = parseInt(key.dataset.semitone, 10);
-    return Number.isFinite(semi) ? semi : null;
+/** Live key rects, read once per pointer event. */
+function collectKeyRects() {
+    const board = document.getElementById('chromaticKeyboard');
+    if (!board) return [];
+    const out = [];
+    for (const key of board.querySelectorAll('.piano-key')) {
+        if (key.classList.contains('key-out-of-scale')) continue;
+        const semi = parseInt(key.dataset.semitone, 10);
+        if (!Number.isFinite(semi)) continue;
+        const r = key.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+        out.push({ semi, r, black: key.classList.contains('piano-key-black') });
+    }
+    return out;
+}
+
+/**
+ * Key under a point. Rects, not elementFromPoint: during a touch the browser
+ * often keeps reporting the key that received pointerdown, so a slide never
+ * leaves the first note. Black keys win where they overlap whites.
+ * slopY catches a fingertip that sits just above or below the key strip.
+ */
+function keyFromRects(rects, clientX, clientY, slopY = 0) {
+    let black = null;
+    let white = null;
+    let blackSlop = null;
+    let whiteSlop = null;
+    let whiteSlopDist = Infinity;
+    for (const { semi, r, black: isBlack } of rects) {
+        if (clientX < r.left || clientX >= r.right) continue;
+        if (clientY >= r.top && clientY < r.bottom) {
+            if (isBlack) black = semi;
+            else white = semi;
+            continue;
+        }
+        if (slopY <= 0) continue;
+        const dy = clientY < r.top ? r.top - clientY : clientY - r.bottom;
+        if (dy <= 0 || dy > slopY) continue;
+        if (isBlack) blackSlop = semi;
+        else if (dy < whiteSlopDist) {
+            whiteSlopDist = dy;
+            whiteSlop = semi;
+        }
+    }
+    if (black != null) return black;
+    if (white != null) return white;
+    if (blackSlop != null) return blackSlop;
+    return whiteSlop;
+}
+
+function keyFromPoint(clientX, clientY, slopY = 0) {
+    return keyFromRects(collectKeyRects(), clientX, clientY, slopY);
+}
+
+/** Last key the pointer actually crossed, including positions the browser coalesced. */
+function slideSemiFromEvent(e) {
+    const slop = (e.pointerType === 'touch' || e.pointerType === 'pen') ? 36 : 10;
+    const rects = collectKeyRects();
+    if (!rects.length) return null;
+    let semi = null;
+    const consider = (x, y) => {
+        const next = keyFromRects(rects, x, y, slop);
+        if (next != null) semi = next;
+    };
+    const coalesced = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : null;
+    if (coalesced) {
+        for (const ev of coalesced) consider(ev.clientX, ev.clientY);
+    }
+    consider(e.clientX, e.clientY);
+    return semi;
+}
+
+/** Poly Uni owns the stack only when chord memory is not playing a real chord. */
+function polyUnisonOwnsVoices() {
+    return !!(
+        state.keyboardPolyUnison
+        && state.keyboardPoly
+        && getPolyChordIntervals().length <= 1
+    );
+}
+
+/**
+ * Slide one poly pointer onto a new key.
+ * The map is updated before any note-off: polyPointerUp releases only the
+ * semitone stored for that pointer, and skips the release while another
+ * pointer still lists it.
+ */
+function movePolyPointer(pointerId, toSemi) {
+    const fromSemi = polyPointers.get(pointerId);
+    if (fromSemi == null || fromSemi === toSemi) return;
+
+    let sharingOld = false;
+    let destTaken = getHeldNotes().includes(toSemi);
+    for (const [id, semi] of polyPointers) {
+        if (id === pointerId) continue;
+        if (semi === fromSemi) sharingOld = true;
+        if (semi === toSemi) destTaken = true;
+    }
+    polyPointers.set(pointerId, toSemi);
+
+    if (polyUnisonOwnsVoices()) {
+        const sounding = getHeldPressOrder().at(-1);
+        const isSounding = fromSemi === sounding;
+        if (!sharingOld && isSounding) {
+            glidePolyFinger(fromSemi, toSemi, soundingSemitones(toSemi));
+            moveHeldNote(fromSemi, toSemi);
+        } else if (!sharingOld) {
+            moveHeldNote(fromSemi, toSemi);
+        } else if (!destTaken) {
+            heldNoteDown(toSemi);
+        }
+    } else if (!sharingOld && !destTaken) {
+        glidePolyFinger(fromSemi, toSemi, soundingSemitones(toSemi));
+        moveHeldNote(fromSemi, toSemi);
+    } else if (!sharingOld) {
+        // Occupied destination (other finger, MIDI, or computer keys).
+        // polyNoteOff, not heldNoteUp: heldNoteUp's Poly Uni branch would
+        // retrigger the last key instead of releasing this finger's stack.
+        removeHeldNote(fromSemi);
+        polyNoteOff(fromSemi);
+    } else if (!destTaken) {
+        heldNoteDown(toSemi);
+    }
+
+    state.keyboardHeldSemitone = getHeldPressOrder().at(-1) ?? null;
+    highlightHeldOrFrozen();
+    paintLiveChordVfd();
 }
 
 function handlePointerMove(e) {
     if (state.keyboardWrite) return;
-    // Multi-hold / poly: no drag-retune (would break chord / learn / poly)
+    // Learn commits every key touched. A swipe would store the smear.
+    if (state.chordMemoryLearning) return;
+    if (polyPointers.has(e.pointerId)) {
+        const semi = slideSemiFromEvent(e);
+        if (semi == null) return;
+        movePolyPointer(e.pointerId, semi);
+        return;
+    }
+    // Poly arp and mono chord arp stay on the press path. Playback transpose
+    // still falls through when this pointer is not in polyPointers.
     if (needsHeldNoteSet()) return;
     if (activePointerId === null || e.pointerId !== activePointerId) return;
-    const semi = keyFromPoint(e.clientX, e.clientY);
+    const semi = slideSemiFromEvent(e);
     if (semi === null || semi === pressedSemitone) return;
     handlePress(semi);
 }
@@ -506,6 +686,7 @@ function handleRelease() {
         if (isPolyWriteMode()) {
             if (released != null) polyWriteNoteUp(released);
             highlightFromState();
+            if (!state.isPlaying) paintLiveChordVfd();
             return;
         }
         state.keyboardHeldSemitone = null;
@@ -639,10 +820,15 @@ export function refreshKeyboard() {
 
         key.addEventListener('pointerdown', (e) => {
             if (e.button !== undefined && e.button !== 0) return;
-            e.preventDefault();
+            // A touch can still become a page scroll. Don't cancel it until
+            // the finger moves sideways; a mouse press can be captured now.
+            const touchMayScroll = e.pointerType === 'touch' && useTouchKeyboardScroller();
+            if (!touchMayScroll) {
+                e.preventDefault();
+            }
             e.stopPropagation();
             const boardEl = document.getElementById('chromaticKeyboard');
-            if (boardEl) {
+            if (boardEl && !touchMayScroll) {
                 try { boardEl.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
             }
             const polyStyle = state.keyboardPoly || state.keyboardMultitudes;
@@ -650,7 +836,10 @@ export function refreshKeyboard() {
             const polyLiveHold = polyStyle && !state.isPlaying && !state.keyboardWrite
                 && !state.chordMemoryLearning
                 && !(state.keyboardArp && state.keyboardArpChord);
-            if (polyWrite || polyLiveHold) {
+            // Learn banks when the last finger lifts. One activePointerId drops
+            // the other key-ups, so a phone chord never empties the held set.
+            const chordLearnHold = !!state.chordMemoryLearning && !state.isPlaying;
+            if (polyWrite || polyLiveHold || chordLearnHold) {
                 polyPointerDown(e.pointerId, semi);
                 return;
             }
@@ -678,11 +867,222 @@ export function refreshKeyboard() {
 
         // Re-center when entering/leaving Write (range changes) or first load
         requestAnimationFrame(() => {
-            if (centerOnRoot()) return;
-            requestAnimationFrame(centerOnRoot);
+            if (centerOnRoot()) {
+                syncChromaticKeyboardScroller();
+                return;
+            }
+            requestAnimationFrame(() => {
+                centerOnRoot();
+                syncChromaticKeyboardScroller();
+            });
         });
         hasCenteredOnce = true;
     }
+    syncChromaticKeyboardScroller();
+}
+
+function useTouchKeyboardScroller() {
+    return window.matchMedia('(max-width: 768px)').matches
+        || window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
+function chromaticKeyboardIsShown(panel) {
+    if (!panel || panel.hidden || panel.style.display === 'none') return false;
+    const section = panel.closest('.keyboard-section');
+    if (!section) return true;
+    if (section.classList.contains('keyboard-off')) return false;
+    if (section.classList.contains('computer-keyboard-mode')) return false;
+    return true;
+}
+
+function syncChromaticKeyboardScroller() {
+    const panel = document.getElementById('chromaticKeyboardPanel');
+    const scroller = document.getElementById('chromaticKeyboardScroller');
+    const track = scroller?.querySelector('.chromatic-keyboard-scroller-track');
+    const thumb = scroller?.querySelector('.chromatic-keyboard-scroller-thumb');
+    if (!panel || !scroller || !track || !thumb) return;
+
+    const mobile = useTouchKeyboardScroller();
+    const maxScroll = Math.max(0, panel.scrollWidth - panel.clientWidth);
+    const show = mobile && chromaticKeyboardIsShown(panel) && maxScroll > 2;
+    scroller.hidden = !show;
+    scroller.setAttribute('aria-hidden', show ? 'false' : 'true');
+    if (!show) return;
+
+    const trackW = track.clientWidth;
+    const viewRatio = panel.scrollWidth > 0 ? panel.clientWidth / panel.scrollWidth : 1;
+    const thumbW = Math.min(
+        Math.max(56, trackW - 8),
+        Math.max(56, Math.round(trackW * viewRatio)),
+    );
+    const travel = Math.max(0, trackW - thumbW);
+    const x = maxScroll > 0 ? (panel.scrollLeft / maxScroll) * travel : 0;
+    thumb.style.width = `${thumbW}px`;
+    thumb.style.transform = `translate(${x}px, -50%)`;
+    const now = maxScroll > 0 ? Math.round((panel.scrollLeft / maxScroll) * 100) : 0;
+    track.setAttribute('aria-valuenow', String(now));
+    track.setAttribute('aria-valuemax', '100');
+}
+
+function initChromaticKeyboardScroller() {
+    const panel = document.getElementById('chromaticKeyboardPanel');
+    const scroller = document.getElementById('chromaticKeyboardScroller');
+    const track = scroller?.querySelector('.chromatic-keyboard-scroller-track');
+    const thumb = scroller?.querySelector('.chromatic-keyboard-scroller-thumb');
+    if (!panel || !scroller || !track || !thumb) return;
+
+    // Sideways touch must not pan the keys. Up and down is left to the page.
+    // Touch identifiers are not pointer ids, so match on the gesture state:
+    // while any finger is running the keys, hold every touchmove here. If
+    // iOS starts a page scroll mid-run it cancels the pointer and drops the note.
+    const touchStarts = new Map();
+    panel.addEventListener('touchstart', (e) => {
+        for (const t of e.changedTouches) {
+            touchStarts.set(t.identifier, { x: t.clientX, y: t.clientY });
+        }
+    }, { passive: true });
+    const forgetTouches = (e) => {
+        for (const t of e.changedTouches) touchStarts.delete(t.identifier);
+    };
+    panel.addEventListener('touchend', forgetTouches, { passive: true });
+    panel.addEventListener('touchcancel', forgetTouches, { passive: true });
+    panel.addEventListener('touchmove', (e) => {
+        if (!useTouchKeyboardScroller()) return;
+        let keyTouch = false;
+        for (const gesture of touchGesture.values()) {
+            if (gesture.bar) continue;
+            if (gesture.lock === 'x') {
+                e.preventDefault();
+                return;
+            }
+            if (gesture.lock !== 'y') keyTouch = true;
+        }
+        if (!keyTouch) return;
+        // touchmove can land before the pointermove that sets the lock.
+        // Judge this touch on its own so the first sideways move is held too.
+        for (const t of e.changedTouches) {
+            const start = touchStarts.get(t.identifier);
+            if (!start) continue;
+            const dx = Math.abs(t.clientX - start.x);
+            const dy = Math.abs(t.clientY - start.y);
+            if (dx >= 6 && dx >= dy) {
+                e.preventDefault();
+                return;
+            }
+        }
+    }, { passive: false });
+    panel.addEventListener('scroll', syncChromaticKeyboardScroller, { passive: true });
+    window.addEventListener('resize', syncChromaticKeyboardScroller);
+    window.matchMedia('(max-width: 768px)').addEventListener('change', syncChromaticKeyboardScroller);
+    window.matchMedia('(hover: none) and (pointer: coarse)').addEventListener('change', syncChromaticKeyboardScroller);
+    const ro = new ResizeObserver(() => syncChromaticKeyboardScroller());
+    ro.observe(panel);
+    const board = document.getElementById('chromaticKeyboard');
+    if (board) ro.observe(board);
+
+    let drag = null;
+
+    const scrollFromPointer = (clientX, originX, originScroll) => {
+        const maxScroll = Math.max(0, panel.scrollWidth - panel.clientWidth);
+        const trackW = track.clientWidth;
+        const thumbW = thumb.offsetWidth;
+        const travel = Math.max(1, trackW - thumbW);
+        const dx = clientX - originX;
+        panel.scrollLeft = originScroll + (dx / travel) * maxScroll;
+    };
+
+    track.addEventListener('pointerdown', (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (scroller.hidden) return;
+        const touchMayScroll = e.pointerType === 'touch' && useTouchKeyboardScroller();
+        if (touchMayScroll) {
+            touchGesture.set(e.pointerId, {
+                x: e.clientX,
+                y: e.clientY,
+                lock: null,
+                bar: true,
+                originScroll: panel.scrollLeft,
+            });
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        startBarDrag(e, e.clientX, panel.scrollLeft);
+    });
+
+    const startBarDrag = (e, originX, originScroll) => {
+        const maxScroll = Math.max(0, panel.scrollWidth - panel.clientWidth);
+        const trackRect = track.getBoundingClientRect();
+        const thumbRect = thumb.getBoundingClientRect();
+        const onThumb = originX >= thumbRect.left && originX <= thumbRect.right;
+        if (!onThumb && maxScroll > 0) {
+            const travel = Math.max(1, track.clientWidth - thumb.offsetWidth);
+            const local = originX - trackRect.left - thumb.offsetWidth / 2;
+            panel.scrollLeft = (Math.min(travel, Math.max(0, local)) / travel) * maxScroll;
+            originScroll = panel.scrollLeft;
+        }
+        drag = {
+            pointerId: e.pointerId,
+            originX,
+            originScroll,
+        };
+        scroller.classList.add('is-dragging');
+        try { track.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+    };
+
+    track.addEventListener('pointermove', (e) => {
+        const gesture = touchGesture.get(e.pointerId);
+        if (gesture?.bar && !gesture.lock) {
+            const dx = e.clientX - gesture.x;
+            const dy = e.clientY - gesture.y;
+            if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
+            if (Math.abs(dy) > Math.abs(dx)) {
+                gesture.lock = 'y';
+                touchGesture.delete(e.pointerId);
+                return;
+            }
+            gesture.lock = 'x';
+            e.preventDefault();
+            startBarDrag(e, gesture.x, gesture.originScroll);
+        }
+        if (!drag || e.pointerId !== drag.pointerId) return;
+        e.preventDefault();
+        scrollFromPointer(e.clientX, drag.originX, drag.originScroll);
+    });
+
+    const endDrag = (e) => {
+        if (e?.pointerId != null) {
+            const gesture = touchGesture.get(e.pointerId);
+            if (gesture?.bar) touchGesture.delete(e.pointerId);
+        }
+        if (!drag || (e && e.pointerId !== drag.pointerId)) return;
+        drag = null;
+        scroller.classList.remove('is-dragging');
+        if (e) {
+            try { track.releasePointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+        }
+    };
+    track.addEventListener('pointerup', endDrag);
+    track.addEventListener('pointercancel', endDrag);
+
+    track.addEventListener('keydown', (e) => {
+        const maxScroll = Math.max(0, panel.scrollWidth - panel.clientWidth);
+        const step = Math.max(WHITE_KEY_PX, panel.clientWidth * 0.2);
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            panel.scrollLeft = Math.min(maxScroll, panel.scrollLeft + step);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            panel.scrollLeft = Math.max(0, panel.scrollLeft - step);
+        } else if (e.key === 'Home') {
+            panel.scrollLeft = 0;
+        } else if (e.key === 'End') {
+            panel.scrollLeft = maxScroll;
+        } else {
+            return;
+        }
+        e.preventDefault();
+    });
+
+    syncChromaticKeyboardScroller();
 }
 
 function syncKeyboardXyVisibility() {
@@ -720,6 +1120,7 @@ export function syncVisibilityUI() {
     }
     syncKeyboardXyVisibility();
     syncChromaticSpaceBarVisibility();
+    syncChromaticKeyboardScroller();
     if (btn) {
         const front = btn.querySelector('.front');
         if (front) front.textContent = 'Keys';
@@ -876,8 +1277,8 @@ export function applyScaleState(enabled, scaleId) {
         btn.setAttribute('aria-pressed', scaleOn ? 'true' : 'false');
     };
     syncToggle(kbToggle, { on: 'Scale: On', off: 'Scale: Off' });
-    syncToggle(patternToggle);
-    syncToggle(xyToggle);
+    syncToggle(patternToggle, { on: 'On', off: 'Scale Off' });
+    syncToggle(xyToggle, { on: 'On', off: 'Scale Off' });
 
     if (selectedId) {
         if (mainSelect) mainSelect.value = selectedId;
@@ -890,10 +1291,11 @@ export function applyScaleState(enabled, scaleId) {
     const kbScaleRow = document.getElementById('keyboardScaleSelectRow');
     if (kbScaleRow) kbScaleRow.style.display = scaleOn ? '' : 'none';
     const tuningScaleRow = document.getElementById('kbTuningScaleSelectRow');
-    if (tuningScaleRow) tuningScaleRow.style.display = scaleOn ? '' : 'none';
+    if (tuningScaleRow) tuningScaleRow.style.display = '';
     const xyScaleRow = document.getElementById('kbXyScaleSelectRow');
-    if (xyScaleRow) xyScaleRow.style.display = scaleOn ? '' : 'none';
-    else if (patternSelect && !tuningScaleRow) patternSelect.style.display = scaleOn ? '' : 'none';
+    if (xyScaleRow) xyScaleRow.style.display = '';
+    if (patternSelect) patternSelect.style.display = scaleOn ? '' : 'none';
+    if (xySelect) xySelect.style.display = scaleOn ? '' : 'none';
 
     if (scaleOn && !wasEnabled) {
         beginScaleVfdPrompt();
@@ -1127,11 +1529,139 @@ export function onSequencerStop() {
     syncPolyModeUI();
 }
 
+export function arpOrderLabel() {
+    return ARP_ORDER_LABELS[state.arpOrder || 'up'] || 'Up';
+}
+
+/** Toggle keyboard arp. Safe with no 2D toolbar. */
+export function toggleKeyboardArp() {
+    if (state.isPlaying) return;
+    if (!state.keyboardArp && state.keyboardWrite) {
+        setWriteMode(false, { refreshKeyboard });
+    }
+    state.keyboardArp = !state.keyboardArp;
+    if (state.keyboardArp && isPolyStyleMode()) {
+        ensurePolyChordArp();
+        if (!state.isPlaying) {
+            clearPolyPointers();
+            forcePolyAllOff({ silent: true });
+            for (const semi of getHeldNotes()) {
+                recordArpChordSessionNote(semi);
+            }
+            if (heldNoteCount() > 0 && !state.isArping) startArp();
+        }
+    }
+    if (!state.keyboardArp) {
+        state.keyboardArpChord = false;
+        const wasArping = state.isArping;
+        if (wasArping) stopArp();
+        clearFrozenArpNotes();
+        clearArpChordSession();
+        if (isPolyStyleMode() && !state.isPlaying) {
+            forcePolyAllOff({ silent: true });
+            for (const semi of getHeldNotes()) {
+                polyNoteOn(semi, soundingSemitones(semi));
+            }
+            highlightHeldOrFrozen();
+        } else if (wasArping) {
+            clearHeldNotes();
+            if (!state.keyboardLatch) {
+                state.keyboardHeldSemitone = state.keyboardTranspose !== 0 ? state.keyboardTranspose : null;
+                highlightFromState();
+            }
+        }
+    }
+    syncLiveModeControlsUI();
+}
+
+export function toggleKeyboardArpChord() {
+    if (state.isPlaying || !state.keyboardArp) return;
+    if (isPolyStyleMode()) return;
+    state.keyboardArpChord = !state.keyboardArpChord;
+    invalidateChordArpOrder();
+    if (state.isArping) {
+        stopArp();
+        clearHeldNotes();
+        clearFrozenArpNotes();
+        clearArpChordSession();
+    }
+    if (!state.keyboardArpChord) {
+        clearHeldNotes();
+        clearFrozenArpNotes();
+        clearArpChordSession();
+    }
+    syncLiveModeControlsUI();
+    highlightFromState();
+}
+
+export function cycleArpOrder() {
+    if (state.isPlaying || !state.keyboardArp || !state.keyboardArpChord) return;
+    const cycle = isPolyArpMode()
+        ? POLY_ARP_ORDER_CYCLE
+        : ARP_ORDER_CYCLE;
+    let idx = cycle.indexOf(state.arpOrder || 'up');
+    if (idx < 0) idx = 0;
+    state.arpOrder = cycle[(idx + 1) % cycle.length];
+    invalidateChordArpOrder();
+    syncArpOrderUI();
+}
+
 export function initKeyboard() {
     const board = document.getElementById('chromaticKeyboard');
     if (!board) return;
+    initChromaticKeyboardScroller();
+
+    const releaseTouchPlay = (pointerId) => {
+        if (polyPointers.has(pointerId)) {
+            try { board.releasePointerCapture(pointerId); } catch (_) { /* ignore */ }
+            polyPointerUp(pointerId);
+            return;
+        }
+        if (activePointerId !== pointerId) return;
+        try { board.releasePointerCapture(pointerId); } catch (_) { /* ignore */ }
+        activePointerId = null;
+        if (pressedSemitone !== null) {
+            pressedSemitone = null;
+            handleRelease();
+        }
+    };
+
+    // Upward swipe scrolls the page. Sideways swipe stays on the keys and plays a run.
+    board.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'touch' || !useTouchKeyboardScroller()) return;
+        if (!e.target.closest?.('.piano-key')) return;
+        // A primary touch means no other finger is down. Drop any gesture whose
+        // pointerup was lost so a stale sideways lock cannot pin page scrolling.
+        if (e.isPrimary) {
+            for (const [id, g] of touchGesture) {
+                if (!g.bar) touchGesture.delete(id);
+            }
+        }
+        touchGesture.set(e.pointerId, { x: e.clientX, y: e.clientY, lock: null });
+    }, true);
+
+    board.addEventListener('pointermove', (e) => {
+        const gesture = touchGesture.get(e.pointerId);
+        if (!gesture || gesture.lock || gesture.bar) return;
+        const dx = Math.abs(e.clientX - gesture.x);
+        const dy = Math.abs(e.clientY - gesture.y);
+        // Decide sideways early. iOS starts a page scroll and cancels the
+        // pointer after about 10px, so the slide must own the touch before
+        // that. A finger press dips before it runs, so up/down needs to be
+        // clearly steeper and longer before it hands the touch to the page.
+        if (dx >= 6 && dx >= dy) {
+            gesture.lock = 'x';
+            try { board.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+            return;
+        }
+        if (dy >= 14 && dy > dx * 1.5) {
+            gesture.lock = 'y';
+            releaseTouchPlay(e.pointerId);
+        }
+    }, true);
 
     const endPointer = (e) => {
+        touchGesture.delete(e.pointerId);
         if (polyPointers.has(e.pointerId)) {
             const boardEl = document.getElementById('chromaticKeyboard');
             if (boardEl) {
@@ -1174,79 +1704,15 @@ export function initKeyboard() {
     });
 
     document.getElementById('keyboardArpToggle')?.addEventListener('click', () => {
-        if (state.isPlaying) return;
-        if (!state.keyboardArp && state.keyboardWrite) {
-            // Turning Arp on exits Write
-            setWriteMode(false, { refreshKeyboard });
-        }
-        state.keyboardArp = !state.keyboardArp;
-        if (state.keyboardArp && isPolyStyleMode()) {
-            // Enter Poly/Multitudes Arp: silence sustained chord; keys become the pool
-            ensurePolyChordArp();
-            if (!state.isPlaying) {
-                clearPolyPointers();
-                forcePolyAllOff({ silent: true });
-                for (const semi of getHeldNotes()) {
-                    recordArpChordSessionNote(semi);
-                }
-                if (heldNoteCount() > 0 && !state.isArping) startArp();
-            }
-        }
-        if (!state.keyboardArp) {
-            state.keyboardArpChord = false;
-            const wasArping = state.isArping;
-            if (wasArping) stopArp();
-            clearFrozenArpNotes();
-            clearArpChordSession();
-            if (isPolyStyleMode() && !state.isPlaying) {
-                // Restore normal poly holding for any keys still down
-                forcePolyAllOff({ silent: true });
-                for (const semi of getHeldNotes()) {
-                    polyNoteOn(semi, soundingSemitones(semi));
-                }
-                highlightHeldOrFrozen();
-            } else if (wasArping) {
-                clearHeldNotes();
-                if (!state.keyboardLatch) {
-                    state.keyboardHeldSemitone = state.keyboardTranspose !== 0 ? state.keyboardTranspose : null;
-                    highlightFromState();
-                }
-            }
-        }
-        syncLiveModeControlsUI();
+        toggleKeyboardArp();
     });
 
     document.getElementById('keyboardArpChordToggle')?.addEventListener('click', () => {
-        if (state.isPlaying || !state.keyboardArp) return;
-        // Poly/Multitudes Arp always uses chord-style — button stays forced on
-        if (isPolyStyleMode()) return;
-        state.keyboardArpChord = !state.keyboardArpChord;
-        invalidateChordArpOrder();
-        if (state.isArping) {
-            stopArp();
-            clearHeldNotes();
-            clearFrozenArpNotes();
-            clearArpChordSession();
-        }
-        if (!state.keyboardArpChord) {
-            clearHeldNotes();
-            clearFrozenArpNotes();
-            clearArpChordSession();
-        }
-        syncLiveModeControlsUI();
-        highlightFromState();
+        toggleKeyboardArpChord();
     });
 
     document.getElementById('keyboardArpOrderToggle')?.addEventListener('click', () => {
-        if (state.isPlaying || !state.keyboardArp || !state.keyboardArpChord) return;
-        const cycle = isPolyArpMode()
-            ? POLY_ARP_ORDER_CYCLE
-            : ARP_ORDER_CYCLE;
-        let idx = cycle.indexOf(state.arpOrder || 'up');
-        if (idx < 0) idx = 0;
-        state.arpOrder = cycle[(idx + 1) % cycle.length];
-        invalidateChordArpOrder();
-        syncArpOrderUI();
+        cycleArpOrder();
     });
 
     document.getElementById('keyboardArpRangeToggle')?.addEventListener('click', () => {

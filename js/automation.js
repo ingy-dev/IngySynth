@@ -5,16 +5,16 @@
 
 import { state } from './state.js?v=116';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=75';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=97';
-import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=78';
-import { ensureDisplayStep } from './knobs.js?v=130';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=106';
+import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=79';
+import { ensureDisplayStep } from './knobs.js?v=147';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=7';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=74';
-import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=14';
-import { clampToCatalog, getParam } from './param-catalog.js?v=2';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=83';
+import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=15';
+import { clampToCatalog, getParam } from './param-catalog.js?v=3';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */
@@ -34,6 +34,7 @@ const RANGE_IDS = [
     'lfoSyncDivision',
     'cutoffMod', 'resonanceMod', 'highpassMod',
     'osc1PitchMod', 'osc2PitchMod', 'osc3PitchMod', 'osc4PitchMod',
+    'ringFreqMod',
 ];
 
 /** Transport / pattern / write µTUNE — never automate. */

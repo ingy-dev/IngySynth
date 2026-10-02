@@ -1,28 +1,28 @@
 import { state, OSC_COUNT } from './state.js?v=116';
-import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=14';
-import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=36';
+import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=15';
+import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=51';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=185';
+} from './audio-engine.js?v=208';
 import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=30';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
 import { clearAccentSweep } from './acid-env.js?v=48';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=383';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=114';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=416';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=121';
 import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=80';
-import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=111';
-import { applyScaleState } from './keyboard.js?v=212';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=129';
-import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=184';
-import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=130';
-import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=26';
-import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=22';
-import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=17';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=111';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=41';
+import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=126';
+import { applyScaleState } from './keyboard.js?v=238';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=140';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=186';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=147';
+import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=35';
+import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=32';
+import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=18';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=129';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=50';
 import {
     ensurePlaitsWorklet,
     createOscSource,
@@ -34,7 +34,7 @@ import {
     applyFm6BankToLive,
     readFm6PatchName,
     fm6PresetFromHarmonics,
-} from './osc-source.js?v=122';
+} from './osc-source.js?v=125';
 import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=21';
 
 function syncAcidModeUi() {
@@ -74,7 +74,9 @@ export function setAcidMode(next) {
     // ACID needs Env Mod depth — turn Filter Env on when enabling
     if (on) set('filterEnvToggle', true);
 
-    // ACID strip Dist knob — enable distortion (amount stays at default 0 until turned up)
+    // ACID strip Dist knob — enable distortion (amount stays at default 0 until turned up).
+    // Must stay after applyAcidOscLock so the pre-Acid toggle is snapshotted first;
+    // exit turns it off again unless it was already on.
     if (on) set('distortionToggle', true);
 
     // Acid default GATE is full-length (slider still live after this)

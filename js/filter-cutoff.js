@@ -1,5 +1,5 @@
 import { state } from './state.js?v=116';
-import { getNumber } from './params.js?v=14';
+import { getNumber } from './params.js?v=15';
 
 /** Keep in sync with getLfoAmountAudio() in lfo-strip.js (avoid circular import). */
 function softKneeLfoAmount(a) {

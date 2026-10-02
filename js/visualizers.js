@@ -1,9 +1,12 @@
 import { state } from './state.js?v=116';
 import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=80';
-import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=4';
-import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=6';
-import { getNumber, set } from './params.js?v=14';
-import { getParam } from './param-catalog.js?v=2';
+import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=6';
+import { formatNoteOrChord } from './chord-name.js?v=3';
+import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=16';
+import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=23';
+import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=7';
+import { getNumber, set } from './params.js?v=15';
+import { getParam } from './param-catalog.js?v=3';
 import { acidEnvelopeDisplay, acidDecayKnobFromSec } from './acid-env.js?v=48';
 
 const NOTE_VFD_HOSTS = ['kbPatternNoteVisualizer', 'kbXyNoteVisualizer'];
@@ -16,6 +19,7 @@ function noteVfdHostIsVisible(host) {
     if (panel && (panel.hidden || panel.classList.contains('hidden'))) return false;
     const fieldset = host.closest('.collapsible-fieldset');
     if (fieldset?.classList.contains('collapsed')) return false;
+    if (host.closest('.kb-tab-hidden')) return false;
     return true;
 }
 
@@ -552,30 +556,85 @@ if (document.readyState === 'loading') {
     bootAdsrVisualizers();
 }
 
+function paintNoteVfd(text, { preview = false } = {}) {
+    const previewOn = preview || !!window.noteVisualizerPreviewActive;
+    noteVfdHosts().forEach((host) => renderNoteVfd(host, text, { preview: previewOn }));
+}
+
 function updateNoteVisualizer(totalTune, cents = 0) {
-    const noteName = semitonesToNoteName(totalTune, cents);
-    const preview = !!window.noteVisualizerPreviewActive;
-    noteVfdHosts().forEach((host) => renderNoteVfd(host, noteName, { preview }));
+    paintNoteVfd(semitonesToNoteName(totalTune, cents), {
+        preview: !!window.noteVisualizerPreviewActive,
+    });
+}
+
+/** Sounding pitches for a step (chord memory expanded when armed). */
+function soundingNotesForStep(step) {
+    const data = getLiveStep(step);
+    const soundingRoot = getStepTotalTune(step);
+    let cells;
+    if (isPolyChordMemoryOn()) {
+        const ivs = getPolyChordIntervals();
+        const root = Math.round(Number(data?.tune) || 0);
+        cells = ivs.length ? ivs.map((iv) => root + iv) : [root];
+    } else {
+        cells = stepCellNotes(data);
+    }
+    if (!cells.length) return [soundingRoot];
+    const root = cells[0];
+    return cells.map((n) => n - root + soundingRoot);
+}
+
+function restoreNoteVisualizerAfterPreview() {
+    window.noteVisualizerPreviewActive = false;
+    if (state.isPlaying || state.isArping) {
+        const step = state.currentStep;
+        const cents = getStepFineCents(step);
+        const notes = soundingNotesForStep(step);
+        if (notes.length > 1) updateChordVisualizer(notes, { cents, preview: false });
+        else updateNoteVisualizer(getStepTotalTune(step), cents);
+    } else {
+        clearNoteVisualizer();
+    }
+}
+
+/**
+ * Paint a chord (or single note) from a semitone list. Lowest = root.
+ * @param {number[]} notes
+ * @param {{ cents?: number, preview?: boolean }} [opts]
+ */
+function updateChordVisualizer(notes, { cents = 0, preview = false } = {}) {
+    const text = formatNoteOrChord(notes, cents);
+    if (!text) {
+        if (!preview && !window.noteVisualizerPreviewActive) clearNoteVisualizer();
+        return;
+    }
+    paintNoteVfd(text, { preview });
 }
 
 /** Cyan root-note preview while a step knob / µtune is being edited. */
-function previewNoteVisualizer(totalTune, cents = 0) {
+function previewNoteVisualizer(totalTune, cents = 0, notes = null) {
     window.noteVisualizerPreviewActive = true;
     if (window.noteVisualizerPreviewTimeout) {
         clearTimeout(window.noteVisualizerPreviewTimeout);
     }
-    updateNoteVisualizer(totalTune, cents);
+    const list = Array.isArray(notes) ? notes : null;
+    if (list && list.length > 1) updateChordVisualizer(list, { cents, preview: true });
+    else updateNoteVisualizer(totalTune, cents);
     window.noteVisualizerPreviewTimeout = setTimeout(() => {
-        window.noteVisualizerPreviewActive = false;
-        if (state.isPlaying || state.isArping) {
-            updateNoteVisualizer(getStepTotalTune(state.currentStep), getStepFineCents(state.currentStep));
-        } else {
-            clearNoteVisualizer();
-        }
+        restoreNoteVisualizerAfterPreview();
     }, 2000);
 }
 
-/** Idle note screen (fixed 12-cell matrix, centered "Note"). */
+function previewChordVisualizer(notes, cents = 0) {
+    const list = Array.isArray(notes) ? notes : [];
+    if (list.length <= 1) {
+        previewNoteVisualizer(list[0] ?? 0, cents);
+        return;
+    }
+    previewNoteVisualizer(list[0], cents, list);
+}
+
+/** Idle note screen (fixed 14-cell matrix, centered "Note"). */
 function clearNoteVisualizer() {
     noteVfdHosts().forEach((host) => renderNoteVfd(host, NOTE_VFD_IDLE_TEXT, { preview: false }));
 }
@@ -691,4 +750,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-export { drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, clearNoteVisualizer, previewNoteVisualizer, hideLogoOverlay, showLogoOverlay };
+export {
+    paintOscilloscopeCanvas,
+    drawOscilloscope,
+    drawADSRVisualizer,
+    drawFilterADSRVisualizer,
+    updateNoteVisualizer,
+    updateChordVisualizer,
+    clearNoteVisualizer,
+    previewNoteVisualizer,
+    previewChordVisualizer,
+    soundingNotesForStep,
+    hideLogoOverlay,
+    showLogoOverlay,
+};

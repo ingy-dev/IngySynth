@@ -2,14 +2,14 @@
 // `pattern.steps[]` is the source; hydrate paints the hidden bus + stage strip.
 
 import { state } from './state.js?v=116';
-import { refreshStepTuneReadouts } from './sequencer.js?v=383';
+import { refreshStepTuneReadouts } from './sequencer.js?v=416';
 import {
     syncAllKeyboardStepButtonsFromMain,
     syncAllKeyboardStepFinesFromMain,
-} from './keyboard-steps.js?v=129';
-import { setWriteCursor } from './pattern-write.js?v=112';
-import { rotateAutomationLanes } from './automation.js?v=52';
-import { getNumber } from './params.js?v=14';
+} from './keyboard-steps.js?v=140';
+import { setWriteCursor } from './pattern-write.js?v=123';
+import { rotateAutomationLanes } from './automation.js?v=62';
+import { getNumber } from './params.js?v=15';
 import {
     cloneStep,
     getPattern,

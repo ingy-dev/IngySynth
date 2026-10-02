@@ -1,7 +1,7 @@
 // Acid Mode strip above Steps: visibility, saw/square switch, OSC1 lock.
 
 import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getOscType, getOscVol, set } from './params.js?v=14';
+import { get, getNumber, getOscType, getOscVol, set } from './params.js?v=15';
 import { refreshFilterInputDrive } from './filter-drive.js?v=30';
 
 const ACID_WAVES = new Set(['sawtooth', 'square']);
@@ -164,6 +164,8 @@ export function applyAcidOscLock(on) {
                 oscStates: state.oscStates.slice(),
                 noiseState: !!state.noiseState,
                 osc1Wave: getOscType(0) || 'sawtooth',
+                // Captured before Acid forces the Dist knob's effect on.
+                distortionOn: !!get('distortionToggle'),
             };
         }
         setOscEnabled(0, true);
@@ -187,6 +189,9 @@ export function applyAcidOscLock(on) {
     setNoiseEnabled(!!snap.noiseState);
     if (snap.osc1Wave) set('osc-type-0', snap.osc1Wave);
     syncAcidWaveUi(snap.osc1Wave || getOscType(0) || 'sawtooth');
+    // Acid enables distortion for the strip Dist knob. Drop that on exit
+    // unless distortion was already on before Acid.
+    if (!snap.distortionOn) set('distortionToggle', false);
     if (state.audioContext) refreshFilterInputDrive();
 }
 

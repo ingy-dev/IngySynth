@@ -1,13 +1,13 @@
 // Mixer: level / pan / mute / solo / master on persistent buses.
-// Vertical channel strips; cap hash lines up with scale ticks. INGY6 faders untouched.
+// Vertical channel strips; linear 0–100 scale + ticks match fader travel. INGY6 faders untouched.
 
 import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getOscVol, getOscPan, set, subscribe } from './params.js?v=14';
-import { applyMixerMutes } from './store-engine.js?v=36';
-import { applyBerlinDrumKitToLive } from './osc-source.js?v=122';
+import { getNumber, getOscVol, getOscPan, set, subscribe } from './params.js?v=15';
+import { applyMixerMutes } from './store-engine.js?v=51';
+import { applyBerlinDrumKitToLive } from './osc-source.js?v=125';
 import { ensureBerlinDrumKit } from './pattern-bank.js?v=16';
 
-const MIXER_SCALE = ['+10', '5', '0', '-10', '-20', '∞'];
+const MIXER_SCALE = ['100', '80', '60', '40', '20', '0'];
 
 let mixerFaderDragDepth = 0;
 
@@ -196,6 +196,20 @@ function ensureFaderChrome(panel) {
         const slot = fader.querySelector('.mixer-fader-slot');
         if (!slot) return;
         slot.querySelector('.mixer-fader-ticks')?.remove();
+        if (!fader.querySelector(':scope > .mixer-fader-ticks')) {
+            const ticks = document.createElement('div');
+            ticks.className = 'mixer-fader-ticks';
+            ticks.setAttribute('aria-hidden', 'true');
+            const majors = MIXER_SCALE.length;
+            const total = majors + (majors - 1);
+            for (let i = 0; i < total; i++) {
+                const tick = document.createElement('span');
+                tick.className = 'mixer-fader-tick';
+                if (i % 2 === 0) tick.classList.add('mixer-fader-tick--major');
+                ticks.appendChild(tick);
+            }
+            fader.insertBefore(ticks, slot);
+        }
         if (!slot.querySelector('.mixer-fader-track')) {
             const track = document.createElement('div');
             track.className = 'mixer-fader-track';

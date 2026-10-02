@@ -4,7 +4,7 @@
 // keeps its own headroom until it is tuned back inside.
 
 import { state } from './state.js?v=116';
-import { refreshKnobDial } from './knobs.js?v=130';
+import { refreshKnobDial } from './knobs.js?v=147';
 
 export const MANUAL_TUNE_MIN = -24;
 export const MANUAL_TUNE_MAX = 24;

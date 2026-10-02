@@ -1,8 +1,9 @@
 // Live CPU / audio-thread overlay. On by default; hide with ?perf=0.
+// The overlay's hide/show button collapses the readout; the choice is remembered.
 // "keep" / "hw" are audio-seconds / wall-seconds over the last 1s (~1.00 = keeping up).
 
 import { state } from './state.js?v=116';
-import { getWorkletPoolStats } from './osc-source.js?v=122';
+import { getWorkletPoolStats } from './osc-source.js?v=125';
 
 function el(tag, css, text) {
     const n = document.createElement(tag);
@@ -45,7 +46,62 @@ export function initPerfHud() {
         'white-space:pre',
     ].join(';'));
     box.id = 'ingyPerfHud';
+
+    const head = el('div', [
+        'display:flex',
+        'align-items:center',
+        'justify-content:space-between',
+        'gap:12px',
+        'margin-bottom:2px',
+        'pointer-events:none',
+        'white-space:nowrap',
+    ].join(';'));
+    const title = el('span', '', 'INGY PERF');
+    const btn = el('button', [
+        'font:inherit',
+        'line-height:1',
+        'color:inherit',
+        'background:transparent',
+        'border:1px solid currentColor',
+        'border-radius:3px',
+        'padding:1px 6px',
+        'cursor:pointer',
+        'pointer-events:auto',
+    ].join(';'));
+    btn.type = 'button';
+    const body = el('div');
+    body.id = 'ingyPerfHudBody';
+    head.append(title, btn);
+    box.append(head, body);
     document.body.appendChild(box);
+
+    const VIS_KEY = 'ingyPerfHudVisible';
+    let visible = true;
+    try {
+        visible = localStorage.getItem(VIS_KEY) !== '0';
+    } catch (_) { /* private mode */ }
+
+    function applyVisible() {
+        body.hidden = !visible;
+        head.style.marginBottom = visible ? '2px' : '0';
+        box.style.minWidth = visible ? '300px' : '0';
+        btn.textContent = visible ? 'hide' : 'show';
+        btn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+        btn.setAttribute('aria-controls', 'ingyPerfHudBody');
+        btn.setAttribute('aria-label', visible ? 'Hide performance window' : 'Show performance window');
+    }
+
+    function setVisible(on) {
+        visible = !!on;
+        try {
+            localStorage.setItem(VIS_KEY, visible ? '1' : '0');
+        } catch (_) { /* private mode */ }
+        applyVisible();
+        if (visible) paint(snapshot());
+    }
+
+    btn.addEventListener('click', () => setVisible(!visible));
+    applyVisible();
 
     let frames = 0;
     let fps = 0;
@@ -155,8 +211,7 @@ export function initPerfHud() {
         const keep = Number.isFinite(s.keepUp1s) ? s.keepUp1s.toFixed(3) : '—';
         const hw = s.keepHw != null ? s.keepHw.toFixed(3) : '—';
         const dLag = `${s.dLagMs >= 0 ? '+' : ''}${s.dLagMs.toFixed(1)}ms`;
-        box.textContent = [
-            'INGY PERF',
+        body.textContent = [
             `fps ${s.fps.toFixed(0).padStart(3)}   rAF ${keep}×  hw ${hw}×`,
             `rAF ${dLag}  stale ${s.staleMs.toFixed(0)}ms  stalls ${s.stalls}`,
             `ctx ${s.ctxState}  play ${s.playing ? 'on' : 'off'}  ${s.osc4Wavetable ? s.osc4Model : 'analog'} ${s.polyMode}${s.acid ? ' acid' : ''} uni ${s.unisonOn ? s.unisonVoices : 'off'}`,
@@ -248,7 +303,7 @@ export function initPerfHud() {
                 p.refillMadeMax = 0;
             }
         }
-        if (now - lastPaint >= PAINT_EVERY_MS) {
+        if (visible && now - lastPaint >= PAINT_EVERY_MS) {
             lastPaint = now;
             const hudT0 = performance.now();
             paint(snapshot());

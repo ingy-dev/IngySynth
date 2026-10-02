@@ -87,6 +87,7 @@ export const state = {
     lfoGainOsc2Pitch: undefined,
     lfoGainOsc3Pitch: undefined,
     lfoGainOsc4Pitch: undefined,
+    lfoGainRingFreq: undefined,
     lfoState: true,
     lfoAmount: 0,                      // performance strip 0…1 (scales master when On)
     lfoSync: false,                    // false = Hz, true = tempo-synced divisions

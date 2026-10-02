@@ -3,7 +3,7 @@
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
 import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getOscType, getString } from './params.js?v=14';
+import { getNumber, getOscType, getString } from './params.js?v=15';
 import { isAnalogDrumEngine } from './pattern-bank.js?v=16';
 import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=16';
 
@@ -357,14 +357,14 @@ function restoreSpeechUserBankFromStorage() {
 // Hydrate USER bank flag early so REC/USER button is correct before worklet load.
 restoreSpeechUserBankFromStorage();
 
-const PLAITS_TABLES_URL = () =>
-    new URL(`js/worklets/plaits-wavetables.bin?v=2`, window.location.href).href;
-const PLAITS_WS_URL = () =>
-    new URL(`js/worklets/plaits-waveshaper.bin?v=1`, window.location.href).href;
-const PLAITS_FM_BANKS_URL = () =>
-    new URL(`js/worklets/plaits-fm-banks.bin?v=1`, window.location.href).href;
-const PLAITS_SPEECH_URL = () =>
-    new URL(`js/worklets/plaits-speech.bin?v=1`, window.location.href).href;
+/** Resolve worklets from this module so `/vr/` does not look in `/vr/js/worklets/`. */
+const JS_DIR = new URL('./', import.meta.url);
+const jsAsset = (rel) => new URL(rel, JS_DIR).href;
+
+const PLAITS_TABLES_URL = () => jsAsset('worklets/plaits-wavetables.bin?v=2');
+const PLAITS_WS_URL = () => jsAsset('worklets/plaits-waveshaper.bin?v=1');
+const PLAITS_FM_BANKS_URL = () => jsAsset('worklets/plaits-fm-banks.bin?v=1');
+const PLAITS_SPEECH_URL = () => jsAsset('worklets/plaits-speech.bin?v=1');
 
 const FM6_BANK_BYTES = 4096;
 const FM6_PATCH_BYTES = 128;
@@ -667,7 +667,7 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
     }
 
     state.plaitsWorkletCtx = ctx;
-    const url = new URL(`js/worklets/plaits-engine-processor.js?v=42`, window.location.href).href;
+    const url = jsAsset('worklets/plaits-engine-processor.js?v=42');
     state.plaitsWorkletPromise = Promise.all([
         ctx.audioWorklet.addModule(url),
         loadPlaitsTables(),
@@ -1008,6 +1008,43 @@ function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = fal
             } catch (_) {
                 return false;
             }
+        },
+        /**
+         * Sequencer ratch: short 0→1 edge the worklet can see (≥1 render block).
+         * Do not use retrigger() here — sustained engines spend ~50ms falling
+         * and smear subdivisions.
+         */
+        pulseSeqGate(when = 0) {
+            if (stopped) return false;
+            if (slot.gen !== gen) return false;
+            const t = Math.max(ctx.currentTime, when || 0);
+            const gapStart = Math.max(ctx.currentTime, t - 0.006);
+            const holdEnd = Math.max(t, gapStart + 0.003);
+            try {
+                gateParam.cancelScheduledValues(gapStart);
+                gateParam.setValueAtTime(0, gapStart);
+                gateParam.setValueAtTime(0, holdEnd);
+                gateParam.linearRampToValueAtTime(1, holdEnd + 0.002);
+                if (triggered) slot.ringing = true;
+                proxy.started = true;
+                return true;
+            } catch (_) {
+                return false;
+            }
+        },
+        /** Sequencer gate-off: drop worklet gate without releasing the pool slot. */
+        releaseSeqGate(offAt = 0) {
+            if (stopped) return;
+            if (slot.gen !== gen) return;
+            const t = Math.max(ctx.currentTime, offAt || 0);
+            try {
+                if (typeof gateParam.cancelAndHoldAtTime === 'function') {
+                    try { gateParam.cancelAndHoldAtTime(t); } catch (_) { /* ignore */ }
+                } else {
+                    gateParam.cancelScheduledValues(t);
+                }
+                gateParam.setTargetAtTime(0, t, 0.008);
+            } catch (_) { /* ignore */ }
         },
         /**
          * @param {number} [when]

@@ -2,7 +2,8 @@
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
 import { state, OSC_COUNT } from './state.js?v=116';
-import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=14';
+import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=15';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=32';
 import { semitonesToFrequency } from './tuning.js?v=80';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=84';
 import { refreshFilterInputDrive } from './filter-drive.js?v=30';
@@ -11,11 +12,11 @@ import {
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=114';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=184';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=17';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=28';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=89';
+} from './visualizers.js?v=121';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=186';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=18';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=37';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=98';
 import {
     createOscSource,
     startAnalogOsc,
@@ -27,12 +28,17 @@ import {
     PLAITS_POLY_WARM_COUNT,
     hasDarkOscActive,
     wtAttackSecForFilter,
-} from './osc-source.js?v=122';
+} from './osc-source.js?v=125';
 import {
     isPolyChordMemoryOn,
     getPolyChordIntervals,
     syncChordMemUI,
-} from './chord-memory.js?v=22';
+} from './chord-memory.js?v=23';
+import {
+    pairPolySeqSlidePitches,
+    pairPolySeqGlissPitches,
+    sortedPolySeqIntervals,
+} from './poly-seq-slide.js?v=1';
 
 /** Local bend helper — avoid circular import with pitch-bend.js. */
 function bentFrequency(baseFreq) {
@@ -44,8 +50,20 @@ export const POLY_VOICE_COUNT = 6;
 const POLY_OSC_MAX = 2; // OSC 1–2 only
 const POLY_DEFAULT_OSC_VOL = 0.1; // stacked chords run hot at normal mono levels
 const BEND_RAMP = 0.01;
-/** Sequenced gate-off tau (~36 ms settle). Not the Release knob — that made a wub. */
+/** Same short legato ramp as the mono keyboard (voice.js RETUNE_RAMP). */
+const GLIDE_RAMP = 0.012;
+/** Ratchet gate-off tau (~36 ms settle). Normal notes use the Release knob, like Main Stage. */
 const SEQ_GATE_CLOSE_TAU = 0.012;
+
+/** Release-knob tau (~95% settle in `seconds`). Same as sequencer.seqReleaseTau. */
+function seqReleaseTau(seconds) {
+    const releaseTime = Math.max(0.02, Number(seconds) || 0);
+    return Math.max(0.008, releaseTime / 3);
+}
+
+function seqFiltCloseTau(pulseRatch) {
+    return pulseRatch ? SEQ_GATE_CLOSE_TAU : seqReleaseTau(readFloatParam('filterRelease', 0.3));
+}
 /** Mixer mute/solo open flags — poly oscs bypass shared oscMuteGains. */
 const polyOscBusOpen = [true, true, true, true];
 
@@ -133,6 +151,31 @@ function readOscVol(oscIndex) {
     return getOscVol(oscIndex, POLY_DEFAULT_OSC_VOL);
 }
 
+/** Unison is coherent (1/N). Distinct chord tones are incoherent (1/√N, same RMS as one note). */
+function polyStackNorm(stackCount, sequenced, unison = false) {
+    const chordN = stackCount > 1
+        ? stackCount
+        : (!sequenced && isPolyChordMemoryOn()
+            ? Math.max(1, getPolyChordIntervals().length)
+            : 1);
+    const liveUni = !!(
+        !sequenced
+        && state.keyboardPolyUnison
+        && state.keyboardPoly
+        && !isPolyChordMemoryOn()
+    );
+    const uniDiv = liveUni ? POLY_VOICE_COUNT : 1;
+    const stackDiv = uniDiv * (chordN > 1 ? chordN : 1);
+    const coherent = !!(unison || liveUni);
+    const denom = coherent ? stackDiv : Math.sqrt(Math.max(1, stackDiv));
+    return { chordN, uniDiv, stackDiv, coherent, denom };
+}
+
+function polyStackVoiceVol(fullVol, stackCount, sequenced, unison = false) {
+    const { denom } = polyStackNorm(stackCount, sequenced, unison);
+    return Math.max(0.0001, fullVol / denom);
+}
+
 function setOscEnabled(oscIndex, enabled) {
     const want = !!enabled;
     if (!!state.oscStates[oscIndex] === want) {
@@ -177,6 +220,10 @@ function setNoiseEnabled(enabled) {
     }
     state.noiseState = want;
     syncNoiseUi();
+    if (state.keyboardPoly) {
+        syncPolyNoiseFromUi();
+        return;
+    }
     if (state.audioContext && state.noiseGain) {
         const volume = want ? getNumber('noiseVol', 0) : 0;
         state.noiseGain.gain.cancelScheduledValues(state.audioContext.currentTime);
@@ -322,6 +369,19 @@ function setPolyLockedUi(locked) {
         polyUni.disabled = !locked;
         polyUni.setAttribute('aria-disabled', locked ? 'false' : 'true');
     }
+
+    syncPolyUnusedOscModLock();
+}
+
+/** OSC 3–4 have no poly voices — grey the mod-matrix dests in Ingy 6 and Multitudes. */
+function syncPolyUnusedOscModLock() {
+    const locked = !!(state.keyboardPoly || state.keyboardMultitudes);
+    ['kbOsc3PitchModKnob', 'kbOsc4PitchModKnob'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.setAttribute('aria-disabled', locked ? 'true' : 'false');
+        el.setAttribute('tabindex', locked ? '-1' : '0');
+    });
 }
 
 /**
@@ -394,7 +454,8 @@ export function bumpSeqEngine() {
 
 function polyNoiseTargetLevel() {
     if (!state.keyboardPoly || !state.noiseState) return 0;
-    return Math.max(0, readFloatParam('noiseVol', 0));
+    // Noise UI is 0–1; poly DCOs sit at POLY_DEFAULT_OSC_VOL so the mix matches.
+    return Math.max(0, readFloatParam('noiseVol', 0) * POLY_DEFAULT_OSC_VOL);
 }
 
 function ensurePolyNoiseSource() {
@@ -571,7 +632,29 @@ function rampMuteGain(node, open, now) {
     } catch (_) { /* ignore */ }
 }
 
+function lfoPitchGainForOsc(oscIndex) {
+    return [
+        state.lfoGainOsc1Pitch,
+        state.lfoGainOsc2Pitch,
+        state.lfoGainOsc3Pitch,
+        state.lfoGainOsc4Pitch,
+    ][oscIndex] || null;
+}
+
+function connectPolyOscPitchLfo(osc) {
+    const lfoGain = lfoPitchGainForOsc(osc?.oscIndex);
+    if (!lfoGain || !osc?.detune) return;
+    try { lfoGain.connect(osc.detune); } catch (_) { /* ignore */ }
+}
+
+function disconnectPolyOscPitchLfo(osc) {
+    const lfoGain = lfoPitchGainForOsc(osc?.oscIndex);
+    if (!lfoGain || !osc?.detune) return;
+    try { lfoGain.disconnect(osc.detune); } catch (_) { /* ignore */ }
+}
+
 function disconnectOscGraph(osc) {
+    disconnectPolyOscPitchLfo(osc);
     try { osc.gainNode?.disconnect(); } catch (_) { /* ignore */ }
     try { osc.panNode?.disconnect(); } catch (_) { /* ignore */ }
     try { osc.muteNode?.disconnect(); } catch (_) { /* ignore */ }
@@ -659,7 +742,7 @@ function silenceVoiceAmp(voice, now) {
     } catch (_) { /* ignore */ }
 }
 
-function triggerVoiceAmp(voice, now, { fromCurrent = false, peakScale = 1, gateOffAt = null } = {}) {
+function triggerVoiceAmp(voice, now, { fromCurrent = false, peakScale = 1, gateOffAt = null, duck = false } = {}) {
     const g = voice.ampEnv.gain;
     const peak = Math.max(0.00001, peakScale);
     // Ingy 6 VCA GATE: instant open (filter still uses shared ADSR)
@@ -687,6 +770,9 @@ function triggerVoiceAmp(voice, now, { fromCurrent = false, peakScale = 1, gateO
             try { g.cancelAndHoldAtTime(now); held = true; } catch (_) { /* ignore */ }
         }
         if (!held) g.cancelScheduledValues(now);
+        if (duck) {
+            g.setValueAtTime(0.00001, now);
+        }
         const attackTau = Math.max(0.0008, seqAttack / 3);
         g.setTargetAtTime(peak, now, attackTau);
         g.setTargetAtTime(Math.max(0.00001, sustain * peak), decayStart, Math.max(0.004, safeDecay / 3));
@@ -729,7 +815,7 @@ function releaseVoiceAmp(voice, now) {
     }, (releaseTime + 0.05) * 1000);
 }
 
-function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, sequenced = false } = {}) {
+function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, sequenced = false, unison = false } = {}) {
     stopVoiceOscs(voice, now);
     const dest = voice.ampEnv;
     let any = false;
@@ -751,16 +837,7 @@ function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, seque
             const pct = Number.isFinite(subFader) ? Math.max(0, Math.min(1, subFader / 10)) : 0;
             fullVol *= pct;
         }
-        const chordN = stackCount > 1
-            ? stackCount
-            : (!sequenced && isPolyChordMemoryOn()
-                ? Math.max(1, getPolyChordIntervals().length)
-                : 1);
-        const uniDiv = (!sequenced && state.keyboardPolyUnison && state.keyboardPoly && !isPolyChordMemoryOn())
-            ? POLY_VOICE_COUNT
-            : 1;
-        const stackDiv = uniDiv * (chordN > 1 ? chordN : 1);
-        const voiceVol = Math.max(0.0001, fullVol / stackDiv);
+        const voiceVol = polyStackVoiceVol(fullVol, stackCount, sequenced, unison);
 
         const panValue = getOscPan(i);
         const panner = state.audioContext.createStereoPanner();
@@ -818,6 +895,7 @@ function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, seque
             });
         }
 
+        connectPolyOscPitchLfo(osc);
         voice.oscs.push(osc);
         voice.baseFreqs.push(baseFreq);
     }
@@ -1099,6 +1177,7 @@ export function polyNoteOn(cellSemitone, soundingSemitones) {
     ensureVoicePool();
     hideLogoOverlay();
     document.dispatchEvent(new CustomEvent('ingysynth:live-note-on'));
+    if (!state.isArping) retriggerLfoIfNeeded(state.audioContext.currentTime);
 
     const chordIv = isPolyChordMemoryOn() ? getPolyChordIntervals() : [];
     if (chordIv.length > 1) {
@@ -1194,7 +1273,7 @@ function voiceCanRetune(v) {
     });
 }
 
-function seqVoiceStackVol(oscIndex, stackCount) {
+function seqVoiceStackVol(oscIndex, stackCount, unison = false) {
     const multitudes = !!state.keyboardMultitudes;
     let fullVol = getOscVol(oscIndex, POLY_DEFAULT_OSC_VOL);
     if (oscIndex === 1 && state.keyboardPoly && !multitudes) {
@@ -1204,15 +1283,14 @@ function seqVoiceStackVol(oscIndex, stackCount) {
         const pct = Number.isFinite(subFader) ? Math.max(0, Math.min(1, subFader / 10)) : 0;
         fullVol *= pct;
     }
-    const chordN = stackCount > 1 ? stackCount : 1;
-    return Math.max(0.0001, fullVol / (chordN > 1 ? chordN : 1));
+    return polyStackVoiceVol(fullVol, stackCount, true, unison);
 }
 
-function retuneVoiceStackGain(voice, stackCount, when) {
+function retuneVoiceStackGain(voice, stackCount, when, { unison = false } = {}) {
     voice.oscs.forEach((osc) => {
         const g = osc.gainNode?.gain;
         if (!g) return;
-        const target = seqVoiceStackVol(osc.oscIndex, stackCount);
+        const target = seqVoiceStackVol(osc.oscIndex, stackCount, unison);
         try {
             if (typeof g.cancelAndHoldAtTime === 'function') {
                 try { g.cancelAndHoldAtTime(when); } catch (_) { /* ignore */ }
@@ -1224,27 +1302,66 @@ function retuneVoiceStackGain(voice, stackCount, when) {
     });
 }
 
-/** Audio-clock gate close. Oscs stay up; next step's hold+setTarget attack retriggers. */
-function scheduleSeqGateClose(voice, offAt) {
-    const g = voice.ampEnv?.gain;
-    if (!g) return;
-    try {
-        if (typeof g.cancelAndHoldAtTime === 'function') {
-            try { g.cancelAndHoldAtTime(offAt); } catch (_) { /* ignore */ }
+function pulseWavetableSeqGates(voice, when) {
+    let n = 0;
+    (voice?.oscs || []).forEach((osc) => {
+        if (osc.isWavetable && typeof osc.pulseSeqGate === 'function') {
+            if (osc.pulseSeqGate(when)) n += 1;
         }
-        g.setTargetAtTime(0.00001, offAt, SEQ_GATE_CLOSE_TAU);
-    } catch (_) { /* ignore */ }
+    });
+    return n;
+}
+
+function releaseWavetableSeqGates(voice, offAt) {
+    (voice?.oscs || []).forEach((osc) => {
+        if (osc.isWavetable && typeof osc.releaseSeqGate === 'function') {
+            osc.releaseSeqGate(offAt);
+        }
+    });
+}
+
+function setVoiceOscFrequencies(voice, soundingSemi, cents, when) {
+    const freqs = [];
+    voice.oscs.forEach((osc) => {
+        const baseFreq = Math.max(20, semitonesToFrequency(soundingSemi, osc.oscIndex));
+        osc.polyBaseFreq = baseFreq;
+        osc.unisonCents = cents;
+        const freq = applyUnisonCents(bentFrequency(baseFreq), osc.unisonCents || 0);
+        freqs.push(baseFreq);
+        try {
+            osc.frequency.cancelScheduledValues(when);
+            osc.frequency.setValueAtTime(freq, when);
+        } catch (_) { /* ignore */ }
+    });
+    voice.baseFreqs = freqs;
+    voice.cents = cents;
+}
+
+/** Audio-clock gate close. Oscs stay up; next step's hold+setTarget attack retriggers. */
+function scheduleSeqGateClose(voice, offAt, { tau = SEQ_GATE_CLOSE_TAU, closeWt = false } = {}) {
+    const g = voice.ampEnv?.gain;
+    const closeTau = Math.max(0.008, Number(tau) || SEQ_GATE_CLOSE_TAU);
+    if (g) {
+        try {
+            if (typeof g.cancelAndHoldAtTime === 'function') {
+                try { g.cancelAndHoldAtTime(offAt); } catch (_) { /* ignore */ }
+            }
+            g.setTargetAtTime(0.00001, offAt, closeTau);
+        } catch (_) { /* ignore */ }
+    }
+    if (closeWt) releaseWavetableSeqGates(voice, offAt);
 }
 
 /** Same dump on the shared filter — skipClose left it open for the whole step. */
-function scheduleSeqFilterGateClose(offAt) {
+function scheduleSeqFilterGateClose(offAt, tau = SEQ_GATE_CLOSE_TAU) {
     const g = state.filterEnvGain?.gain;
     if (!g) return;
+    const closeTau = Math.max(0.008, Number(tau) || SEQ_GATE_CLOSE_TAU);
     try {
         if (typeof g.cancelAndHoldAtTime === 'function') {
             try { g.cancelAndHoldAtTime(offAt); } catch (_) { /* ignore */ }
         }
-        g.setTargetAtTime(0.00001, offAt, SEQ_GATE_CLOSE_TAU);
+        g.setTargetAtTime(0.00001, offAt, closeTau);
     } catch (_) { /* ignore */ }
 }
 
@@ -1252,6 +1369,8 @@ function scheduleSeqFilterGateClose(offAt) {
 function releaseSeqSurplus(voice, when) {
     const g = voice.ampEnv?.gain;
     const minValue = 0.00001;
+    const relSec = Math.max(0.02, readFloatParam('release', 0.3));
+    const tau = seqReleaseTau(relSec);
     if (g) {
         try {
             if (typeof g.cancelAndHoldAtTime === 'function') {
@@ -1259,7 +1378,7 @@ function releaseSeqSurplus(voice, when) {
             } else {
                 g.cancelScheduledValues(when);
             }
-            g.setTargetAtTime(minValue, when, 0.012);
+            g.setTargetAtTime(minValue, when, tau);
         } catch (_) { /* ignore */ }
     }
     voice.releasing = true;
@@ -1279,7 +1398,7 @@ function releaseSeqSurplus(voice, when) {
         voice.semi = null;
         voice.chordInterval = 0;
         voice.releasing = false;
-    }, Math.max(20, (when - ctxNow + 0.05) * 1000));
+    }, Math.max(20, (when - ctxNow + relSec + 0.08) * 1000));
 }
 
 function retuneVoiceOscs(voice, soundingSemi, cents, when) {
@@ -1309,10 +1428,50 @@ function slewVoiceToSounding(voice, sounding, when, slideTime) {
         osc.polyBaseFreq = baseFreq;
         const target = applyUnisonCents(bentFrequency(baseFreq), osc.unisonCents || 0);
         try {
-            osc.frequency.cancelScheduledValues(when);
-            osc.frequency.setTargetAtTime(target, when, Math.max(0.01, slideTime) / 3);
+            const tau = Math.max(0.01, slideTime) / 3;
+            if (typeof osc.frequency.cancelAndHoldAtTime === 'function') {
+                try { osc.frequency.cancelAndHoldAtTime(when); } catch (_) {
+                    osc.frequency.cancelScheduledValues(when);
+                }
+            } else {
+                osc.frequency.cancelScheduledValues(when);
+            }
+            osc.frequency.setTargetAtTime(target, when, tau);
         } catch (_) { /* ignore */ }
     });
+}
+
+function linearRampVoiceToSounding(voice, fromSemi, toSemi, t0, t1) {
+    const end = Math.max(t0 + 0.001, Number(t1) || t0);
+    voice.oscs.forEach((osc) => {
+        const fromBase = Math.max(20, semitonesToFrequency(fromSemi, osc.oscIndex));
+        const toBase = Math.max(20, semitonesToFrequency(toSemi, osc.oscIndex));
+        osc.polyBaseFreq = toBase;
+        const fromHz = applyUnisonCents(bentFrequency(fromBase), osc.unisonCents || 0);
+        const toHz = applyUnisonCents(bentFrequency(toBase), osc.unisonCents || 0);
+        if (osc.isWavetable && typeof osc.retrigger === 'function') {
+            osc.retrigger(t0, fromHz);
+        }
+        try {
+            osc.frequency.cancelScheduledValues(t0);
+            osc.frequency.setValueAtTime(Math.max(0.01, fromHz), t0);
+            if (Math.abs(toHz - fromHz) > 0.01) {
+                osc.frequency.linearRampToValueAtTime(Math.max(0.01, toHz), end);
+            }
+        } catch (_) { /* ignore */ }
+    });
+}
+
+/** Rest after a slide-hold: close sequenced finger amps. Does not steal the pool. */
+export function releasePolySeqHold(when) {
+    if (!state.audioContext) return;
+    const t = Math.max(state.audioContext.currentTime, Number(when) || state.audioContext.currentTime);
+    const live = seqFingerLiveVoices(SEQ_FINGER_BASE);
+    live.forEach((voice) => {
+        if (voice.semi == null) return;
+        releaseSeqSurplus(voice, t);
+    });
+    if (live.length) scheduleSeqFilterGateClose(t, seqFiltCloseTau(false));
 }
 
 /**
@@ -1327,10 +1486,18 @@ export function schedulePolySeqVoicing({
     intervals,
     cellRoot,
     accentScale = 1,
-    slideFromSounding = null,
     slideTime = 0.05,
     engineGen,
     unison = false,
+    slideThisStep = false,
+    nextStepWillSlideEnv = false,
+    glissRoll = false,
+    skipPitch = false,
+    pulseRatch = false,
+    lastRatchHit = false,
+    slideFrom = null,
+    nextSounding = null,
+    glissEndTime = null,
 } = {}) {
     if ((!state.keyboardPoly && !state.keyboardMultitudes) || !state.audioContext) {
         return;
@@ -1341,12 +1508,10 @@ export function schedulePolySeqVoicing({
     ensureVoicePool();
     const ctxNow = state.audioContext.currentTime;
     const when = Math.max(ctxNow, Number(startTime) || ctxNow);
-    const ivs = Array.isArray(intervals) && intervals.length ? intervals : [0];
+    const ivs = sortedPolySeqIntervals(intervals);
     const isChord = ivs.length > 1;
     const useUni = !isChord && !!unison && !!state.keyboardPoly && !state.keyboardMultitudes;
     const nVoices = useUni ? POLY_VOICE_COUNT : ivs.length;
-    // One stable seq finger: retrigger in place like Main, instead of occupying
-    // a new pool slot per lookahead step and then hard-stealing (hung oscs).
     seqIdCounter += 1;
     const seqId = seqIdCounter;
     const finger = SEQ_FINGER_BASE;
@@ -1355,9 +1520,41 @@ export function schedulePolySeqVoicing({
     const gateFrac = Math.max(0.05, Math.min(1, (Number(getNumber('gateLength', 90)) || 90) / 100));
     const gateSecN = Math.max(0.02, Number(gateSec) || 0.05);
     const legato = gateFrac >= 0.98;
+    const holdGate = !!nextStepWillSlideEnv && !glissRoll;
+    const closeGate = !legato && !holdGate;
     const offAt = when + gateSecN;
+    const ampCloseTau = (pulseRatch && !lastRatchHit) ? SEQ_GATE_CLOSE_TAU : seqReleaseTau(readFloatParam('release', 0.3));
+    const filtCloseTau = (pulseRatch && !lastRatchHit) ? SEQ_GATE_CLOSE_TAU : seqReleaseTau(readFloatParam('filterRelease', 0.3));
+    const closeWt = !!pulseRatch && closeGate && !lastRatchHit;
+    const doSlide = !!slideThisStep && slideFrom != null && !glissRoll && !skipPitch;
+    const doGliss = !!glissRoll && nextSounding != null && !skipPitch;
+    const slidePairs = doSlide
+        ? pairPolySeqSlidePitches(slideFrom.root, slideFrom.intervals, soundingRoot, ivs)
+        : null;
+    const glissPairs = doGliss
+        ? pairPolySeqGlissPitches(soundingRoot, ivs, nextSounding.root, nextSounding.intervals)
+        : null;
 
-    holdMasterEnvelope();
+    if (!slideThisStep) holdMasterEnvelope();
+    hideLogoOverlay();
+
+    if (skipPitch) {
+        const live = seqFingerLiveVoices(finger).filter(voiceCanRetune);
+        live.forEach((voice) => {
+            voice.seqId = seqId;
+            voice.releasing = false;
+            pulseWavetableSeqGates(voice, when);
+            triggerVoiceAmp(voice, when, { peakScale: accentScale, gateOffAt: closeGate ? offAt : null, duck: !!pulseRatch });
+            if (closeGate) scheduleSeqGateClose(voice, offAt, { tau: ampCloseTau, closeWt });
+        });
+        if (!live.length) return;
+        triggerSharedFilterEnvelope(when, { skipClose: !closeGate });
+        if (closeGate) scheduleSeqFilterGateClose(offAt, filtCloseTau);
+        triggerPolyNoiseEnv(when);
+        state.keyboardVoiceActive = true;
+        return;
+    }
+
     const existing = seqFingerLiveVoices(finger);
     const reusable = existing.filter(voiceCanRetune);
     const keepN = Math.min(reusable.length, nVoices);
@@ -1380,30 +1577,55 @@ export function schedulePolySeqVoicing({
         stealUntilFree(Math.max(0, nVoices - keepN), finger, when);
     }
 
-    hideLogoOverlay();
+    const applyPitch = (voice, pair, cents, reusedVoice) => {
+        const sounding = pair.to;
+        const fromSemi = pair.from;
+        if (doGliss && !pair.same) {
+            if (reusedVoice) retuneVoiceStackGain(voice, stackCount, when, { unison: useUni });
+            linearRampVoiceToSounding(voice, fromSemi, sounding, when, glissEndTime ?? (when + gateSecN));
+            return;
+        }
+        // Main Stage slide dest: slew or hold — never retrigger Plaits, never poke stack gain.
+        if (doSlide) {
+            if (!pair.same) slewVoiceToSounding(voice, sounding, when, slideTime);
+            return;
+        }
+        if (reusedVoice) {
+            retuneVoiceOscs(voice, sounding, cents, when);
+            retuneVoiceStackGain(voice, stackCount, when, { unison: useUni });
+        }
+    };
 
-    const startOne = (voice, sounding, cents, interval, slide) => {
+    const startOne = (voice, pair, cents) => {
+        const sounding = pair.to;
         voice.semi = sounding;
         voice.finger = finger;
-        voice.chordInterval = interval;
+        voice.chordInterval = pair.interval;
         voice.age = ++allocAge;
         voice.sequenced = true;
         voice.seqId = seqId;
         voice.engineGen = engineGen ?? state.seqEngineGeneration;
-        const spawnPitch = (slide && slideFromSounding != null) ? slideFromSounding : sounding;
-        const doRetune = reusedSet.has(voice) && voiceCanRetune(voice);
-        if (doRetune) {
-            retuneVoiceOscs(voice, spawnPitch, cents, when);
-            retuneVoiceStackGain(voice, stackCount, when);
-            if (slide && slideFromSounding != null) {
-                slewVoiceToSounding(voice, sounding, when, slideTime);
+        const reusedVoice = reusedSet.has(voice) && voiceCanRetune(voice);
+        const spawnPitch = (doSlide || doGliss) ? pair.from : sounding;
+        if (reusedVoice) {
+            if (pulseRatch && !doSlide && !doGliss) {
+                setVoiceOscFrequencies(voice, sounding, cents, when);
+                retuneVoiceStackGain(voice, stackCount, when, { unison: useUni });
+                pulseWavetableSeqGates(voice, when);
+            } else if (!doSlide && !doGliss) {
+                retuneVoiceOscs(voice, sounding, cents, when);
+                retuneVoiceStackGain(voice, stackCount, when, { unison: useUni });
+            } else {
+                applyPitch(voice, pair, cents, true);
             }
-            triggerVoiceAmp(voice, when, { peakScale: accentScale, gateOffAt: legato ? null : offAt });
-            if (!legato) scheduleSeqGateClose(voice, offAt);
+            if (!slideThisStep) {
+                triggerVoiceAmp(voice, when, { peakScale: accentScale, gateOffAt: closeGate ? offAt : null, duck: !!pulseRatch });
+            }
+            if (closeGate) scheduleSeqGateClose(voice, offAt, { tau: ampCloseTau, closeWt });
             return true;
         }
         if (voice.oscs.length) stopVoiceOscs(voice, when);
-        const ok = spawnVoiceOscs(voice, spawnPitch, cents, when, { stackCount, sequenced: true });
+        const ok = spawnVoiceOscs(voice, spawnPitch, cents, when, { stackCount, sequenced: true, unison: useUni });
         if (!ok) {
             voice.semi = null;
             voice.finger = null;
@@ -1411,37 +1633,47 @@ export function schedulePolySeqVoicing({
             voice.seqId = 0;
             return false;
         }
-        if (slide && slideFromSounding != null) {
-            slewVoiceToSounding(voice, sounding, when, slideTime);
-        }
-        triggerVoiceAmp(voice, when, { peakScale: accentScale, gateOffAt: legato ? null : offAt });
-        if (!legato) scheduleSeqGateClose(voice, offAt);
+        applyPitch(voice, pair, cents, false);
+        triggerVoiceAmp(voice, when, { peakScale: accentScale, gateOffAt: closeGate ? offAt : null, duck: !!pulseRatch });
+        if (closeGate) scheduleSeqGateClose(voice, offAt, { tau: ampCloseTau, closeWt });
         return true;
+    };
+
+    const pairAt = (i) => {
+        if (slidePairs) return slidePairs[i];
+        if (glissPairs) return glissPairs[Math.min(i, glissPairs.length - 1)];
+        return {
+            from: soundingRoot + ivs[Math.min(i, ivs.length - 1)],
+            to: soundingRoot + ivs[Math.min(i, ivs.length - 1)],
+            interval: ivs[Math.min(i, ivs.length - 1)],
+            same: true,
+        };
     };
 
     let any = false;
     if (useUni) {
+        const base = pairAt(0);
         for (let k = 0; k < POLY_VOICE_COUNT; k++) {
             const voice = reused[k] || voices.find((v) => v.semi == null) || allocVoice();
             if (!voice) break;
             const cents = unisonCents(k, POLY_VOICE_COUNT, spread);
-            if (startOne(voice, soundingRoot, cents, 0, k === 0)) any = true;
+            if (startOne(voice, { ...base, interval: 0 }, cents)) any = true;
         }
     } else {
-        for (let i = 0; i < ivs.length; i++) {
+        for (let i = 0; i < nVoices; i++) {
             const voice = reused[i] || voices.find((v) => v.semi == null) || allocVoice();
             if (!voice) break;
-            const iv = ivs[i];
-            const sounding = soundingRoot + iv;
-            const slide = i === 0 && slideFromSounding != null;
-            if (startOne(voice, sounding, 0, iv, slide)) any = true;
+            if (startOne(voice, pairAt(i), 0)) any = true;
         }
     }
 
     if (!any) return;
-    triggerSharedFilterEnvelope(when, { skipClose });
-    if (!legato) scheduleSeqFilterGateClose(offAt);
-    triggerPolyNoiseEnv(when);
+    const retriggerFilter = !slideThisStep || keepN === 0;
+    if (retriggerFilter) {
+        triggerSharedFilterEnvelope(when, { skipClose: skipClose || holdGate });
+    }
+    if (closeGate) scheduleSeqFilterGateClose(offAt, filtCloseTau);
+    if (!slideThisStep) triggerPolyNoiseEnv(when);
     state.keyboardVoiceActive = true;
 }
 
@@ -1485,6 +1717,56 @@ export function forcePolyAllOff({ silent = false } = {}) {
         showLogoOverlay(0);
     }
     if (!silent && !state.isPlaying) syncPolyModeUI();
+}
+
+/**
+ * Move one finger's live voices to a new key without retriggering envelopes.
+ * `voice.semi` stays the cell key (not the sounding pitch). Chord intervals
+ * stay put, so a chord-memory stack transposes as a shape.
+ * No polyNoteOn fallback: a silent Poly Uni key has no voices, and note-on
+ * would forcePolyAllOff the stack that is actually sounding.
+ * @returns {boolean} true when at least one voice was ramped
+ */
+export function glidePolyFinger(fromSemi, toSemi, soundingRoot) {
+    if (!state.audioContext) return false;
+    if (!Number.isFinite(fromSemi) || !Number.isFinite(toSemi) || !Number.isFinite(soundingRoot)) {
+        return false;
+    }
+    const owned = voices.filter((v) => (
+        v.semi != null && !v.releasing && fingerOf(v) === fromSemi
+    ));
+    if (!owned.length) return false;
+
+    const now = state.audioContext.currentTime;
+    owned.forEach((voice) => {
+        const sounding = soundingRoot + (voice.chordInterval || 0);
+        const freqs = [];
+        voice.oscs.forEach((osc) => {
+            const baseFreq = Math.max(20, semitonesToFrequency(sounding, osc.oscIndex));
+            osc.polyBaseFreq = baseFreq;
+            freqs.push(baseFreq);
+            const targetHz = Math.max(20, applyUnisonCents(bentFrequency(baseFreq), osc.unisonCents || 0));
+            try {
+                // Read before cancel. cancelScheduledValues snaps .value back to
+                // the previous setValueAtTime, so a fast slide never leaves the first key.
+                // Plain cancel + set, not cancelAndHoldAtTime: Safari has left the
+                // param stuck after a hold, so a slide moves the lights but not the pitch.
+                const freq = osc.frequency;
+                const live = Math.max(20, freq.value || targetHz);
+                freq.cancelScheduledValues(now);
+                freq.setValueAtTime(live, now);
+                if (Math.abs(live - targetHz) > 0.01) {
+                    freq.exponentialRampToValueAtTime(targetHz, now + GLIDE_RAMP);
+                } else {
+                    freq.setValueAtTime(targetHz, now);
+                }
+            } catch (_) { /* ignore */ }
+        });
+        voice.baseFreqs = freqs;
+        voice.semi = toSemi;
+        voice.finger = toSemi;
+    });
+    return true;
 }
 
 /** Retune live poly oscs after pitch bend changes. */
@@ -1918,6 +2200,7 @@ export function syncMultitudesPolyLocks(on) {
     if (input) {
         input.disabled = !state.ringModEnabled || !!state.keyboardPoly || !!on;
     }
+    syncPolyUnusedOscModLock();
 }
 
 export function togglePolyMode() {

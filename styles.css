@@ -23,6 +23,15 @@ html {
         overflow: hidden;
         height: 100%;
         height: 100dvh;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+    }
+    /* iOS Safari ignores parent-only user-select on long-press. */
+    body * {
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
     }
     h1.sr-only,
     .sr-only {
@@ -677,7 +686,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 12px;
         font-weight: normal;
-        display: block;
+        display: table;
         width: fit-content;
         margin: 0 auto;     /* Center on the border line */
     }
@@ -1014,7 +1023,6 @@ html {
         width: 100%;
         max-width: none;
         margin: 0 0 25px;
-        padding: 6px 6px 8px;
         border: 1px solid #00aa00;
         border-radius: 5px;
         box-sizing: border-box;
@@ -1038,7 +1046,7 @@ html {
         align-items: stretch;
         gap: 8px;
         width: 100%;
-        padding-top: 8px;
+        padding-top: 6px;
         box-sizing: border-box;
     }
     .midi-fieldset-body.hidden,
@@ -1184,7 +1192,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1213,7 +1221,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1242,7 +1250,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1282,7 +1290,7 @@ html {
         padding: 0 5px;
         font-size: 14px;
         font-weight: normal;
-        display: block;
+        display: table;
         width: fit-content;
         margin: 0 auto;
     }
@@ -1314,7 +1322,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1342,7 +1350,7 @@ html {
         padding: 0 5px;
         font-size: 14px;
         font-weight: normal;
-        display: block;
+        display: table;
         width: fit-content;
         margin: 0 auto;
     }
@@ -1370,7 +1378,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1399,7 +1407,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1428,7 +1436,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1457,7 +1465,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1484,7 +1492,7 @@ html {
         padding: 0 5px;
         font-size: 14px;
         font-weight: normal;
-        display: block;
+        display: table;
         width: fit-content;
         margin: 0 auto;
     }
@@ -1748,6 +1756,11 @@ html {
         outline: 1px solid #00ff00;
         outline-offset: 1px;
     }
+    .osc4-model-select optgroup {
+        color: #00aa00;
+        background: #111;
+        font-style: normal;
+    }
     .osc1-group .osc4-model-label {
         color: #aaa;
     }
@@ -1812,7 +1825,7 @@ html {
         padding: 0 5px;
         font-size: 14px;
         font-weight: normal;
-        display: block;
+        display: table;
         width: fit-content;
         margin: 0 auto;
     }
@@ -1843,7 +1856,7 @@ html {
         padding: 0 5px;
         font-size: 14px;
         font-weight: normal;
-        display: block;
+        display: table;
         width: fit-content;
         margin: 0 auto;
     }
@@ -1871,7 +1884,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1900,7 +1913,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1929,7 +1942,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -1958,7 +1971,7 @@ html {
         padding: 0 5px;     /* Padding on left/right creates the border gap */
         font-size: 14px;    /* Made font smaller */
         font-weight: normal;/* Regular font weight */
-        display: block;     /* Make it a block element */
+        display: table;
         width: fit-content; /* Width based on content */
         margin: 0 auto;     /* Center horizontally */
     }
@@ -2090,7 +2103,6 @@ html {
     width: 100%;
     max-width: none;
     margin: 0;
-    padding: 6px 6px 8px;
     border: 1px solid #00aa00;
     border-radius: 5px;
     box-sizing: border-box;
@@ -2141,6 +2153,7 @@ html {
     line-height: 1;
 }
 .keyboard-section.keyboard-off #chromaticKeyboardPanel,
+.keyboard-section.keyboard-off #chromaticKeyboardScroller,
 .keyboard-section.keyboard-off #computerKeyboardPanel,
 .keyboard-section.keyboard-off #chromaticSpaceBarRow,
 .keyboard-section.keyboard-off .computer-keyboard-toggle-row {
@@ -2245,10 +2258,10 @@ html {
 .keyboard-section .keyboard-write-fieldset > legend,
 .keyboard-section .keyboard-arp-panel > legend,
 .keyboard-section .keyboard-mod-matrix > legend,
-.keyboard-section .keyboard-scale-fieldset > .collapsible-legend,
 .midi-fieldset > .collapsible-legend {
     --hex-h: 20px;
     --field-border: 1px;
+    display: table;
     padding: 0;
     width: fit-content;
     margin-left: auto;
@@ -2261,13 +2274,26 @@ html {
     position: relative;
     z-index: 1;
 }
+.keyboard-section .keyboard-transport-fieldset,
+.keyboard-section .keyboard-write-fieldset,
+.keyboard-section .keyboard-arp-panel,
+.keyboard-section .keyboard-mod-matrix,
+.keyboard-section .berlin-row,
+.keyboard-section .berlin-lane-select {
+    text-align: left;
+}
+.keyboard-section .keyboard-transport-fieldset > legend,
+.keyboard-section .keyboard-write-fieldset > legend,
 .keyboard-section .keyboard-arp-panel > legend,
 .keyboard-section .keyboard-mod-matrix > legend,
-.keyboard-section .keyboard-transport-fieldset > legend,
-.keyboard-section .keyboard-write-fieldset > legend {
+.keyboard-section .berlin-row > legend,
+.keyboard-section .berlin-lane-select > legend {
     margin-left: 10px;
     margin-right: 0;
+    margin-inline: 10px 0;
     align-self: flex-start;
+    justify-self: start;
+    text-align: left;
 }
 .keyboard-section .legend-hex {
     --hex-bg: #050805;
@@ -2320,6 +2346,22 @@ html {
     color: #00ffff;
     outline: none;
 }
+/*
+ * Hex legends are 20px tall and centered on the 1px top stroke, so they
+ * hang ~10px into the fieldset. Inner padding must clear that badge and
+ * keep knobs/sliders off the frame on the other sides.
+ */
+.keyboard-section fieldset:has(> legend .legend-hex):not(.berlin-row),
+.midi-fieldset {
+    --hex-field-pad-top: 18px;
+    --hex-field-pad-x: 12px;
+    --hex-field-pad-bottom: 12px;
+    padding: var(--hex-field-pad-top) var(--hex-field-pad-x) var(--hex-field-pad-bottom);
+}
+.keyboard-section fieldset:has(> legend .legend-hex).collapsed,
+.midi-fieldset.collapsed {
+    padding-bottom: 0;
+}
 .keyboard-controls-body {
     display: flex;
     flex-direction: column;
@@ -2334,7 +2376,7 @@ html {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding-top: 4px;
+    padding-top: 6px;
     box-sizing: border-box;
 }
 .keyboard-arp-fieldset {
@@ -2530,6 +2572,23 @@ html {
     border: 1px solid #00aa00;
     border-style: solid;
 }
+/*
+ * Safari ignores margin:auto on the default <legend> box, so titles
+ * mix left and center. display:table shrink-wraps and honors auto
+ * margins in Chrome and Safari without losing the border-gap.
+ */
+fieldset > legend {
+    display: table;
+    float: none;
+    margin-inline: auto;
+    text-align: center;
+}
+/* Classic Safari: legend alignment follows the fieldset's text-align */
+@supports (font: -apple-system-body) {
+    fieldset {
+        text-align: center;
+    }
+}
 .keyboard-section fieldset > legend {
     color: #00aa00;
     font-family: 'Michroma', sans-serif;
@@ -2568,6 +2627,74 @@ html {
 }
 .chromatic-spacebar-row[hidden] {
     display: none !important;
+}
+/*
+ * Phone browsers paint overlay scrollbars that fade away and sit on the keys.
+ * This bar stays put between the piano and the spacebar so a drag never
+ * lands on a key. Desktop keeps the native scrollbar; this stays hidden.
+ */
+.chromatic-keyboard-scroller {
+    display: none;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    padding: 8px 10px 4px;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.chromatic-keyboard-scroller-track {
+    position: relative;
+    height: 44px;
+    margin: 0 6%;
+    touch-action: pan-y;
+    cursor: grab;
+}
+.chromatic-keyboard-scroller.is-dragging .chromatic-keyboard-scroller-track {
+    cursor: grabbing;
+}
+.chromatic-keyboard-scroller-track::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 14px;
+    transform: translateY(-50%);
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 7px;
+    pointer-events: none;
+}
+.chromatic-keyboard-scroller-thumb {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 18px;
+    min-width: 56px;
+    transform: translateY(-50%);
+    border-radius: 9px;
+    background: #00aa00;
+    border: none;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+.chromatic-keyboard-scroller.is-dragging .chromatic-keyboard-scroller-thumb {
+    background: #00ff00;
+}
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    .chromatic-keyboard-panel {
+        padding-bottom: 0;
+        scrollbar-width: none;
+    }
+    .chromatic-keyboard-panel::-webkit-scrollbar {
+        display: none;
+        height: 0;
+    }
+    .chromatic-keyboard-scroller:not([hidden]) {
+        display: block;
+    }
 }
 .keyboard-section .chromatic-spacebar-row {
     --ckb-key-size: 56px;
@@ -2630,7 +2757,6 @@ html {
     width: 100%;
     min-width: 0;
     margin: 0;
-    padding: 0;
     border: 1px solid #00aa00;
     border-radius: 5px;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
@@ -2639,51 +2765,9 @@ html {
     overflow: visible;
 }
 .keyboard-arp-panel > legend .legend-hex,
-.keyboard-mod-matrix > legend .legend-hex,
-.keyboard-scale-fieldset > legend .legend-hex {
+.keyboard-mod-matrix > legend .legend-hex {
     /* Match panel top fill so the hex sits cleanly on the border */
     --hex-bg: #1a1a1a;
-}
-.keyboard-scale-fieldset {
-    /* Full-width sibling below Tuning — hex legend sits on the top border */
-    display: block;
-    position: relative;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    margin: 0;
-    padding: 0;
-    border: 1px solid #00aa00;
-    border-radius: 5px;
-    background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.15);
-    box-sizing: border-box;
-    overflow: visible;
-}
-.keyboard-scale-fieldset-body {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 8px 10px 10px;
-    box-sizing: border-box;
-}
-.keyboard-scale-fieldset-body.hidden,
-.keyboard-scale-fieldset-body[hidden] {
-    display: none;
-}
-.keyboard-scale-fieldset-body .keyboard-tuning-scale-row {
-    width: max-content;
-    max-width: 100%;
-    justify-content: center;
-}
-.keyboard-scale-fieldset-body .keyboard-scale-select {
-    width: auto;
-    min-width: 12rem;
-    max-width: 18rem;
 }
 .keyboard-arp-panel-body {
     display: flex;
@@ -2692,7 +2776,7 @@ html {
     justify-content: center;
     gap: 6px;
     width: 100%;
-    padding: 8px 6px 6px;
+    padding: 6px 8px 8px;
     box-sizing: border-box;
 }
 .keyboard-arp-panel-body .keyboard-toolbar-btn {
@@ -2724,9 +2808,11 @@ html {
 
 /* --- Reusable collapsible fieldset (legend + arrow) --- */
 .collapsible-legend {
+    display: table;
     padding: 0;
     margin: 0 auto;
     width: fit-content;
+    text-align: center;
 }
 .collapsible-toggle {
     display: inline-flex;
@@ -2789,7 +2875,206 @@ html {
     display: none;
 }
 
+/* Full Screen / Tabbed — drum analog/digital size, equal halves, seam centered */
+.keyboard-view-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    width: max-content;
+    margin: 8px auto 0;
+}
+.keyboard-view-switch .kb-step-btn {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    padding: 3px 7px;
+    font-size: 7px;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+    margin: 0;
+    white-space: nowrap;
+    text-align: center;
+    justify-content: center;
+}
+.keyboard-view-switch .kb-step-btn:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right-width: 0;
+}
+.keyboard-view-switch .kb-step-btn:last-child {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/*
+ * Folder tabs for Steps / Synthesizer / Effects / Mixer — top half of the
+ * legend hex (same slant angle), open at the bottom so the active tab
+ * flows into the panel's top border.
+ */
+.keyboard-tab-strip {
+    --folder-gap: var(--kb-knobs-gap, 8px);
+    --field-border: 1px;
+    --tab-field-pad-x: 12px; /* = fieldset --hex-field-pad-x */
+    --tab-legend-indent: 10px; /* = left-aligned legend margin (Sequencer, Step Input) */
+    display: none;
+    align-items: flex-end;
+    gap: 3px;
+    padding: 0 10px 0 calc(var(--field-border) + var(--tab-field-pad-x) + var(--tab-legend-indent));
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 2;
+}
+body.view-tabbed .keyboard-tab-strip {
+    display: flex;
+    /* Cancel the flex gap and overlap the panel's top stroke */
+    margin-bottom: calc(-1 * var(--folder-gap) - var(--field-border));
+}
+.keyboard-tab {
+    --tab-h: 20px;
+    --tab-cut: 19.74px; /* 2 × legend --hex-cut: half of the legend hex at 2× height */
+    --tab-border: 1.5px;
+    --tab-slant-len: 28.1px; /* sqrt(H^2 + C^2) */
+    --tab-stroke: #00aa00;
+    --tab-bg: #050805;
+    --tab-inner-bottom-x: calc(var(--tab-border) * var(--tab-slant-len) / var(--tab-h));
+    --tab-inner-top-x: calc(
+        (var(--tab-cut) * (var(--tab-h) - var(--tab-border))
+            + var(--tab-border) * var(--tab-slant-len))
+        / var(--tab-h)
+    );
+    /* Inactive tabs keep the panel stroke visible along their base */
+    --tab-inner-bottom-y: calc(100% - var(--field-border));
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    isolation: isolate;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--tab-h);
+    margin: 0;
+    padding: 1px calc(var(--tab-cut) + 4px) 0;
+    border: none;
+    background: transparent;
+    box-sizing: border-box;
+    color: #00aa00;
+    font-family: "changeling-neo", sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    line-height: 1;
+    cursor: pointer;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+.keyboard-tab::before,
+.keyboard-tab::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+.keyboard-tab::before {
+    background: var(--tab-stroke);
+    clip-path: polygon(
+        var(--tab-cut) 0%,
+        calc(100% - var(--tab-cut)) 0%,
+        100% 100%,
+        0% 100%
+    );
+}
+.keyboard-tab::after {
+    background: var(--tab-bg);
+    clip-path: polygon(
+        var(--tab-inner-top-x) var(--tab-border),
+        calc(100% - var(--tab-inner-top-x)) var(--tab-border),
+        calc(100% - var(--tab-inner-bottom-x)) var(--tab-inner-bottom-y),
+        var(--tab-inner-bottom-x) var(--tab-inner-bottom-y)
+    );
+}
+.keyboard-tab:hover,
+.keyboard-tab:focus-visible {
+    --tab-stroke: #00ff00;
+    color: #00ff00;
+}
+.keyboard-tab.active {
+    --tab-inner-bottom-y: 100%; /* punch through the panel stroke: tab + panel read as one */
+    color: #00ff00;
+    text-shadow: 0 0 2px #00ff00, 0 0 4px rgba(0, 255, 0, 0.35);
+    z-index: 1;
+}
+.keyboard-tab.active:hover,
+.keyboard-tab.active:focus-visible {
+    --tab-stroke: #00aa00;
+}
+/* Reserved on step input / automation so the label does not jump when the dot appears.
+   Shown by body.write-mode-on / body.automation-mode-active. */
+.keyboard-tab-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 4px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    pointer-events: none;
+    visibility: hidden;
+    opacity: var(--kb-rec-blink);
+}
+body.write-mode-on #tabStepInput .keyboard-tab-dot {
+    visibility: visible;
+    background: #ff0000;
+    box-shadow: 0 0 4px rgba(255, 0, 0, 0.65);
+}
+body.automation-mode-active #tabAutomation .keyboard-tab-dot {
+    visibility: visible;
+    background: #ff00ff;
+    box-shadow: 0 0 4px rgba(255, 0, 255, 0.65);
+}
+.kb-tab-hidden,
+body.view-tabbed #keyboardXyTuningFieldset {
+    display: none !important;
+}
+/* Folder (tabs + panels) is one block; everything else stays outside it.
+   Panels can sit before the strip in the DOM, so flex order — not sibling
+   position — places the strip, then the tab panels, then the rest.
+   The repeated .view-tabbed beats the ~ * rule. */
+body.view-tabbed .keyboard-filter-knobs > #keyboardTabStrip ~ * {
+    order: 3;
+}
+body.view-tabbed .keyboard-filter-knobs > #keyboardTabStrip {
+    order: 1;
+}
+body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardStepsFieldset,
+body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardSynthFieldset,
+body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardEffectsFieldset,
+body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardMixerFieldset {
+    order: 2;
+}
+body.view-tabbed #keyboardStepsFieldset > .collapsible-legend,
+body.view-tabbed #keyboardSynthFieldset > .collapsible-legend,
+body.view-tabbed #keyboardEffectsFieldset > .collapsible-legend,
+body.view-tabbed #keyboardMixerFieldset > .collapsible-legend {
+    display: none;
+}
+body.view-tabbed #keyboardStepsFieldset,
+body.view-tabbed #keyboardSynthFieldset,
+body.view-tabbed #keyboardEffectsFieldset,
+body.view-tabbed #keyboardMixerFieldset {
+    --hex-field-pad-top: 10px;
+}
+
 @media (min-width: 769px) {
+    body.view-tabbed .keyboard-tab-strip--mobile {
+        display: none;
+    }
     .collapsible-mobile-only > .collapsible-legend .collapsible-arrow {
         display: none;
     }
@@ -2812,7 +3097,6 @@ html {
 .keyboard-xy-fieldset,
 .keyboard-controls-fieldset {
     margin: 0;
-    padding: 6px 6px 8px;
     border: 1px solid #00aa00;
     border-radius: 5px; /* Steps reference — keep all top fieldsets identical */
     min-width: 0;
@@ -2827,7 +3111,6 @@ html {
 .keyboard-automation-fieldset > .collapsible-panel,
 .keyboard-synth-fieldset > .collapsible-panel,
 .keyboard-xy-fieldset > .collapsible-panel,
-.keyboard-scale-fieldset > .collapsible-panel,
 .keyboard-controls-fieldset > .collapsible-panel {
     overflow: hidden;
     max-width: 100%;
@@ -2843,12 +3126,8 @@ html {
 .keyboard-xy-fieldset.collapsed,
 .keyboard-controls-fieldset.collapsed,
 .keyboard-arp-panel.collapsed,
-.keyboard-mod-matrix.collapsed,
-.keyboard-scale-fieldset.collapsed {
+.keyboard-mod-matrix.collapsed {
     padding-bottom: 0;
-}
-.keyboard-scale-fieldset.collapsed {
-    padding-top: 6px;
 }
 .keyboard-tuning-body {
     display: flex;
@@ -2856,7 +3135,7 @@ html {
     align-items: stretch;
     gap: 8px;
     width: 100%;
-    padding-top: 4px;
+    padding: 6px 8px 4px;
     box-sizing: border-box;
 }
 .keyboard-tuning-row {
@@ -2902,9 +3181,12 @@ html {
 }
 .keyboard-tuning-scale-row {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    gap: 8px;
+    width: max-content;
+    max-width: 100%;
 }
 .keyboard-tuning-right .keyboard-pattern-octave {
     padding: 0;
@@ -2945,7 +3227,7 @@ html {
     }
 }
 .keyboard-automation-panel {
-    padding-top: 6px;
+    padding: 6px 8px 4px;
 }
 .keyboard-automation-controls {
     display: flex;
@@ -3137,7 +3419,7 @@ html {
     display: block;
 }
 .keyboard-xy-panel {
-    padding-top: 4px;
+    padding: 6px 8px 4px;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -3157,7 +3439,7 @@ html {
     box-sizing: border-box;
 }
 .keyboard-synth-panel {
-    padding-top: 4px;
+    padding: 6px 8px 4px;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -3754,7 +4036,7 @@ body.acid-mode .berlin-step-ratch {
 }
 
 .keyboard-effects-panel {
-    padding: 8px 8px 10px;
+    padding: 10px 10px 12px;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -4475,7 +4757,10 @@ body.berlin-mode .pattern-bank-select {
     font-size: 8px;
     letter-spacing: 0.06em;
     width: fit-content;
-    margin: 0 auto;
+    margin-left: 10px;
+    margin-right: 0;
+    margin-inline: 10px 0;
+    text-align: left;
 }
 .berlin-lane-select .berlin-count {
     display: flex;
@@ -4811,7 +5096,7 @@ body.berlin-mode .keyboard-section fieldset.berlin-dream-frame {
 }
 .berlin-row {
     margin: 0;
-    padding: 2px 6px 6px;
+    padding: 10px 8px 8px;
     border-radius: 5px;
     box-shadow: inset 0 0 12px color-mix(in srgb, var(--berlin-color, #00aa00) 12%, transparent);
     min-width: 0;
@@ -4873,16 +5158,19 @@ body.berlin-mode .keyboard-section fieldset.berlin-dream-frame {
 .berlin-row legend {
     --hex-h: 20px;
     --field-border: 1px;
+    display: table;
     padding: 0;
     width: fit-content;
     margin-left: 10px;
     margin-right: 0;
+    margin-inline: 10px 0;
     margin-top: calc(var(--hex-h) / -2 + var(--field-border) / 2);
     margin-bottom: calc(var(--hex-h) / -2 + var(--field-border) / 2);
     line-height: 0;
     overflow: visible;
     position: relative;
     z-index: 1;
+    text-align: left;
 }
 .berlin-row legend .legend-hex.berlin-row-enable {
     --hex-stroke: var(--berlin-color, #00aa00);
@@ -5245,7 +5533,7 @@ body.berlin-mode .berlin-mode-brand {
 }
 .berlin-mode-brand-lockup {
     display: block;
-    width: 220px; /* match .note-vfd-glass */
+    width: 251px; /* match .note-vfd-glass */
     /* viewBox 122.14 × 30.43 */
     aspect-ratio: 122.14 / 30.43;
     height: auto;
@@ -5386,10 +5674,11 @@ body.berlin-mode .berlin-mode-brand {
 
 /* Performance controls: 2 columns (Transport | Write), collapsible sections below */
 .keyboard-filter-knobs {
+    --kb-knobs-gap: 8px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: var(--kb-knobs-gap);
     margin-bottom: 6px;
     padding: 0 4px;
     width: 100%;
@@ -5410,7 +5699,6 @@ body.berlin-mode .berlin-mode-brand {
     width: 100%;
     overflow: visible;
     box-sizing: border-box;
-    padding: 6px 8px 8px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -5451,6 +5739,7 @@ body.berlin-mode .berlin-mode-brand {
     gap: 8px;
     width: 100%;
     min-width: 0;
+    padding: 6px 8px 4px;
     box-sizing: border-box;
 }
 .keyboard-steps-collapsible-panel.hidden {
@@ -5478,7 +5767,7 @@ body.berlin-mode .berlin-mode-brand {
     box-sizing: border-box;
 }
 
-/* --- Note readout: fixed 12-cell 5×7 matrix VFD (not the 16-seg DISP) --- */
+/* --- Note readout: fixed 14-cell 5×7 matrix VFD (not the 16-seg DISP) --- */
 .note-vfd {
     /* Playing / idle: green (matches former #00ff00 readout) */
     --note-vfd-on: #00ff00;
@@ -5534,10 +5823,10 @@ canvas.vfd-glass {
     display: block;
 }
 .note-vfd-glass {
-    /* Fixed module size: 12×(5×7) cells — never grows with text length */
-    width: 220px;
+    /* Fixed module size: 14×(5×7) cells — never grows with text length */
+    width: 251px;
     height: 36px;
-    padding: 5px 8px;
+    padding: 5px 7px;
 }
 .note-vfd--preview .note-vfd-glass {
     border-color: #0c2226;
@@ -5673,8 +5962,8 @@ canvas.vfd-glass {
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    margin: 6px auto 0;
-    padding: 4px 0 2px;
+    margin: 0;
+    padding: 2px 4px 2px;
     box-sizing: border-box;
 }
 .keyboard-drum-dock-bar {
@@ -6688,6 +6977,9 @@ body.poly-mode .keyboard-effects-ringmod-field,
 body.poly-mode #ringModToggle,
 body.poly-mode #kbRingModToggle,
 body.poly-mode #kbRingModKnob,
+body.poly-mode .keyboard-mod-matrix-knob[data-param="ringFreqMod"],
+body.poly-mode .keyboard-mod-matrix-knob[data-param="osc3PitchMod"],
+body.poly-mode .keyboard-mod-matrix-knob[data-param="osc4PitchMod"],
 fieldset.control-group.unison-group.poly-classic-unison-locked #unisonToggle,
 fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 .keyboard-unison-field.poly-classic-unison-locked #kbUnisonToggle,
@@ -6906,6 +7198,13 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     line-height: 1;
     color: #00ff00;
 }
+.kb-dir-arrow {
+    display: block;
+    width: 16px;
+    height: 14px;
+    flex: 0 0 auto;
+    pointer-events: none;
+}
 .pattern-shift-control {
     display: flex;
     flex-direction: column;
@@ -6995,13 +7294,16 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     font-size: 10px;
     font-weight: normal;
     letter-spacing: 0.04em;
+    display: table;
     width: fit-content;
     margin: 0 auto;
+    text-align: center;
 }
 .keyboard-transport-fieldset > legend,
 .keyboard-write-fieldset > legend {
     margin-left: 10px;
     margin-right: 0;
+    margin-inline: 10px 0;
     align-self: flex-start;
     text-align: left;
 }
@@ -7274,7 +7576,7 @@ body.write-mode-on .keyboard-step {
     --seg-glow: 0 0 4px rgba(0, 255, 102, 0.9), 0 0 8px rgba(0, 200, 60, 0.4);
     --seg-w: 2.5px;
 }
-/* Write / Arp / Scale prompts & write cursor: cyan; playback & brand stay green.
+/* Write / Arp / Scale / STEPS preview & write cursor: cyan; playback & brand stay green.
    Must set vars on .sixteen-seg — it defines --seg-on and would shadow a parent. */
 .keyboard-step-vfd-digits.vfd-cyan .sixteen-seg {
     --seg-on: #00ffff;
@@ -7454,16 +7756,22 @@ body.write-mode-on .keyboard-step {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    align-items: center;
+    align-items: stretch;
     gap: clamp(4px, 1.4cqi, 8px);
     min-width: 0;
     width: 100%;
     box-sizing: border-box;
-    padding: clamp(4px, 1.4cqi, 8px);
+    padding: clamp(8px, 1.8cqi, 12px);
     border: none;
     background: transparent;
     box-shadow: none;
-    overflow: hidden;
+    overflow: visible;
+}
+.keyboard-mod-matrix-lfo {
+    flex: 0 1 auto;
+    min-width: 0;
+    min-inline-size: 0;
+    padding: 10px 10px 10px;
 }
 .keyboard-mod-matrix-left {
     display: flex;
@@ -7531,17 +7839,28 @@ body.write-mode-on .keyboard-step {
 .keyboard-mod-matrix-left #kbLfoRetrigger {
     min-width: 0;
 }
+.keyboard-mod-matrix-dests-field {
+    flex: 1 1 0;
+    min-width: 0;
+    min-inline-size: 0;
+    padding: 8px 8px 8px;
+}
 .keyboard-mod-matrix-dests {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(4px, 1.2cqi, 8px);
+    width: 100%;
+    min-width: 0;
+}
+.keyboard-mod-matrix-dests-row {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-auto-flow: column;
-    grid-auto-rows: auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     justify-items: center;
     align-items: end;
     gap: 0 clamp(2px, 0.8cqi, 4px);
-    flex: 1 1 0;
+    width: 100%;
     min-width: 0;
-    width: auto;
 }
 .keyboard-mod-matrix .keyboard-mod-matrix-knob {
     --mod-dial: clamp(22px, 6.8cqi, 40px);
@@ -7549,6 +7868,9 @@ body.write-mode-on .keyboard-step {
     width: 100%;
     min-width: 0;
     max-width: 56px;
+}
+.keyboard-mod-matrix-dests .keyboard-mod-matrix-knob {
+    --mod-dial: clamp(20px, 5.6cqi, 34px);
 }
 .keyboard-mod-matrix-rate .keyboard-mod-matrix-knob {
     width: auto;
@@ -7778,26 +8100,44 @@ body.write-mode-on .keyboard-step {
     justify-content: center;
 }
 .chromatic-keyboard-panel::-webkit-scrollbar,
-.keyboard-mixer-panel::-webkit-scrollbar {
+.keyboard-mixer-panel::-webkit-scrollbar,
+.ingy6-sections::-webkit-scrollbar,
+.multitudes-sections::-webkit-scrollbar,
+.keyboard-acid-strip-knobs::-webkit-scrollbar,
+.computer-keyboard-panel::-webkit-scrollbar,
+body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar {
+    width: 14px;
     height: 14px;
 }
 .chromatic-keyboard-panel::-webkit-scrollbar-track,
-.keyboard-mixer-panel::-webkit-scrollbar-track {
+.keyboard-mixer-panel::-webkit-scrollbar-track,
+.ingy6-sections::-webkit-scrollbar-track,
+.multitudes-sections::-webkit-scrollbar-track,
+.keyboard-acid-strip-knobs::-webkit-scrollbar-track,
+.computer-keyboard-panel::-webkit-scrollbar-track,
+body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-track {
     background: #111;
-    border: 1px solid #333;
     border-radius: 7px;
-    margin: 0 18%;
 }
 .chromatic-keyboard-panel::-webkit-scrollbar-thumb,
-.keyboard-mixer-panel::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom, #00cc00, #006600);
+.keyboard-mixer-panel::-webkit-scrollbar-thumb,
+.ingy6-sections::-webkit-scrollbar-thumb,
+.multitudes-sections::-webkit-scrollbar-thumb,
+.keyboard-acid-strip-knobs::-webkit-scrollbar-thumb,
+.computer-keyboard-panel::-webkit-scrollbar-thumb,
+body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb {
+    background: #00aa00;
     border-radius: 7px;
-    border: 2px solid #111;
     min-width: 24px;
 }
 .chromatic-keyboard-panel::-webkit-scrollbar-thumb:hover,
-.keyboard-mixer-panel::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(to bottom, #00ff00, #00aa00);
+.keyboard-mixer-panel::-webkit-scrollbar-thumb:hover,
+.ingy6-sections::-webkit-scrollbar-thumb:hover,
+.multitudes-sections::-webkit-scrollbar-thumb:hover,
+.keyboard-acid-strip-knobs::-webkit-scrollbar-thumb:hover,
+.computer-keyboard-panel::-webkit-scrollbar-thumb:hover,
+body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
+    background: #00ff00;
 }
 .chromatic-keyboard {
     --white-count: 52;
@@ -7834,6 +8174,18 @@ body.write-mode-on .keyboard-step {
     border-radius: 0 0 4px 4px;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+}
+/* Phone: sideways on the keys plays a run. Up and down still scrolls the page. */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    .chromatic-keyboard-panel,
+    .chromatic-keyboard,
+    .piano-key {
+        touch-action: pan-y;
+    }
+    .chromatic-keyboard-panel {
+        -webkit-overflow-scrolling: auto;
+        overscroll-behavior-x: none;
+    }
 }
 .piano-key-white {
     flex: 0 0 var(--white-key-width);
@@ -7891,6 +8243,10 @@ body.write-mode-on .keyboard-step {
 #keyboardVisibilityToggle.off {
     color: #ff0000;
 }
+#keyboardVisibilityToggle,
+.keyboard-perf-btn-slot:has(#keyboardVisibilityToggle) {
+    display: none !important;
+}
 #keyboardVisibilityToggle {
     font-size: 11px;
     min-width: 52px;
@@ -7917,8 +8273,54 @@ body.write-mode-on .keyboard-step {
         margin-left: 0;
     }
     .keyboard-filter-knobs {
-        gap: 8px;
+        --kb-knobs-gap: 8px;
         margin-bottom: 4px;
+    }
+    .keyboard-tab {
+        --tab-h: 18px;
+        --tab-cut: 12px;
+        --tab-slant-len: 21.63px; /* sqrt(H^2 + C^2) */
+        font-size: 10px;
+        padding: 1px calc(var(--tab-cut) + 1px) 0;
+    }
+    .keyboard-tab-strip {
+        --tab-field-pad-x: 10px;
+        padding-right: 0;
+        gap: 1px;
+    }
+    body.view-tabbed .keyboard-tab-strip {
+        overflow-x: auto;
+        scrollbar-color: #00aa00 #111;
+        scrollbar-width: auto;
+    }
+    /* Sequencer, then the Step Input / Scale / Automation folder, then the
+       mode toggles and the main folder. Step Input lives in .keyboard-perf-top
+       (display: contents here), so negative orders lift it past the toggles. */
+    body.view-tabbed .keyboard-perf-top {
+        display: contents;
+    }
+    body.view-tabbed .keyboard-transport-fieldset {
+        order: -3;
+    }
+    body.view-tabbed .keyboard-filter-knobs > #keyboardMobileTabStrip {
+        order: -2;
+    }
+    body.view-tabbed #keyboardWriteFieldset,
+    body.view-tabbed .keyboard-filter-knobs > #keyboardTuningFieldset,
+    body.view-tabbed .keyboard-filter-knobs > #keyboardAutomationFieldset {
+        order: -1;
+        --hex-field-pad-top: 10px;
+    }
+    body.view-tabbed #keyboardWriteFieldset > legend,
+    body.view-tabbed #keyboardTuningFieldset > .collapsible-legend,
+    body.view-tabbed #keyboardAutomationFieldset > .collapsible-legend {
+        display: none;
+    }
+    .keyboard-section fieldset:has(> legend .legend-hex):not(.berlin-row),
+    .midi-fieldset {
+        --hex-field-pad-top: 16px;
+        --hex-field-pad-x: 10px;
+        --hex-field-pad-bottom: 10px;
     }
     .keyboard-steps-fieldset,
     .keyboard-tuning-fieldset,
@@ -7927,7 +8329,6 @@ body.write-mode-on .keyboard-step {
     .keyboard-xy-fieldset,
     .keyboard-controls-fieldset {
         margin: 0;
-        padding: 4px 6px 6px;
     }
     .keyboard-synth-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -8236,7 +8637,7 @@ body.write-mode-on .keyboard-step {
         font-size: 5px;
     }
     .keyboard-filter-knobs {
-        gap: 6px;
+        --kb-knobs-gap: 6px;
     }
     .keyboard-perf-top {
         grid-template-columns: 1fr;
@@ -8540,6 +8941,8 @@ body.write-mode-on .keyboard-step {
     box-sizing: border-box;
     user-select: none;
     -webkit-user-select: none;
+    scrollbar-color: #00aa00 #111;
+    scrollbar-width: auto;
 }
 .computer-keyboard-case {
     --ckb-key-size: 48px;
@@ -9176,6 +9579,12 @@ body.poly-mode {
     inset: 0;
     width: 100%;
     height: 100%;
+    /* Vertical range inputs report a ~100px min track. Unclamped, that
+       spills out of the 22px slot and widens the page on a phone. */
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
     margin: 0;
     opacity: 0;
     /* Pointer drag is handled on .ingy6-fader-slot (native vertical range is flaky) */
@@ -9516,31 +9925,82 @@ body.poly-mode {
     background-color: #00ff00;
 }
 
+/*
+ * Phone / narrow tablet: keep the Juno strip and scroll it sideways.
+ * Section widths are the controls' real size — the old fixed widths were
+ * narrower than the faders, so sections spilled into each other.
+ * Logo gets its own row so it does not cover the mode buttons.
+ */
 @media (max-width: 900px) {
     .ingy6-panel-shell {
-        --ingy6-logo-w: min(calc(32px * 426.46 / 64.38), 72vw);
+        --ingy6-logo-w: min(148px, 64%);
     }
     .ingy6-brand {
-        min-height: 40px;
-        padding-top: 8px;
-        padding-bottom: 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        gap: 6px;
+        min-height: 0;
+        padding: 8px 2px 8px;
+    }
+    .ingy6-brand-left,
+    .ingy6-brand-center {
+        grid-column: auto;
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+    }
+    .ingy6-brand-left:empty {
+        display: none;
+    }
+    .ingy6-logo {
+        grid-column: auto;
+        justify-self: auto;
+        align-self: flex-end;
+        width: var(--ingy6-logo-w);
+        max-width: 100%;
+    }
+    .ingy6-sublogo {
+        max-width: 100%;
     }
     .ingy6-sections {
         display: flex;
+        flex-wrap: nowrap;
         overflow-x: auto;
+        overflow-y: hidden;
         justify-content: flex-start;
-        padding-bottom: 4px;
+        align-items: stretch;
+        padding-bottom: 6px;
         -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        scrollbar-color: #00aa00 #111;
+        scrollbar-width: thin;
+        touch-action: pan-x pan-y;
     }
     .ingy6-section {
         flex: 0 0 auto;
+        width: max-content;
+        min-width: 0;
+        max-width: none;
     }
-    .ingy6-section--dco { width: 200px; }
-    .ingy6-section--hpf { width: 72px; }
-    .ingy6-section--vcf { width: 180px; }
-    .ingy6-section--vca { width: 110px; }
-    .ingy6-section--env { width: 200px; }
-    .ingy6-section--chorus { width: 130px; }
+    .ingy6-section--dco { min-width: 228px; }
+    .ingy6-section--hpf { min-width: 88px; }
+    .ingy6-section--vcf { min-width: 248px; }
+    .ingy6-section--vca { min-width: 148px; }
+    .ingy6-section--env { min-width: 248px; }
+    .ingy6-section--chorus { min-width: 140px; }
+    .ingy6-section--hpf .ingy6-fader,
+    .ingy6-section--vca .ingy6-fader {
+        flex: 0 0 auto;
+        width: max-content;
+        max-width: none;
+    }
+    .ingy6-section--vcf .ingy6-fader-row {
+        width: max-content;
+        max-width: none;
+        grid-template-columns: auto auto auto;
+    }
     .ingy6-fader {
         grid-template-rows: auto 100px;
     }
@@ -9549,6 +10009,8 @@ body.poly-mode {
     }
     .ingy6-section-body {
         min-height: 128px;
+        width: max-content;
+        min-width: 100%;
     }
 }
 
@@ -9565,10 +10027,13 @@ body.multitudes-poly-lock .keyboard-effects-ringmod-field,
 body.multitudes-poly-lock #ringModToggle,
 body.multitudes-poly-lock #kbRingModToggle,
 body.multitudes-poly-lock #kbRingModKnob,
+body.multitudes-poly-lock .keyboard-mod-matrix-knob[data-param="ringFreqMod"],
 body.multitudes-poly-lock .unison-group #unisonToggle,
 body.multitudes-poly-lock .unison-group #unisonVoices,
 body.multitudes-poly-lock #kbUnisonToggle,
-body.multitudes-poly-lock #kbUnisonVoices {
+body.multitudes-poly-lock #kbUnisonVoices,
+body.multitudes-poly-lock .keyboard-mod-matrix-knob[data-param="osc3PitchMod"],
+body.multitudes-poly-lock .keyboard-mod-matrix-knob[data-param="osc4PitchMod"] {
     opacity: 0.4;
     pointer-events: none;
 }
@@ -9873,6 +10338,11 @@ body.multitudes-mode {
     border-radius: 3px;
     padding: 4px 6px;
 }
+.mi-select optgroup {
+    color: #00aa00;
+    background: #050805;
+    font-style: normal;
+}
 .mi-toggle,
 .mi-wave-btn {
     font-family: 'DIN Pro', sans-serif;
@@ -10040,6 +10510,8 @@ body.multitudes-mode {
         justify-content: flex-start;
         padding-bottom: 6px;
         -webkit-overflow-scrolling: touch;
+        scrollbar-color: #00aa00 #111;
+        scrollbar-width: auto;
     }
     .multitudes-module {
         flex: 0 0 168px;
@@ -10486,6 +10958,33 @@ body .mixer-level::-moz-range-thumb {
     background: transparent;
     border: none;
 }
+.mixer-fader-ticks {
+    grid-column: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: calc(var(--mixer-cap-h) / 2) 0;
+    box-sizing: border-box;
+    pointer-events: none;
+    justify-self: end;
+    width: 100%;
+    min-width: 0;
+}
+.mixer-fader-tick {
+    display: block;
+    width: 4px;
+    height: 1px;
+    flex: 0 0 auto;
+    background: #00aa00;
+    opacity: 0.55;
+}
+.mixer-fader-tick--major {
+    width: 8px;
+    height: 1.5px;
+    opacity: 1;
+    background: #00cc00;
+}
 .mixer-fader-scale {
     grid-column: 3;
     display: flex;
@@ -10501,7 +11000,7 @@ body .mixer-level::-moz-range-thumb {
     min-width: 0;
     justify-self: start;
 }
-.mixer-fader-scale span:nth-child(3) {
+.mixer-fader-scale span:first-child {
     color: #00ff00;
 }
 .mixer-level-value {
@@ -10646,4 +11145,103 @@ body .mixer-level::-moz-range-thumb {
 .speech-rec-modal__actions .button:disabled {
     opacity: 0.45;
     cursor: default;
+}
+
+/* Touch / mobile value bubble — above the grabbed knob, slider, or fader. */
+.touch-readout {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 11000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    box-sizing: border-box;
+    min-width: 56px;
+    max-width: min(70vw, 240px);
+    margin: 0;
+    padding: 6px 10px 5px;
+    border: 1px solid #00ff00;
+    border-radius: 4px;
+    background: rgba(4, 10, 4, 0.96);
+    box-shadow:
+        0 0 10px rgba(0, 255, 0, 0.35),
+        inset 0 0 8px rgba(0, 255, 0, 0.12);
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+    transform-origin: center bottom;
+    transition: opacity 120ms ease, transform 120ms ease;
+    will-change: opacity, transform;
+}
+.touch-readout[hidden] {
+    display: none !important;
+}
+.touch-readout.is-visible {
+    opacity: 1;
+    transform: none;
+}
+.touch-readout--below {
+    transform-origin: center top;
+}
+.touch-readout::after {
+    content: '';
+    position: absolute;
+    left: var(--caret-x, 50%);
+    bottom: -5px;
+    width: 8px;
+    height: 8px;
+    box-sizing: border-box;
+    background: rgba(4, 10, 4, 0.96);
+    border-right: 1px solid #00ff00;
+    border-bottom: 1px solid #00ff00;
+    transform: translateX(-50%) rotate(45deg);
+}
+.touch-readout--below::after {
+    bottom: auto;
+    top: -5px;
+    border-right: none;
+    border-bottom: none;
+    border-left: 1px solid #00ff00;
+    border-top: 1px solid #00ff00;
+}
+.touch-readout-caption {
+    max-width: 100%;
+    overflow: hidden;
+    padding-top: 1px;
+    font-family: 'Michroma', sans-serif;
+    font-size: 7px;
+    line-height: 1.45;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: normal;
+    color: #00aa00;
+}
+.touch-readout-caption:empty {
+    display: none;
+}
+.touch-readout-value {
+    max-width: 60vw;
+    overflow: hidden;
+    font-family: 'Michroma', sans-serif;
+    font-size: 15px;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #00ff00;
+    text-shadow: 0 0 6px rgba(0, 255, 0, 0.55);
+}
+@media (prefers-reduced-motion: reduce) {
+    .touch-readout {
+        transform: none;
+        transition: opacity 120ms linear;
+    }
+    .touch-readout.is-visible {
+        transform: none;
+    }
 }

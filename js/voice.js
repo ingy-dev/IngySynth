@@ -1,11 +1,12 @@
 import { state } from './state.js?v=116';
-import { getNumber } from './params.js?v=14';
+import { getNumber } from './params.js?v=15';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=32';
 import { semitonesToFrequency } from './tuning.js?v=80';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=84';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=114';
-import { bentFrequency } from './pitch-bend.js?v=97';
-import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=184';
-import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=122';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=121';
+import { bentFrequency } from './pitch-bend.js?v=106';
+import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=186';
+import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=125';
 import {
     triggerAcidLiveAmp,
     triggerAcidLiveFilter,
@@ -274,6 +275,7 @@ export function noteOn(semitonesFromC) {
     spawnLiveOscillators(semitonesFromC, now, { legato });
     triggerLiveAmpEnvelope(now, { fromCurrent: legato });
     triggerLiveFilterEnvelope(now, { fromCurrent: legato });
+    retriggerLfoIfNeeded(now);
     updateNoteVisualizer(semitonesFromC);
 }
 

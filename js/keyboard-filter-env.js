@@ -3,10 +3,10 @@
 // ADSR knobs are wired in knobs.js.
 
 import { state } from './state.js?v=116';
-import { getNumber, wireToggle } from './params.js?v=14';
+import { getNumber, wireToggle } from './params.js?v=15';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=26';
-import { drawFilterADSRVisualizer } from './visualizers.js?v=114';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=35';
+import { drawFilterADSRVisualizer } from './visualizers.js?v=121';
 
 let syncToggle = () => {};
 

@@ -51,6 +51,29 @@ export function removeHeldNote(semi) {
     return true;
 }
 
+/**
+ * Slide a held key to another cell.
+ * In-place so a silent Poly Uni key does not become the newest note.
+ * If the destination is already held, only drop the source — replacing in
+ * place would duplicate pressOrder, and removeHeldNote splices one index,
+ * so the key would stay held after every finger is up.
+ */
+export function moveHeldNote(fromSemi, toSemi) {
+    if (!Number.isFinite(fromSemi) || !Number.isFinite(toSemi)) return false;
+    if (fromSemi === toSemi || !held.has(fromSemi)) return false;
+    const idx = pressOrder.indexOf(fromSemi);
+    if (held.has(toSemi)) {
+        held.delete(fromSemi);
+        if (idx >= 0) pressOrder.splice(idx, 1);
+        return true;
+    }
+    held.delete(fromSemi);
+    held.add(toSemi);
+    if (idx >= 0) pressOrder[idx] = toSemi;
+    else pressOrder.push(toSemi);
+    return true;
+}
+
 export function getHeldNotes() {
     return [...held];
 }

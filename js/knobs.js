@@ -3,12 +3,12 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=383';
+import { previewStepsOnVfd } from './sequencer.js?v=416';
 import { state } from './state.js?v=116';
-import { beginMidiLearn } from './midi-learn.js?v=6';
-import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=14';
-import { getParam, isCatalogKey } from './param-catalog.js?v=2';
-import { stepTuneBounds } from './step-tune-range.js?v=15';
+import { beginMidiLearn } from './midi-learn.js?v=7';
+import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=15';
+import { getParam, isCatalogKey } from './param-catalog.js?v=3';
+import { stepTuneBounds } from './step-tune-range.js?v=24';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -69,6 +69,7 @@ const KNOB_BINDINGS = [
     { dialId: 'kbOsc2PitchModKnob', inputId: 'osc2PitchMod' },
     { dialId: 'kbOsc3PitchModKnob', inputId: 'osc3PitchMod' },
     { dialId: 'kbOsc4PitchModKnob', inputId: 'osc4PitchMod' },
+    { dialId: 'kbRingFreqModKnob', inputId: 'ringFreqMod' },
     { dialId: 'kbOsc4HarmonicsKnob', inputId: 'osc4Harmonics', valueId: 'kbOsc4HarmonicsValue' },
     { dialId: 'kbOsc4TimbreKnob', inputId: 'osc4MorphX', valueId: 'kbOsc4TimbreValue' },
     { dialId: 'kbOsc4MorphKnob', inputId: 'osc4MorphY', valueId: 'kbOsc4MorphValue' },

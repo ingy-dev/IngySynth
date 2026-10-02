@@ -527,6 +527,20 @@ ok(
 );
 
 ok(
+    'Berlin OSC lane reuses one voice and pulses envelope',
+    (() => {
+        const start = seq.indexOf('function triggerBerlinOscLane');
+        const end = seq.indexOf('function berlinNextStepIndex');
+        const body = start >= 0 && end > start ? seq.slice(start, end) : '';
+        return /findLiveBerlinOscVoice/.test(body)
+            && /scheduleBerlinLaneEnvelope/.test(body)
+            && /pulseRatch/.test(body)
+            && /createBerlinOscVoice/.test(body)
+            && !/peakScale = 1 \/ Math\.sqrt/.test(body);
+    })(),
+);
+
+ok(
     'state.js has no ratchVoices island',
     !/ratchVoices/.test(read('js/state.js')),
 );

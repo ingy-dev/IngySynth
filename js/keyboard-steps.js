@@ -4,8 +4,8 @@
 
 import { state } from './state.js?v=116';
 import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=80';
-import { bindKnob } from './knobs.js?v=130';
-import { previewNoteVisualizer } from './visualizers.js?v=114';
+import { bindKnob } from './knobs.js?v=147';
+import { previewNoteVisualizer, soundingNotesForStep } from './visualizers.js?v=121';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import {
     click,
@@ -15,11 +15,11 @@ import {
     set,
     subscribe,
     toggle,
-} from './params.js?v=14';
+} from './params.js?v=15';
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=112';
+} from './pattern-write.js?v=123';
 import { paintAllStepChordMarkers } from './pattern-bank.js?v=16';
 import { syncRatchButton } from './step-ratch.js?v=1';
 
@@ -200,7 +200,11 @@ function wireStep(i) {
     const valueEl = document.querySelector(`.kb-step-tune-value[data-step="${i}"]`);
     if (dial) {
         bindKnob(dial, `step-slider-${i}`, null, {
-            onInteract: () => previewNoteVisualizer(getStepTotalTune(i), getStepFineCents(i)),
+            onInteract: () => previewNoteVisualizer(
+                getStepTotalTune(i),
+                getStepFineCents(i),
+                soundingNotesForStep(i),
+            ),
         });
         const updateValue = () => {
             if (valueEl) valueEl.textContent = String(getQuantizedStepTune(i));
@@ -219,7 +223,11 @@ function wireStep(i) {
             }
             set(`step-fine-${i}`, parseFloat(kbFine.value));
             syncFromStore();
-            previewNoteVisualizer(getStepTotalTune(i), getStepFineCents(i));
+            previewNoteVisualizer(
+                getStepTotalTune(i),
+                getStepFineCents(i),
+                soundingNotesForStep(i),
+            );
             if (state.keyboardWrite) syncWriteToolbarFromStep();
         });
         subscribe(`step-fine-${i}`, syncFromStore);

@@ -11,7 +11,7 @@ import {
     getParam,
     isCatalogKey,
     isStepKey,
-} from './param-catalog.js?v=2';
+} from './param-catalog.js?v=3';
 
 const subscribers = new Map();
 const lastNotified = new Map();

@@ -1,10 +1,10 @@
 // Sidechain TIME: free ms or tempo-synced beat divisions (LFO RATE pattern, shorter list).
 
 import { state } from './state.js?v=116';
-import { get, getNumber, set, subscribe, toggle } from './params.js?v=14';
-import { getParam } from './param-catalog.js?v=2';
-import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=130';
-import { beginMidiLearn } from './midi-learn.js?v=6';
+import { get, getNumber, set, subscribe, toggle } from './params.js?v=15';
+import { getParam } from './param-catalog.js?v=3';
+import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=147';
+import { beginMidiLearn } from './midi-learn.js?v=7';
 
 export const SC_SYNC_DIVISIONS = [
     { label: '1/4', beats: 1 },
@@ -75,16 +75,16 @@ export function updateScTimeReadout() {
     }
 }
 
-function pinThenRamp(param, t0, from, to, dur) {
+/**
+ * Hold the scheduled value at t0. Do not pin param.value — that is "now",
+ * and lookahead ducks then jump (crossover click into distortion).
+ * setTarget after hold continues from the real level (Acid VEG path).
+ */
+function holdParam(param, t0) {
     if (!param) return;
     try {
         if (typeof param.cancelAndHoldAtTime === 'function') param.cancelAndHoldAtTime(t0);
-        else {
-            param.cancelScheduledValues(t0);
-        }
-        param.setValueAtTime(from, t0);
-        const end = t0 + Math.max(0.001, dur);
-        param.linearRampToValueAtTime(to, end);
+        else param.cancelScheduledValues(t0);
     } catch (_) { /* ignore */ }
 }
 
@@ -98,13 +98,15 @@ export function scheduleSidechainDuck(atTime) {
     const floor = clamp(1 - depth, 0, 1);
     const release = getSidechainReleaseSec();
     const param = ducker.gain;
-    let from = 1;
-    try { from = Math.max(0, Number(param.value) || 1); } catch (_) { from = 1; }
-    pinThenRamp(param, t0, from, floor, SC_ATTACK_SEC);
-    const t1 = t0 + SC_ATTACK_SEC;
+    const attack = Math.max(0.002, SC_ATTACK_SEC);
+    const attackTau = Math.max(0.0008, attack / 3);
+    const releaseTau = Math.max(0.008, release / 3);
     try {
-        param.setValueAtTime(floor, t1);
-        param.linearRampToValueAtTime(1, t1 + release);
+        holdParam(param, t0);
+        param.setTargetAtTime(floor, t0, attackTau);
+        const t1 = t0 + attack;
+        holdParam(param, t1);
+        param.setTargetAtTime(1, t1, releaseTau);
     } catch (_) { /* ignore */ }
 }
 
@@ -115,9 +117,8 @@ export function resetSidechainDucker(atTime) {
     const t0 = atTime ?? ctx?.currentTime ?? 0;
     const param = ducker.gain;
     try {
-        if (typeof param.cancelAndHoldAtTime === 'function') param.cancelAndHoldAtTime(t0);
-        else param.cancelScheduledValues(t0);
-        param.setValueAtTime(1, t0);
+        holdParam(param, t0);
+        param.setTargetAtTime(1, t0, 0.012);
     } catch (_) {
         try { param.value = 1; } catch (__) { /* ignore */ }
     }

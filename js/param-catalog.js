@@ -5,9 +5,11 @@
 const OSC_WAVES = ['sawtooth', 'square', 'sine', 'triangle'];
 const NOTE_DIVISIONS = ['2', '4', '8', '16'];
 const OSC4_MODELS = [
-    'wavetable', 'va', 'va_vcf', 'fm', 'fm6', 'waveshaper', 'additive', 'grain',
-    'swarm', 'noise', 'particle', 'pd', 'terrain', 'string_machine', 'chiptune',
-    'chord', 'speech', 'modal', 'string', 'bass_drum', 'snare', 'hihat',
+    'va', 'va_vcf', 'waveshaper', 'pd', 'fm', 'fm6',
+    'wavetable', 'terrain', 'additive', 'grain',
+    'speech', 'chord', 'string_machine', 'chiptune',
+    'swarm', 'noise', 'particle', 'string', 'modal',
+    'bass_drum', 'snare', 'hihat',
 ];
 const STEP_SLOTS = 32;
 
@@ -118,6 +120,7 @@ export const PARAMS = {
     osc2PitchMod: range(-12, 12, 0, 0.1, { name: 'Osc 2 Pitch Mod', group: 'LFO' }),
     osc3PitchMod: range(-12, 12, 0, 0.1, { name: 'Osc 3 Pitch Mod', group: 'LFO' }),
     osc4PitchMod: range(-12, 12, 0, 0.1, { name: 'Osc 4 Pitch Mod', group: 'LFO' }),
+    ringFreqMod: range(-2000, 2000, 0, 10, { name: 'Ring Freq Mod', group: 'LFO' }),
 };
 
 for (let i = 0; i < 4; i++) {

@@ -3,15 +3,48 @@
 // the single writer to state.lfo.frequency. state.lfoSync stays the mode flag.
 
 import { state } from './state.js?v=116';
-import { getNumber, set, subscribe, toggle } from './params.js?v=14';
-import { getParam } from './param-catalog.js?v=2';
-import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=130';
-import { beginMidiLearn } from './midi-learn.js?v=6';
+import { getNumber, getString, set, subscribe, toggle } from './params.js?v=15';
+import { getParam } from './param-catalog.js?v=3';
+import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=147';
+import { beginMidiLearn } from './midi-learn.js?v=7';
 
 /** Optional hook so applyLfoRate can refresh smoothing without a circular import. */
 let onRateApplied = null;
 export function onLfoRateApplied(fn) {
     onRateApplied = typeof fn === 'function' ? fn : null;
+}
+
+/** Oscillators still sounding or queued (lookahead retrigger keeps more than one). */
+const liveLfoOscs = new Set();
+let lastLfoRetrigWhen = -1;
+
+export function registerLfoOsc(osc) {
+    if (!osc) return;
+    liveLfoOscs.add(osc);
+    const drop = () => { liveLfoOscs.delete(osc); };
+    try { osc.addEventListener('ended', drop); } catch (_) { /* ignore */ }
+}
+
+export function forEachLiveLfoOsc(fn) {
+    const list = liveLfoOscs.size ? [...liveLfoOscs] : (state.lfo ? [state.lfo] : []);
+    for (const osc of list) {
+        try { fn(osc); } catch (_) { /* ignore */ }
+    }
+}
+
+function connectLfoOsc(lfo) {
+    if (state.lfoSmooth) lfo.connect(state.lfoSmooth);
+    else if (state.lfoMasterGain) lfo.connect(state.lfoMasterGain);
+    else {
+        if (state.lfoGainCutoff) lfo.connect(state.lfoGainCutoff);
+        if (state.lfoGainResonance) lfo.connect(state.lfoGainResonance);
+        if (state.lfoGainHighpass) lfo.connect(state.lfoGainHighpass);
+        if (state.lfoGainOsc1Pitch) lfo.connect(state.lfoGainOsc1Pitch);
+        if (state.lfoGainOsc2Pitch) lfo.connect(state.lfoGainOsc2Pitch);
+        if (state.lfoGainOsc3Pitch) lfo.connect(state.lfoGainOsc3Pitch);
+        if (state.lfoGainOsc4Pitch) lfo.connect(state.lfoGainOsc4Pitch);
+        if (state.lfoGainRingFreq) lfo.connect(state.lfoGainRingFreq);
+    }
 }
 
 /** Whole-note = 4 beats. Triplet = 2/3 of the straight note. */
@@ -73,6 +106,40 @@ export function getLfoRateHz() {
     return Math.max(0.01, Number.isFinite(hz) ? hz : 1);
 }
 
+/**
+ * Restart the shared LFO at `startTime` (audio clock).
+ * Stop/start are scheduled at that time so sequencer lookahead cannot
+ * cancel a reset that has not sounded yet.
+ */
+export function retriggerLfoIfNeeded(startTime) {
+    const ctx = state.audioContext;
+    if (!ctx || !state.lfoState || !state.lfoRetriggerState) return false;
+    if (!state.lfo && liveLfoOscs.size === 0) return false;
+    const now = ctx.currentTime;
+    if (startTime == null) return false;
+    const when = Math.max(now, Number(startTime) || now);
+    if (lastLfoRetrigWhen >= 0 && Math.abs(when - lastLfoRetrigWhen) < 1e-6) return false;
+
+    lastLfoRetrigWhen = when;
+    const prev = state.lfo;
+    if (prev) {
+        try { prev.stop(when); } catch (_) { /* already stopped */ }
+    }
+    const lfo = ctx.createOscillator();
+    try { lfo.type = getString('lfoWaveform', 'sine'); } catch (_) { lfo.type = 'sine'; }
+    lfo.frequency.value = getLfoRateHz();
+    connectLfoOsc(lfo);
+    try {
+        lfo.start(when);
+        lfo.started = true;
+        registerLfoOsc(lfo);
+        state.lfo = lfo;
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
 export function formatLfoRateReadout() {
     if (state.lfoSync) {
         return getSyncDivision().label;
@@ -131,24 +198,27 @@ export function updateLfoRateReadout() {
  */
 export function applyLfoRate({ ramp = 0.03 } = {}) {
     updateLfoRateReadout();
-    if (!state.lfo || !state.audioContext) return;
+    if (!state.audioContext) return;
 
     const freq = getLfoRateHz();
     const now = state.audioContext.currentTime;
-    const param = state.lfo.frequency;
-    const from = Math.max(0.01, param.value || freq);
-
-    param.cancelScheduledValues(now);
-    param.setValueAtTime(from, now);
-    if (ramp > 0 && Math.abs(from - freq) > 0.0001) {
-        try {
-            param.exponentialRampToValueAtTime(freq, now + ramp);
-        } catch (_) {
-            param.linearRampToValueAtTime(freq, now + ramp);
+    const write = (osc) => {
+        if (!osc) return;
+        const param = osc.frequency;
+        const from = Math.max(0.01, param.value || freq);
+        param.cancelScheduledValues(now);
+        param.setValueAtTime(from, now);
+        if (ramp > 0 && Math.abs(from - freq) > 0.0001) {
+            try {
+                param.exponentialRampToValueAtTime(freq, now + ramp);
+            } catch (_) {
+                param.linearRampToValueAtTime(freq, now + ramp);
+            }
+        } else {
+            param.setValueAtTime(freq, now);
         }
-    } else {
-        param.setValueAtTime(freq, now);
-    }
+    };
+    forEachLiveLfoOsc(write);
     if (onRateApplied) onRateApplied();
 }
 
@@ -249,12 +319,30 @@ export function initLfoRateKnob() {
         const next = hzNormToValue(norm);
         set('lfoSpeed', next);
         if (!state.lfoSync) applyLfoRate({ ramp: 0.02 });
+        else updateLfoRateReadout();
     };
 
     const writeSync = (index) => {
         const idx = clamp(Math.round(index), 0, LFO_SYNC_DIVISIONS.length - 1);
         set('lfoSyncDivision', idx);
         setLfoSyncDivision(idx, { ramp: 0.02 });
+    };
+
+    const paintRateKnob = (normOrNull) => {
+        if (state.lfoSync) {
+            const idx = getSyncDivisionIndex();
+            const n = LFO_SYNC_DIVISIONS.length;
+            setKnobAngle(dial, n <= 1 ? 0 : idx / (n - 1));
+            dial.setAttribute('aria-valuenow', String(idx));
+            dial.setAttribute('aria-valuetext', LFO_SYNC_DIVISIONS[idx].label);
+        } else {
+            const norm = Number.isFinite(normOrNull) ? normOrNull : hzValueToNorm(getNumber('lfoSpeed', 1));
+            setKnobAngle(dial, norm);
+            const v = getNumber('lfoSpeed', 1);
+            dial.setAttribute('aria-valuenow', String(v));
+            dial.setAttribute('aria-valuetext', formatLfoRateReadout());
+        }
+        updateLfoRateReadout();
     };
 
     dial.addEventListener('pointerdown', (e) => {
@@ -286,11 +374,11 @@ export function initLfoRateKnob() {
             const n = LFO_SYNC_DIVISIONS.length;
             const perStep = STEPPED_DRAG_PIXELS / Math.max(1, n - 1);
             writeSync(startIndex + deltaY / perStep);
+            paintRateKnob();
         } else {
             const norm = clamp(startNorm + deltaY / DRAG_PIXELS, 0, 1);
-            setKnobAngle(dial, norm);
             writeHz(norm);
-            dial.setAttribute('aria-valuetext', formatLfoRateReadout());
+            paintRateKnob(norm);
         }
     });
 
@@ -342,7 +430,10 @@ export function initLfoRateKnob() {
             } else if (e.key === 'End') {
                 e.preventDefault();
                 writeSync(LFO_SYNC_DIVISIONS.length - 1);
+            } else {
+                return;
             }
+            paintRateKnob();
             return;
         }
         const stepNorm = e.shiftKey ? 0.05 : 0.01;
@@ -364,6 +455,7 @@ export function initLfoRateKnob() {
         }
         setKnobAngle(dial, norm);
         writeHz(norm);
+        paintRateKnob(norm);
     });
 
     // Double-click reset: Hz → catalog default; Sync → 1/4

@@ -1,7 +1,7 @@
 import { state } from './state.js?v=116';
 import { semitonesToNoteName } from './tuning.js?v=80';
-import { initAudio } from './audio-engine.js?v=185';
-import { togglePlay } from './sequencer.js?v=383';
+import { initAudio } from './audio-engine.js?v=208';
+import { togglePlay } from './sequencer.js?v=416';
 import {
     pressKey,
     releaseKey,
@@ -12,9 +12,9 @@ import {
     syncVisibilityUI,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=212';
-import { needsHeldNoteSet } from './held-notes.js?v=8';
-import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=112';
+} from './keyboard.js?v=238';
+import { needsHeldNoteSet } from './held-notes.js?v=9';
+import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=123';
 
 /** Ableton home-row octave: relative semitones from A-key root. */
 const NOTE_CODES = {
@@ -398,8 +398,10 @@ function onBoardPointerDown(e) {
 function onBoardPointerMove(e) {
     if (activePointerId === null || e.pointerId !== activePointerId) return;
     if (pointerHeldCode === null) return;
-    // Match chromatic keyboard: no drag-write across keys
-    if (state.keyboardWrite) return;
+    // Match chromatic keyboard: no drag-write across keys.
+    // Poly / Multitudes / learn / chord arp: pressKey would heldNoteDown the
+    // new key and never release the one the finger left.
+    if (state.keyboardWrite || needsHeldNoteSet()) return;
 
     const code = noteKeyCodeFromPoint(e.clientX, e.clientY);
     if (code == null || code === pointerHeldCode) return;

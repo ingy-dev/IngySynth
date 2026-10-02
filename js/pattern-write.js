@@ -1,13 +1,15 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
 import { state } from './state.js?v=116';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=383';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=416';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
-import { bindKnob } from './knobs.js?v=130';
-import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=22';
-import { forceNoteOff } from './voice.js?v=145';
-import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=111';
-import { getNumber, set, subscribe } from './params.js?v=14';
+import { isTabbedView, selectKeyboardTab } from './view-mode.js?v=4';
+import { bindKnob } from './knobs.js?v=147';
+import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=23';
+import { forceNoteOff } from './voice.js?v=155';
+import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=129';
+import { getNumber, set, subscribe } from './params.js?v=15';
 import { getGlobalTune } from './tuning.js?v=80';
+import { updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=121';
 import {
     getLiveStep,
     chordFromCellNotes,
@@ -94,6 +96,18 @@ function resetPolyWriteCapture() {
     polyWriteSession.clear();
     polyWriteTargetStep = null;
     polyWriteIgnoreUntilEmpty = false;
+    paintPolyWriteChordVfd();
+}
+
+function paintPolyWriteChordVfd() {
+    if (state.isPlaying || window.noteVisualizerPreviewActive) return;
+    const notes = [...polyWriteSession];
+    if (!notes.length) {
+        clearNoteVisualizer();
+        return;
+    }
+    const global = getGlobalTune();
+    updateChordVisualizer(notes.map((n) => n + global));
 }
 
 export function polyWriteNoteDown(cellSemitone) {
@@ -106,6 +120,7 @@ export function polyWriteNoteDown(cellSemitone) {
     }
     polyWriteSession.add(semi);
     previewPolyWrite(semi, true);
+    paintPolyWriteChordVfd();
     document.dispatchEvent(new CustomEvent('ingysynth:poly-write-keys'));
     return true;
 }
@@ -122,10 +137,12 @@ export function polyWriteNoteUp(cellSemitone) {
     if (!isPolyWriteMode()) {
         polyWriteSession.clear();
         polyWriteTargetStep = null;
+        paintPolyWriteChordVfd();
         return false;
     }
     if (polyWriteHeld.size === 0 && polyWriteSession.size > 0) {
         commitPolyWrite({ advance: true });
+        paintPolyWriteChordVfd();
     }
     document.dispatchEvent(new CustomEvent('ingysynth:poly-write-keys'));
     return true;
@@ -360,6 +377,11 @@ function isPanelExpanded(fieldset) {
 
 /** Snapshot current panels, then open Steps and collapse synth/XY/automation. */
 function applyWriteTemporaryView() {
+    if (isTabbedView()) {
+        selectKeyboardTab('keyboardStepsFieldset');
+        return;
+    }
+
     writeViewSnapshot = {};
     for (const id of WRITE_VIEW_PANEL_IDS) {
         writeViewSnapshot[id] = isPanelExpanded(document.getElementById(id));
@@ -374,6 +396,10 @@ function applyWriteTemporaryView() {
 }
 
 function restoreWriteTemporaryView() {
+    if (isTabbedView()) {
+        writeViewSnapshot = null;
+        return;
+    }
     if (!writeViewSnapshot) return;
     for (const id of WRITE_VIEW_PANEL_IDS) {
         const expanded = !!writeViewSnapshot[id];

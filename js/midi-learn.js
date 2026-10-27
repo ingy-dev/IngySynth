@@ -1,9 +1,9 @@
 // Stage MIDI learn: pick a visible widget, store the canonical range/button.
 // Pointer capture runs in mapping mode so knobs/strips do not scrub while learning.
 
-import { state } from './state.js?v=116';
-import { keyFromElement } from './params.js?v=15';
-import { getParam, isCatalogKey } from './param-catalog.js?v=3';
+import { state } from './state.js?v=119';
+import { keyFromElement } from './params.js?v=23';
+import { getParam, isCatalogKey } from './param-catalog.js?v=4';
 
 const IGNORE_IDS = new Set([
     'midiMapping',

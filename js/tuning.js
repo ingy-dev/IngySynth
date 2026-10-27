@@ -1,6 +1,6 @@
-import { state } from './state.js?v=116';
-import { get, getNumber, getString } from './params.js?v=15';
-import { getLiveStep } from './pattern-bank.js?v=16';
+import { state } from './state.js?v=119';
+import { get, getNumber, getString } from './params.js?v=23';
+import { getLiveStep } from './pattern-bank.js?v=30';
 
 // Base reference frequency: C4.
 export const BASE_FREQ = 261.63;

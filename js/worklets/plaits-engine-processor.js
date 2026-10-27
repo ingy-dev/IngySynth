@@ -1148,6 +1148,8 @@ class PlaitsEngineProcessor extends AudioWorkletProcessor {
             { name: 'alt', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
             /** 1 = TRIG patched (Mode 2), 0 = unpatched (Mode 1). */
             { name: 'trigPatched', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+            /** 1 = open hi-hat decay. Same circuit as hihat. */
+            { name: 'openHat', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
         ];
     }
 
@@ -1159,6 +1161,7 @@ class PlaitsEngineProcessor extends AudioWorkletProcessor {
         this.polyMode = false;
         this.alt = false;
         this.trigPatched = true;
+        this.openHat = false;
         this.tables = null;
         this.wsLuts = null;
         this.prevGate = 0;
@@ -1263,6 +1266,7 @@ class PlaitsEngineProcessor extends AudioWorkletProcessor {
             if (typeof msg.polyMode === 'boolean') this.polyMode = msg.polyMode;
             if (typeof msg.alt === 'boolean') this.alt = msg.alt;
             if (typeof msg.trigPatched === 'boolean') this.trigPatched = msg.trigPatched;
+            if (typeof msg.openHat === 'boolean') this.openHat = msg.openHat;
             if (msg.tables) {
                 const buf = msg.tables instanceof ArrayBuffer
                     ? msg.tables
@@ -2300,7 +2304,9 @@ class PlaitsEngineProcessor extends AudioWorkletProcessor {
         const aux = this.drumAux;
         const sr = sampleRate;
         const hz = this.noteHz(parameters, 0);
-        const decay = Math.exp(-1 / (sr * (0.015 + morph * 0.2)));
+        const openHat = ((parameters.openHat && parameters.openHat[0]) ?? (this.openHat ? 1 : 0)) >= 0.5;
+        const decaySec = openHat ? (0.12 + morph * 0.9) : (0.015 + morph * 0.2);
+        const decay = Math.exp(-1 / (sr * decaySec));
         const ratios = [
             1,
             1.34 + harmonics * 0.2,

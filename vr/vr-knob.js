@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import { getNumber, getString, subscribe } from '../js/params.js?v=15';
-import { getParam } from '../js/param-catalog.js?v=3';
+import { getNumber, getString, subscribe } from '../js/params.js?v=19';
+import { getParam } from '../js/param-catalog.js?v=4';
 import { makeLabel, noHit } from './vr-label.js?v=2';
 
 const ANGLE_MIN = -135 * Math.PI / 180;

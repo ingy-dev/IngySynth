@@ -2,9 +2,9 @@ import * as THREE from './vendor/three.module.js';
 import {
     createHeartPanel,
     PANEL_W,
-} from './synth-panel.js?v=10';
-import { createKnob } from './vr-knob.js?v=7';
-import { createButton } from './vr-button.js?v=2';
+} from './synth-panel.js?v=15';
+import { createKnob } from './vr-knob.js?v=13';
+import { createButton } from './vr-button.js?v=6';
 import { noHit } from './vr-label.js?v=2';
 
 export const CHASSIS_W = PANEL_W;

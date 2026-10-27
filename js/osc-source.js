@@ -2,10 +2,10 @@
 // Plaits-style engines share one pooled AudioWorkletNode shell.
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
-import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getOscType, getString } from './params.js?v=15';
-import { isAnalogDrumEngine } from './pattern-bank.js?v=16';
-import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=16';
+import { state, OSC_COUNT } from './state.js?v=119';
+import { getNumber, getOscType, getString } from './params.js?v=23';
+import { isAnalogDrumEngine } from './pattern-bank.js?v=30';
+import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=20';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
 export const OSC4_INDEX = 0;
@@ -31,6 +31,7 @@ export const ENGINE_TRIM = {
     bass_drum: 0.92,
     snare: 0.85,
     hihat: 0.7,
+    open_hat: 0.7,
     va: 0.75,
     va_vcf: 0.7,
     additive: 0.85,
@@ -48,7 +49,7 @@ export const ENGINE_TRIM = {
 
 /** Engines that ring after gate-off (trigger/exciter model). */
 export const TRIGGERED_ENGINES = new Set([
-    'modal', 'string', 'bass_drum', 'snare', 'hihat', 'fm6',
+    'modal', 'string', 'bass_drum', 'snare', 'hihat', 'open_hat', 'fm6',
 ]);
 
 export const ENGINE_TAIL_SEC = {
@@ -57,10 +58,11 @@ export const ENGINE_TAIL_SEC = {
     bass_drum: 2.5,
     snare: 2.5,
     hihat: 2.0,
+    open_hat: 1.4,
     fm6: 8,
 };
 
-export const DRUM_ENGINES = new Set(['bass_drum', 'snare', 'hihat']);
+export const DRUM_ENGINES = new Set(['bass_drum', 'snare', 'hihat', 'open_hat']);
 
 const WT_POOL_MAX = 16;
 const DRUM_POOL_MAX = 6;
@@ -301,7 +303,7 @@ export function fadeStopOsc(osc, when, { fadeSec = 0.02, hard = false } = {}) {
 /** @type {{ ctx: AudioContext, node: AudioWorkletNode, inUse: boolean, gen: number, tablesSent?: boolean, ringing?: boolean, drum?: boolean, engine?: string }[]} */
 let wtPool = [];
 let wtPoolCtx = null;
-/** Dedicated Plaits pool for Berlin D1–D3 — never steal wtPool[0]. */
+/** Dedicated Plaits pool for Berlin D1–D4 — never steal wtPool[0]. */
 let drumPool = [];
 let drumPoolCtx = null;
 /** Official Plaits wavetable ROM (float32 LE, 4×64×128 integrated). */
@@ -667,7 +669,7 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
     }
 
     state.plaitsWorkletCtx = ctx;
-    const url = jsAsset('worklets/plaits-engine-processor.js?v=42');
+    const url = jsAsset('worklets/plaits-engine-processor.js?v=43');
     state.plaitsWorkletPromise = Promise.all([
         ctx.audioWorklet.addModule(url),
         loadPlaitsTables(),
@@ -823,6 +825,7 @@ function releasePoolSlot(slot, gen) {
 
 function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = false } = {}) {
     let model;
+    let openHat = false;
     let x;
     let y;
     let harmonics;
@@ -832,6 +835,8 @@ function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = fal
     let bank;
     if (patchOverride) {
         model = patchOverride.model || 'hihat';
+        openHat = model === 'open_hat';
+        if (openHat) model = 'hihat';
         x = Math.max(0, Math.min(1, Number(patchOverride.morphX) || 0.5));
         y = Math.max(0, Math.min(1, Number(patchOverride.morphY) || 0.5));
         harmonics = Math.max(0, Math.min(1, Number(patchOverride.harmonics) || 0.5));
@@ -897,12 +902,15 @@ function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = fal
         if (altParam) altParam.setValueAtTime(alt ? 1 : 0, now);
         const trigParam = node.parameters.get('trigPatched');
         if (trigParam) trigParam.setValueAtTime(trigPatched ? 1 : 0, now);
+        const openParam = node.parameters.get('openHat');
+        if (openParam) openParam.setValueAtTime(openHat ? 1 : 0, now);
         node.port.postMessage({
             reset: true,
             engine: model,
             polyMode: drum ? false : !!(state.keyboardMultitudes || state.keyboardPoly),
             alt,
             trigPatched,
+            openHat,
         });
     } catch (_) { /* ignore */ }
 
@@ -1333,9 +1341,12 @@ export function applyBerlinDrumKitToLive(lane) {
             if (altP) altP.setValueAtTime(patch.alt ? 1 : 0, now);
             const trigP = osc._worklet.parameters?.get('trigPatched');
             if (trigP) trigP.setValueAtTime(patch.trigPatched !== false ? 1 : 0, now);
+            const openP = osc._worklet.parameters?.get('openHat');
+            if (openP) openP.setValueAtTime(patch.model === 'open_hat' ? 1 : 0, now);
             osc._worklet.port.postMessage({
                 alt: !!patch.alt,
                 trigPatched: patch.trigPatched !== false,
+                openHat: patch.model === 'open_hat',
             });
         } catch (_) { /* ignore */ }
     };

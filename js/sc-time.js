@@ -1,10 +1,11 @@
 // Sidechain TIME: free ms or tempo-synced beat divisions (LFO RATE pattern, shorter list).
 
-import { state } from './state.js?v=116';
-import { get, getNumber, set, subscribe, toggle } from './params.js?v=15';
-import { getParam } from './param-catalog.js?v=3';
-import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=147';
-import { beginMidiLearn } from './midi-learn.js?v=7';
+import { state } from './state.js?v=119';
+import { DRUM_LANE_COUNT } from './pattern-bank.js?v=30';
+import { get, getNumber, set, subscribe, toggle } from './params.js?v=23';
+import { getParam } from './param-catalog.js?v=4';
+import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=163';
+import { beginMidiLearn } from './midi-learn.js?v=15';
 
 export const SC_SYNC_DIVISIONS = [
     { label: '1/4', beats: 1 },
@@ -29,12 +30,13 @@ function clamp(n, min, max) {
 }
 
 export function parseScSource(raw) {
-    const s = String(raw ?? get('scSource') ?? 'd3').toLowerCase();
+    const s = String(raw ?? get('scSource') ?? 'd4').toLowerCase();
     const m = s.match(/^([do])([1-4])$/);
-    if (!m) return { kind: 'drum', index: 2, id: 'd3' };
+    const kick = DRUM_LANE_COUNT - 1;
+    if (!m) return { kind: 'drum', index: kick, id: 'd4' };
     const kind = m[1] === 'o' ? 'osc' : 'drum';
     const n = parseInt(m[2], 10);
-    const index = kind === 'drum' ? clamp(n - 1, 0, 2) : clamp(n - 1, 0, 3);
+    const index = kind === 'drum' ? clamp(n - 1, 0, kick) : clamp(n - 1, 0, 3);
     return { kind, index, id: `${m[1]}${index + 1}` };
 }
 

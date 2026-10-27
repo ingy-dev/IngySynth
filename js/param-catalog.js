@@ -99,7 +99,7 @@ export const PARAMS = {
     compToggle: button(false),
     compThreshold: range(-100, 0, -24, 1, { name: 'Comp Threshold', group: 'Effects' }),
     scToggle: button(false),
-    scSource: select(['d1', 'd2', 'd3', 'o1', 'o2', 'o3', 'o4'], 'd3'),
+    scSource: select(['d1', 'd2', 'd3', 'd4', 'o1', 'o2', 'o3', 'o4'], 'd4'),
     scDepth: range(0, 1, 0.6, 0.01, { name: 'Sidechain Depth', group: 'Effects' }),
     scTimeMs: range(50, 400, 150, 1, { name: 'Sidechain Time', group: 'Effects' }),
     scTimeSyncToggle: button(false),

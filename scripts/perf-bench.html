@@ -30,7 +30,7 @@
   <div id="table"></div>
   <pre id="out">Idle.</pre>
   <script type="module">
-    import { createAnalog808Voice } from '../js/analog-808.js?v=14';
+    import { createAnalog808Voice } from '../js/analog-808.js?v=20';
 
     const SR = 44100;
     const WARMUP_MS = 900;
@@ -127,7 +127,7 @@
     }
 
     async function loadWorklet(ctx) {
-      const url = new URL('../js/worklets/plaits-engine-processor.js?v=42', window.location.href);
+      const url = new URL('../js/worklets/plaits-engine-processor.js?v=43', window.location.href);
       await ctx.audioWorklet.addModule(url.href);
     }
 

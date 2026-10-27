@@ -1,16 +1,16 @@
 // Berlin Dream-960: eight lanes on one tempo — O1–O4 pitch+amp, M1–M4 filter CV.
 // Acid and Poly are mutually exclusive with it.
 
-import { state } from './state.js?v=116';
-import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=80';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=121';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
-import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=129';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=50';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=18';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=147';
-import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=7';
-import { get, getNumber, set } from './params.js?v=15';
+import { state } from './state.js?v=119';
+import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=88';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=130';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=92';
+import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=168';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=63';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=27';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=163';
+import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=15';
+import { get, getNumber, set } from './params.js?v=23';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
@@ -26,21 +26,25 @@ import {
     clampDrumPatch,
     isAnalogDrumEngine,
     ensureBank,
+    ensureBerlinBank,
     getPattern,
+    getBerlinLane,
+    getBerlinPattern,
+    seedBerlinO1FromMain,
     getDrumPattern,
+    copyBerlinLane,
+    pasteBerlinLane,
+    clearBerlinLane,
     patternStepCount,
     patternGate,
     flushDomToPattern,
     hydratePatternToDom,
-    copyPatternContent,
-    pastePatternContent,
-    clearPatternSteps,
     flashCopiedToast,
     syncPatternClipboardUi,
     ensureBerlinDrumKit,
     ensureDrumPatterns,
-} from './pattern-bank.js?v=16';
-import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=125';
+} from './pattern-bank.js?v=30';
+import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=134';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
@@ -68,14 +72,21 @@ const DRUM_TONE_LABELS = {
     bass_drum: { harmonics: 'DRIVE', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
     snare: { harmonics: 'TONE/N', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
     hihat: { harmonics: 'METAL', timbre: 'COLOR', morph: 'DECAY', tune: 'TUNE' },
+    open_hat: { harmonics: 'METAL', timbre: 'COLOR', morph: 'DECAY', tune: 'TUNE' },
 };
 const ANALOG_TONE_LABELS = {
     bass_drum: { harmonics: '—', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
     snare: { harmonics: 'SNAPPY', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
     hihat: { harmonics: '—', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
+    open_hat: { harmonics: '—', timbre: 'TONE', morph: 'DECAY', tune: 'TUNE' },
 };
 const DRUM_MODE_LABELS = { m1: 'DRONE', m2: 'HIT' };
-const DRUM_MODEL_LABELS = { hihat: 'Hi-Hat', snare: 'Snare', bass_drum: 'Bass Drum' };
+const DRUM_MODEL_LABELS = {
+    open_hat: 'Open Hat',
+    hihat: 'Hi-Hat',
+    snare: 'Snare',
+    bass_drum: 'Bass Drum',
+};
 
 const PITCH_DESTINATIONS = {
     osc1Pitch: 0,
@@ -113,11 +124,15 @@ export function isBerlinOn() {
 }
 
 export function berlinOscCount() {
-    return clamp(Math.round(state.berlinOscCount) || 3, 1, OSC_LANE_COUNT);
+    const n = clamp(Math.round(getBerlinPattern(state.berlinSlot)?.oscCount) || 3, 1, OSC_LANE_COUNT);
+    state.berlinOscCount = n;
+    return n;
 }
 
 export function berlinModCount() {
-    return clamp(Math.round(state.berlinModCount) || 1, 1, OSC_LANE_COUNT);
+    const n = clamp(Math.round(getBerlinPattern(state.berlinSlot)?.modCount) || 1, 1, OSC_LANE_COUNT);
+    state.berlinModCount = n;
+    return n;
 }
 
 /** Total visible lanes (osc + mod). */
@@ -141,7 +156,7 @@ function isPitchLane(rowIndex) {
 
 /** Output mute: pattern stays visible/editable; playhead keeps phase. */
 export function isRowEnabled(rowIndex) {
-    const pattern = getPattern(rowIndex);
+    const pattern = getBerlinLane(rowIndex);
     return pattern?.enabled !== false;
 }
 
@@ -182,7 +197,7 @@ export function rowLoopSeconds(pattern, tempo) {
 export function masterLoopSeconds(tempo) {
     let best = 0;
     berlinActiveRows().forEach((i) => {
-        const secs = rowLoopSeconds(getPattern(i), tempo);
+        const secs = rowLoopSeconds(getBerlinLane(i), tempo);
         if (secs > best) best = secs;
     });
     return best || (60 / Math.max(1, tempo)) * 4;
@@ -238,7 +253,7 @@ export function ensurePlayheads() {
 export function resetBerlinPlayheads(startTime) {
     ensurePlayheads();
     for (let i = 0; i < PATTERN_COUNT; i++) {
-        const pattern = getPattern(i);
+        const pattern = getBerlinLane(i);
         const ph = state.berlinPlayheads[i];
         ph.currentStep = pattern.reverse ? patternStepCount(pattern) - 1 : 0;
         ph.nextStepTime = startTime;
@@ -293,7 +308,7 @@ export function advanceDrumPlayhead(lane) {
 }
 
 export function advancePlayhead(rowIndex) {
-    const pattern = getPattern(rowIndex);
+    const pattern = getBerlinLane(rowIndex);
     const ph = state.berlinPlayheads[rowIndex];
     const n = patternStepCount(pattern);
     ph.currentStep = pattern.reverse
@@ -334,7 +349,7 @@ export function berlinFrequency(semi, fine, oscIndex) {
  */
 function previewBerlinOscStepNote(row, stepIndex) {
     if (!isPitchLane(row)) return;
-    const { semi, fine } = rowStepValue(getPattern(row), stepIndex, row);
+    const { semi, fine } = rowStepValue(getBerlinLane(row), stepIndex, row);
     const totalTune = berlinPitchSemitones(semi) + getGlobalTune();
     updateNoteVisualizer(totalTune, fine);
 
@@ -451,7 +466,7 @@ export function refreshBerlinDots() {
     const map = {};
     berlinActiveRows().forEach((i) => {
         if (!isRowSounding(i) || isDrumLane(i)) return;
-        const key = DOT_HOST_KEYS[getPattern(i).destination];
+        const key = DOT_HOST_KEYS[getBerlinLane(i).destination];
         if (!key) return;
         if (!map[key]) map[key] = [];
         map[key].push(BERLIN_COLORS[i]);
@@ -587,7 +602,7 @@ function buildRow(row) {
 }
 
 function syncStepCell(row, step) {
-    const pattern = getPattern(row);
+    const pattern = getBerlinLane(row);
     const data = pattern.steps[step] || {};
     const cell = document.querySelector(`.berlin-step[data-row="${row}"][data-step="${step}"]`);
     if (!cell) return;
@@ -643,7 +658,7 @@ export function refreshBerlinStepReadouts(row) {
         for (let i = 0; i < PATTERN_COUNT; i++) refreshBerlinStepReadouts(i);
         return;
     }
-    const pattern = getPattern(row);
+    const pattern = getBerlinLane(row);
     document.querySelectorAll(`.berlin-step[data-row="${row}"] .berlin-step-value`)
         .forEach((el) => {
             const step = parseInt(el.closest('.berlin-step').dataset.step, 10);
@@ -652,7 +667,7 @@ export function refreshBerlinStepReadouts(row) {
 }
 
 function syncRowVisibleSteps(row) {
-    const count = patternStepCount(getPattern(row));
+    const count = patternStepCount(getBerlinLane(row));
     document.querySelectorAll(`.berlin-step[data-row="${row}"]`).forEach((cell) => {
         const step = parseInt(cell.dataset.step, 10);
         cell.classList.toggle('hidden', step >= count);
@@ -694,7 +709,7 @@ function syncAllRowEnableUi() {
  * the soloed row stays audible until Solo is cleared.
  */
 export function setRowEnabled(row, enabled) {
-    const pattern = getPattern(row);
+    const pattern = getBerlinLane(row);
     const next = !!enabled;
     const wasSounding = isRowSounding(row);
     if ((pattern.enabled !== false) === next) {
@@ -752,7 +767,7 @@ export function clearBerlinSolo() {
 }
 
 export function syncBerlinRowUi(row) {
-    const pattern = getPattern(row);
+    const pattern = getBerlinLane(row);
     const fieldset = document.querySelector(`.berlin-row[data-row="${row}"]`);
     if (!fieldset) return;
 
@@ -900,7 +915,18 @@ export function clearBerlinStepActive() {
 function wireRow(row) {
     const fieldset = document.querySelector(`.berlin-row[data-row="${row}"]`);
     if (!fieldset) return;
-    const pattern = getPattern(row);
+    // Live lookup: switching P1–P8 must edit the pattern now on screen, not the one wired at build time.
+    const pattern = new Proxy({}, {
+        get(_target, prop) {
+            const lane = getBerlinLane(row);
+            const value = lane[prop];
+            return typeof value === 'function' ? value.bind(lane) : value;
+        },
+        set(_target, prop, value) {
+            getBerlinLane(row)[prop] = value;
+            return true;
+        },
+    });
 
     fieldset.querySelector('.berlin-row-enable')?.addEventListener('click', () => {
         setRowEnabled(row, !isRowEnabled(row));
@@ -912,15 +938,15 @@ function wireRow(row) {
     });
 
     fieldset.querySelector('.berlin-row-copy')?.addEventListener('click', (e) => {
-        copyPatternContent(row);
+        copyBerlinLane(row);
         flashCopiedToast(e.currentTarget);
     });
 
     fieldset.querySelector('.berlin-row-paste')?.addEventListener('click', () => {
-        if (!pastePatternContent(row)) return;
+        if (!pasteBerlinLane(row)) return;
         const ph = state.berlinPlayheads?.[row];
         if (ph) {
-            ph.currentStep = Math.min(ph.currentStep, patternStepCount(getPattern(row)) - 1);
+            ph.currentStep = Math.min(ph.currentStep, patternStepCount(getBerlinLane(row)) - 1);
             ph.sounded = false;
             ph.prevSlide = false;
             ph.prevGliss = false;
@@ -929,7 +955,7 @@ function wireRow(row) {
     });
 
     fieldset.querySelector('.berlin-row-clear')?.addEventListener('click', () => {
-        clearPatternSteps(row);
+        clearBerlinLane(row);
         const ph = state.berlinPlayheads?.[row];
         if (ph) {
             ph.sounded = false;
@@ -1139,6 +1165,7 @@ function ensureDrumChrome(fieldset, lane) {
             <span class="berlin-ctl-label">MODEL</span>
             <select class="berlin-drum-model">${modelOpts}</select>
         </label>
+        <button type="button" class="ingy6-switch-btn berlin-drum-choke off" aria-pressed="false">Choke</button>
         <div class="berlin-drum-tones">
             ${['tune', 'harmonics', 'timbre', 'morph'].map((tone) => `
                 <div class="synth-knob berlin-drum-knob" data-drum-tone="${tone}">
@@ -1198,6 +1225,11 @@ function ensureDrumChrome(fieldset, lane) {
     });
     toolbar.querySelector('.berlin-drum-model')?.addEventListener('change', (e) => {
         writeDrumPatch(lane, { model: e.target.value });
+    });
+    toolbar.querySelector('.berlin-drum-choke')?.addEventListener('click', () => {
+        const patch = ensureBerlinDrumKit()[lane];
+        if (patch.model !== 'open_hat') return;
+        writeDrumPatch(lane, { choke: patch.choke === false });
     });
     toolbar.querySelector('.berlin-drum-alt')?.addEventListener('click', () => {
         const patch = ensureBerlinDrumKit()[lane];
@@ -1283,6 +1315,20 @@ function syncDrumChrome(fieldset, lane) {
     if (altBtn) {
         altBtn.classList.toggle('off', !patch.alt);
         altBtn.setAttribute('aria-pressed', patch.alt ? 'true' : 'false');
+    }
+    const chokeBtn = toolbar.querySelector('.berlin-drum-choke');
+    if (chokeBtn) {
+        const chokeLive = patch.model === 'open_hat';
+        const chokeOn = chokeLive && patch.choke !== false;
+        chokeBtn.disabled = !chokeLive;
+        chokeBtn.classList.toggle('is-grey', !chokeLive);
+        chokeBtn.classList.toggle('off', !chokeOn);
+        chokeBtn.setAttribute('aria-pressed', chokeOn ? 'true' : 'false');
+        chokeBtn.title = chokeLive
+            ? (chokeOn
+                ? 'Choke on — closed hat cuts this open hat, and this open hat cuts the closed hat'
+                : 'Choke off — open hat rings through the closed hat')
+            : 'Choke is for the open hat';
     }
     const modeBtn = toolbar.querySelector('.berlin-drum-mode-btn');
     if (modeBtn) {
@@ -1455,8 +1501,19 @@ export function setBerlinMode(on) {
         // The single strip is a view of the edit slot — bank it before hiding.
         flushDomToPattern(state.editSlot);
         state.pendingEditSlot = null;
+        state.berlinPendingSlot = null;
+        state.berlinCyclePass = 0;
+        state.berlinCycleFirstPass = true;
         state.berlinMode = true;
         ensureBank();
+        ensureBerlinBank();
+        // Once per load: P1–P8 land on each Berlin pattern's O1 before the rows paint.
+        if (seedBerlinO1FromMain()) {
+            state.berlinSlot = Math.max(0, Math.min(BANK_COUNT - 1, state.editSlot | 0));
+            const shown = getBerlinPattern(state.berlinSlot);
+            state.berlinOscCount = shown.oscCount;
+            state.berlinModCount = shown.modCount;
+        }
         ensurePlayheads();
         resetBerlinPlayheads(state.audioContext ? state.audioContext.currentTime : 0);
         buildUi();
@@ -1471,6 +1528,9 @@ export function setBerlinMode(on) {
         bumpSeqEngine();
         state.berlinMode = false;
         state.berlinSoloRow = null;
+        state.berlinPendingSlot = null;
+        state.cyclePass = 0;
+        state.cycleFirstPass = true;
         setBerlinLockedUi(false);
         clearBerlinStepActive();
         applyBerlinMasterGateExit();
@@ -1497,13 +1557,15 @@ export function toggleBerlinMode() {
 
 export function setBerlinOscCount(count) {
     const next = clamp(Math.round(count) || 3, 1, OSC_LANE_COUNT);
-    if (state.berlinOscCount === next) {
+    const pattern = getBerlinPattern(state.berlinSlot);
+    if (pattern.oscCount === next) {
         syncBerlinUi();
         return;
     }
     const prevSounding = new Set(
         berlinActiveRows().filter((i) => isOscLane(i) && isRowSounding(i))
     );
+    pattern.oscCount = next;
     state.berlinOscCount = next;
     if (state.berlinSoloRow !== null && isOscLane(state.berlinSoloRow)
         && state.berlinSoloRow >= next) {
@@ -1517,10 +1579,12 @@ export function setBerlinOscCount(count) {
 
 export function setBerlinModCount(count) {
     const next = clamp(Math.round(count) || 1, 1, OSC_LANE_COUNT);
-    if (state.berlinModCount === next) {
+    const pattern = getBerlinPattern(state.berlinSlot);
+    if (pattern.modCount === next) {
         syncBerlinUi();
         return;
     }
+    pattern.modCount = next;
     state.berlinModCount = next;
     if (state.berlinSoloRow !== null && isModLane(state.berlinSoloRow)
         && (state.berlinSoloRow - OSC_LANE_COUNT) >= next) {
@@ -1531,7 +1595,18 @@ export function setBerlinModCount(count) {
 
 export function initBerlin() {
     ensureBank();
+    ensureBerlinBank();
     ensurePlayheads();
+
+    document.addEventListener('ingysynth:berlin-slot', (e) => {
+        syncBerlinUi();
+        if (!state.isPlaying || !state.audioContext) return;
+        // Paste / Clear refresh the rows without a start time and must not
+        // jump the running lanes back to step 1. A real P1–P8 switch passes one.
+        const t = Number(e.detail?.startTime);
+        if (!Number.isFinite(t)) return;
+        resetBerlinPlayheads(t);
+    });
 
     document.getElementById('berlinToggle')?.addEventListener('click', () => {
         toggleBerlinMode();

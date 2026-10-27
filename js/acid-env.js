@@ -2,13 +2,13 @@
 // When Off, callers keep the normal ADSR path untouched.
 // Envelope timings restored from local commit f618f51.
 
-import { state } from './state.js?v=116';
-import { getNumber } from './params.js?v=15';
+import { state } from './state.js?v=119';
+import { getNumber } from './params.js?v=23';
 import {
     getFilterEnvAmount,
     getFilterCutoffRange,
     updateFilterCutoffRange,
-} from './filter-cutoff.js?v=84';
+} from './filter-cutoff.js?v=92';
 
 const MIN = 0.00001;
 const ACCENT_MEG_SEC = 0.2; // fixed MEG decay on accent (~200 ms)

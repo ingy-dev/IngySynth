@@ -1,7 +1,7 @@
 // Compact noise controls in the keyboard Synthesizer panel (column 2).
 // Type select and toggle write params; volume knob is wired in knobs.js.
 
-import { wireSelect, wireToggle } from './params.js?v=15';
+import { wireSelect, wireToggle } from './params.js?v=23';
 
 let syncToggle = () => {};
 let syncType = () => {};

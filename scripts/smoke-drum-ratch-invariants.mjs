@@ -162,11 +162,26 @@ const berlin = read('js/berlin.js');
 console.log('\n=== Berlin Dream drum-lane contracts ===\n');
 
 ok(
-    'D1–D3 live on drumPatterns; bank isDrumLane is always false',
+    'D1–D4 live on drumPatterns; bank isDrumLane is always false',
     /export function isDrumLane/.test(bank)
         && /Bank rows are never drums/.test(bank)
         && /state\.drumPatterns/.test(bank)
         && /laneKind:\s*'drum'/.test(bank),
+);
+
+ok(
+    'four drum lanes: open hat, closed hat, snare, kick',
+    /export const DRUM_LANE_COUNT = 4/.test(bank)
+        && /DRUM_MODELS = \['open_hat', 'hihat', 'snare', 'bass_drum'\]/.test(bank),
+);
+
+const catalog = read('js/param-catalog.js');
+const sc = read('js/sc-time.js');
+ok(
+    'sidechain default is D4 (kick)',
+    /scSource: select\(\[[^\]]*'d4'/.test(catalog)
+        && /select\(\[[^\]]*\], 'd4'\)/.test(catalog)
+        && /get\('scSource'\) \?\? 'd4'/.test(sc),
 );
 
 ok(
@@ -403,8 +418,8 @@ ok(
 }
 
 ok(
-    'createAnalog808Voice still only BD / SN / CH',
-    /model === 'bass_drum' \|\| model === 'snare' \? model : 'hihat'/.test(analog),
+    'createAnalog808Voice keeps BD / SN / CH / OH',
+    /model === 'bass_drum' \|\| model === 'snare' \|\| model === 'open_hat' \? model : 'hihat'/.test(analog),
 );
 
 ok(
@@ -416,13 +431,13 @@ ok(
 );
 
 ok(
-    'DRUM_MODELS is exactly hihat, snare, bass_drum',
-    /export const DRUM_MODELS = \['hihat', 'snare', 'bass_drum'\]/.test(bank),
+    'DRUM_MODELS is open hat, hihat, snare, bass_drum',
+    /export const DRUM_MODELS = \['open_hat', 'hihat', 'snare', 'bass_drum'\]/.test(bank),
 );
 
 ok(
-    'analogDrumInput.gain.value = 0.32 unchanged',
-    /analogDrumInput\.gain\.value = 0\.32/.test(audioEng),
+    'analogDrumInput.gain.value = 1.5',
+    /analogDrumInput\.gain\.value = 1\.5/.test(audioEng),
 );
 
 {
@@ -451,11 +466,12 @@ ok(
 );
 
 ok(
-    'analog-808.js?v=16 on both importers',
-    /analog-808\.js\?v=16/.test(seq)
-        && /analog-808\.js\?v=16/.test(osc)
-        && !/analog-808\.js\?v=15/.test(seq)
-        && !/analog-808\.js\?v=15/.test(osc),
+    'analog-808.js version matches on sequencer and osc-source',
+    (() => {
+        const a = seq.match(/analog-808\.js\?v=(\d+)/);
+        const b = osc.match(/analog-808\.js\?v=(\d+)/);
+        return !!(a && b && a[1] === b[1]);
+    })(),
 );
 
 ok(

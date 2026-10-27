@@ -1,11 +1,12 @@
-import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=15';
-import { wireControls } from './controls.js?v=329';
-import { getFilterCutoffRange } from './filter-cutoff.js?v=84';
-import { updateLfoSmoothing } from './lfo-strip.js?v=35';
-import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=32';
-import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=30';
-import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=125';
+import { state, OSC_COUNT } from './state.js?v=119';
+import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=23';
+import { wireControls } from './controls.js?v=344';
+import { getFilterCutoffRange } from './filter-cutoff.js?v=92';
+import { updateLfoSmoothing } from './lfo-strip.js?v=48';
+import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=45';
+import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=39';
+import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=134';
+import { DRUM_LANE_COUNT } from './pattern-bank.js?v=30';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;
@@ -349,7 +350,7 @@ function initAudio() {
     });
     state.noiseMuteGain = state.audioContext.createGain();
     state.noiseMuteGain.gain.value = 1;
-    state.drumMuteGains = [0, 1, 2].map(() => {
+    state.drumMuteGains = Array.from({ length: DRUM_LANE_COUNT }, () => {
         const g = state.audioContext.createGain();
         g.gain.value = 1;
         return g;
@@ -360,8 +361,8 @@ function initAudio() {
             oscSolo: [false, false, false, false],
             noiseMute: false,
             noiseSolo: false,
-            drumMute: [false, false, false],
-            drumSolo: [false, false, false],
+            drumMute: Array.from({ length: DRUM_LANE_COUNT }, () => false),
+            drumSolo: Array.from({ length: DRUM_LANE_COUNT }, () => false),
         };
     }
 
@@ -427,11 +428,12 @@ function initAudio() {
     state.distDryGain.connect(state.bitcrusher);
 
     // Analog 808 FILT-off joins after distortion so O1–O4 waveshaping is skipped.
+    // 0.32 left the whole analog kit behind a synth note.
     state.analogDrumInput = state.audioContext.createGain();
-    state.analogDrumInput.gain.value = 0.32;
+    state.analogDrumInput.gain.value = 1.5;
     state.analogDrumInput.connect(state.bitcrusher);
 
-    state.berlinDrumPanners = [0, 1, 2].map((i) => {
+    state.berlinDrumPanners = Array.from({ length: DRUM_LANE_COUNT }, (_, i) => {
         const panner = state.audioContext.createStereoPanner();
         panner.pan.value = 0;
         panner.connect(state.drumMuteGains[i]);

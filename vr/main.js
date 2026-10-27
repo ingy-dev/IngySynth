@@ -1,10 +1,10 @@
 import { createScene } from './scene.js?v=29';
-import { bindBoard } from './keyboard.js?v=227';
-import { createPoly800, placeOnDesk } from './poly800.js?v=24';
+import { bindBoard } from './keyboard.js?v=249';
+import { createPoly800, placeOnDesk } from './poly800.js?v=29';
 import { DESK_TOP_Y, KEYBOARD_Z } from './loft.js?v=22';
-import { createDeskMonitors, liveDisplayDown, liveDisplayUp } from './screens.js?v=16';
+import { createDeskMonitors, liveDisplayDown, liveDisplayUp } from './screens.js?v=25';
 import { createTolomeoLamps } from './tolomeo.js?v=12';
-import { attachHexPaint } from './hex-scope.js?v=6';
+import { attachHexPaint } from './hex-scope.js?v=11';
 import { closeSelect } from './vr-select.js?v=2';
 import { attachXrInput } from './xr-input.js?v=7';
 
@@ -64,19 +64,19 @@ function modeFlags() {
 
 async function bootEngine() {
     setStatus('Loading INGYSYNTH engine…');
-    const ae = await import('../js/audio-engine.js?v=208');
-    const kb = await import('../js/keyboard.js?v=238');
-    const held = await import('../js/held-notes.js?v=9');
-    const bend = await import('../js/pitch-bend.js?v=106');
-    const lfo = await import('../js/lfo-strip.js?v=35');
-    const seq = await import('../js/sequencer.js?v=416');
-    const params = await import('../js/params.js?v=15');
-    const acid = await import('../js/controls.js?v=329');
-    const berlin = await import('../js/berlin.js?v=83');
-    const polyVoice = await import('../js/poly-voice.js?v=129');
-    const mult = await import('../js/keyboard-multitudes-panel.js?v=50');
-    const st = await import('../js/state.js?v=116');
-    const filtEnv = await import('../js/keyboard-filter-env.js?v=98');
+    const ae = await import('../js/audio-engine.js?v=219');
+    const kb = await import('../js/keyboard.js?v=249');
+    const held = await import('../js/held-notes.js?v=10');
+    const bend = await import('../js/pitch-bend.js?v=115');
+    const lfo = await import('../js/lfo-strip.js?v=44');
+    const seq = await import('../js/sequencer.js?v=428');
+    const params = await import('../js/params.js?v=19');
+    const acid = await import('../js/controls.js?v=340');
+    const berlin = await import('../js/berlin.js?v=94');
+    const polyVoice = await import('../js/poly-voice.js?v=164');
+    const mult = await import('../js/keyboard-multitudes-panel.js?v=59');
+    const st = await import('../js/state.js?v=118');
+    const filtEnv = await import('../js/keyboard-filter-env.js?v=107');
     initAudio = ae.initAudio;
     pressKey = kb.pressKey;
     releaseKey = kb.releaseKey;

@@ -1,12 +1,12 @@
 import * as THREE from './vendor/three.module.js';
-import { getNumber, getString, set, subscribe } from '../js/params.js?v=15';
-import { SCALE_BANKS } from '../js/tuning.js?v=80';
+import { getNumber, getString, set, subscribe } from '../js/params.js?v=19';
+import { SCALE_BANKS } from '../js/tuning.js?v=84';
 import { makeLabel, noHit, whenFonts } from './vr-label.js?v=2';
-import { createKnob } from './vr-knob.js?v=7';
-import { createButton } from './vr-button.js?v=2';
+import { createKnob } from './vr-knob.js?v=13';
+import { createButton } from './vr-button.js?v=6';
 import { createSelectTrigger, closeSelect } from './vr-select.js?v=2';
-import { createXyPad } from './vr-xy.js?v=2';
-import { createHexScope } from './hex-scope.js?v=6';
+import { createXyPad } from './vr-xy.js?v=6';
+import { createHexScope } from './hex-scope.js?v=11';
 
 export const PANEL_W = 0.60;
 export const PANEL_H = 0.335;

@@ -5,8 +5,8 @@
 // Amounts show as 0–100 (dial position). Tempo, pitch, time, pan, and
 // bit depth keep their own units.
 
-import { state } from './state.js?v=116';
-import { formatRangeValue } from './knobs.js?v=147';
+import { state } from './state.js?v=119';
+import { formatRangeValue } from './knobs.js?v=163';
 
 const TOUCH_MQ = '(max-width: 768px), (hover: none) and (pointer: coarse)';
 const LINGER_MS = 520;
@@ -14,6 +14,8 @@ const GAP_PX = 10;
 const EDGE_PX = 8;
 const FADE_MS = 160;
 const MAX_BUBBLES = 4;
+
+const DIAL_SEL = '.synth-knob-dial[role="slider"], .mi-knob-dial[role="slider"]';
 
 const RANGE_READOUT_SEL = [
     '.berlin-ctl-value',
@@ -246,7 +248,7 @@ function controlKey(el) {
     if (key === 'write-fine') return 'stepFine';
     if (key) return key;
     const id = el.id || '';
-    const osc = id.match(/^kbOsc(\d)TuneKnob$/);
+    const osc = id.match(/^(?:kb|mi)Osc(\d)TuneKnob$/);
     if (osc) return `osc-tune-${Number(osc[1]) - 1}`;
     if (id === 'kbTuningMasterTune' || id === 'kbXyTuningMasterTune') return 'masterTune';
     if (id === 'kbPatternSemiSwitch') return 'semitoneSwitch';
@@ -312,8 +314,8 @@ function scaleReadout(key, raw, hundred) {
 function dialCaption(dial) {
     const custom = customCaption(dial);
     if (custom) return custom.toUpperCase();
-    const knob = dial.closest('.synth-knob');
-    const label = textOf(knob?.querySelector('.synth-knob-label'));
+    const knob = dial.closest('.synth-knob, .mi-knob');
+    const label = textOf(knob?.querySelector('.synth-knob-label, .mi-knob-pill'));
     const aria = dial.getAttribute('aria-label') || '';
     if (label) return finishCaption(dial, label, aria);
     const legend = textOf(dial.closest('.keyboard-step')?.querySelector('legend'));
@@ -333,11 +335,11 @@ function readDialValue(dial) {
 }
 
 function dialFromEvent(e) {
-    const direct = e.target?.closest?.('.synth-knob-dial[role="slider"]');
+    const direct = e.target?.closest?.(DIAL_SEL);
     if (direct) return direct;
-    const wrap = e.target?.closest?.('.synth-knob-dial-wrap');
+    const wrap = e.target?.closest?.('.synth-knob-dial-wrap, .mi-knob-dial-wrap');
     if (!wrap) return null;
-    const dial = wrap.querySelector('.synth-knob-dial[role="slider"]');
+    const dial = wrap.querySelector(DIAL_SEL);
     if (!dial) return null;
     const rect = dial.getBoundingClientRect();
     if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {

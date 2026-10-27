@@ -3,7 +3,7 @@
 // sits above it, with its own active tab.
 
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
-import { state } from './state.js?v=116';
+import { state } from './state.js?v=119';
 
 export const TAB_FIELDSET_IDS = [
     'keyboardStepsFieldset',
@@ -190,7 +190,20 @@ function leaveGroup(group) {
     restoreGroup(group);
 }
 
-export function setViewMode(mode) {
+function hasStoredViewMode() {
+    const value = readStored(VIEW_MODE_KEY, '');
+    return value === 'tabbed' || value === 'full';
+}
+
+/** Saved choice wins. Otherwise phones open tabbed and desktop opens full. */
+function preferredMode() {
+    const stored = readStored(VIEW_MODE_KEY, '');
+    if (stored === 'tabbed' || stored === 'full') return stored;
+    return isMobileViewport() ? 'tabbed' : 'full';
+}
+
+export function setViewMode(mode, options = {}) {
+    const persist = options.persist !== false;
     const next = mode === 'tabbed' ? 'tabbed' : 'full';
     if (next === currentMode) {
         syncSwitchButtons();
@@ -199,12 +212,14 @@ export function setViewMode(mode) {
     currentMode = next;
     document.body.classList.toggle('view-tabbed', next === 'tabbed');
     for (const group of GROUPS) {
-        if (!isGroupEnabled(group)) continue;
-        if (next === 'tabbed') enterGroup(group);
-        else leaveGroup(group);
+        if (next === 'tabbed') {
+            if (isGroupEnabled(group)) enterGroup(group);
+        } else {
+            leaveGroup(group);
+        }
     }
     if (next === 'full') collapseSnapshot = null;
-    writeStored(VIEW_MODE_KEY, currentMode);
+    if (persist) writeStored(VIEW_MODE_KEY, currentMode);
     syncSwitchButtons();
 }
 
@@ -212,6 +227,11 @@ function onViewportChange() {
     const mobile = isMobileViewport();
     if (mobile === wasMobile) return;
     wasMobile = mobile;
+    // Don't persist the automatic choice: opening the phone must not lock desktop into tabbed.
+    if (!hasStoredViewMode()) {
+        setViewMode(mobile ? 'tabbed' : 'full', { persist: false });
+        return;
+    }
     if (currentMode !== 'tabbed') return;
     for (const group of GROUPS) {
         if (!group.mobileOnly) continue;
@@ -257,7 +277,7 @@ export function initViewMode(options = {}) {
     if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onViewportChange);
     else mq.addListener(onViewportChange);
 
-    const storedMode = readStored(VIEW_MODE_KEY, 'full');
-    if (storedMode === 'tabbed') setViewMode('tabbed');
+    const initial = preferredMode();
+    if (initial === 'tabbed') setViewMode('tabbed', { persist: hasStoredViewMode() });
     else syncSwitchButtons();
 }

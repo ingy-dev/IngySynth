@@ -181,13 +181,20 @@ export const state = {
     playGeneration: 0,
     seqEngineGeneration: 0,            // invalidates lookahead voices / MIDI on mode hot-swap
 
-    // Pattern bank (P1–P8) + Berlin Dream-960 (8 lanes)
+    // Pattern bank (P1–P8). Berlin has its own bank (8 patterns × 8 lanes).
     patterns: [],                      // 8 × Pattern (see pattern-bank.js)
-    editSlot: 0,                       // bank slot shown in the step strips (0–7 normal)
-    pendingEditSlot: null,             // armed slot; commits at next loop start
-    berlinMode: false,                 // eight rows in parallel, own clocks/destinations
-    berlinOscCount: 3,                 // 1–4 visible oscillator lanes (O1–O4)
-    berlinModCount: 1,                 // 1–4 visible modulation lanes (M1–M4)
+    editSlot: 0,                       // normal slot shown in the step strip (0–7)
+    pendingEditSlot: null,             // armed normal slot; commits at next cycle start
+    cyclePass: 0,                      // 0-based pass inside the current Repeat cycle
+    cycleFirstPass: true,             // next normal boundary is the start of playback
+    berlinMode: false,                 // eight lanes in parallel, own clocks/destinations
+    berlinBank: [],                    // 8 × { lanes[8], oscCount, modCount, repeat }
+    berlinSlot: 0,                     // Berlin pattern playing and shown (P1–P8)
+    berlinPendingSlot: null,           // armed Berlin pattern; commits at next cycle start
+    berlinCyclePass: 0,                // 0-based pass inside the Berlin Repeat cycle
+    berlinCycleFirstPass: false,       // Berlin play-start already anchors the first pass
+    berlinOscCount: 3,                 // mirror of the current Berlin pattern's oscCount
+    berlinModCount: 1,                 // mirror of the current Berlin pattern's modCount
     berlinSoloRow: null,               // exclusive Solo index, or null when none
     berlinPlayheads: [],               // playhead × 8
     berlinLoopAnchor: 0,               // audio time the master loop last wrapped
@@ -198,9 +205,11 @@ export const state = {
     berlinDrumFilt: false,             // drums through shared filter (default off)
     berlinDrum: [],                    // 3 × { engine, model, tune, harmonics, morphX, morphY, alt, trigPatched, vol, pan }
     berlinDrumVoices: [],              // independent drum hits (Plaits or analog 808)
-    berlinDrumPanners: [],             // StereoPannerNode × 3 (not oscPanners)
-    drumPatterns: [],                  // 3 × dedicated D-lane patterns (not P6–P8)
-    drumPlayheads: [],                 // playhead × 3 for D1–D3
+    berlinDrumPanners: [],             // StereoPannerNode × 4 (not oscPanners)
+    drumBank: [],                      // 8 × { lanes[4] } — steps, length, division, ratch per slot
+    drumSlot: 0,                       // drum pattern playing and shown (P1–P8)
+    drumPatterns: [],                  // drumBank[drumSlot].lanes (D1–D4)
+    drumPlayheads: [],                 // playhead × 4 for D1–D4
     scSourcePlayhead: undefined,       // extra playhead when SC SRC is an oscillator
     scDucker: undefined,               // GainNode after envelope, before distInput
     drumFxInput: undefined,            // post-envelope pad into distortion (Plaits FILT off)

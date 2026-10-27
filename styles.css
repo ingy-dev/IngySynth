@@ -2056,15 +2056,313 @@ html {
         color: #000;
     }
 
+/* Site header — shared across pages. Transport shows only on the synth page. */
+:root {
+    --site-bar-h: calc(44px + env(safe-area-inset-top, 0px));
+}
+body.note-in-header {
+    --site-bar-h: calc(88px + env(safe-area-inset-top, 0px));
+}
+.site-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10050;
+    box-sizing: border-box;
+    height: var(--site-bar-h);
+    padding-top: env(safe-area-inset-top, 0px);
+    background: #000;
+    color: #00ff00;
+}
+.site-bar-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    height: 44px;
+    padding: 0 max(4px, env(safe-area-inset-right, 0px)) 0 max(4px, env(safe-area-inset-left, 0px));
+}
+.site-bar-transport {
+    grid-column: 1;
+    justify-self: start;
+    display: flex;
+    align-items: center;
+}
+body:not([data-page="synth"]) .site-bar-transport {
+    display: none;
+}
+.site-bar-logo {
+    grid-column: 2;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 44px;
+    padding: 0 4px;
+}
+.site-bar-logo img {
+    display: block;
+    height: 32px;
+    width: auto;
+    max-width: 100%;
+}
+.site-bar-end {
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+}
+.site-bar-btn {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #00ff00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+.site-bar-btn:focus-visible,
+.site-bar-logo:focus-visible,
+.site-bar-nav a:focus-visible {
+    outline: 1px solid #fff;
+    outline-offset: -2px;
+}
+.site-bar-play-icon {
+    display: block;
+    pointer-events: none;
+}
+.site-bar-play.start .site-bar-play-icon {
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 0 8px 14px;
+    border-color: transparent transparent transparent #00ff00;
+    margin-left: 3px;
+}
+.site-bar-play.stop .site-bar-play-icon {
+    width: 14px;
+    height: 14px;
+    background: #ff0000;
+    border-radius: 1px;
+}
+.site-bar-mute svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+}
+.site-bar-mute .site-bar-mute-slash,
+.site-bar-mute.is-muted .site-bar-mute-waves {
+    display: none;
+}
+.site-bar-mute.is-muted .site-bar-mute-slash {
+    display: block;
+}
+.site-bar-menu {
+    color: #fff;
+}
+.site-bar-menu-glyph,
+.site-bar-menu-glyph::before,
+.site-bar-menu-glyph::after {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    position: relative;
+}
+.site-bar-menu-glyph::before,
+.site-bar-menu-glyph::after {
+    content: "";
+    position: absolute;
+    left: 0;
+}
+.site-bar-menu-glyph::before { top: -5px; }
+.site-bar-menu-glyph::after { top: 5px; }
+.site-bar.is-menu-open .site-bar-menu-glyph {
+    background: transparent;
+}
+.site-bar.is-menu-open .site-bar-menu-glyph::before {
+    top: 0;
+    transform: rotate(45deg);
+}
+.site-bar.is-menu-open .site-bar-menu-glyph::after {
+    top: 0;
+    transform: rotate(-45deg);
+}
+.site-bar-nav {
+    position: absolute;
+    top: 100%;
+    right: max(4px, env(safe-area-inset-right, 0px));
+    min-width: 148px;
+    max-height: min(70dvh, 480px);
+    overflow: auto;
+    margin: 0;
+    background: #000;
+    box-sizing: border-box;
+}
+.site-bar-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.site-bar-nav a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    color: #00ff00;
+    text-decoration: none;
+    font-family: "changeling-neo", Michroma, sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+}
+.site-bar-nav a[aria-current="page"] {
+    color: #fff;
+}
+/* Second header row: same 44px as the logo row. Semitone left, note center, octave right. */
+.site-bar-note {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    height: 44px;
+    padding: 0 max(4px, env(safe-area-inset-right, 0px)) 0 max(4px, env(safe-area-inset-left, 0px));
+    box-sizing: border-box;
+    border-top: 1px solid rgba(0, 170, 0, 0.45);
+}
+.site-bar-note[hidden] {
+    display: none;
+}
+.site-bar-note-semi,
+.site-bar-note-oct {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+.site-bar-note-semi {
+    grid-column: 1;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    padding-right: 8px;
+}
+.site-bar-note-oct { grid-column: 3; justify-content: flex-end; }
+.site-bar-note-center {
+    grid-column: 2;
+    display: flex;
+    justify-content: center;
+    min-width: max-content;
+}
+.site-bar-note .note-vfd-pair {
+    position: relative;
+    max-width: none;
+    flex-shrink: 0;
+}
+.site-bar-note .note-vfd-float {
+    height: 40px;
+}
+.site-bar-note .note-vfd-bezel {
+    padding: 1px 2px;
+}
+.site-bar-note .note-vfd-glass {
+    height: 30px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+.site-bar-note .keyboard-pattern-octave {
+    gap: 4px;
+    padding: 0;
+}
+.site-bar-note .keyboard-pattern-octave-buttons {
+    gap: 4px;
+}
+.site-bar-note .pushable.keyboard-pattern-octave-btn,
+.site-bar-note .pushable.keyboard-pattern-octave-btn .front {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+}
+.site-bar-note .pushable.keyboard-pattern-octave-btn .front {
+    gap: 1px;
+    font-size: 7px;
+    transform: translateY(-3px);
+}
+.site-bar-note .pushable.keyboard-pattern-octave-btn:hover .front,
+.site-bar-note .pushable.keyboard-pattern-octave-btn:active .front {
+    transform: translateY(-2px);
+}
+.site-bar-note .pushable.keyboard-pattern-octave-btn .kb-pattern-oct-dir-up {
+    border-width: 0 4px 6px 4px;
+}
+.site-bar-note .pushable.keyboard-pattern-octave-btn .kb-pattern-oct-dir-down {
+    border-width: 6px 4px 0 4px;
+}
+.site-bar-note .keyboard-octave-screen {
+    height: 28px;
+    min-width: 2rem;
+    padding: 0 6px;
+}
+.site-bar-note .keyboard-tuning-semi {
+    flex-wrap: nowrap;
+    gap: 4px;
+    width: max-content;
+    max-width: 100%;
+    min-width: 0;
+}
+.site-bar-note .keyboard-master-tune {
+    height: 28px;
+    gap: 4px;
+    padding: 0 6px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.site-bar-note .keyboard-master-tune-label,
+.site-bar-note .keyboard-tuning-semi-amount {
+    flex: 0 0 auto;
+}
+.site-bar-note .keyboard-master-tune-value {
+    flex: 0 0 auto;
+}
+.site-bar-note .keyboard-master-tune-label,
+.site-bar-note .keyboard-master-tune-value,
+.site-bar-note .keyboard-octave-readout {
+    font-size: 9px;
+}
+.site-bar-note .keyboard-master-tune-value {
+    min-width: 1.4rem;
+}
+.site-bar-note .keyboard-tuning-semi input[type="range"].keyboard-master-tune-slider {
+    width: 72px;
+    max-width: 72px;
+    min-width: 24px;
+    flex: 1 1 72px;
+}
+.site-bar-note .keyboard-tuning-semi-amount {
+    height: 28px;
+    min-width: 2.4rem;
+    padding: 0 4px;
+    font-size: 10px;
+}
+@media (orientation: portrait) and (max-width: 768px) {
+    .site-bar-note-semi,
+    .site-bar-note-oct {
+        display: none;
+    }
+}
+
 /* --- Chromatic piano keyboard --- */
 .keyboard-section {
     position: fixed;
-    inset: 0;
+    inset: var(--site-bar-h) 0 0 0;
     z-index: 9999;
     max-width: none;
     width: 100%;
-    height: 100%;
-    height: 100dvh;
+    height: auto;
     margin: 0;
     border-radius: 0;
     overflow-x: hidden;
@@ -2456,7 +2754,8 @@ html {
     font-variant-numeric: tabular-nums;
 }
 /* Minimal keyboard-section range — overrides the heavy default chrome sliders */
-.keyboard-section input[type="range"].keyboard-master-tune-slider {
+.keyboard-section input[type="range"].keyboard-master-tune-slider,
+.site-bar-note input[type="range"].keyboard-master-tune-slider {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
@@ -2469,11 +2768,14 @@ html {
     border-radius: 0;
     box-shadow: none;
     cursor: pointer;
+    touch-action: none;
 }
-.keyboard-section input[type="range"].keyboard-master-tune-slider:focus {
+.keyboard-section input[type="range"].keyboard-master-tune-slider:focus,
+.site-bar-note input[type="range"].keyboard-master-tune-slider:focus {
     outline: none;
 }
-.keyboard-section input[type="range"].keyboard-master-tune-slider::-webkit-slider-runnable-track {
+.keyboard-section input[type="range"].keyboard-master-tune-slider::-webkit-slider-runnable-track,
+.site-bar-note input[type="range"].keyboard-master-tune-slider::-webkit-slider-runnable-track {
     -webkit-appearance: none;
     appearance: none;
     height: 3px;
@@ -2482,7 +2784,8 @@ html {
     border-radius: 1px;
     box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.75);
 }
-.keyboard-section input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb {
+.keyboard-section input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb,
+.site-bar-note input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 8px;
@@ -2496,23 +2799,28 @@ html {
     transition: none;
 }
 .keyboard-section input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:hover,
-.keyboard-section input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:active {
+.keyboard-section input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:active,
+.site-bar-note input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:hover,
+.site-bar-note input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:active {
     background: #00ff00;
     transform: none;
     box-shadow: none;
 }
-.keyboard-section input[type="range"].keyboard-master-tune-slider:focus::-webkit-slider-thumb {
+.keyboard-section input[type="range"].keyboard-master-tune-slider:focus::-webkit-slider-thumb,
+.site-bar-note input[type="range"].keyboard-master-tune-slider:focus::-webkit-slider-thumb {
     background: #00ff00;
     box-shadow: none;
 }
-.keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-track {
+.keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-track,
+.site-bar-note input[type="range"].keyboard-master-tune-slider::-moz-range-track {
     height: 3px;
     background: #0a0f0a;
     border: 1px solid #1a3a1a;
     border-radius: 1px;
     box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.75);
 }
-.keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-thumb {
+.keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-thumb,
+.site-bar-note input[type="range"].keyboard-master-tune-slider::-moz-range-thumb {
     width: 8px;
     height: 11px;
     border-radius: 1px;
@@ -2523,12 +2831,15 @@ html {
     transition: none;
 }
 .keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:hover,
-.keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:active {
+.keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:active,
+.site-bar-note input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:hover,
+.site-bar-note input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:active {
     background: #00ff00;
     transform: none;
     box-shadow: none;
 }
-.keyboard-section input[type="range"].keyboard-master-tune-slider:focus::-moz-range-thumb {
+.keyboard-section input[type="range"].keyboard-master-tune-slider:focus::-moz-range-thumb,
+.site-bar-note input[type="range"].keyboard-master-tune-slider:focus::-moz-range-thumb {
     background: #00ff00;
     box-shadow: none;
 }
@@ -2713,7 +3024,8 @@ fieldset > legend {
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas:
         "arp arp mod mod"
-        "strips strips mod mod";
+        "strips strips mod mod"
+        "toggles toggles toggles toggles";
     gap: 8px;
     align-items: stretch;
     width: 100%;
@@ -2724,6 +3036,9 @@ fieldset > legend {
 }
 .keyboard-arp-panel {
     grid-area: arp;
+}
+.computer-keyboard-toggle-row {
+    grid-area: toggles;
 }
 .keyboard-play-strips {
     grid-area: strips;
@@ -2759,15 +3074,10 @@ fieldset > legend {
     margin: 0;
     border: 1px solid #00aa00;
     border-radius: 5px;
-    background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.15);
+    background: transparent;
+    box-shadow: none;
     box-sizing: border-box;
     overflow: visible;
-}
-.keyboard-arp-panel > legend .legend-hex,
-.keyboard-mod-matrix > legend .legend-hex {
-    /* Match panel top fill so the hex sits cleanly on the border */
-    --hex-bg: #1a1a1a;
 }
 .keyboard-arp-panel-body {
     display: flex;
@@ -2797,11 +3107,13 @@ fieldset > legend {
         grid-template-areas:
             "arp"
             "mod"
-            "strips";
+            "strips"
+            "toggles";
     }
     .keyboard-arp-panel,
     .keyboard-mod-matrix,
-    .keyboard-play-strips {
+    .keyboard-play-strips,
+    .computer-keyboard-toggle-row {
         grid-column: 1 / -1;
     }
 }
@@ -3039,7 +3351,8 @@ body.automation-mode-active #tabAutomation .keyboard-tab-dot {
     box-shadow: 0 0 4px rgba(255, 0, 255, 0.65);
 }
 .kb-tab-hidden,
-body.view-tabbed #keyboardXyTuningFieldset {
+body.view-tabbed #keyboardXyTuningFieldset,
+body.view-tabbed #kbXyNoteDock {
     display: none !important;
 }
 /* Folder (tabs + panels) is one block; everything else stays outside it.
@@ -3140,10 +3453,11 @@ body.view-tabbed #keyboardMixerFieldset {
 }
 .keyboard-tuning-row {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px 16px;
+    justify-content: center;
+    gap: 10px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -3152,15 +3466,17 @@ body.view-tabbed #keyboardMixerFieldset {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: center;
     gap: 10px;
-    flex: 1 1 0;
+    flex: 0 0 auto;
+    width: auto;
+    max-width: 100%;
     min-width: 0;
 }
-.keyboard-tuning-left {
-    justify-content: flex-start;
-}
 .keyboard-tuning-right {
-    justify-content: flex-end;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 10px;
 }
 .keyboard-tuning-center {
     display: flex;
@@ -3179,14 +3495,93 @@ body.view-tabbed #keyboardMixerFieldset {
     max-width: 100%;
     box-sizing: border-box;
 }
+.note-vfd-pair {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+}
+body.note-in-header #kbXyNotePair,
+body.note-in-header #kbXyNoteDock {
+    display: none;
+}
+.note-vfd-float {
+    position: absolute;
+    left: calc(100% + 2px);
+    top: 50%;
+    z-index: 1;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 36px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #00ff00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+.note-vfd-float svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+}
+.note-vfd-float path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.note-vfd-float .note-vfd-float-down {
+    display: none;
+}
+body.note-in-header .note-vfd-float .note-vfd-float-up {
+    display: none;
+}
+body.note-in-header .note-vfd-float .note-vfd-float-down {
+    display: block;
+}
+.note-vfd-float:focus-visible {
+    outline: 1px solid #fff;
+    outline-offset: 2px;
+}
+/* Pattern dock fills whenever the note has been moved out of Scale / Tuning.
+   The full-page dock fills whenever that copy is showing. */
+.keyboard-tuning-note-dock {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+#kbPatternNoteDock:not(:empty) {
+    display: flex;
+}
+.keyboard-tuning-center:empty,
+.keyboard-tuning-right:empty {
+    display: none;
+}
 .keyboard-tuning-scale-row {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: max-content;
+    width: auto;
     max-width: 100%;
+}
+.keyboard-tuning-scale-row .keyboard-toolbar-btn {
+    width: auto;
+    min-width: 7.5rem;
+    font-size: 11px;
 }
 .keyboard-tuning-right .keyboard-pattern-octave {
     padding: 0;
@@ -3217,13 +3612,11 @@ body.view-tabbed #keyboardMixerFieldset {
     outline-offset: 1px;
 }
 @media (max-width: 900px) {
-    .keyboard-tuning-row {
-        justify-content: center;
-    }
     .keyboard-tuning-left,
     .keyboard-tuning-right {
-        flex: 1 1 100%;
+        flex: 0 0 auto;
         justify-content: center;
+        max-width: 100%;
     }
 }
 .keyboard-automation-panel {
@@ -4699,6 +5092,14 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     margin-bottom: 4px;
     position: relative;
 }
+.pattern-bank-patterns {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    min-width: 0;
+}
 .keyboard-section fieldset.pattern-bank-select {
     margin: 0;
     padding: 6px 10px 8px;
@@ -4716,12 +5117,29 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     width: fit-content;
     margin: 0 auto;
 }
-.pattern-bank-slots {
+/* P1–P8 and the repeat row share one 8-column track */
+.pattern-bank-grid {
     display: grid;
     grid-template-columns: repeat(8, auto);
-    justify-content: center;
-    align-items: center;
     gap: 4px;
+    width: max-content;
+    max-width: 100%;
+}
+.pattern-bank-slots,
+.pattern-repeat-row {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: center;
+}
+.pattern-repeat-btn {
+    grid-column: 1;
+}
+.pattern-cycle-count {
+    grid-column: 2;
+}
+.pattern-cycle-meter {
+    grid-column: 3 / span 6;
 }
 .pattern-bank-berlin {
     display: flex;
@@ -4737,9 +5155,6 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
 }
 /* Lane count selects are Berlin-only; keep PATTERN SELECT centered in normal mode */
 body:not(.berlin-mode) .pattern-bank-berlin {
-    display: none;
-}
-body.berlin-mode .pattern-bank-select {
     display: none;
 }
 .keyboard-section fieldset.berlin-lane-select {
@@ -4768,7 +5183,9 @@ body.berlin-mode .pattern-bank-select {
     justify-content: center;
     gap: 4px;
 }
-.pattern-paste-btn.is-disabled {
+.pattern-paste-btn.is-disabled,
+.pattern-slot-paste-btn.is-disabled,
+.automation-paste-btn.is-disabled {
     opacity: 0.35;
     pointer-events: none;
 }
@@ -4804,28 +5221,141 @@ body.berlin-mode .pattern-bank-select {
     white-space: nowrap;
 }
 .pattern-bank-bar .kb-step-btn {
+    position: relative;
     flex: 0 0 auto;
     min-width: 28px;
     height: 20px;
     padding: 0 7px;
     font-size: 8px;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+.pattern-bank-grid .kb-step-btn {
+    width: 100%;
+}
+.pattern-slot-clipboard {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+.pattern-slot-clipboard .kb-step-btn {
+    width: auto;
+    min-width: 58px;
+    overflow: visible;
+    white-space: nowrap;
+}
+.pattern-slot-btn > .pattern-slot-name {
+    position: relative;
+    z-index: 1;
+}
+.pattern-slot-auto {
+    position: absolute;
+    left: 2px;
+    bottom: 2px;
+    z-index: 2;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #ff00ff;
+    box-shadow: 0 0 3px rgba(255, 0, 255, 0.75);
+    pointer-events: none;
+}
+@media (max-width: 420px) {
+    .pattern-bank-bar .kb-step-btn {
+        min-width: 26px;
+        padding: 0 4px;
+    }
 }
 .pattern-bank-bar .berlin-toggle {
     min-width: 0;
     padding: 0 12px;
     letter-spacing: 0.5px;
 }
-/* Armed bank switch: waiting for the loop boundary */
-.pattern-slot-btn.is-armed {
-    border-color: #00ff00;
-    color: #00ff00;
-    animation: patternSlotArm 0.5s steps(1, end) infinite;
+/* Queued pattern: the button flashes until the switch is heard */
+.pattern-bank-bar .pattern-slot-btn.is-armed {
+    animation: patternSlotFlash 0.8s ease-in-out infinite;
 }
-@keyframes patternSlotArm {
-    50% {
-        background: rgba(0, 255, 0, 0.28);
+@keyframes patternSlotFlash {
+    0%, 42% {
+        background: #00ff00;
         color: #000;
+        border-color: #00ff00;
+        box-shadow: 0 0 8px rgba(0, 255, 0, 0.85);
     }
+    58%, 100% {
+        background: #101010;
+        color: #00ff00;
+        border-color: #00ff00;
+        box-shadow: none;
+    }
+}
+/* Repeat meter: fill advances left to right, one segment per repeat */
+.pattern-cycle-meter {
+    position: relative;
+    height: 20px;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid #00aa00;
+    border-radius: 3px;
+    background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    overflow: hidden;
+    --repeat: 1;
+    --pass: 1;
+    --remaining: 0;
+}
+.pattern-cycle-meter-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    background: rgba(0, 255, 0, 0.55);
+    pointer-events: none;
+    z-index: 0;
+}
+.pattern-cycle-meter.is-playing .pattern-cycle-meter-fill {
+    width: calc(((var(--pass) - 1) + (1 - var(--remaining))) * 100% / var(--repeat));
+}
+.pattern-cycle-meter-ticks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.pattern-cycle-meter-ticks > span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    margin-left: -1px;
+    background: rgba(0, 255, 0, 0.7);
+}
+.pattern-bank-grid .pattern-cycle-count.kb-step-btn {
+    color: #000;
+    border-color: #00aa00;
+    /* Same stack as the cycle meter: dark well + the light-green fill */
+    background:
+        linear-gradient(rgba(0, 255, 0, 0.55), rgba(0, 255, 0, 0.55)),
+        linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    padding: 0 1px;
+    font-size: 7px;
+    letter-spacing: 0;
+    cursor: default;
+    pointer-events: none;
+}
+.pattern-bank-grid .pattern-cycle-count.kb-step-btn:hover,
+.pattern-bank-grid .pattern-cycle-count.kb-step-btn:focus-visible {
+    color: #000;
+    border-color: #00aa00;
+    background:
+        linear-gradient(rgba(0, 255, 0, 0.55), rgba(0, 255, 0, 0.55)),
+        linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
 }
 
 .berlin-panel[hidden] {
@@ -5053,26 +5583,6 @@ body:not(.berlin-mode) .berlin-drum-bar {
         width: 26px;
         height: 26px;
     }
-}
-/* Untitled frame around Berlin logos + bank + steps — chrome only in Berlin mode */
-.keyboard-section fieldset.berlin-dream-frame {
-    margin: 0;
-    padding: 0;
-    border: none;
-    border-radius: 5px;
-    min-width: 0;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-}
-body.berlin-mode .keyboard-section fieldset.berlin-dream-frame {
-    padding: 8px 8px 6px;
-    border: 1px solid #00aa00;
-    gap: 4px;
 }
 .berlin-footer-brand {
     display: flex;
@@ -5500,16 +6010,14 @@ body.berlin-mode .keyboard-section fieldset.berlin-dream-frame {
 }
 
 /* Berlin owns the voice: single-strip editing and rival modes step aside.
- * Pattern toolbar (Slide / Accent / Gate) stays; clipboard is per-lane. */
+ * Pattern toolbar (Slide / Accent / Gate), the synth clipboard, and the
+ * P1–P8 slot clipboard stay. */
 body.berlin-mode #keyboardStepsGrid,
 body.berlin-mode #keyboardAcidStrip,
 body.berlin-mode .keyboard-pattern-shift {
     display: none;
 }
-body.berlin-mode .keyboard-pattern-clipboard {
-    display: none;
-}
-body.berlin-mode .keyboard-section fieldset.berlin-dream-frame > #keyboardPatternFieldset {
+body.berlin-mode #keyboardPatternFieldset {
     margin: 0 0 2px;
 }
 body.berlin-mode .berlin-locked {
@@ -5907,13 +6415,22 @@ canvas.vfd-glass {
     align-items: center;
     gap: 4px;
 }
+.keyboard-automation-clipboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 6px;
+}
 .keyboard-pattern-clipboard .kb-step-btn,
+.keyboard-automation-clipboard .kb-step-btn,
 #kbStepsMicrotuneLock.kb-step-btn.kb-microtune-lock {
     flex: 0 0 auto;
     min-width: 34px;
     height: 18px;
     padding: 0 6px;
     font-size: 7px;
+    white-space: nowrap;
 }
 .keyboard-pattern-microtune-lock.berlin-ctl {
     gap: 4px;
@@ -8874,10 +9391,14 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
         grid-template-areas:
             "arp"
             "mod"
+            "toggles"
             "strips";
         gap: 6px;
         padding: 0 4px;
         margin-bottom: 4px;
+    }
+    #computerKeyboardToggle {
+        display: none !important;
     }
     .keyboard-arp-panel,
     .keyboard-mod-matrix,
@@ -9752,6 +10273,38 @@ body.poly-mode {
 .ingy6-polarity-switch:disabled {
     cursor: default;
     opacity: 0.55;
+}
+.berlin-drum-toolbar .berlin-drum-choke {
+    min-width: 52px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 7px;
+    color: var(--berlin-color, #1E6BFF);
+    border-color: var(--berlin-color, #1E6BFF);
+    background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #1E6BFF) 28%, transparent);
+}
+.berlin-drum-toolbar .berlin-drum-choke:not(.off),
+.berlin-drum-toolbar .berlin-drum-choke:active,
+.berlin-drum-toolbar .berlin-drum-choke:not(.off):hover,
+.berlin-drum-toolbar .berlin-drum-choke:not(.off):focus-visible {
+    color: #000;
+    border-color: var(--berlin-color, #1E6BFF);
+    background: var(--berlin-color, #1E6BFF);
+    box-shadow: none;
+}
+.berlin-drum-toolbar .berlin-drum-choke.off,
+.berlin-drum-toolbar .berlin-drum-choke.off:hover,
+.berlin-drum-toolbar .berlin-drum-choke.off:focus-visible {
+    color: var(--berlin-color, #1E6BFF);
+    border-color: var(--berlin-color, #1E6BFF);
+    background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #1E6BFF) 28%, transparent);
+}
+.berlin-drum-toolbar .berlin-drum-choke.is-grey,
+.berlin-drum-toolbar .berlin-drum-choke:disabled {
+    opacity: 0.4;
+    pointer-events: none;
 }
 .ingy6-chorus-group {
     display: flex;
@@ -10729,8 +11282,8 @@ body.multitudes-mode {
     min-width: 62px;
 }
 .mixer-group[data-group="drums"] {
-    flex: 3 0 186px;
-    min-width: 186px;
+    flex: 4 0 252px;
+    min-width: 252px;
 }
 .mixer-group--master {
     flex: 1.2 0 72px;
@@ -11236,6 +11789,469 @@ body .mixer-level::-moz-range-thumb {
     color: #00ff00;
     text-shadow: 0 0 6px rgba(0, 255, 0, 0.55);
 }
+
+/* =========================================================================
+ * Phone layout pass — rows that fit without widows, aligned toolbars.
+ * Portrait phones use the max-width: 768px blocks; landscape phones are
+ * wider than 768px, so they get their own touch + short-viewport block.
+ * ========================================================================= */
+@media (max-width: 768px) {
+    /* Sequencer: Play, Rev, Tempo, Div, Steps, Disp on one row */
+    .keyboard-tempo-div-row,
+    .keyboard-write-row {
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        gap: 3px;
+    }
+    .keyboard-tempo-div-row > .synth-knob,
+    .keyboard-tempo-div-row > .keyboard-step-vfd-wrap,
+    .keyboard-write-fine-col .synth-knob {
+        width: 54px;
+    }
+    .keyboard-tempo-div-row .synth-knob-dial-wrap,
+    .keyboard-write-fine-col .synth-knob-dial-wrap {
+        width: 54px;
+        flex-basis: 60px;
+        --tick-radius: 24px;
+    }
+    .keyboard-tempo-div-row .keyboard-step-vfd-bezel {
+        width: 54px;
+    }
+    .keyboard-tempo-div-row .keyboard-step-vfd-digits {
+        min-width: 50px;
+        padding: 3px 4px;
+    }
+    #kbWrite.pushable.keyboard-write,
+    #kbWrite.pushable.keyboard-write .front {
+        width: 52px;
+        flex-basis: 52px;
+    }
+
+    /* Step input / scale / automation tabs fit without clipping */
+    #keyboardMobileTabStrip .keyboard-tab {
+        font-size: 9px;
+    }
+
+    /* Step cards: single-letter accent / slide */
+    .kb-step-btn.kb-step-accent,
+    .kb-step-btn.kb-step-slide {
+        font-size: 0;
+        letter-spacing: 0;
+    }
+    .kb-step-btn.kb-step-accent::after,
+    .kb-step-btn.kb-step-slide::after {
+        font-size: 8px;
+        line-height: 1;
+    }
+    .kb-step-btn.kb-step-accent::after {
+        content: 'A';
+    }
+    .kb-step-btn.kb-step-slide::after {
+        content: 'S';
+    }
+
+    /* Arpeggiator: all five on one row (~291px with "Order: Up/Down") */
+    .keyboard-arp-panel-body {
+        flex-wrap: nowrap;
+        gap: 4px;
+    }
+    .keyboard-arp-panel-body .keyboard-toolbar-btn {
+        height: 22px;
+        padding: 0 4px;
+        font-size: 7px;
+    }
+    /* Widest label, so cycling Order doesn't shift the row */
+    .keyboard-arp-panel-body #keyboardArpOrderToggle {
+        min-width: 74px;
+    }
+
+    /* LFO: room for "Retrig" */
+    .keyboard-mod-matrix-lfo .keyboard-lfo-wave {
+        width: 72px;
+    }
+    .keyboard-mod-matrix-left #kbLfoRetrigger {
+        padding: 0 1px;
+        letter-spacing: 0;
+    }
+
+    /* Envelopes: A D S R on one row (the auto-fit 44px columns wrap), Amt centred below */
+    .keyboard-vol-env-knob-row,
+    .keyboard-filter-env-knob-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 2px;
+    }
+    .keyboard-filter-env-knob[data-param="filterEnvAmount"] {
+        grid-column: 1 / -1;
+    }
+
+    /* Drum lane toolbar, by function:
+       Mute Solo Rev Length / Steps Gate / Copy Paste Clear.
+       ::before and ::after are forced line breaks; row-gap is 0 so their
+       height is the gap. */
+    .keyboard-drum-row .berlin-row-controls-body {
+        gap: 0 8px;
+    }
+    .keyboard-drum-row .berlin-row-controls-body::before,
+    .keyboard-drum-row .berlin-row-controls-body::after {
+        content: '';
+        flex-basis: 100%;
+        height: 6px;
+    }
+    .keyboard-drum-row .berlin-row-ms { order: 1; }
+    .keyboard-drum-row .berlin-row-rev { order: 2; }
+    .keyboard-drum-row .berlin-ctl:has(.berlin-row-division) { order: 3; }
+    .keyboard-drum-row .berlin-row-controls-body::before { order: 4; }
+    .keyboard-drum-row .berlin-ctl:has(.berlin-row-steps) { order: 5; }
+    .keyboard-drum-row .berlin-ctl-gate { order: 6; }
+    .keyboard-drum-row .berlin-row-controls-body::after { order: 7; }
+    .keyboard-drum-row .berlin-row-clipboard { order: 8; }
+
+    /* Berlin lane toolbars: Solo Rev Length, then one aligned row per parameter
+       (label | control | value), then Copy Paste Clear. These lanes get
+       ~255px at 375 wide, so two sliders side by side would leave ~60px tracks. */
+    #berlinRows .berlin-row-controls-body {
+        gap: 6px 8px;
+    }
+    #berlinRows .berlin-row-solo { order: 1; }
+    #berlinRows .berlin-row-rev { order: 2; }
+    #berlinRows .berlin-row-clipboard { order: 5; }
+    #berlinRows .berlin-row-controls-body > .berlin-ctl {
+        order: 4;
+        flex: 0 0 100%;
+        justify-content: center;
+    }
+    #berlinRows .berlin-row-controls-body > .berlin-ctl > .berlin-ctl-label {
+        flex: 0 0 40px;
+    }
+    #berlinRows .berlin-row-controls-body > .berlin-ctl > .berlin-ctl-value {
+        flex: 0 0 24px;
+    }
+    .keyboard-section #berlinRows .berlin-row-controls-body > .berlin-ctl > input[type="range"].keyboard-master-tune-slider {
+        width: 150px;
+        max-width: 150px;
+    }
+    /* Spans track + value, so menus line up with the sliders */
+    #berlinRows .berlin-row-controls-body > .berlin-ctl > select {
+        flex: 0 0 178px;
+        width: 178px;
+    }
+    /* Length joins Solo Rev on the first row at its natural width */
+    #berlinRows .berlin-row-controls-body > .berlin-ctl:has(.berlin-row-division) {
+        order: 3;
+        flex: 0 0 auto;
+    }
+    #berlinRows .berlin-row-controls-body > .berlin-ctl:has(.berlin-row-division) > .berlin-ctl-label,
+    #berlinRows .berlin-row-controls-body > .berlin-ctl:has(.berlin-row-division) > select {
+        flex: 0 0 auto;
+        width: auto;
+    }
+}
+
+@media (max-width: 768px), (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+    /* Toolbar buttons: 24px touch height, natural width */
+    .keyboard-pattern-clipboard .kb-step-btn,
+    .keyboard-automation-clipboard .kb-step-btn,
+    .pattern-slot-clipboard .kb-step-btn,
+    #kbStepsMicrotuneLock.kb-step-btn.kb-microtune-lock,
+    .keyboard-drum-row .berlin-row-controls-body .berlin-step-btn,
+    #berlinRows .berlin-row-controls-body .berlin-step-btn {
+        min-width: 40px;
+        height: 24px;
+        padding: 0 8px;
+        font-size: 8px;
+    }
+    .keyboard-drum-row .berlin-ctl select,
+    #berlinRows .berlin-row-controls-body > .berlin-ctl > select {
+        height: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Steps toolbar: Slide / Accent / Gate stacked in label | track | value
+       columns, then Copy Paste Clear + µTune on one row */
+    .keyboard-pattern-slide-accent {
+        flex: 0 0 100%;
+        display: grid;
+        grid-template-columns: auto 150px auto;
+        justify-content: center;
+        align-items: center;
+        gap: 6px 8px;
+    }
+    .keyboard-pattern-slide-accent > .keyboard-pattern-ctl {
+        display: contents;
+    }
+    .keyboard-section .keyboard-pattern-ctl input[type="range"].keyboard-master-tune-slider {
+        width: 150px;
+        max-width: 150px;
+    }
+
+    /* Scale / tuning stacks: scale, master tune, semitone, octave.
+       The note VFD is docked above the mode switches. */
+    .keyboard-tuning-semi {
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 100%;
+    }
+}
+
+
+/* Full-page extra Scale / Tuning: its note VFD sits above the poly mode
+   switches and stays when that fieldset is collapsed. */
+#kbXyNoteDock:not(:empty) {
+    display: flex;
+}
+
+@media (max-width: 900px) {
+    /* Ingy 6 / Multitudes: mode buttons on their own rail above the logo */
+    .ingy6-panel-shell {
+        --ingy6-logo-w: min(200px, 60%);
+    }
+    .ingy6-brand-center,
+    .multitudes-brand-center {
+        flex-wrap: nowrap;
+        margin: 0 -16px;
+        padding: 0 16px 8px;
+        border-bottom: 1px solid rgba(0, 170, 0, 0.55);
+    }
+    .multitudes-brand {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 8px 16px 8px;
+    }
+    .multitudes-brand-left:empty {
+        display: none;
+    }
+    .multitudes-brand-center {
+        justify-content: center;
+    }
+    .multitudes-logo {
+        align-self: flex-end;
+    }
+    .multitudes-module .mi-wave-group {
+        flex-wrap: nowrap;
+    }
+    .multitudes-module .mi-wave-btn {
+        padding: 5px;
+        letter-spacing: 0.02em;
+    }
+    .multitudes-module[data-module="plaititudes"] .mi-knob-row {
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+    .multitudes-module[data-module="plaititudes"] .mi-knob-pill {
+        padding: 3px 4px;
+        letter-spacing: 0.02em;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+    #computerKeyboardToggle {
+        display: none !important;
+    }
+
+    /* Sequencer + Step Input side by side, each on a single row */
+    .keyboard-tempo-div-row,
+    .keyboard-write-row {
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        gap: 4px;
+    }
+    .keyboard-tempo-div-row > .synth-knob,
+    .keyboard-tempo-div-row > .keyboard-step-vfd-wrap,
+    .keyboard-write-fine-col .synth-knob {
+        width: 60px;
+    }
+    .keyboard-tempo-div-row .synth-knob-dial-wrap,
+    .keyboard-write-fine-col .synth-knob-dial-wrap,
+    .keyboard-tempo-div-row .keyboard-step-vfd-bezel {
+        width: 60px;
+        height: 60px;
+        flex-basis: 60px;
+        --tick-radius: 26px;
+    }
+    .keyboard-transport-fieldset,
+    .keyboard-write-fieldset {
+        --kb-perf-footer-h: 20px;
+    }
+    .keyboard-perf-btn-slot {
+        height: 60px;
+    }
+    /* Column flex: flex-basis, not height, sets the box (base is 72px) */
+    .keyboard-write-step-select-btns {
+        height: 60px;
+        flex-basis: 60px;
+    }
+    #kbStartStop.pushable.keyboard-start-stop,
+    #kbRev.pushable.keyboard-rev,
+    #kbWritePrev.pushable.keyboard-write-nav,
+    #kbWriteNext.pushable.keyboard-write-nav,
+    #kbRest.pushable.keyboard-write-rest,
+    #kbWriteAcc.pushable.keyboard-write-arm,
+    #kbWriteSld.pushable.keyboard-write-arm,
+    #kbStartStop.pushable.keyboard-start-stop .front,
+    #kbRev.pushable.keyboard-rev .front,
+    #kbWritePrev.pushable.keyboard-write-nav .front,
+    #kbWriteNext.pushable.keyboard-write-nav .front,
+    #kbRest.pushable.keyboard-write-rest .front,
+    #kbWriteAcc.pushable.keyboard-write-arm .front,
+    #kbWriteSld.pushable.keyboard-write-arm .front {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px;
+    }
+    #kbWrite.pushable.keyboard-write,
+    #kbWrite.pushable.keyboard-write .front {
+        width: 52px;
+        height: 36px;
+        flex-basis: 52px;
+    }
+    #kbRev.pushable.keyboard-rev .front,
+    #kbWrite.pushable.keyboard-write .kb-write-label,
+    #kbWritePrev.pushable.keyboard-write-nav .front,
+    #kbWriteNext.pushable.keyboard-write-nav .front,
+    #kbRest.pushable.keyboard-write-rest .front,
+    #kbWriteAcc.pushable.keyboard-write-arm .front,
+    #kbWriteSld.pushable.keyboard-write-arm .front {
+        font-size: 8px;
+    }
+    #kbWrite.pushable.keyboard-write .kb-write-rec {
+        width: 14px;
+        height: 14px;
+    }
+    #kbStartStop.start .kb-transport-icon {
+        border-width: 7px 0 7px 12px;
+    }
+    #kbStartStop.stop .kb-transport-icon {
+        width: 14px;
+        height: 14px;
+    }
+
+    /* Synth sections stacked full width: after the notch safe-area insets the
+       desktop 4-column grid leaves each envelope too narrow for its dials */
+    .keyboard-synth-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .keyboard-osc-group,
+    .keyboard-filter-section,
+    .keyboard-amp-section {
+        grid-column: 1;
+        height: auto;
+    }
+    .keyboard-osc-group { grid-row: 1; }
+    .keyboard-filter-section { grid-row: 2; }
+    .keyboard-amp-section { grid-row: 3; }
+    /* height: 100% lets each row collapse to its shorter neighbour, so the
+       taller box's content (env knobs, Off/Inv) spills out the bottom */
+    .keyboard-synth-panel .keyboard-synth-grid .keyboard-perf-fieldset,
+    .keyboard-synth-panel .keyboard-synth-col-stack--bottom {
+        height: auto;
+        align-self: stretch;
+    }
+    .keyboard-filter-env-knob[data-param="filterEnvAmount"] {
+        grid-column: 1 / -1;
+    }
+
+    /* Steps toolbar: Slide Accent Gate on one row, Copy Paste Clear + µTune below */
+    .keyboard-pattern-slide-accent {
+        flex: 0 0 100%;
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: center;
+        gap: 16px;
+    }
+    .keyboard-pattern-slide-accent > .keyboard-pattern-ctl {
+        display: flex;
+    }
+    .keyboard-section .keyboard-pattern-ctl input[type="range"].keyboard-master-tune-slider {
+        width: 100px;
+        max-width: 100px;
+    }
+
+    /* Drum lane toolbar: Mute Solo Rev Length Copy Paste Clear / Steps Gate */
+    .keyboard-drum-row .berlin-row-controls-body {
+        gap: 0 8px;
+    }
+    .keyboard-drum-row .berlin-row-controls-body::before {
+        content: '';
+        flex-basis: 100%;
+        height: 6px;
+        order: 4;
+    }
+    .keyboard-drum-row .berlin-row-controls-body::after {
+        display: none;
+    }
+    .keyboard-drum-row .berlin-row-ms { order: 1; }
+    .keyboard-drum-row .berlin-row-rev { order: 2; }
+    .keyboard-drum-row .berlin-ctl:has(.berlin-row-division),
+    .keyboard-drum-row .berlin-row-clipboard { order: 3; }
+    .keyboard-drum-row .berlin-ctl:has(.berlin-row-steps) { order: 5; }
+    .keyboard-drum-row .berlin-ctl-gate { order: 6; }
+
+    /* Drum tone bar: one row, with Pan stacked under Vol in the last column */
+    .keyboard-drum-row .berlin-drum-toolbar {
+        display: grid;
+        grid-template-rows: auto auto;
+        grid-auto-flow: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px 8px;
+    }
+    .keyboard-drum-row .berlin-drum-toolbar > * {
+        grid-row: 1 / -1;
+    }
+    .keyboard-drum-row .berlin-drum-toolbar > .berlin-ctl:has(.berlin-drum-vol) {
+        grid-row: 1;
+    }
+    .keyboard-drum-row .berlin-drum-toolbar > .berlin-ctl:has(.berlin-drum-pan) {
+        grid-row: 2;
+    }
+    .keyboard-drum-row .berlin-drum-toolbar > .berlin-ctl:has(.berlin-drum-vol) > .berlin-ctl-label,
+    .keyboard-drum-row .berlin-drum-toolbar > .berlin-ctl:has(.berlin-drum-pan) > .berlin-ctl-label {
+        flex: 0 0 22px;
+    }
+    .keyboard-section .keyboard-drum-row .berlin-drum-toolbar .berlin-ctl input[type="range"].keyboard-master-tune-slider {
+        width: 80px;
+        max-width: 80px;
+    }
+
+    /* Berlin lane toolbars, as the drum lanes:
+       Solo Rev Length (Dest) Copy Paste Clear / Steps Gate (or Amount) */
+    #berlinRows .berlin-row-controls-body {
+        gap: 0 8px;
+    }
+    #berlinRows .berlin-row-controls-body::before {
+        content: '';
+        flex-basis: 100%;
+        height: 6px;
+        order: 4;
+    }
+    #berlinRows .berlin-row-solo { order: 1; }
+    #berlinRows .berlin-row-rev { order: 2; }
+    #berlinRows .berlin-row-controls-body > .berlin-ctl,
+    #berlinRows .berlin-row-clipboard {
+        order: 3;
+        flex: 0 0 auto;
+    }
+    #berlinRows .berlin-row-controls-body > .berlin-ctl:has(input[type="range"]) { order: 5; }
+    #berlinRows .berlin-row-controls-body > .berlin-ctl > .berlin-ctl-label,
+    #berlinRows .berlin-row-controls-body > .berlin-ctl > .berlin-ctl-value,
+    #berlinRows .berlin-row-controls-body > .berlin-ctl > select {
+        flex: 0 0 auto;
+        width: auto;
+    }
+    .keyboard-section #berlinRows .berlin-row-controls-body > .berlin-ctl > input[type="range"].keyboard-master-tune-slider {
+        width: 100px;
+        max-width: 100px;
+    }
+
+    /* Arpeggiator: all five fit on one row */
+    .keyboard-arp-panel-body .keyboard-toolbar-btn {
+        height: 24px;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .touch-readout {
         transform: none;
@@ -11243,5 +12259,8 @@ body .mixer-level::-moz-range-thumb {
     }
     .touch-readout.is-visible {
         transform: none;
+    }
+    .pattern-bank-bar .pattern-slot-btn.is-armed {
+        animation: none;
     }
 }

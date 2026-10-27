@@ -1,26 +1,37 @@
 // Mixer: level / pan / mute / solo / master on persistent buses.
 // Vertical channel strips; linear 0–100 scale + ticks match fader travel. INGY6 faders untouched.
 
-import { state, OSC_COUNT } from './state.js?v=116';
-import { getNumber, getOscVol, getOscPan, set, subscribe } from './params.js?v=15';
-import { applyMixerMutes } from './store-engine.js?v=51';
-import { applyBerlinDrumKitToLive } from './osc-source.js?v=125';
-import { ensureBerlinDrumKit } from './pattern-bank.js?v=16';
+import { state, OSC_COUNT } from './state.js?v=119';
+import { getNumber, getOscVol, getOscPan, set, subscribe } from './params.js?v=23';
+import { applyMixerMutes } from './store-engine.js?v=65';
+import { applyBerlinDrumKitToLive } from './osc-source.js?v=134';
+import { DRUM_LANE_COUNT, ensureBerlinDrumKit } from './pattern-bank.js?v=30';
 
 const MIXER_SCALE = ['100', '80', '60', '40', '20', '0'];
 
 let mixerFaderDragDepth = 0;
 
+function fitDrumFlags(arr) {
+    if (!Array.isArray(arr)) return Array.from({ length: DRUM_LANE_COUNT }, () => false);
+    if (arr.length === 3) return [false, arr[0], arr[1], arr[2]];
+    const out = arr.slice(0, DRUM_LANE_COUNT);
+    while (out.length < DRUM_LANE_COUNT) out.push(false);
+    return out;
+}
+
 function ensureMixer() {
-    if (state.mixer) return state.mixer;
-    state.mixer = {
-        oscMute: [false, false, false, false],
-        oscSolo: [false, false, false, false],
-        noiseMute: false,
-        noiseSolo: false,
-        drumMute: [false, false, false],
-        drumSolo: [false, false, false],
-    };
+    if (!state.mixer) {
+        state.mixer = {
+            oscMute: [false, false, false, false],
+            oscSolo: [false, false, false, false],
+            noiseMute: false,
+            noiseSolo: false,
+            drumMute: Array.from({ length: DRUM_LANE_COUNT }, () => false),
+            drumSolo: Array.from({ length: DRUM_LANE_COUNT }, () => false),
+        };
+    }
+    state.mixer.drumMute = fitDrumFlags(state.mixer.drumMute);
+    state.mixer.drumSolo = fitDrumFlags(state.mixer.drumSolo);
     return state.mixer;
 }
 
@@ -77,7 +88,7 @@ function notifyMixerMutes() {
 /** Toggle D-lane mute (shared with mixer strip). */
 export function toggleDrumMute(lane) {
     const mix = ensureMixer();
-    const i = Math.max(0, Math.min(2, lane | 0));
+    const i = Math.max(0, Math.min(DRUM_LANE_COUNT - 1, lane | 0));
     mix.drumMute[i] = !mix.drumMute[i];
     applyMixerMutes();
     refreshMixerUi();
@@ -86,7 +97,7 @@ export function toggleDrumMute(lane) {
 /** Toggle D-lane solo (shared with mixer strip; additive with other solos). */
 export function toggleDrumSolo(lane) {
     const mix = ensureMixer();
-    const i = Math.max(0, Math.min(2, lane | 0));
+    const i = Math.max(0, Math.min(DRUM_LANE_COUNT - 1, lane | 0));
     mix.drumSolo[i] = !mix.drumSolo[i];
     applyMixerMutes();
     refreshMixerUi();

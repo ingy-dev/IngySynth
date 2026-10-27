@@ -2,16 +2,16 @@
 // Knobs are wired in knobs.js; chorus, delay, ring, distortion write params
 // (same keys as acid / Multitudes). Compressor / sidechain live on the mixer strip.
 
-import { state } from './state.js?v=116';
-import { bindKnob, formatRangeValue } from './knobs.js?v=147';
+import { state } from './state.js?v=119';
+import { bindKnob, formatRangeValue } from './knobs.js?v=163';
 import {
     elementFor,
     get,
     subscribe,
     wireSelect,
     wireToggle,
-} from './params.js?v=15';
-import { initScTimeKnob } from './sc-time.js?v=13';
+} from './params.js?v=23';
+import { initScTimeKnob } from './sc-time.js?v=26';
 
 const syncFns = [];
 

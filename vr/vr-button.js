@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { get, getString, subscribe } from '../js/params.js?v=15';
+import { get, getString, subscribe } from '../js/params.js?v=19';
 import { makeLabel, noHit } from './vr-label.js?v=2';
 
 const bodyMat = new THREE.MeshStandardMaterial({

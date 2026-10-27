@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import { paintOscilloscopeCanvas } from '../js/visualizers.js?v=121';
-import { state } from '../js/state.js?v=116';
+import { paintOscilloscopeCanvas } from '../js/visualizers.js?v=126';
+import { state } from '../js/state.js?v=118';
 import { noHit } from './vr-label.js?v=2';
 
 /** CSS clip-path polygon(21% 0, 79% 0, 100% 50%, 79% 100%, 21% 100%, 0% 50%). */

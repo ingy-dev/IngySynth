@@ -1,5 +1,5 @@
-import { state } from './state.js?v=116';
-import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=15';
+import { state } from './state.js?v=119';
+import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=23';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -10,26 +10,27 @@ import {
     midiPitchBendValue,
     getGlobalTune,
     semitonesToFrequency,
-} from './tuning.js?v=80';
-import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=121';
-import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=84';
-import { forceNoteOff } from './voice.js?v=155';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=32';
-import { bentFrequency } from './pitch-bend.js?v=106';
+} from './tuning.js?v=88';
+import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=130';
+import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=92';
+import { forceNoteOff } from './voice.js?v=168';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=45';
+import { bentFrequency } from './pitch-bend.js?v=119';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { setKeyboardStepActive } from './keyboard-steps.js?v=140';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=186';
-import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=125';
-import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=16';
-import { notifyAutomationLoopAnchor } from './automation.js?v=62';
-import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=9';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=154';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=195';
+import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=134';
+import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=20';
+import { notifyAutomationLoopAnchor } from './automation.js?v=77';
+import { nextCyclePass } from './pattern-repeat.js?v=3';
+import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=11';
 import {
     scheduleAcidAmpEnvelope,
     scheduleAcidFilterEnvelope,
     clearAccentSweep,
     acidVegDecaySec,
     releaseAcidHeldEnvelopes,
-} from './acid-env.js?v=48';
+} from './acid-env.js?v=56';
 import {
     isBerlinOn,
     berlinActiveRows,
@@ -52,21 +53,26 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=83';
+} from './berlin.js?v=98';
 import {
     getPattern,
+    getBerlinLane,
+    getBerlinPattern,
     getDrumPattern,
     snapshotStepNeighborhood,
     isAnalogDrumEngine,
+    DRUM_LANE_COUNT,
+    canonicalDrumModel,
     soundingIntervalsFromStep,
     stepCellNotes,
     stepChordCount,
-    getLiveStep,
-} from './pattern-bank.js?v=16';
-import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=129';
-import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=23';
-import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=15';
-import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=13';
+    patternRepeat,
+    patternStepCount,
+} from './pattern-bank.js?v=30';
+import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=168';
+import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=32';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=29';
+import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=26';
 import {
     clampRatch,
     nextRatch,
@@ -1056,13 +1062,13 @@ function warmBerlinAnalogDrums() {
     if (!ctx) return;
     routeBerlinDrumPanners();
     if (!Array.isArray(state.berlinDrumVoices)) state.berlinDrumVoices = [];
-    for (let lane = 0; lane < 3; lane++) {
+    for (let lane = 0; lane < DRUM_LANE_COUNT; lane++) {
         const patch = state.berlinDrum?.[lane];
         if (!isAnalogDrumEngine(patch)) continue;
         const panner = state.berlinDrumPanners?.[lane];
         if (!panner) continue;
         if (state.berlinDrumVoices.some((v) => v.lane === lane && v.isAnalog && !v.dead)) continue;
-        const model = patch.model === 'bass_drum' || patch.model === 'snare' ? patch.model : 'hihat';
+        const model = canonicalDrumModel(patch.model);
         const voice = createAnalog808Voice(ctx, {
             model,
             patch: { ...patch },
@@ -1124,6 +1130,11 @@ function togglePlay() {
         state.lastStepSounded = false;
         state.envelopeHeld = false;
         state.filterEnvelopeHeld = false;
+        state.cyclePass = 0;
+        state.cycleFirstPass = true;
+        state.berlinCyclePass = 0;
+        // Berlin's start anchor below IS pass 1. Normal mode's first step consumes cycleFirstPass.
+        state.berlinCycleFirstPass = false;
         // Every Berlin row restarts from its own beginning on the same downbeat
         if (isBerlinOn()) {
             warmPlaitsPool(state.audioContext, 6);
@@ -1131,6 +1142,11 @@ function togglePlay() {
             warmBerlinAnalogDrums();
             resetBerlinPlayheads(state.nextStepTime);
             notifyAutomationLoopAnchor(state.nextStepTime);
+            queuePatternPass(
+                state.nextStepTime,
+                1,
+                patternRepeat(getBerlinPattern(state.berlinSlot)),
+            );
         }
         if (state.berlinDrumMode) {
             warmPlaitsPool(state.audioContext, 6);
@@ -1204,6 +1220,72 @@ function togglePlay() {
     }
 }
 
+function currentStepDuration() {
+    const tempoN = getNumber('tempo', 120);
+    const tempo = Number.isFinite(tempoN) && tempoN > 0 ? tempoN : 120;
+    const division = Math.max(1, getNumber('division', 8) || 8);
+    return (60 / tempo) * (4 / division);
+}
+
+/** 0–1 through the Repeat cycle, plus the audio-time window of this pass. */
+function normalPassMeter(stepIndex, stepDuration, startTime) {
+    const pattern = getPattern(state.editSlot);
+    const n = patternStepCount(pattern);
+    const repeat = patternRepeat(pattern);
+    const idxRaw = pattern.reverse ? (n - 1 - stepIndex) : stepIndex;
+    const idx = Math.max(0, Math.min(Math.max(0, n - 1), idxRaw));
+    const dur = Number(stepDuration) > 0 ? Number(stepDuration) : 0;
+    const total = n * repeat;
+    const progress = total <= 0 ? 0 : Math.max(0, Math.min(1, (state.cyclePass * n + idx + 1) / total));
+    const pass = Math.max(1, Math.min(repeat, (state.cyclePass | 0) + 1));
+    const passStart = startTime - idx * dur;
+    const passEnd = passStart + Math.max(1, n) * dur;
+    return { progress, pass, repeat, passStart, passEnd };
+}
+
+function berlinPassMeter(atTime) {
+    const tempoN = getNumber('tempo', 120);
+    const tempo = Number.isFinite(tempoN) && tempoN > 0 ? tempoN : 120;
+    const loop = masterLoopSeconds(tempo);
+    const repeat = patternRepeat(getBerlinPattern(state.berlinSlot));
+    const anchor = state.berlinLoopAnchor;
+    const into = loop > 0.001 ? (atTime - anchor) / loop : 0;
+    const clamped = Math.max(0, Math.min(1, into));
+    const progress = Math.max(0, Math.min(1, (state.berlinCyclePass + clamped) / Math.max(1, repeat)));
+    const pass = Math.max(1, Math.min(repeat, (state.berlinCyclePass | 0) + 1));
+    return {
+        progress,
+        pass,
+        repeat,
+        passStart: anchor,
+        passEnd: anchor + Math.max(0, loop),
+    };
+}
+
+function meterDetailFrom(item) {
+    if (!item || item.passEnd == null || item.passStart == null) return null;
+    return {
+        progress: item.cycleProgress,
+        pass: item.cyclePass,
+        repeat: item.cycleRepeat,
+        passStart: item.passStart,
+        passEnd: item.passEnd,
+    };
+}
+
+function queuePatternPass(startTime, pass, repeat) {
+    if (!state.audioContext) return;
+    const generation = state.playGeneration;
+    const heardAt = startTime + uiOutputLatency();
+    const delay = Math.max(0, (heardAt - state.audioContext.currentTime) * 1000);
+    setTimeout(() => {
+        if (generation !== state.playGeneration || !state.isPlaying) return;
+        document.dispatchEvent(new CustomEvent('ingysynth:pattern-pass', {
+            detail: { pass, repeat, startTime },
+        }));
+    }, delay);
+}
+
 function scheduleNextStep() {
     if (!state.isPlaying || !state.audioContext) return;
 
@@ -1218,27 +1300,24 @@ function scheduleNextStep() {
         return;
     }
 
-    const tempo = getNumber('tempo');
-    const division = getNumber('division');
-    const bps = 60 / tempo;
-    const stepDuration = bps * (4 / division);
-    
     // Look ahead far enough to survive Safari main-thread gaps (~200 ms).
     const lookAheadTime = 0.3; // 300ms
     const seqT0 = performance.now();
     
-    // Schedule notes in the next scheduling window
+    // Schedule notes in the next scheduling window.
+    // Duration is re-read after each step: a cycle-boundary switch can change division.
     while (state.nextStepTime < state.audioContext.currentTime + lookAheadTime) {
-        // Schedule this step
-        playStep(
-            state.currentStep,
-            state.nextStepTime,
-            stepDuration,
-            snapshotStepNeighborhood(state.currentStep, getNumber('stepCount', 8), state.isReverse),
-        );
+        const startTime = state.nextStepTime;
+        // Finish the current drum pattern on this downbeat before a queued P switch
+        // restarts all four lanes at step 1.
+        if (upcomingNormalCycleStart(state.currentStep)) {
+            scheduleDrumLanesUntil(startTime);
+        }
+        playStep(state.currentStep, startTime, currentStepDuration(), null);
 
         // Re-read: an armed bank switch can swap pattern length mid-window
         const stepCount = getNumber('stepCount', 8);
+        const stepDuration = currentStepDuration();
 
         // Advance to next step
         if (state.isReverse) {
@@ -1247,7 +1326,6 @@ function scheduleNextStep() {
             state.currentStep = (state.currentStep + 1) % stepCount;
         }
         
-        // Calculate time for next step
         state.nextStepTime += stepDuration;
     }
     scheduleDrumLanes();
@@ -1424,6 +1502,18 @@ function flushPlayStepUi() {
             },
         }));
     }
+    let heardMeter = null;
+    for (let i = live.length - 1; i >= 0; i--) {
+        if (live[i].passEnd != null) {
+            heardMeter = meterDetailFrom(live[i]);
+            break;
+        }
+    }
+    if (heardMeter) {
+        document.dispatchEvent(new CustomEvent('ingysynth:cycle-progress', {
+            detail: heardMeter,
+        }));
+    }
     const paintDom = () => {
         const t0 = performance.now();
         for (const item of live) {
@@ -1486,18 +1576,34 @@ function flushBerlinHighlights() {
     });
     if (kbStep != null) {
         try {
-            const data = getLiveStep(kbStep);
-            document.dispatchEvent(new CustomEvent('ingysynth:seq-step-ui', {
-                detail: {
-                    step: kbStep,
-                    on: data?.on !== false,
-                    tune: data?.on === false ? null : getStepTotalTuneFromRaw(data?.tune),
-                    fine: Math.round(Number(data?.fine) || 0),
-                    cellNotes: [],
-                    chordCount: 0,
-                },
-            }));
+            const row = keyboardHighlightRow();
+            const data = row == null ? null : getBerlinLane(row).steps?.[kbStep];
+            if (data) {
+                document.dispatchEvent(new CustomEvent('ingysynth:seq-step-ui', {
+                    detail: {
+                        step: kbStep,
+                        on: data.on !== false,
+                        tune: data.on === false ? null : getStepTotalTuneFromRaw(data.tune),
+                        fine: Math.round(Number(data.fine) || 0),
+                        cellNotes: [],
+                        chordCount: 0,
+                    },
+                }));
+            }
         } catch (_) { /* */ }
+    }
+    let heardMeter = null;
+    for (let i = due.length - 1; i >= 0; i--) {
+        if (due[i].generation !== state.playGeneration) continue;
+        if (due[i].passEnd != null) {
+            heardMeter = meterDetailFrom(due[i]);
+            break;
+        }
+    }
+    if (heardMeter && state.berlinMode && state.isPlaying) {
+        document.dispatchEvent(new CustomEvent('ingysynth:cycle-progress', {
+            detail: heardMeter,
+        }));
     }
     const paintBerlin = () => {
         const t0 = performance.now();
@@ -1522,12 +1628,18 @@ function flushBerlinHighlights() {
 
 /** Highlights land at audio time, not schedule time. Coalesce to one rAF. */
 function scheduleBerlinHighlight(row, step, atTime, syncKeyboard) {
+    const meter = berlinPassMeter(atTime);
     berlinHlQueue.push({
         row,
         step,
         atTime,
         syncKeyboard,
         generation: state.playGeneration,
+        cycleProgress: meter.progress,
+        cyclePass: meter.pass,
+        cycleRepeat: meter.repeat,
+        passStart: meter.passStart,
+        passEnd: meter.passEnd,
     });
     armTimedFlush(berlinHlQueue, 'berlin', flushBerlinHighlights);
 }
@@ -2214,7 +2326,7 @@ function berlinNextStepIndex(pattern, step) {
     return pattern.reverse ? (step - 1 + n) % n : (step + 1) % n;
 }
 
-const lastDrumFreqs = [0, 0, 0];
+const lastDrumFreqs = Array.from({ length: DRUM_LANE_COUNT }, () => 0);
 
 function berlinFiltDrumsActive() {
     return isBerlinOn()
@@ -2264,8 +2376,13 @@ function applyDigitalDrumPatchLive(osc, patch, when, velocity) {
         if (!n?.parameters) return;
         n.parameters.get('alt')?.setValueAtTime(patch.alt ? 1 : 0, when);
         n.parameters.get('trigPatched')?.setValueAtTime(patch.trigPatched !== false ? 1 : 0, when);
+        n.parameters.get('openHat')?.setValueAtTime(patch.model === 'open_hat' ? 1 : 0, when);
         n.parameters.get('velocity')?.setValueAtTime(velocity, when);
-        n.port.postMessage({ alt: !!patch.alt, trigPatched: patch.trigPatched !== false });
+        n.port.postMessage({
+            alt: !!patch.alt,
+            trigPatched: patch.trigPatched !== false,
+            openHat: patch.model === 'open_hat',
+        });
     } catch (_) { /* ignore */ }
 }
 
@@ -2375,7 +2492,7 @@ function spawnAnalog808DrumVoice({
 
     const t0 = Math.max(ctx.currentTime, startTime);
     const accent = accentThisStep ? Math.max(0, Math.min(1, accentAmount)) : 0;
-    const model = patch.model === 'bass_drum' || patch.model === 'snare' ? patch.model : 'hihat';
+    const model = canonicalDrumModel(patch.model);
     const hits = Math.max(1, ratchHits | 0);
     const subDur = hits > 1 ? stepDuration / hits : 0;
     const hitOpts = { patch, accent, gateLen, hz: fromHz, hitDur: subDur };
@@ -2470,6 +2587,40 @@ function spawnAnalog808DrumVoice({
     scheduleDispose();
 }
 
+function chokeDrumVoice(voice, when) {
+    if (!voice || voice.dead) return;
+    const t = Math.max(0, when || 0);
+    if (voice.isAnalog && typeof voice.choke === 'function') {
+        try { voice.choke(t); } catch (_) { /* ignore */ }
+        return;
+    }
+    const g = voice.amp?.gain;
+    if (!g) return;
+    try {
+        const cur = Math.max(0.00001, g.value || 0.00001);
+        g.cancelScheduledValues(t);
+        g.setValueAtTime(cur, t);
+        g.exponentialRampToValueAtTime(0.00001, t + 0.018);
+    } catch (_) { /* ignore */ }
+}
+
+/** Closed hat cuts a choking open hat. A choking open hat cuts the closed hat. */
+function chokeHatPartners(lane, model, when) {
+    const kit = state.berlinDrum;
+    if (!Array.isArray(kit)) return;
+    const kind = canonicalDrumModel(model);
+    if (kind !== 'hihat' && kind !== 'open_hat') return;
+    if (kind === 'open_hat' && kit[lane]?.choke === false) return;
+    const want = kind === 'hihat' ? 'open_hat' : 'hihat';
+    (state.berlinDrumVoices || []).forEach((voice) => {
+        if (!voice || voice.dead || voice.lane === lane) return;
+        const other = canonicalDrumModel(kit[voice.lane]?.model);
+        if (other !== want) return;
+        if (want === 'open_hat' && kit[voice.lane]?.choke === false) return;
+        chokeDrumVoice(voice, when);
+    });
+}
+
 /**
  * One hit on a D-lane. Analog 808 or Plaits. No unison, OSC1 globals, filter env, or synth ADSR.
  */
@@ -2493,6 +2644,7 @@ function spawnBerlinDrumVoice({
     if (!ctx || !patch || !(patch.vol > 0.0001)) return;
     const panner = state.berlinDrumPanners?.[lane];
     if (!panner) return;
+    chokeHatPartners(lane, canonicalDrumModel(patch.model), Math.max(ctx.currentTime, startTime));
 
     if (isAnalogDrumEngine(patch)) {
         spawnAnalog808DrumVoice({
@@ -2621,7 +2773,7 @@ function spawnBerlinDrumVoice({
 
 function triggerBerlinDrumLane(lane, pattern, startTime, stepDuration, data, playhead, nextPitch) {
     lane = lane | 0;
-    if (lane < 0 || lane > 2) return;
+    if (lane < 0 || lane >= DRUM_LANE_COUNT) return;
     const patch = state.berlinDrum?.[lane];
     if (!patch) return;
     const analog = isAnalogDrumEngine(patch);
@@ -2742,7 +2894,7 @@ function fireDrumLane(lane, pattern, playhead, startTime, stepDuration) {
 
 function scheduleScOscSource(oscIndex, tempo, lookAhead) {
     const ctx = state.audioContext;
-    const pattern = getPattern(oscIndex);
+    const pattern = state.berlinMode ? getBerlinLane(oscIndex) : getPattern(oscIndex);
     ensureDrumPlayheads();
     const playhead = state.scSourcePlayhead;
     const stepDuration = rowStepDuration(pattern, tempo);
@@ -2763,76 +2915,173 @@ function scheduleScOscSource(oscIndex, tempo, lookAhead) {
     }
 }
 
-function scheduleDrumLanes() {
+function passesUntilCycleStart(cyclePass, repeat, isFirst) {
+    if (isFirst) return 1;
+    const n = Math.max(1, Math.round(Number(repeat)) || 1);
+    const pass = Math.max(0, Math.round(Number(cyclePass)) || 0);
+    return Math.max(1, n - pass);
+}
+
+/** Audio time of the next cycle boundary, so drums never schedule past a queued switch. */
+function nextCycleBoundaryTime() {
+    if (!state.isPlaying) return Infinity;
+    if (state.berlinMode) {
+        const tempoN = getNumber('tempo', 120);
+        const tempo = Number.isFinite(tempoN) && tempoN > 0 ? tempoN : 120;
+        const loop = masterLoopSeconds(tempo);
+        if (!(loop > 0.01) || !Number.isFinite(state.berlinLoopAnchor)) return Infinity;
+        const passes = passesUntilCycleStart(
+            state.berlinCyclePass,
+            patternRepeat(getBerlinPattern(state.berlinSlot)),
+            !!state.berlinCycleFirstPass,
+        );
+        return state.berlinLoopAnchor + passes * loop;
+    }
+    const n = Math.max(1, Math.round(getNumber('stepCount', 8)) || 8);
+    const dur = currentStepDuration();
+    if (!(dur > 0) || !Number.isFinite(state.nextStepTime)) return Infinity;
+    const reverse = !!state.isReverse;
+    const target = reverse ? n - 1 : 0;
+    let cur = Math.round(Number(state.currentStep)) % n;
+    if (cur < 0) cur += n;
+    const steps = (target - cur + n) % n;
+    const passes = passesUntilCycleStart(
+        state.cyclePass,
+        patternRepeat(getPattern(state.editSlot)),
+        !!state.cycleFirstPass,
+    );
+    return state.nextStepTime + (steps + (passes - 1) * n) * dur;
+}
+
+function upcomingNormalCycleStart(stepIndex) {
+    const n = Math.max(1, Math.round(getNumber('stepCount', 8)) || 8);
+    const reverse = !!state.isReverse;
+    const idx = Math.round(Number(stepIndex)) || 0;
+    const isLoopStart = reverse ? idx === n - 1 : idx === 0;
+    if (!isLoopStart) return false;
+    return nextCyclePass(
+        state.cyclePass,
+        patternRepeat(getPattern(state.editSlot)),
+        !!state.cycleFirstPass,
+    ).isCycleStart;
+}
+
+function scheduleDrumLanesUntil(until) {
     const ctx = state.audioContext;
     if (!ctx) return;
     const tempo = getNumber('tempo', 120);
     ensureDrumPlayheads();
-    const lookAhead = 0.3;
-    for (let lane = 0; lane < 3; lane++) {
+    const hard = Number.isFinite(Number(until)) ? Number(until) : ctx.currentTime + 0.3;
+    const boundary = nextCycleBoundaryTime();
+    const limit = Math.min(hard, Number.isFinite(boundary) ? boundary : hard);
+    for (let lane = 0; lane < DRUM_LANE_COUNT; lane++) {
         const pattern = getDrumPattern(lane);
         const playhead = state.drumPlayheads[lane];
         const stepDuration = rowStepDuration(pattern, tempo);
         if (!(stepDuration > 0)) continue;
         if (playhead.nextStepTime < ctx.currentTime - 1) playhead.nextStepTime = ctx.currentTime;
         let guard = 0;
-        while (playhead.nextStepTime < ctx.currentTime + lookAhead && guard++ < 64) {
+        while (playhead.nextStepTime < limit && guard++ < 64) {
             fireDrumLane(lane, pattern, playhead, playhead.nextStepTime, stepDuration);
             advanceDrumPlayhead(lane);
             playhead.nextStepTime += stepDuration;
         }
     }
+}
+
+function scheduleDrumLanes() {
+    const ctx = state.audioContext;
+    if (!ctx) return;
+    scheduleDrumLanesUntil(ctx.currentTime + 0.3);
+    const tempo = getNumber('tempo', 120);
     const src = parseScSource();
-    if (get('scToggle') && src.kind === 'osc') scheduleScOscSource(src.index, tempo, lookAhead);
+    if (get('scToggle') && src.kind === 'osc') scheduleScOscSource(src.index, tempo, 0.3);
 }
 
 function scheduleBerlinSteps() {
     const ctx = state.audioContext;
     const tempo = getNumber('tempo', 120);
     ensurePlayheads();
+    const kbRow = keyboardHighlightRow();
+    const horizon = () => ctx.currentTime + BERLIN_LOOKAHEAD;
 
-    // Automation follows the longest active row, time-wise
-    const loopSeconds = masterLoopSeconds(tempo);
-    if (loopSeconds > 0.01) {
-        if (state.berlinLoopAnchor < ctx.currentTime - loopSeconds * 64) {
+    // Schedule every lane up to `until`, and never past the lookahead.
+    // Called before a cycle boundary so the pattern that is ending still
+    // plays its last steps, then again after a switch for the new pattern.
+    const scheduleBerlinRows = (until) => {
+        const limit = Math.min(until, horizon());
+        berlinActiveRows().forEach((row) => {
+            const pattern = getBerlinLane(row);
+            const playhead = state.berlinPlayheads[row];
+            const stepDuration = rowStepDuration(pattern, tempo);
+            if (!(stepDuration > 0)) return;
+
+            // A backgrounded tab can leave a playhead far behind — rejoin the clock
+            if (playhead.nextStepTime < ctx.currentTime - 1) {
+                playhead.nextStepTime = ctx.currentTime;
+            }
+
+            let guard = 0;
+            while (playhead.nextStepTime < limit && guard++ < 64) {
+                // Mute / Solo silence skips CV/pitch only — playhead keeps phase
+                if (isRowSounding(row)) {
+                    try {
+                        fireBerlinRow(row, pattern, playhead, playhead.nextStepTime, stepDuration, row === kbRow);
+                    } catch (_) { /* keep Berlin clock alive */ }
+                } else {
+                    scheduleBerlinHighlight(row, playhead.currentStep, playhead.nextStepTime, false);
+                }
+                advancePlayhead(row);
+                playhead.nextStepTime += stepDuration;
+            }
+        });
+    };
+
+    // Automation follows the longest active row, time-wise.
+    // Re-read each pass: a cycle-boundary switch can change the master length.
+    const firstLoop = masterLoopSeconds(tempo);
+    if (firstLoop > 0.01) {
+        if (state.berlinLoopAnchor < ctx.currentTime - firstLoop * 64) {
             state.berlinLoopAnchor = ctx.currentTime;
         }
         let guard = 0;
-        while (state.berlinLoopAnchor + loopSeconds < ctx.currentTime + BERLIN_LOOKAHEAD && guard++ < 64) {
-            state.berlinLoopAnchor += loopSeconds;
-            notifyAutomationLoopAnchor(state.berlinLoopAnchor);
-            document.dispatchEvent(new CustomEvent('ingysynth:loop-start', {
-                detail: { startTime: state.berlinLoopAnchor },
-            }));
+        while (guard++ < 64) {
+            const loopSeconds = masterLoopSeconds(tempo);
+            if (!(loopSeconds > 0.01)) break;
+            const boundary = state.berlinLoopAnchor + loopSeconds;
+            if (!(boundary < horizon())) break;
+            // Finish this pattern through the boundary before any switch.
+            scheduleBerlinRows(boundary);
+            state.berlinLoopAnchor = boundary;
+            const first = !!state.berlinCycleFirstPass;
+            state.berlinCycleFirstPass = false;
+            const next = nextCyclePass(
+                state.berlinCyclePass,
+                patternRepeat(getBerlinPattern(state.berlinSlot)),
+                first,
+            );
+            state.berlinCyclePass = next.cyclePass;
+            let switched = false;
+            if (next.isCycleStart) {
+                // Old drum hits through this boundary; a switch then restarts them on it.
+                scheduleDrumLanesUntil(boundary);
+                const slotBefore = state.berlinSlot;
+                notifyAutomationLoopAnchor(state.berlinLoopAnchor);
+                // commitPendingSlot may swap patterns and reset every lane onto this anchor.
+                document.dispatchEvent(new CustomEvent('ingysynth:loop-start', {
+                    detail: { startTime: state.berlinLoopAnchor },
+                }));
+                switched = state.berlinSlot !== slotBefore;
+            }
+            const shown = patternRepeat(getBerlinPattern(state.berlinSlot));
+            const pass = next.isCycleStart ? 1 : state.berlinCyclePass + 1;
+            queuePatternPass(state.berlinLoopAnchor, pass, shown);
+            // Let the new pattern's step 1 get scheduled before another pass is consumed.
+            if (switched) break;
         }
     }
 
-    const kbRow = keyboardHighlightRow();
-    berlinActiveRows().forEach((row) => {
-        const pattern = getPattern(row);
-        const playhead = state.berlinPlayheads[row];
-        const stepDuration = rowStepDuration(pattern, tempo);
-        if (!(stepDuration > 0)) return;
-
-        // A backgrounded tab can leave a playhead far behind — rejoin the clock
-        if (playhead.nextStepTime < ctx.currentTime - 1) {
-            playhead.nextStepTime = ctx.currentTime;
-        }
-
-        let guard = 0;
-        while (playhead.nextStepTime < ctx.currentTime + BERLIN_LOOKAHEAD && guard++ < 64) {
-            // Mute / Solo silence skips CV/pitch only — playhead keeps phase
-            if (isRowSounding(row)) {
-                try {
-                    fireBerlinRow(row, pattern, playhead, playhead.nextStepTime, stepDuration, row === kbRow);
-                } catch (_) { /* keep Berlin clock alive */ }
-            } else {
-                scheduleBerlinHighlight(row, playhead.currentStep, playhead.nextStepTime, false);
-            }
-            advancePlayhead(row);
-            playhead.nextStepTime += stepDuration;
-        }
-    });
+    scheduleBerlinRows(horizon());
 }
 
 // Osc / drum lane muted / solo-silenced — release that row's independent voices
@@ -2841,6 +3090,14 @@ document.addEventListener('ingysynth:berlin-osc-muted', (e) => {
     const oscIndex = e.detail?.oscIndex;
     if (oscIndex === null || oscIndex === undefined) return;
     releaseBerlinOscVoices(state.audioContext.currentTime, oscIndex | 0);
+});
+
+document.addEventListener('ingysynth:drum-slot', (e) => {
+    if (!state.isPlaying || !state.audioContext) return;
+    const t = Number(e.detail?.startTime);
+    if (!Number.isFinite(t)) return;
+    resetDrumPlayheads(t);
+    clearDrumStepActive();
 });
 
 document.addEventListener('ingysynth:berlin-drum-muted', (e) => {
@@ -3413,25 +3670,51 @@ function playPolySeqStep({
 function playStep(step, startTime, stepDuration, scheduled) {
     if (!state.isPlaying && !state.isArping) return;
 
-    const snap = scheduled || snapshotStepNeighborhood(step, getNumber('stepCount', 8), state.isReverse);
+    let playIndex = step;
+    let refreshSnap = !scheduled;
+    // Cycle boundary: Repeat passes, then automation + a queued pattern, from step 1.
+    if (state.isPlaying) {
+        const stepsN = Math.max(1, Math.round(getNumber('stepCount', 8)) || 8);
+        const isLoopStart = state.isReverse ? step === stepsN - 1 : step === 0;
+        if (isLoopStart) {
+            const first = !!state.cycleFirstPass;
+            state.cycleFirstPass = false;
+            const next = nextCyclePass(
+                state.cyclePass,
+                patternRepeat(getPattern(state.editSlot)),
+                first,
+            );
+            state.cyclePass = next.cyclePass;
+            if (next.isCycleStart) {
+                notifyAutomationLoopAnchor(startTime);
+                // Lands the armed pattern before this downbeat is snapshotted, so it starts at step 1.
+                document.dispatchEvent(new CustomEvent('ingysynth:loop-start', { detail: { startTime } }));
+                const pattern = getPattern(state.editSlot);
+                const n = patternStepCount(pattern);
+                playIndex = pattern.reverse ? n - 1 : 0;
+                state.currentStep = playIndex;
+                stepDuration = currentStepDuration();
+                refreshSnap = true;
+            }
+            const shown = patternRepeat(getPattern(state.editSlot));
+            const pass = next.isCycleStart ? 1 : state.cyclePass + 1;
+            queuePatternPass(startTime, pass, shown);
+        }
+    }
+
+    const snap = refreshSnap
+        ? snapshotStepNeighborhood(playIndex, getNumber('stepCount', 8), state.isReverse)
+        : scheduled;
     const data = snap.this;
     const prevData = snap.prev;
     const nextData = snap.next;
     const freqThis = (i) => frequencyFromStepData(data, i);
     const freqNext = (i) => frequencyFromStepData(nextData, i);
 
-    // Anchor automation loop phase at the start of each pattern cycle
-    const stepsN = getNumber('stepCount', 8);
-    const isLoopStart = state.isReverse ? step === stepsN - 1 : step === 0;
-    if (state.isPlaying && isLoopStart) {
-        notifyAutomationLoopAnchor(startTime);
-        // Bank switches land here so P1–P8 stays in time
-        document.dispatchEvent(new CustomEvent('ingysynth:loop-start', { detail: { startTime } }));
-    }
-
     const polySeq = seqPolyVoiceMode();
+    const meter = state.isPlaying ? normalPassMeter(playIndex, stepDuration, startTime) : null;
     queuePlayStepUi({
-        step,
+        step: playIndex,
         atTime: startTime,
         generation: state.playGeneration,
         on: data.on !== false,
@@ -3439,6 +3722,11 @@ function playStep(step, startTime, stepDuration, scheduled) {
         fine: data.on === false ? 0 : Math.round(Number(data.fine) || 0),
         cellNotes: data.on === false ? [] : (polySeq ? polySeqPlaybackCellNotes(data) : stepCellNotes(data)),
         chordCount: data.on === false ? 0 : (polySeq ? polySeqPlaybackChordCount(data) : stepChordCount(data)),
+        cycleProgress: meter ? meter.progress : null,
+        cyclePass: meter ? meter.pass : null,
+        cycleRepeat: meter ? meter.repeat : null,
+        passStart: meter ? meter.passStart : null,
+        passEnd: meter ? meter.passEnd : null,
     });
 
     if (data.on === false) {

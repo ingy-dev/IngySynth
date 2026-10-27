@@ -1,7 +1,7 @@
 // TR-808-style BD / SN / CH for Berlin D-lanes. Private oscillators + noise.
 // Never use createOscSource({ oscIndex }) or state.noiseGain.
 
-import { state } from './state.js?v=116';
+import { state } from './state.js?v=119';
 
 const HAT_RATIOS = [205.3, 304.4, 369.6, 522.7, 540.4, 800];
 
@@ -136,6 +136,7 @@ function analogDecaySec(model, morphY, gateLen) {
     if (model === 'bass_drum') return 0.08 + y * y * 1.15;
     if (model === 'snare') return 0.08 + y * 0.32;
     const g = Math.max(0.05, Math.min(1, Number(gateLen) || 0.9));
+    if (model === 'open_hat') return (0.16 + y * 0.9) * (0.7 + 0.3 * g);
     return (0.018 + y * 0.16) * (0.45 + g);
 }
 
@@ -238,8 +239,8 @@ function buildSnare(ctx, { hz, patch, accent, t0, env, nodes }) {
     bodyGain.connect(bodyMix);
     bodyMix.connect(env);
     nodes.push(noise, hp, bp, noiseGain, noiseMix, f1, f2, bodyGain, bodyMix);
-    const noisePeak = 0.55 + accent * 0.28;
-    const bodyPeak = 0.58 + accent * 0.22;
+    const noisePeak = 0.77 + accent * 0.39;
+    const bodyPeak = 0.81 + accent * 0.31;
     startOsc(noise, t0);
     startOsc(f1, t0);
     startOsc(f2, t0);
@@ -249,7 +250,7 @@ function buildSnare(ctx, { hz, patch, accent, t0, env, nodes }) {
 function buildClosedHat(ctx, { hz, patch, accent, t0, env, nodes }) {
     const tone = clamp01(patch.morphX, 0.5);
     const mix = ctx.createGain();
-    mix.gain.value = 0.14 * (0.75 + accent * 0.4);
+    mix.gain.value = 0.45 * (0.75 + accent * 0.4);
     const oscs = [];
     const scale = hz / 200;
     HAT_RATIOS.forEach((f) => {
@@ -279,7 +280,7 @@ function buildClosedHat(ctx, { hz, patch, accent, t0, env, nodes }) {
     noiseHp.frequency.value = hatNoiseHpHz(tone);
     noiseHp.Q.value = 0.7;
     const noiseGain = ctx.createGain();
-    noiseGain.gain.value = 0.07 * (0.75 + accent * 0.4);
+    noiseGain.gain.value = 0.22 * (0.75 + accent * 0.4);
     hatNoise.connect(noiseHp);
     noiseHp.connect(noiseGain);
     noiseGain.connect(env);
@@ -305,7 +306,7 @@ export function createAnalog808Voice(ctx, {
     warm = false,
 } = {}) {
     if (!ctx || !panner) return null;
-    const kind = model === 'bass_drum' || model === 'snare' ? model : 'hihat';
+    const kind = model === 'bass_drum' || model === 'snare' || model === 'open_hat' ? model : 'hihat';
     const kit = {
         tune: clamp01(patch?.tune, 0.5),
         morphX: clamp01(patch?.morphX, 0.5),
@@ -401,8 +402,8 @@ export function createAnalog808Voice(ctx, {
                     parts.bp.frequency.setValueAtTime(snareBpHz(tone), t);
                 } catch (_) { /* ignore */ }
                 const snappy = clamp01(p.harmonics, 0.5);
-                const noisePeak = 0.55 + acc * 0.28;
-                const bodyPeak = 0.58 + acc * 0.22;
+                const noisePeak = 0.77 + acc * 0.39;
+                const bodyPeak = 0.81 + acc * 0.31;
                 parts.noisePeak = noisePeak;
                 parts.bodyPeak = bodyPeak;
                 try {

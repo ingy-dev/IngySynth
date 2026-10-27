@@ -1,8 +1,9 @@
-// Global D1–D3 dock between Steps and Automation. Bound to state.drumPatterns, not P6–P8.
+// Global D1–D4 dock between Steps and Automation. Bound to state.drumPatterns,
+// which is the current P1–P8 drum slot (state.drumBank[state.drumSlot].lanes).
 
-import { state } from './state.js?v=116';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=147';
-import { get, set, subscribe, wireToggle } from './params.js?v=15';
+import { state } from './state.js?v=119';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=163';
+import { get, set, subscribe, wireToggle } from './params.js?v=23';
 import {
     STEP_SLOTS,
     DRUM_LANE_COUNT,
@@ -17,7 +18,7 @@ import {
     flashCopiedToast,
     syncPatternClipboardUi,
     ensureBerlinDrumKit,
-} from './pattern-bank.js?v=16';
+} from './pattern-bank.js?v=30';
 import {
     BERLIN_COLORS,
     berlinStepDisplayValue,
@@ -25,9 +26,9 @@ import {
     setDrumMode,
     setBerlinDrumFilt,
     setDrumLanesHidden,
-} from './berlin.js?v=83';
+} from './berlin.js?v=98';
 import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
-import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=27';
+import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=41';
 
 const DIVISIONS = [
     { value: 2, label: '1/2' },
@@ -36,7 +37,7 @@ const DIVISIONS = [
     { value: 16, label: '1/16' },
 ];
 
-const DRUM_COLORS = [BERLIN_COLORS[5], BERLIN_COLORS[6], BERLIN_COLORS[7]];
+const DRUM_COLORS = [BERLIN_COLORS[4], BERLIN_COLORS[5], BERLIN_COLORS[6], BERLIN_COLORS[7]];
 
 function clamp(n, min, max) {
     return Math.min(max, Math.max(min, n));
@@ -294,7 +295,18 @@ function setDrumLaneEnabled(lane, on) {
 function wireDrumRow(lane) {
     const fieldset = document.querySelector(`.keyboard-drum-row[data-drum-lane="${lane}"]`);
     if (!fieldset) return;
-    const pattern = getDrumPattern(lane);
+    // Live lookup: switching P1–P8 must edit the drum pattern now on screen.
+    const pattern = new Proxy({}, {
+        get(_target, prop) {
+            const lanePattern = getDrumPattern(lane);
+            const value = lanePattern[prop];
+            return typeof value === 'function' ? value.bind(lanePattern) : value;
+        },
+        set(_target, prop, value) {
+            getDrumPattern(lane)[prop] = value;
+            return true;
+        },
+    });
 
     fieldset.querySelector('.berlin-row-enable')?.addEventListener('click', () => {
         setDrumLaneEnabled(lane, pattern.enabled === false);
@@ -417,6 +429,10 @@ export function clearDrumStepActive() {
     for (let i = 0; i < DRUM_LANE_COUNT; i++) setDrumStepActive(i, null);
 }
 
+function syncAllDrumLanes() {
+    for (let i = 0; i < DRUM_LANE_COUNT; i++) syncDrumLaneUi(i);
+}
+
 let dockBuilt = false;
 
 export function initDrumDock() {
@@ -452,7 +468,18 @@ export function initDrumDock() {
     setDrumMode(!!get('drumModeToggle'));
     setBerlinDrumFilt(!!get('drumFiltToggle'));
 
-    document.addEventListener('ingysynth:pattern-clipboard', syncPatternClipboardUi);
+    document.addEventListener('ingysynth:pattern-clipboard', (e) => {
+        syncPatternClipboardUi();
+        const slot = e.detail?.slot;
+        if (e.detail?.action !== 'paste' || typeof slot !== 'number') return;
+        if ((slot | 0) !== (state.drumSlot | 0) || !dockBuilt) return;
+        syncAllDrumLanes();
+    });
+    document.addEventListener('ingysynth:drum-slot', () => {
+        clearDrumStepActive();
+        if (!dockBuilt) return;
+        syncAllDrumLanes();
+    });
     document.addEventListener('ingysynth:mixer-mutes', syncAllDrumMuteSoloUi);
     document.addEventListener('ingysynth:drum-kit', (e) => {
         const lane = e.detail?.lane;

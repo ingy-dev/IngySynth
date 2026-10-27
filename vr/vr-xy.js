@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import { getNumber, set, subscribe } from '../js/params.js?v=15';
-import { getParam, xyPadEntries } from '../js/param-catalog.js?v=3';
+import { getNumber, set, subscribe } from '../js/params.js?v=19';
+import { getParam, xyPadEntries } from '../js/param-catalog.js?v=4';
 import { makeLabel, whenFonts } from './vr-label.js?v=2';
 
 function groupedAxisItems() {

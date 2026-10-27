@@ -1,7 +1,7 @@
 // CP10: one engine path from the param store. Classic nodes are optional mirrors.
 // Subscribe apply-once at bind (params.subscribe). Re-apply after initAudio.
 
-import { state, OSC_COUNT } from './state.js?v=116';
+import { state, OSC_COUNT } from './state.js?v=119';
 import {
     get,
     getNumber,
@@ -11,15 +11,15 @@ import {
     getOscPan,
     subscribe,
     notifyKey,
-} from './params.js?v=15';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=30';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=84';
-import { previewStepsOnVfd } from './sequencer.js?v=416';
-import { resetSidechainDucker } from './sc-time.js?v=13';
-import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=121';
-import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=80';
-import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=140';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=147';
+} from './params.js?v=23';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=39';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=92';
+import { previewStepsOnVfd } from './sequencer.js?v=432';
+import { resetSidechainDucker } from './sc-time.js?v=26';
+import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=130';
+import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=88';
+import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=154';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=163';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -27,10 +27,10 @@ import {
     updateLfoSmoothing,
     updateLfoCutoffSafety,
     updateLfoHighpassSafety,
-} from './lfo-strip.js?v=35';
-import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=32';
-import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=129';
-import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=125';
+} from './lfo-strip.js?v=48';
+import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=45';
+import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=168';
+import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=134';
 
 let wired = false;
 let rebuildReverbIr = null;
@@ -785,7 +785,7 @@ export function applyMixerMutes() {
         ramp(state.oscMuteGains?.[i], oscOpen[i]);
     }
     ramp(state.noiseMuteGain, noiseOn);
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < (state.drumMuteGains?.length || 0); i++) {
         let on = !mix.drumMute?.[i];
         if (anySolo) on = on && !!mix.drumSolo?.[i];
         ramp(state.drumMuteGains?.[i], on);

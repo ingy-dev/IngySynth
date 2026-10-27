@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { DESK_TOP_Y, DESK_FRONT_Z, DESK_DEPTH } from './loft.js?v=22';
-import { state } from '../js/state.js?v=116';
-import { getHeldNotes } from '../js/held-notes.js?v=9';
-import { formatNoteOrChord } from '../js/chord-name.js?v=3';
-import { semitonesToNoteName } from '../js/tuning.js?v=80';
+import { state } from '../js/state.js?v=118';
+import { getHeldNotes } from '../js/held-notes.js?v=10';
+import { formatNoteOrChord } from '../js/chord-name.js?v=7';
+import { semitonesToNoteName } from '../js/tuning.js?v=84';
 import {
     paintStepsFieldset,
     stepsNeedPaint,
@@ -14,7 +14,7 @@ import {
     pointerDownOnSteps,
     pointerMoveOnSteps,
     pointerUpOnSteps,
-} from './steps-fieldset.js?v=11';
+} from './steps-fieldset.js?v=20';
 import {
     MATRIX_5X7,
     padNoteVfdText,

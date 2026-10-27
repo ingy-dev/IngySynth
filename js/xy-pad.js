@@ -1,6 +1,6 @@
 // ----- XY Pad Functionality -----
-import { getNumber, set } from './params.js?v=15';
-import { getParam, xyPadEntries } from './param-catalog.js?v=3';
+import { getNumber, set } from './params.js?v=23';
+import { getParam, xyPadEntries } from './param-catalog.js?v=4';
 
 function populateXYPadControls() {
     return xyPadEntries();

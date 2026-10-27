@@ -3,12 +3,12 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=416';
-import { state } from './state.js?v=116';
-import { beginMidiLearn } from './midi-learn.js?v=7';
-import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=15';
-import { getParam, isCatalogKey } from './param-catalog.js?v=3';
-import { stepTuneBounds } from './step-tune-range.js?v=24';
+import { previewStepsOnVfd } from './sequencer.js?v=432';
+import { state } from './state.js?v=119';
+import { beginMidiLearn } from './midi-learn.js?v=15';
+import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=23';
+import { getParam, isCatalogKey } from './param-catalog.js?v=4';
+import { stepTuneBounds } from './step-tune-range.js?v=38';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;
@@ -26,6 +26,156 @@ const RESET_EXCLUDE_IDS = new Set([
 
 const DOUBLE_TAP_MS = 300;
 const DOUBLE_TAP_MOVE_PX = 8;
+/** A sideways finger does not turn the knob. Vertical wins a tie. */
+const KNOB_AXIS_LOCK_PX = 6;
+
+function knobAxisIntent(startX, startY, clientX, clientY) {
+    const adx = Math.abs(clientX - startX);
+    const ady = Math.abs(clientY - startY);
+    if (adx <= KNOB_AXIS_LOCK_PX && ady <= KNOB_AXIS_LOCK_PX) return 'wait';
+    if (ady > KNOB_AXIS_LOCK_PX && ady >= adx) return 'vertical';
+    if (adx > KNOB_AXIS_LOCK_PX && adx > ady) return 'horizontal';
+    return 'wait';
+}
+
+function touchPoint(list, id) {
+    if (!list) return null;
+    for (let i = 0; i < list.length; i++) {
+        if (list[i].identifier === id) return list[i];
+    }
+    return null;
+}
+
+/**
+ * Vertical knob drag. Pointer capture waits until the gesture is vertical:
+ * capturing on press makes iOS Safari cancel the touch, so a sideways swipe
+ * never reaches touchend.
+ */
+function attachVerticalDrag(dial, { allow, onArm, onDrag, onEnd }) {
+    let dragging = false;
+    let armed = false;
+    let startX = 0;
+    let startY = 0;
+    let pointerId = null;
+    let touchId = null;
+    let windowBound = false;
+
+    const unbindWindow = () => {
+        if (!windowBound) return;
+        windowBound = false;
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', endDrag);
+        window.removeEventListener('pointercancel', endDrag);
+    };
+
+    const bindWindow = () => {
+        if (windowBound) return;
+        windowBound = true;
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
+    };
+
+    const endDrag = (e) => {
+        if (!dragging && !armed) return;
+        if (e && e.pointerId != null && pointerId != null && e.pointerId !== pointerId) return;
+        const wasDragging = dragging;
+        dragging = false;
+        armed = false;
+        const pid = pointerId;
+        pointerId = null;
+        touchId = null;
+        dial.classList.remove('active');
+        unbindWindow();
+        if (pid != null) {
+            try { dial.releasePointerCapture(pid); } catch (_) { /* not captured yet */ }
+        }
+        if (wasDragging && typeof onEnd === 'function') onEnd();
+    };
+
+    const claimVertical = () => {
+        dragging = true;
+        armed = false;
+        dial.classList.add('active');
+        if (pointerId != null) {
+            try { dial.setPointerCapture(pointerId); } catch (_) { /* ignore */ }
+        }
+    };
+
+    const consider = (x, y) => {
+        if (!armed || dragging) return;
+        const intent = knobAxisIntent(startX, startY, x, y);
+        if (intent === 'wait') return;
+        if (intent === 'horizontal') {
+            endDrag();
+            return;
+        }
+        claimVertical();
+    };
+
+    const onPointerMove = (e) => {
+        if (pointerId == null || e.pointerId !== pointerId) return;
+        consider(e.clientX, e.clientY);
+        if (!dragging) return;
+        e.preventDefault();
+        onDrag(startY - e.clientY);
+    };
+
+    const onPointerDown = (e) => {
+        if (typeof allow === 'function' && allow(e) === false) return;
+        if (e.button !== undefined && e.button !== 0) return;
+        // preventDefault on a touch pointerdown makes iOS and Android cancel
+        // the touch before it moves, so a sideways swipe never arrives.
+        if (e.pointerType !== 'touch') e.preventDefault();
+        e.stopPropagation();
+        dragging = false;
+        armed = true;
+        pointerId = e.pointerId;
+        startX = e.clientX;
+        startY = e.clientY;
+        if (typeof onArm === 'function') onArm();
+        dial.classList.add('active');
+        bindWindow();
+    };
+
+    const onTouchStart = (e) => {
+        if (e.touches.length !== 1) return;
+        const touch = e.changedTouches[0];
+        if (!touch) return;
+        touchId = touch.identifier;
+        if (armed || dragging) return;
+        armed = true;
+        startX = touch.clientX;
+        startY = touch.clientY;
+        if (typeof onArm === 'function') onArm();
+        dial.classList.add('active');
+    };
+
+    const onTouchMove = (e) => {
+        if (touchId == null) return;
+        const touch = touchPoint(e.changedTouches, touchId) || touchPoint(e.touches, touchId);
+        if (!touch) return;
+        consider(touch.clientX, touch.clientY);
+        if (!dragging) return;
+        if (e.cancelable) e.preventDefault();
+        onDrag(startY - touch.clientY);
+    };
+
+    const onTouchEnd = (e) => {
+        if (touchId == null) return;
+        if (!touchPoint(e.changedTouches, touchId)) return;
+        endDrag();
+    };
+
+    dial.addEventListener('pointerdown', onPointerDown);
+    dial.addEventListener('lostpointercapture', endDrag);
+    dial.addEventListener('touchstart', onTouchStart, { passive: true });
+    dial.addEventListener('touchmove', onTouchMove, { passive: false });
+    dial.addEventListener('touchend', onTouchEnd);
+    dial.addEventListener('touchcancel', onTouchEnd);
+
+    return { isDragging: () => dragging };
+}
 
 const KNOB_BINDINGS = [
     { dialId: 'kbTempoKnob', inputId: 'tempo', valueId: 'kbTempoValue' },
@@ -415,10 +565,7 @@ export function bindKnob(dial, inputOrKey, valueEl, { onInteract } = {}) {
     if (key) syncDialFromKey(dial, key, input, valueEl);
     else syncDialFromInput(dial, input, valueEl);
 
-    let dragging = false;
-    let startY = 0;
     let startNorm = 0;
-    let activePointerId = null;
 
     const liveInput = () => (key ? connectedElementFor(key) : (input?.isConnected ? input : null));
 
@@ -427,62 +574,39 @@ export function bindKnob(dial, inputOrKey, valueEl, { onInteract } = {}) {
         onInteract(String(currentParamValue(key, liveInput())));
     };
 
-    const onPointerDown = (e) => {
-        if (beginMidiLearn(e, key || input, dial.closest('.synth-knob') || dial)) return;
-        if (e.button !== undefined && e.button !== 0) return;
-        const el = liveInput();
-        if (el?.disabled || dial.getAttribute('aria-disabled') === 'true') return;
-        e.preventDefault();
-        e.stopPropagation();
-        dragging = true;
-        activePointerId = e.pointerId;
-        startY = e.clientY;
-        const { min, max } = rangeBounds(key, el);
-        startNorm = valueToNormFromRange(min, max, parseFloat(currentParamValue(key, el)));
-        dial.classList.add('active');
-        notify();
-        try {
-            dial.setPointerCapture(e.pointerId);
-        } catch (_) { /* ignore */ }
-    };
-
-    const onPointerMove = (e) => {
-        if (!dragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const deltaY = startY - e.clientY;
-        const norm = clamp(startNorm + deltaY / DRAG_PIXELS, 0, 1);
-        setKnobAngle(dial, norm);
-        const el = liveInput();
-        const next = writeFromNorm(key, el, norm);
-        const text = formatParamReadout(key, next, el);
-        dial.setAttribute('aria-valuetext', text);
-        if (valueEl) valueEl.textContent = text;
-        notify();
-    };
-
-    const endDrag = (e) => {
-        if (!dragging) return;
-        if (e && activePointerId !== null && e.pointerId !== activePointerId) return;
-        dragging = false;
-        activePointerId = null;
-        dial.classList.remove('active');
-    };
-
-    dial.addEventListener('pointerdown', onPointerDown);
-    dial.addEventListener('pointermove', onPointerMove);
-    dial.addEventListener('pointerup', endDrag);
-    dial.addEventListener('pointercancel', endDrag);
-    dial.addEventListener('lostpointercapture', endDrag);
+    const drag = attachVerticalDrag(dial, {
+        allow(e) {
+            if (beginMidiLearn(e, key || input, dial.closest('.synth-knob') || dial)) return false;
+            const el = liveInput();
+            if (el?.disabled || dial.getAttribute('aria-disabled') === 'true') return false;
+            return true;
+        },
+        onArm() {
+            const el = liveInput();
+            const { min, max } = rangeBounds(key, el);
+            startNorm = valueToNormFromRange(min, max, parseFloat(currentParamValue(key, el)));
+            notify();
+        },
+        onDrag(deltaY) {
+            const norm = clamp(startNorm + deltaY / DRAG_PIXELS, 0, 1);
+            setKnobAngle(dial, norm);
+            const el = liveInput();
+            const next = writeFromNorm(key, el, norm);
+            const text = formatParamReadout(key, next, el);
+            dial.setAttribute('aria-valuetext', text);
+            if (valueEl) valueEl.textContent = text;
+            notify();
+        },
+    });
 
     if (key) {
         subscribe(key, () => {
-            if (dragging) return;
+            if (drag.isDragging()) return;
             syncDialFromKey(dial, key, liveInput(), valueEl);
         });
     } else if (input) {
         input.addEventListener('input', () => {
-            if (dragging) return;
+            if (drag.isDragging()) return;
             syncDialFromInput(dial, input, valueEl);
         });
     }
@@ -574,53 +698,28 @@ function bindSteppedKnob({ dialId, controlId, steps }) {
 
     setSteppedIndex(dial, key, control, steps, nearestSteppedIndexFromValue(get(key) ?? control?.value, steps));
 
-    let dragging = false;
-    let startY = 0;
     let startIndex = 0;
-    let activePointerId = null;
     const perStepPixels = STEPPED_DRAG_PIXELS / Math.max(1, steps.length - 1);
 
-    const onPointerDown = (e) => {
-        if (beginMidiLearn(e, key, dial.closest('.synth-knob') || dial)) return;
-        if (e.button !== undefined && e.button !== 0) return;
-        if (connectedElementFor(key)?.disabled || dial.getAttribute('aria-disabled') === 'true') return;
-        e.preventDefault();
-        e.stopPropagation();
-        dragging = true;
-        activePointerId = e.pointerId;
-        startY = e.clientY;
-        startIndex = nearestSteppedIndexFromValue(get(key), steps);
-        dial.classList.add('active');
-        try {
-            dial.setPointerCapture(e.pointerId);
-        } catch (_) { /* ignore */ }
-    };
-
-    const onPointerMove = (e) => {
-        if (!dragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const deltaY = startY - e.clientY;
-        setSteppedIndex(dial, key, connectedElementFor(key), steps, startIndex + deltaY / perStepPixels);
-    };
-
-    const endDrag = (e) => {
-        if (!dragging) return;
-        if (e && activePointerId !== null && e.pointerId !== activePointerId) return;
-        dragging = false;
-        activePointerId = null;
-        dial.classList.remove('active');
-        setSteppedIndex(dial, key, connectedElementFor(key), steps, nearestSteppedIndexFromValue(get(key), steps));
-    };
-
-    dial.addEventListener('pointerdown', onPointerDown);
-    dial.addEventListener('pointermove', onPointerMove);
-    dial.addEventListener('pointerup', endDrag);
-    dial.addEventListener('pointercancel', endDrag);
-    dial.addEventListener('lostpointercapture', endDrag);
+    const drag = attachVerticalDrag(dial, {
+        allow(e) {
+            if (beginMidiLearn(e, key, dial.closest('.synth-knob') || dial)) return false;
+            if (connectedElementFor(key)?.disabled || dial.getAttribute('aria-disabled') === 'true') return false;
+            return true;
+        },
+        onArm() {
+            startIndex = nearestSteppedIndexFromValue(get(key), steps);
+        },
+        onDrag(deltaY) {
+            setSteppedIndex(dial, key, connectedElementFor(key), steps, startIndex + deltaY / perStepPixels);
+        },
+        onEnd() {
+            setSteppedIndex(dial, key, connectedElementFor(key), steps, nearestSteppedIndexFromValue(get(key), steps));
+        },
+    });
 
     subscribe(key, () => {
-        if (dragging) return;
+        if (drag.isDragging()) return;
         setSteppedIndex(dial, key, connectedElementFor(key), steps, nearestSteppedIndexFromValue(get(key), steps));
     });
 

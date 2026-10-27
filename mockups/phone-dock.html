@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INGYSYNTH phone mockup</title>
+<link rel="stylesheet" href="https://use.typekit.net/cmx8gmo.css">
+<link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050805;
+    --green: #00ff00;
+    --mid: #00aa00;
+    --dim: #006600;
+    --cyan: #00ffff;
+    --red: #ff3333;
+    --panel: rgba(0, 20, 0, 0.45);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: #101410;
+    color: #cfc;
+    font-family: Michroma, sans-serif;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 12px 40px;
+  }
+  .banner {
+    max-width: 420px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    color: #8a8;
+  }
+  .banner strong { color: var(--green); font-weight: 400; }
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border: 1px solid #143014;
+    border-radius: 28px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), inset 0 0 0 1px #000;
+    position: relative;
+  }
+  .tabs {
+    flex: none;
+    display: flex;
+    gap: 3px;
+    overflow-x: auto;
+    padding: 10px 8px 0;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    --h: 40px;
+    --cut: 16px;
+    flex: 0 0 auto;
+    height: var(--h);
+    padding: 0 calc(var(--cut) + 6px);
+    border: none;
+    background: transparent;
+    color: var(--mid);
+    font-family: "changeling-neo", Michroma, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: lowercase;
+    position: relative;
+    cursor: pointer;
+  }
+  .tab::before, .tab::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .tab::before {
+    background: var(--mid);
+    clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% 100%, 0 100%);
+  }
+  .tab::after {
+    background: var(--bg);
+    clip-path: polygon(calc(var(--cut) + 1.5px) 1.5px, calc(100% - var(--cut) - 1.5px) 1.5px, calc(100% - 2px) calc(100% - 1px), 2px calc(100% - 1px));
+  }
+  .tab.on {
+    color: var(--green);
+    text-shadow: 0 0 2px var(--green), 0 0 6px rgba(0, 255, 0, 0.35);
+  }
+  .tab.on::before { background: var(--green); }
+  .tab.on::after { clip-path: polygon(calc(var(--cut) + 1.5px) 1.5px, calc(100% - var(--cut) - 1.5px) 1.5px, calc(100% - 2px) 100%, 2px 100%); }
+  .editor {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px 8px 10px;
+    border-top: 1px solid var(--mid);
+  }
+  .panel { display: none; }
+  .panel.on { display: block; }
+  .hex {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 18px;
+    color: var(--green);
+    font-family: "changeling-neo", Michroma, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    text-shadow: 0 0 2px var(--green);
+    position: relative;
+    margin: 0 0 8px 6px;
+  }
+  .hex::before, .hex::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+  .hex::before {
+    background: var(--mid);
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  }
+  .hex::after {
+    background: var(--bg);
+    clip-path: polygon(11.5px 1.5px, calc(100% - 11.5px) 1.5px, calc(100% - 2px) 50%, calc(100% - 11.5px) calc(100% - 1.5px), 11.5px calc(100% - 1.5px), 2px 50%);
+  }
+  .fs {
+    border: 1px solid var(--mid);
+    border-radius: 5px;
+    background: var(--panel);
+    padding: 8px 6px 8px;
+    margin: 0 0 8px;
+  }
+  .sticky {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #050805;
+    padding-top: 2px;
+  }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .chip, .push {
+    height: 36px;
+    min-width: 44px;
+    padding: 0 8px;
+    border: 1px solid var(--mid);
+    border-radius: 4px;
+    background: #021402;
+    color: var(--mid);
+    font-family: Michroma, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  .chip.on, .push.on {
+    color: #041404;
+    background: var(--green);
+    border-color: var(--green);
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.35);
+  }
+  .push.write.on { background: #300; color: var(--red); border-color: var(--red); }
+  .rec {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    margin-left: 4px;
+    vertical-align: middle;
+    opacity: 0.15;
+  }
+  .write.on .rec { animation: blink 1s step-end infinite; }
+  @keyframes blink { 0%, 45% { opacity: 1; } 55%, 100% { opacity: 0.15; } }
+  .slots { display: flex; gap: 4px; margin: 6px 0 8px; }
+  .slot {
+    flex: 1;
+    height: 32px;
+    border: 1px solid var(--dim);
+    background: transparent;
+    color: var(--dim);
+    font-family: Michroma, sans-serif;
+    font-size: 9px;
+    cursor: pointer;
+  }
+  .slot.on { color: #041404; background: var(--green); border-color: var(--green); }
+  .slot.armed { color: var(--cyan); border-color: var(--cyan); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+  }
+  .step {
+    height: 52px;
+    border: 1px solid var(--dim);
+    border-radius: 3px;
+    background: #020802;
+    color: var(--dim);
+    font-family: Michroma, sans-serif;
+    font-size: 9px;
+    position: relative;
+    cursor: pointer;
+    padding: 4px 0 6px;
+  }
+  .step.lit {
+    background: rgba(0, 255, 0, 0.16);
+    color: var(--green);
+    border-color: var(--mid);
+  }
+  .step.play {
+    border-color: var(--green);
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.55);
+    color: var(--green);
+  }
+  .ticks {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 3px;
+    display: flex;
+    gap: 2px;
+    height: 3px;
+  }
+  .ticks i { flex: 1; background: transparent; }
+  .step.acc i:nth-child(1) { background: var(--green); }
+  .step.sld i:nth-child(2) { background: var(--cyan); }
+  .step.ratch i:nth-child(3) { background: #ff3d9a; }
+  .step.open {
+    grid-column: 1 / -1;
+    height: auto;
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 6px;
+    max-width: none;
+  }
+  .open-top { display: flex; justify-content: space-between; color: var(--green); font-size: 10px; }
+  .open-ctrls { display: flex; gap: 6px; align-items: flex-end; margin-top: 8px; }
+  .knob {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--green);
+    background: radial-gradient(circle at 50% 40%, #063006, #010401 70%);
+    position: relative;
+  }
+  .knob::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    width: 2px;
+    height: 12px;
+    background: var(--green);
+    transform: translateX(-50%) rotate(40deg);
+    transform-origin: bottom center;
+  }
+  .fine {
+    flex: 1;
+    height: 28px;
+    accent-color: var(--green);
+  }
+  .tempo { display: flex; gap: 10px; align-items: flex-end; margin-top: 8px; }
+  .dial-col { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 8px; color: var(--mid); letter-spacing: 0.08em; }
+  .collapsed {
+    border: 1px solid var(--dim);
+    border-radius: 5px;
+    padding: 6px 8px;
+    margin-top: 8px;
+    color: var(--mid);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  .scope {
+    height: 120px;
+    border: 1px solid var(--mid);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--green);
+    letter-spacing: 0.28em;
+    font-size: 13px;
+    text-shadow: 0 0 8px var(--green);
+    background:
+      linear-gradient(transparent 49%, rgba(0,255,0,0.25) 50%, transparent 51%),
+      repeating-linear-gradient(90deg, transparent, transparent 18px, rgba(0,170,0,0.15) 19px);
+  }
+  .film {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+  .card {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    border: 1px solid var(--mid);
+    min-height: 220px;
+    padding: 10px;
+    background: var(--panel);
+  }
+  .card h3 { margin: 0 0 12px; font-size: 12px; font-weight: 400; color: var(--green); letter-spacing: 0.12em; }
+  .dots { display: flex; justify-content: center; gap: 6px; }
+  .dots b { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); display: block; }
+  .dots b.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .faders { display: flex; gap: 10px; height: 280px; align-items: stretch; }
+  .fader { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 8px; color: var(--mid); }
+  .fader input { writing-mode: vertical-lr; direction: rtl; height: 220px; accent-color: var(--green); }
+  .dock {
+    flex: none;
+    border-top: 1px solid var(--mid);
+    background: #030803;
+    position: relative;
+  }
+  .strip {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+  }
+  .strip .grow { flex: 1; }
+  .disp {
+    width: 52px;
+    height: 32px;
+    border: 1px solid var(--dim);
+    background: #010301;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 6px var(--green);
+    box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.15);
+  }
+  .keys {
+    height: 112px;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+  }
+  .keys.flat .key { flex: 0 0 46px; }
+  .key {
+    flex: 0 0 46px;
+    height: 100%;
+    border: none;
+    border-right: 1px solid #111;
+    background: #e8ffe8;
+    color: #041404;
+    font-family: Michroma, sans-serif;
+    font-size: 9px;
+    align-self: flex-end;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 8px;
+    position: relative;
+  }
+  .key.black {
+    background: #0a0a0a;
+    color: var(--green);
+    height: 68px;
+    flex: 0 0 28px;
+    margin-left: -14px;
+    margin-right: -14px;
+    z-index: 1;
+    border-radius: 0 0 3px 3px;
+    border: 1px solid #222;
+  }
+  .key.root { background: var(--cyan); color: #041414; }
+  .key.black.root { background: #044; color: var(--cyan); }
+  .scroller {
+    height: 22px;
+    margin: 4px 8px 10px;
+    background: #021402;
+    border: 1px solid var(--dim);
+    border-radius: 8px;
+    position: relative;
+  }
+  .scroller i {
+    position: absolute;
+    left: 18%;
+    top: 3px;
+    bottom: 3px;
+    width: 28%;
+    background: var(--mid);
+    border-radius: 6px;
+  }
+  .tray, .slots-over {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: 48px;
+    background: rgba(5, 8, 5, 0.96);
+    border-top: 1px solid var(--green);
+    padding: 10px 8px;
+    z-index: 4;
+    display: none;
+  }
+  .tray.on, .slots-over.on { display: block; }
+  .tray select, .note {
+    height: 44px;
+    font-family: Michroma, sans-serif;
+    font-size: 14px;
+    background: #021402;
+    color: var(--green);
+    border: 1px solid var(--mid);
+  }
+  .tray select { flex: 1; }
+  .note {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.2em;
+    text-shadow: 0 0 6px var(--green);
+  }
+  .hint {
+    margin: 8px 0 0;
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <p class="banner">Mockup only. This is the phone frame from the plan, drawn with the same phosphor, hex tabs, and step cells. It is not wired to the synth. Tap the tabs, the <strong>P3</strong> chip, the <strong>C</strong> scale chip, and a step.</p>
+  <div class="phone" id="phone">
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-panel="steps">steps</button>
+      <button class="tab" data-panel="perform">perform</button>
+      <button class="tab" data-panel="synth">synthesizer</button>
+      <button class="tab" data-panel="fx">effects</button>
+      <button class="tab" data-panel="mix">mixer</button>
+    </div>
+    <div class="editor" id="editor">
+      <div class="panel on" id="steps">
+        <div class="sticky">
+          <div class="fs">
+            <div class="hex">step input</div>
+            <div class="row">
+              <button class="chip" id="prev">◀</button>
+              <button class="chip" id="next">▶</button>
+              <button class="chip">Acc</button>
+              <button class="chip">Sld</button>
+              <button class="chip">Rst</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <button class="push" type="button">Acid</button>
+          <button class="push" type="button">Berlin</button>
+        </div>
+        <div class="slots" id="editorSlots"></div>
+        <div class="grid" id="grid"></div>
+        <div class="tempo">
+          <button class="chip">Rev</button>
+          <div class="dial-col"><div class="knob"></div>TEMPO</div>
+          <div class="dial-col"><div class="knob"></div>DIV</div>
+          <div class="dial-col"><div class="knob"></div>STEPS</div>
+        </div>
+        <div class="collapsed">automation · rec undo redo clr</div>
+      </div>
+      <div class="panel" id="perform">
+        <div class="scope">INGYSYNTH</div>
+        <div class="fs">
+          <div class="hex">scale / tuning</div>
+          <p class="hint">Full tune, transpose, scale list, note matrix, octave, and semitone switch. The dock chip is the one you use while the grid is up.</p>
+        </div>
+        <div class="fs" style="height:160px;display:flex;align-items:center;justify-content:center;color:#00aa00;letter-spacing:.2em;">XY</div>
+      </div>
+      <div class="panel" id="synth">
+        <div class="row" style="margin-bottom:8px">
+          <button class="push on">Poly</button>
+          <button class="push">Multitudes</button>
+        </div>
+        <div class="film" id="film">
+          <div class="card"><h3>OSC</h3><div class="tempo"><div class="dial-col"><div class="knob"></div>TUNE</div><div class="dial-col"><div class="knob"></div>FINE</div><div class="dial-col"><div class="knob"></div>MIX</div></div></div>
+          <div class="card"><h3>FILTER</h3><div class="tempo"><div class="dial-col"><div class="knob"></div>CUT</div><div class="dial-col"><div class="knob"></div>RES</div><div class="dial-col"><div class="knob"></div>ENV</div></div></div>
+          <div class="card"><h3>INGY-6</h3><p class="hint">Existing panel, one section per swipe. Silk brackets remeasure when this page is showing.</p></div>
+        </div>
+        <div class="dots"><b class="on"></b><b></b><b></b></div>
+      </div>
+      <div class="panel" id="fx">
+        <div class="fs"><div class="hex">delay</div><div class="tempo"><div class="dial-col"><div class="knob"></div>TIME</div><div class="dial-col"><div class="knob"></div>FB</div><div class="dial-col"><div class="knob"></div>MIX</div></div></div>
+        <div class="fs"><div class="hex">reverb</div><div class="tempo"><div class="dial-col"><div class="knob"></div>SIZE</div><div class="dial-col"><div class="knob"></div>DAMP</div><div class="dial-col"><div class="knob"></div>MIX</div></div></div>
+      </div>
+      <div class="panel" id="mix">
+        <div class="faders">
+          <div class="fader">SYNTH<input type="range" min="0" max="100" value="80"></div>
+          <div class="fader">BD<input type="range" min="0" max="100" value="70"></div>
+          <div class="fader">SD<input type="range" min="0" max="100" value="60"></div>
+          <div class="fader">HH<input type="range" min="0" max="100" value="40"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dock">
+      <div class="strip">
+        <button class="push" id="play" aria-label="Start">▶</button>
+        <button class="push write" id="write">Write<span class="rec"></span></button>
+        <button class="chip on" id="slotChip">P3</button>
+        <button class="chip" id="scaleChip">C</button>
+        <span class="grow"></span>
+        <div class="disp" id="disp">05</div>
+      </div>
+      <div class="keys" id="keys"></div>
+      <div class="scroller"><i></i></div>
+      <div class="tray" id="scaleTray">
+        <div class="hex">scale</div>
+        <div class="row">
+          <button class="chip" id="scaleOn">Scale Off</button>
+          <select id="scaleName">
+            <option>Ionian</option>
+            <option selected>Dorian</option>
+            <option>Phrygian</option>
+            <option>Aeolian</option>
+            <option>Harmonic Minor</option>
+            <option>Pentatonic</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <span class="chip" style="cursor:default">T: 0 (C)</span>
+          <button class="chip">OCT−</button>
+          <button class="chip">OCT+</button>
+        </div>
+        <div class="note" id="noteRead">D3</div>
+        <p class="hint">This tray covers the keys, not the grid. Oct lives here, not in the strip.</p>
+      </div>
+      <div class="slots-over" id="slotTray">
+        <div class="hex">pattern</div>
+        <div class="slots" id="dockSlots"></div>
+        <p class="hint">Tap a slot to arm it. Long-press P3 on the strip hides the keys. This row sits over the keys for a moment, then closes.</p>
+      </div>
+    </div>
+  </div>
+<script>
+const on = new Set([0,1,2,4,5,8,12,13]);
+const accents = new Set([0, 8]);
+const slides = new Set([4]);
+let open = 4;
+let cursor = 4;
+let playing = false;
+let writeOn = false;
+let scaleOn = false;
+let slot = 2;
+const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const dorian = new Set([0,2,3,5,7,9,10]);
+
+function pad(n) { return String(n + 1).padStart(2, '0'); }
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 16; i++) {
+    const b = document.createElement('button');
+    b.className = 'step' + (on.has(i) ? ' lit' : '') + (i === cursor ? ' play' : '')
+      + (accents.has(i) ? ' acc' : '') + (slides.has(i) ? ' sld' : '')
+      + (i === open ? ' open' : '');
+    if (i === open) {
+      b.innerHTML = '<div class="open-top"><span>step ' + pad(i) + '</span><span>tap again to close</span></div>'
+        + '<div class="open-ctrls"><div class="knob"></div><input class="fine" type="range" value="64">'
+        + '<button class="chip">Acc</button><button class="chip">Sld</button><button class="chip">Ratch</button><button class="chip on">On</button></div>';
+    } else {
+      b.textContent = pad(i);
+      b.innerHTML = pad(i) + '<span class="ticks"><i></i><i></i><i></i></span>';
+    }
+    b.addEventListener('click', (ev) => {
+      if (ev.target.closest('.chip, .fine, .knob')) return;
+      if (writeOn) { cursor = i; open = i; }
+      else if (open === i) open = -1;
+      else if (i === cursor) open = i;
+      else on.has(i) ? on.delete(i) : on.add(i);
+      document.getElementById('disp').textContent = pad(Math.max(cursor, 0));
+      renderGrid();
+    });
+    grid.appendChild(b);
+  }
+}
+
+function renderKeys() {
+  const keys = document.getElementById('keys');
+  keys.classList.toggle('flat', scaleOn);
+  keys.innerHTML = '';
+  if (!scaleOn) {
+    for (let o = 0; o < 2; o++) {
+      names.forEach((n, pc) => {
+        const k = document.createElement('button');
+        const black = [1,3,6,8,10].includes(pc);
+        k.className = 'key' + (black ? ' black' : '') + (pc === 0 && o === 0 ? ' root' : '');
+        k.textContent = black ? '' : n;
+        keys.appendChild(k);
+      });
+    }
+  } else {
+    for (let o = 0; o < 3; o++) {
+      names.forEach((n, pc) => {
+        if (!dorian.has(pc)) return;
+        const k = document.createElement('button');
+        k.className = 'key' + (pc === 0 && o === 1 ? ' root' : '');
+        k.textContent = n;
+        keys.appendChild(k);
+      });
+    }
+  }
+}
+
+function renderSlots(into, clickable) {
+  const el = document.getElementById(into);
+  el.innerHTML = '';
+  for (let i = 0; i < 8; i++) {
+    const b = document.createElement('button');
+    b.className = 'slot' + (i === slot ? ' on' : '');
+    b.textContent = 'P' + (i + 1);
+    if (clickable) b.addEventListener('click', () => {
+      slot = i;
+      document.getElementById('slotChip').textContent = 'P' + (i + 1);
+      renderSlots('editorSlots', true);
+      renderSlots('dockSlots', true);
+    });
+    el.appendChild(b);
+  }
+}
+
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const t = e.target.closest('.tab');
+  if (!t) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === t.dataset.panel));
+  document.getElementById('editor').scrollTop = 0;
+});
+
+document.getElementById('scaleChip').addEventListener('click', () => {
+  document.getElementById('slotTray').classList.remove('on');
+  document.getElementById('scaleTray').classList.toggle('on');
+});
+document.getElementById('scaleOn').addEventListener('click', () => {
+  scaleOn = !scaleOn;
+  const b = document.getElementById('scaleOn');
+  b.textContent = scaleOn ? 'Scale On' : 'Scale Off';
+  b.classList.toggle('on', scaleOn);
+  document.getElementById('scaleChip').classList.toggle('on', scaleOn);
+  document.getElementById('scaleChip').textContent = 'C';
+  renderKeys();
+});
+document.getElementById('slotChip').addEventListener('click', () => {
+  document.getElementById('scaleTray').classList.remove('on');
+  document.getElementById('slotTray').classList.toggle('on');
+});
+let hold;
+document.getElementById('slotChip').addEventListener('pointerdown', () => {
+  hold = setTimeout(() => {
+    document.getElementById('keys').classList.toggle('hidden');
+    document.querySelector('.scroller').classList.toggle('hidden');
+  }, 450);
+});
+document.getElementById('slotChip').addEventListener('pointerup', () => clearTimeout(hold));
+document.getElementById('play').addEventListener('click', () => {
+  playing = !playing;
+  const b = document.getElementById('play');
+  b.textContent = playing ? '■' : '▶';
+  b.classList.toggle('on', playing);
+});
+document.getElementById('write').addEventListener('click', () => {
+  writeOn = !writeOn;
+  document.getElementById('write').classList.toggle('on', writeOn);
+});
+document.getElementById('prev').addEventListener('click', () => { cursor = (cursor + 15) % 16; open = cursor; document.getElementById('disp').textContent = pad(cursor); renderGrid(); });
+document.getElementById('next').addEventListener('click', () => { cursor = (cursor + 1) % 16; open = cursor; document.getElementById('disp').textContent = pad(cursor); renderGrid(); });
+
+renderGrid();
+renderKeys();
+renderSlots('editorSlots', true);
+renderSlots('dockSlots', true);
+</script>
+</body>
+</html>

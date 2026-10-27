@@ -1,13 +1,13 @@
 // Voice REC modal: mic capture → local LPC encode → USER bank inject.
 
-import { state } from './state.js?v=116';
+import { state } from './state.js?v=119';
 import {
     applySpeechUserBankToLive,
     clearSpeechUserBank,
     hasSpeechUserBank,
     getSpeechUserBankBytes,
     setSpeechUserBankActive,
-} from './osc-source.js?v=125';
+} from './osc-source.js?v=134';
 import {
     SPEECH_LPC_MAX_SEC,
     SPEECH_LPC_MAX_FRAMES,

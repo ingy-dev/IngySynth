@@ -3,18 +3,25 @@
 // the pattern loop wraps → punch out → playback on subsequent loops.
 // Rec off + existing lane → knob tweaks set a persistent offset (curve shape kept).
 
-import { state } from './state.js?v=116';
+import { state } from './state.js?v=119';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=75';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=106';
-import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=79';
-import { ensureDisplayStep } from './knobs.js?v=147';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=119';
+import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=87';
+import { ensureDisplayStep } from './knobs.js?v=163';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
-} from './param-status.js?v=7';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=83';
-import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=15';
-import { clampToCatalog, getParam } from './param-catalog.js?v=3';
+} from './param-status.js?v=15';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=98';
+import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=23';
+import { clampToCatalog, getParam } from './param-catalog.js?v=4';
+import {
+    flashCopiedToast,
+    getPattern,
+    getBerlinPattern,
+    patternRepeat,
+    setPatternAutomationBridge,
+} from './pattern-bank.js?v=30';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */
@@ -68,11 +75,67 @@ const takeValues = new Map();
 const takeWriteIndex = new Map();
 /** Last applied playback value per param (for epsilon / smooth updates). */
 const lastApplied = new Map();
-/** Rec-off baseline shift: playback = clamp(curve + offset). */
-const offsets = new Map();
 
-/** @type {Record<string, { samples: (number|null)[] }>} */
-const lanes = {};
+/** Per-pattern automation. Keys are n0–n7 (normal) and b0–b7 (Berlin). */
+const automationBanks = {};
+let activeBankKey = 'n0';
+
+function ensureAutomationBank(key) {
+    const k = key || 'n0';
+    if (!automationBanks[k]) automationBanks[k] = { lanes: {}, offsets: new Map() };
+    return automationBanks[k];
+}
+
+/** Active bank. Reassigned by useAutomationBank; every lane read goes through these. */
+let lanes = ensureAutomationBank(activeBankKey).lanes;
+let offsets = ensureAutomationBank(activeBankKey).offsets;
+
+function dispatchAutomationChanged() {
+    document.dispatchEvent(new CustomEvent('ingysynth:automation-changed'));
+}
+
+function bankKeyFromState() {
+    if (state.berlinMode) {
+        const slot = Math.max(0, Math.min(7, state.berlinSlot | 0));
+        return `b${slot}`;
+    }
+    const slot = Math.max(0, Math.min(7, state.editSlot | 0));
+    return `n${slot}`;
+}
+
+function patternNameForBank(key) {
+    const n = parseInt(String(key).slice(1), 10);
+    return `P${(Number.isFinite(n) ? n : 0) + 1}`;
+}
+
+function updateAutomationButtonLabels() {
+    const name = patternNameForBank(activeBankKey);
+    const labels = [
+        ['kbAutomationClear', `Clear ${name} automation`],
+        ['kbAutomationCopy', `Copy ${name} automation`],
+        ['kbAutomationPaste', `Paste automation to ${name}`],
+    ];
+    labels.forEach(([id, label]) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.setAttribute('aria-label', label);
+        btn.title = label;
+    });
+}
+
+function useAutomationBank(key) {
+    const next = key || bankKeyFromState();
+    if (next === activeBankKey) return;
+    punchOutAllTakes();
+    const rec = ensureAutomationBank(next);
+    lanes = rec.lanes;
+    offsets = rec.offsets;
+    activeBankKey = next;
+    lastApplied.clear();
+    refreshParamStatusIndicators();
+    updateAutomationButtonLabels();
+    dispatchAutomationChanged();
+}
 
 /** Params currently latch-recording until loop wrap. */
 const activeTakes = new Set();
@@ -111,8 +174,11 @@ function stepCount() {
 function patternDuration() {
     const tempoN = getNumber('tempo', 120);
     const tempo = Number.isFinite(tempoN) && tempoN > 0 ? tempoN : 120;
-    // Berlin rows have unequal lengths — the longest one is the cycle
-    if (isBerlinOn()) return Math.max(0.001, masterLoopSeconds(tempo));
+    // One cycle = one pass × Repeat Pattern. Berlin's pass is the longest lane.
+    if (isBerlinOn()) {
+        const repeat = patternRepeat(getBerlinPattern(state.berlinSlot));
+        return Math.max(0.001, masterLoopSeconds(tempo) * repeat);
+    }
     const fromStr = parseInt(getString('division', '8'), 10);
     const fromNum = getNumber('division', 8);
     const division = Number.isFinite(fromStr) && fromStr > 0
@@ -120,7 +186,8 @@ function patternDuration() {
         : (Number.isFinite(fromNum) && fromNum > 0 ? fromNum : 8);
     const n = stepCount();
     const stepDur = (60 / tempo) * (4 / division);
-    return Math.max(0.001, n * stepDur);
+    const repeat = patternRepeat(getPattern(state.editSlot));
+    return Math.max(0.001, n * stepDur * repeat);
 }
 
 function emptySamples() {
@@ -154,17 +221,20 @@ function snapshotsEqual(a, b) {
     return true;
 }
 
-function applyLaneSnapshot(key, snap) {
+function applyLaneSnapshot(key, snap, bankKey = activeBankKey) {
+    const rec = ensureAutomationBank(bankKey);
     if (!snap || snap.samples == null || !snap.samples.some((s) => s != null)) {
-        delete lanes[key];
-        offsets.delete(key);
+        delete rec.lanes[key];
+        rec.offsets.delete(key);
     } else {
-        lanes[key] = { samples: snap.samples.slice() };
-        if (snap.offset) offsets.set(key, snap.offset);
-        else offsets.delete(key);
+        rec.lanes[key] = { samples: snap.samples.slice() };
+        if (snap.offset) rec.offsets.set(key, snap.offset);
+        else rec.offsets.delete(key);
     }
-    lastApplied.delete(key);
-    refreshParamStatusIndicators(key);
+    if (bankKey === activeBankKey) {
+        lastApplied.delete(key);
+        refreshParamStatusIndicators(key);
+    }
 }
 
 function updateUndoRedoButtons() {
@@ -176,6 +246,7 @@ function updateUndoRedoButtons() {
 
 function pushHistory(entry) {
     if (historyLocked || !entry) return;
+    if (!entry.bankKey) entry.bankKey = activeBankKey;
     undoStack.push(entry);
     while (undoStack.length > HISTORY_MAX) undoStack.shift();
     redoStack.length = 0;
@@ -227,23 +298,44 @@ function commitOffsetGestures() {
     offsetGestureBefore.clear();
 }
 
+function fillRecord(rec, laneMap, offsetMap) {
+    Object.keys(rec.lanes).forEach((k) => delete rec.lanes[k]);
+    rec.offsets.clear();
+    Object.keys(laneMap || {}).forEach((k) => {
+        const samples = laneMap[k]?.samples;
+        if (!samples) return;
+        rec.lanes[k] = { samples: samples.slice() };
+    });
+    const entries = offsetMap instanceof Map
+        ? [...offsetMap.entries()]
+        : Object.entries(offsetMap || {});
+    entries.forEach(([k, v]) => {
+        if (v) rec.offsets.set(k, v);
+    });
+}
+
 function applyHistoryEntry(entry, direction) {
     if (!entry) return;
+    const bankKey = entry.bankKey || activeBankKey;
+    const live = bankKey === activeBankKey;
     historyLocked = true;
     try {
         if (entry.type === 'clear') {
-            if (direction === 'undo') {
-                restoreAllLanes(entry.beforeLanes, entry.beforeOffsets);
-            } else {
-                restoreAllLanes(entry.afterLanes || {}, entry.afterOffsets || {});
+            const rec = ensureAutomationBank(bankKey);
+            if (direction === 'undo') fillRecord(rec, entry.beforeLanes, entry.beforeOffsets);
+            else fillRecord(rec, entry.afterLanes || {}, entry.afterOffsets || {});
+            if (live) {
+                lastApplied.clear();
+                refreshParamStatusIndicators();
             }
         } else if (entry.type === 'lane' && entry.key) {
-            applyLaneSnapshot(entry.key, direction === 'undo' ? entry.before : entry.after);
+            applyLaneSnapshot(entry.key, direction === 'undo' ? entry.before : entry.after, bankKey);
         }
     } finally {
         historyLocked = false;
     }
-    // Nudge playback/UI to match restored curves
+    if (!live) return;
+    // Nudge playback/UI to match restored curves on the pattern that's showing
     const phase = state.isPlaying ? getPhase() : 0;
     if (entry.type === 'clear') {
         Object.keys(lanes).forEach((key) => {
@@ -275,12 +367,14 @@ function undoAutomation() {
         offsetGestureBefore.forEach((before, key) => applyLaneSnapshot(key, before));
         offsetGestureBefore.clear();
         updateUndoRedoButtons();
+        dispatchAutomationChanged();
         return;
     }
     // Unfinished take: cancel without touching history stacks
     if (activeTakes.size) {
         abandonActiveTakes();
         updateUndoRedoButtons();
+        dispatchAutomationChanged();
         return;
     }
     const entry = undoStack.pop();
@@ -291,6 +385,7 @@ function undoAutomation() {
     applyHistoryEntry(entry, 'undo');
     redoStack.push(entry);
     updateUndoRedoButtons();
+    dispatchAutomationChanged();
 }
 
 function redoAutomation() {
@@ -307,6 +402,7 @@ function redoAutomation() {
     applyHistoryEntry(entry, 'redo');
     undoStack.push(entry);
     updateUndoRedoButtons();
+    dispatchAutomationChanged();
 }
 
 function canEngageTake() {
@@ -617,6 +713,7 @@ function punchOutAllTakes() {
     takeValues.clear();
     takeWriteIndex.clear();
     clearHighlight();
+    dispatchAutomationChanged();
 }
 
 function beginTake(key, fromEl) {
@@ -688,6 +785,7 @@ function clearAllLanes() {
     offsets.clear();
     keys.forEach((k) => refreshParamStatusIndicators(k));
     refreshParamStatusIndicators();
+    dispatchAutomationChanged();
 }
 
 function keyFromEventTarget(target) {
@@ -811,14 +909,16 @@ export function notifyAutomationLoopAnchor(audioTime) {
 /** @deprecated step API removed — kept so old imports fail softly if cached */
 export function applyAutomationForStep() { /* no-op */ }
 
-/** Rotate curves with pattern shift. delta in steps. */
+/** Rotate curves with pattern shift. delta in steps, across the whole Repeat cycle. */
 export function rotateAutomationLanes(delta) {
     const n = stepCount();
-    if (n < 2) return;
+    const repeat = patternRepeat(getPattern(state.editSlot));
+    const cycle = n * repeat;
+    if (cycle < 2) return;
     let d = Math.round(Number(delta)) || 0;
     d = ((d % n) + n) % n;
     if (!d) return;
-    const shift = Math.round((d / n) * RESOLUTION);
+    const shift = Math.round((d / cycle) * RESOLUTION);
 
     if (!shift) return;
     Object.values(lanes).forEach((lane) => {
@@ -903,6 +1003,12 @@ function wireUi() {
     undoBtn?.addEventListener('click', () => undoAutomation());
     redoBtn?.addEventListener('click', () => redoAutomation());
     clearBtn?.addEventListener('click', () => clearAllLanes());
+    document.getElementById('kbAutomationCopy')?.addEventListener('click', (e) => {
+        copyActiveAutomation(e.currentTarget);
+    });
+    document.getElementById('kbAutomationPaste')?.addEventListener('click', () => {
+        pasteActiveAutomation();
+    });
 
     if (recordBtn) {
         recordBtn.classList.add('off');
@@ -910,6 +1016,8 @@ function wireUi() {
         recordBtn.setAttribute('aria-pressed', 'false');
     }
     updateUndoRedoButtons();
+    updateAutomationButtonLabels();
+    syncAutomationClipboardUi();
 
     wireStoreRecording();
     document.addEventListener('pointerdown', onPointerDownCapture, true);
@@ -934,15 +1042,106 @@ function wireUi() {
     });
     document.addEventListener('ingysynth:sequencer-start', onSequencerStart);
     document.addEventListener('ingysynth:sequencer-stop', onSequencerStop);
+    document.addEventListener('ingysynth:pattern-slot', () => {
+        if (!state.berlinMode) useAutomationBank(bankKeyFromState());
+    });
+    document.addEventListener('ingysynth:berlin-slot', () => {
+        if (state.berlinMode) useAutomationBank(bankKeyFromState());
+    });
+    document.addEventListener('ingysynth:berlin-mode', () => {
+        useAutomationBank(bankKeyFromState());
+    });
 
     initCollapsibles(document.getElementById('keyboardAutomationFieldset'));
 }
 
+function recordHasData(rec) {
+    if (!rec) return false;
+    const laneData = Object.keys(rec.lanes).some((k) => rec.lanes[k]?.samples?.some((s) => s != null));
+    return laneData || rec.offsets.size > 0;
+}
+
+function snapshotRecord(rec) {
+    const laneMap = {};
+    Object.keys(rec?.lanes || {}).forEach((k) => {
+        laneMap[k] = { samples: rec.lanes[k].samples.slice() };
+    });
+    const offsetMap = {};
+    rec?.offsets?.forEach((v, k) => {
+        offsetMap[k] = v;
+    });
+    return { lanes: laneMap, offsets: offsetMap };
+}
+
+/** Automation-only clipboard. Not tied to normal vs Berlin, so a curve can cross modes. */
+let automationClipboard = null;
+
+function syncAutomationClipboardUi() {
+    const btn = document.getElementById('kbAutomationPaste');
+    if (!btn) return;
+    const has = !!automationClipboard;
+    btn.disabled = !has;
+    btn.setAttribute('aria-disabled', has ? 'false' : 'true');
+    btn.classList.toggle('is-disabled', !has);
+}
+
+function copyActiveAutomation(btn) {
+    commitOffsetGestures();
+    automationClipboard = snapshotRecord(ensureAutomationBank(activeBankKey));
+    flashCopiedToast(btn);
+    syncAutomationClipboardUi();
+}
+
+function pasteActiveAutomation() {
+    if (!automationClipboard) return;
+    commitOffsetGestures();
+    if (activeTakes.size) abandonActiveTakes();
+
+    const clip = automationClipboard;
+    pushHistory({
+        type: 'clear',
+        beforeLanes: snapshotAllLanes(),
+        beforeOffsets: snapshotAllOffsets(),
+        afterLanes: clip.lanes,
+        afterOffsets: clip.offsets,
+    });
+    fillRecord(ensureAutomationBank(activeBankKey), clip.lanes, clip.offsets);
+    lastApplied.clear();
+    refreshParamStatusIndicators();
+    dispatchAutomationChanged();
+}
+
+export function hasAutomation(bankKey) {
+    return recordHasData(automationBanks[bankKey]);
+}
+
+export function snapshotBankAutomation(bankKey) {
+    const rec = automationBanks[bankKey];
+    if (!rec) return { lanes: {}, offsets: {} };
+    return snapshotRecord(rec);
+}
+
+export function applyBankAutomation(bankKey, snap) {
+    const rec = ensureAutomationBank(bankKey);
+    fillRecord(rec, snap?.lanes, snap?.offsets);
+    if (bankKey === activeBankKey) {
+        lastApplied.clear();
+        refreshParamStatusIndicators();
+    }
+    dispatchAutomationChanged();
+}
+
 export function initAutomation() {
+    setPatternAutomationBridge({
+        snapshot: snapshotBankAutomation,
+        apply: applyBankAutomation,
+        has: hasAutomation,
+    });
     bindAutomationStatusSource(
         laneHasData,
         () => Object.keys(lanes).filter((k) => laneHasData(k)),
     );
     wireUi();
+    useAutomationBank(bankKeyFromState());
     refreshParamStatusIndicators();
 }

@@ -2,11 +2,11 @@
 // params.lfoSpeed / lfoSyncDivision are source of truth; applyLfoRate() is
 // the single writer to state.lfo.frequency. state.lfoSync stays the mode flag.
 
-import { state } from './state.js?v=116';
-import { getNumber, getString, set, subscribe, toggle } from './params.js?v=15';
-import { getParam } from './param-catalog.js?v=3';
-import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=147';
-import { beginMidiLearn } from './midi-learn.js?v=7';
+import { state } from './state.js?v=119';
+import { getNumber, getString, set, subscribe, toggle } from './params.js?v=23';
+import { getParam } from './param-catalog.js?v=4';
+import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=163';
+import { beginMidiLearn } from './midi-learn.js?v=15';
 
 /** Optional hook so applyLfoRate can refresh smoothing without a circular import. */
 let onRateApplied = null;

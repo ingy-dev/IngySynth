@@ -5,6 +5,7 @@ import { state } from './state.js?v=120';
 import { togglePlay } from './sequencer.js?v=436';
 import { getNumber, subscribe } from './params.js?v=24';
 import { setArrangeView } from './arrange-view.js?v=6';
+import { initSaveLibraryUi, initSiteShare } from './save-ui.js';
 
 function writeMasterGain(level, ramp) {
     const gain = state.masterGain;
@@ -130,6 +131,8 @@ export function initSiteBar() {
     });
 
     initNoteHeader();
+    initSiteShare();
+    initSaveLibraryUi();
 }
 
 // Phone portrait and short landscape: the note sits outside Scale / Tuning,

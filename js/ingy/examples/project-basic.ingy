@@ -1,0 +1,103 @@
+{
+  "format": "ingysynth",
+  "version": 1,
+  "kind": "project",
+  "name": "Night bus",
+  "by": "ingy",
+  "voice": {
+    "params": {
+      "cutoff": 640,
+      "resonance": 12,
+      "filterEnvToggle": true,
+      "filterEnvAmount": 70,
+      "filterDecay": 0.24,
+      "decay": 0.3,
+      "sustain": 0.2,
+      "osc-type-0": "sawtooth",
+      "osc-type-1": "square",
+      "osc-tune-1": -12,
+      "osc-vol-1": 0.18,
+      "delayToggle": true,
+      "delayTime": "8",
+      "delayAmount": 0.22,
+      "lfoToggle": true,
+      "cutoffMod": 1500,
+      "volume": 0.6
+    },
+    "flags": {
+      "acid": true,
+      "lfoAmount": 0.25,
+      "drumKit": [
+        { "engine": "analog", "model": "open_hat", "tune": 0.5, "morphY": 0.72, "choke": true, "vol": 0.7, "pan": 0.2 },
+        { "engine": "analog", "model": "hihat", "vol": 0.65, "pan": -0.2 },
+        { "engine": "plaits", "model": "snare", "tune": 0.45, "vol": 0.8 },
+        { "engine": "analog", "model": "bass_drum", "tune": 0.4, "morphY": 0.6, "vol": 0.95 }
+      ]
+    }
+  },
+  "pattern": {
+    "params": { "tempo": 126, "slideTime": 80, "accentAmount": 90, "gateLength": 75, "drumModeToggle": true },
+    "slot": 0,
+    "slots": [
+      {
+        "stepCount": 16,
+        "division": 16,
+        "gate": 0.8,
+        "repeat": 2,
+        "steps": [
+          { "tune": 0, "fine": 0, "on": true, "accent": true, "slide": false, "ratch": 1, "chord": [] },
+          { "tune": 0, "on": false },
+          { "tune": 12, "slide": true },
+          { "tune": 10, "fine": -14 },
+          { "tune": 7, "accent": true },
+          { "tune": 0, "ratch": 3 },
+          { "tune": 3, "fine": 31, "slide": true },
+          { "tune": 5 },
+          { "tune": -12, "accent": true },
+          { "tune": 0, "on": false },
+          { "tune": 7, "chord": [3, 7] },
+          { "tune": 12, "ratch": 2 },
+          { "tune": 10, "slide": true },
+          { "tune": 7 },
+          { "tune": 3, "accent": true },
+          { "tune": 0, "fine": -50 }
+        ]
+      },
+      { "stepCount": 8, "division": 8, "steps": [ { "tune": 5 }, { "tune": 8 }, { "tune": 12 }, { "tune": 8 } ] }
+    ],
+    "drumSlot": 0,
+    "drums": [
+      {
+        "lanes": [
+          { "stepCount": 16, "division": 16, "steps": [ {"on": false}, {"on": false}, {"on": true}, {"on": false}, {"on": false}, {"on": false}, {"on": true}, {"on": false}, {"on": false}, {"on": false}, {"on": true}, {"on": false}, {"on": false}, {"on": false}, {"on": true}, {"on": false} ] },
+          { "stepCount": 16, "division": 16, "steps": [ {"on": true}, {"on": false}, {"on": true, "accent": true}, {"on": false}, {"on": true}, {"on": false}, {"on": true}, {"on": false}, {"on": true}, {"on": false}, {"on": true}, {"on": false}, {"on": true}, {"on": false}, {"on": true, "ratch": 2}, {"on": false} ] },
+          { "stepCount": 8, "division": 8 },
+          { "stepCount": 8, "division": 8 }
+        ]
+      }
+    ],
+    "berlin": { "enabled": false, "seeded": false, "slot": 0 },
+    "automation": {
+      "n0": {
+        "lanes": {
+          "cutoff": { "samples": [400, 420, 440, 460, 480, 500, 520, 540, 560, 580, 600, 620, 640, 660, 680, 700, 720, 740, 760, 780, 800, 820, 840, 860, 880, 900, 920, 940, 960, 980, 1000, 1020, 1040, 1060, 1080, 1100, 1120, 1140, 1160, 1180, 1200, 1220, 1240, 1260, 1280, 1300, 1320, 1340, 1360, 1380, 1400, 1420, 1440, 1460, 1480, 1500, 1520, 1540, 1560, 1580, 1600, 1620, 1640, 1660, 1680, 1700, 1720, 1740, 1760, 1780, 1800, 1820, 1840, 1860, 1880, 1900, 1920, 1940, 1960, 1980, 2000, 1950, 1900, 1850, 1800, 1750, 1700, 1650, 1600, 1550, 1500, 1450, 1400, 1350, 1300, 1250, 1200, 1150, 1100, 1050, 1000, 950, 900, 850, 800, 750, 700, 650, 600, 550, 500, 450, 400, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null] }
+        },
+        "offsets": { "cutoff": -120 }
+      }
+    }
+  },
+  "session": {
+    "params": { "scaleToggle": true, "scaleSelect": "aeolian" },
+    "xy": { "x": "cutoff", "y": "resonance" },
+    "pitchBendRange": 2,
+    "arp": false,
+    "latch": false,
+    "transpose": 0,
+    "microtuneLock": false,
+    "midiBaseNote": 48,
+    "midiMaps": {
+      "cutoff": { "type": "cc", "cc": 74, "channel": 0 },
+      "resonance": { "type": "cc", "cc": 71, "channel": 0 }
+    }
+  }
+}

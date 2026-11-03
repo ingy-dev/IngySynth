@@ -1,0 +1,170 @@
+{
+  "ok": true,
+  "error": "",
+  "warnings": [
+    "clamped:pattern.berlin.slot",
+    "clamped:pattern.berlin.slots.0.lanes.4.amount",
+    "clamped:pattern.berlin.slots.0.modCount",
+    "clamped:pattern.berlin.slots.0.oscCount",
+    "clamped:pattern.params.slideTime",
+    "clamped:pattern.params.tempo",
+    "clamped:pattern.slot",
+    "clamped:pattern.slots.0.gate",
+    "clamped:pattern.slots.0.repeat",
+    "clamped:pattern.slots.0.stepCount",
+    "clamped:pattern.slots.0.steps.0.chord",
+    "clamped:pattern.slots.0.steps.0.fine",
+    "clamped:pattern.slots.0.steps.0.ratch",
+    "clamped:pattern.slots.0.steps.0.tune",
+    "clamped:pattern.slots.0.steps.1.ratch",
+    "clamped:pattern.slots.0.steps.1.tune",
+    "clamped:session.arpRange",
+    "clamped:session.midiBaseNote",
+    "clamped:session.midiMaps.cutoff.cc",
+    "clamped:session.midiMaps.cutoff.channel",
+    "clamped:session.pitchBendRange",
+    "clamped:session.transpose",
+    "clamped:voice.flags.drumKit.0.pan",
+    "clamped:voice.flags.drumKit.0.tune",
+    "clamped:voice.flags.lfoAmount",
+    "clamped:voice.params.cutoff",
+    "clamped:voice.params.resonance",
+    "dropped:pattern.automation.n0.offsets.cutoff",
+    "dropped:session.midiMaps.resonance",
+    "dropped:session.midiMaps.volume",
+    "invalid:pattern.automation.n0.lanes.resonance",
+    "invalid:pattern.berlin.slots.0.lanes.4.destination",
+    "invalid:pattern.drums",
+    "invalid:pattern.slots.0.division",
+    "invalid:pattern.slots.0.reverse",
+    "invalid:pattern.slots.0.steps.1.on",
+    "invalid:pattern.slots.0.steps.2.chord",
+    "invalid:pattern.slots.0.steps.3",
+    "invalid:session.arpOrder",
+    "invalid:voice.flags.acid",
+    "invalid:voice.flags.drumKit.0.engine",
+    "invalid:voice.flags.drumKit.0.model",
+    "invalid:voice.flags.drumKit.1",
+    "invalid:voice.params.osc-type-0",
+    "invalid:voice.params.osc-vol-0",
+    "invalid:voice.params.unisonToggle",
+    "misplaced:pattern.params.cutoff",
+    "misplaced:voice.params.division",
+    "misplaced:voice.params.tempo"
+  ],
+  "doc": {
+    "name": "Everything wrong",
+    "voice": {
+      "params": {
+        "osc4Model": "fm",
+        "cutoff": 10000,
+        "resonance": 0,
+        "delayTime": "8",
+        "osc-tune-0": 7
+      },
+      "flags": {
+        "lfoAmount": 1,
+        "drumKit": [
+          {
+            "tune": 1,
+            "choke": false,
+            "pan": -1
+          },
+          null,
+          null,
+          {
+            "model": "open_hat",
+            "choke": false
+          }
+        ]
+      }
+    },
+    "pattern": {
+      "params": {
+        "tempo": 240,
+        "slideTime": 10,
+        "gateLength": 50
+      },
+      "slot": 7,
+      "slots": [
+        {
+          "steps": [
+            {
+              "tune": 48,
+              "fine": -100,
+              "ratch": 4,
+              "chord": [
+                -5,
+                3,
+                5,
+                7,
+                12
+              ]
+            },
+            {
+              "tune": -39,
+              "fine": 13
+            },
+            {
+              "tune": 2
+            }
+          ],
+          "stepCount": 32,
+          "gate": 0.05
+        }
+      ],
+      "berlin": {
+        "enabled": true,
+        "slots": [
+          {
+            "lanes": [
+              null,
+              null,
+              null,
+              null,
+              {
+                "amount": 0
+              }
+            ],
+            "oscCount": 4
+          }
+        ]
+      },
+      "automation": {
+        "n0": {
+          "lanes": {
+            "cutoff": {
+              "samples": [
+                1.1235,
+                null,
+                null,
+                1e+30,
+                0
+              ]
+            }
+          },
+          "offsets": {}
+        },
+        "n9": {
+          "lanes": {}
+        }
+      }
+    },
+    "session": {
+      "pitchBendRange": 1,
+      "arpRange": 3,
+      "transpose": 48,
+      "midiBaseNote": 127,
+      "midiMaps": {
+        "cutoff": {
+          "type": "cc",
+          "cc": 127,
+          "channel": 15
+        }
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "project"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "url": "https://ingysynth.com/#p=LYzBCcJAEEVbGfYSA4IEbyFJBXbgaRPHzZDsbJgdgovYgi1Yh11Zghv0-B__vbvpk6lNEwehRTs7o-iu6FNRNoc_M3tzDeKt5h-xSzGxjhlOxJeMFqvDNtl63ErkHUQZ2hsERpEg7S9ald35WHlcaYbP6_mGU2AHmwU6WoUJcYngAnGOrSiRApu6enwB",
+  "length": 213,
+  "tooLong": false,
+  "decoded": {
+    "name": "<img src=x onerror=alert(1)>[31mevil 🎹 Long name that keeps goin",
+    "by": "<script>alert('by')</script>",
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "patch"
+  }
+}

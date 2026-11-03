@@ -1,0 +1,375 @@
+{
+  "url": "https://ingysynth.com/#p=pVVNj9s2EP0rBc_yQiOJkuxb0_aUj0t6KYI9MDJts5FIRaIWMBb-751Hmbac2IsCgWGCfG80M284JF_F16PYCGP3R5GInRs65c_r8Wj9gcFvxm4Z6gf3r248A1Z1moFPZn_wv32dRoZ65b0erNi8CjV5x06MCyubYmyV1SMmDZO7HWaj6voW4JciTZMi43_B_5L_dZpIxiRjkjHJmGSsZKxkrGSsZKxkrGKsYqxirGKsYqxmrGasZqxmrGZszdiasTVja8bWjFGaYsgwFBhKDCAIBIEgEASCQGQgMhAZiAxEBiIHkYPIQeQgchAQR1BHkEfQRxBIUEiQSNBIEElQSZBJ0EkQSlBKkErQShBLUEuQS9BLEExQTJBM0EwQTVBNkE3QTRBOUJ4F5WsZTWoZvVQyBiplzEXKmG4ho6JcRtGZjHUhGUuXynN1EQIREAD-4R7e4Ry-4Rqe4Zj9Pp9OieD-GLW_6ZYVBziB2w5Th5a5dBTPtubFjKHbqEzE6HX_h5usvy5hZqe2TcLwKmDqh0mfkiv6cHjDfEE9n5L_mcjS3zzfqXYMC9U0GuYgk8dmv0Lcl_QGkIhB-eYgNhlr5B9O-qC6sDtzvr93s8h1Om_PR7fVf7v9vtXRw155_UHbPV8mm0pyKVrDJgZ3CPei8LrrHRcpK0_gnL-3rfAhNulTzQnpXuOOyt6o8bKUP5UjxI_J-clqBAexM5ivqLjA6c_7MjMViHNp8uu3OSX33AeLeSofeVzNOdxk2hzcwFfvlzypnu9Fzm7zvycsvYauHoVeCFjJdG7may0Xec_T-jqd40YYHcL69TieL__ObM07NepPDrtX8OYB-aj6H96CpuHsuOrNQVmrW95oTu3Y45Fh6oQ9H51VttEXa3pofVr26NioVn_WLR6ujVDatUZZfq8CvmxTfPaih3PH8dyZOdquVftzu5ttrBsa_b3xoT68Sd8uVe_ZO7dpBgfI7CkUPaCrJVyGevKhCFUXfauMxzs6lzJ9KgLfuaE__BPsF9TFyVriQLY7F88gR5A38mOJ8ZKcF3w-WSAuXbHVjTriqxzzVh0XfrIzNJ9TUYu4vjnaO9Pys_9n9JMVEfrLvkRnVboAbz93Y7PCzq2IQ4zfJzVoMaOsEGD6RPXN7hNO_TR6ZRZ1nrpQmJKfiP8A",
+  "length": 1193,
+  "tooLong": false,
+  "decoded": {
+    "name": "Night bus",
+    "by": "ingy",
+    "voice": {
+      "params": {
+        "cutoff": 640,
+        "resonance": 12,
+        "filterEnvAmount": 70,
+        "filterEnvToggle": true,
+        "filterDecay": 0.24,
+        "decay": 0.3,
+        "sustain": 0.2,
+        "delayToggle": true,
+        "delayTime": "8",
+        "delayAmount": 0.22,
+        "volume": 0.6,
+        "cutoffMod": 1500,
+        "osc-vol-1": 0.18,
+        "osc-type-1": "square"
+      },
+      "flags": {
+        "acid": true,
+        "lfoAmount": 0.25,
+        "drumKit": [
+          {
+            "vol": 0.7,
+            "pan": 0.2,
+            "choke": true
+          },
+          {
+            "vol": 0.65,
+            "pan": -0.2
+          },
+          {
+            "engine": "plaits",
+            "tune": 0.45
+          },
+          {
+            "tune": 0.4,
+            "morphY": 0.6,
+            "vol": 0.95
+          }
+        ]
+      }
+    },
+    "pattern": {
+      "params": {
+        "tempo": 126,
+        "slideTime": 80,
+        "accentAmount": 90,
+        "gateLength": 75,
+        "drumModeToggle": true
+      },
+      "slots": [
+        {
+          "steps": [
+            {
+              "accent": true
+            },
+            {
+              "on": false
+            },
+            {
+              "tune": 12,
+              "slide": true
+            },
+            {
+              "tune": 10,
+              "fine": -14
+            },
+            {
+              "tune": 7,
+              "accent": true
+            },
+            {
+              "ratch": 3
+            },
+            {
+              "tune": 3,
+              "fine": 31,
+              "slide": true
+            },
+            {
+              "tune": 5
+            },
+            {
+              "tune": -12,
+              "accent": true
+            },
+            {
+              "on": false
+            },
+            {
+              "tune": 7,
+              "chord": [
+                3,
+                7
+              ]
+            },
+            {
+              "tune": 12,
+              "ratch": 2
+            },
+            {
+              "tune": 10,
+              "slide": true
+            },
+            {
+              "tune": 7
+            },
+            {
+              "tune": 3,
+              "accent": true
+            },
+            {
+              "fine": -50
+            }
+          ],
+          "stepCount": 16,
+          "division": 16,
+          "gate": 0.8,
+          "repeat": 2
+        },
+        {
+          "steps": [
+            {
+              "tune": 5
+            },
+            {
+              "tune": 8
+            },
+            {
+              "tune": 12
+            },
+            {
+              "tune": 8
+            }
+          ]
+        }
+      ],
+      "drums": [
+        {
+          "lanes": [
+            {
+              "steps": [
+                null,
+                null,
+                {
+                  "on": true
+                },
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                {
+                  "on": true
+                },
+                null,
+                null,
+                null,
+                {
+                  "on": true
+                }
+              ],
+              "stepCount": 16,
+              "division": 16
+            },
+            {
+              "steps": [
+                {
+                  "on": true
+                },
+                {
+                  "on": false
+                },
+                {
+                  "on": true,
+                  "accent": true
+                },
+                {
+                  "on": false
+                },
+                {
+                  "on": true
+                },
+                {
+                  "on": false
+                },
+                {
+                  "on": true
+                },
+                {
+                  "on": false
+                },
+                {
+                  "on": true
+                },
+                null,
+                {
+                  "on": true
+                },
+                null,
+                {
+                  "on": true
+                },
+                null,
+                {
+                  "on": true,
+                  "ratch": 2
+                }
+              ],
+              "stepCount": 16,
+              "division": 16
+            }
+          ]
+        }
+      ],
+      "automation": {
+        "n0": {
+          "lanes": {
+            "cutoff": {
+              "samples": [
+                400,
+                420,
+                440,
+                460,
+                480,
+                500,
+                520,
+                540,
+                560,
+                580,
+                600,
+                620,
+                640,
+                660,
+                680,
+                700,
+                720,
+                740,
+                760,
+                780,
+                800,
+                820,
+                840,
+                860,
+                880,
+                900,
+                920,
+                940,
+                960,
+                980,
+                1000,
+                1020,
+                1040,
+                1060,
+                1080,
+                1100,
+                1120,
+                1140,
+                1160,
+                1180,
+                1200,
+                1220,
+                1240,
+                1260,
+                1280,
+                1300,
+                1320,
+                1340,
+                1360,
+                1380,
+                1400,
+                1420,
+                1440,
+                1460,
+                1480,
+                1500,
+                1520,
+                1540,
+                1560,
+                1580,
+                1600,
+                1620,
+                1640,
+                1660,
+                1680,
+                1700,
+                1720,
+                1740,
+                1760,
+                1780,
+                1800,
+                1820,
+                1840,
+                1860,
+                1880,
+                1900,
+                1920,
+                1940,
+                1960,
+                1980,
+                2000,
+                1950,
+                1900,
+                1850,
+                1800,
+                1750,
+                1700,
+                1650,
+                1600,
+                1550,
+                1500,
+                1450,
+                1400,
+                1350,
+                1300,
+                1250,
+                1200,
+                1150,
+                1100,
+                1050,
+                1000,
+                950,
+                900,
+                850,
+                800,
+                750,
+                700,
+                650,
+                600,
+                550,
+                500,
+                450,
+                400
+              ]
+            }
+          },
+          "offsets": {
+            "cutoff": -120
+          }
+        }
+      }
+    },
+    "session": {
+      "params": {
+        "scaleToggle": true,
+        "scaleSelect": "aeolian"
+      },
+      "midiBaseNote": 48,
+      "midiMaps": {
+        "cutoff": {
+          "type": "cc",
+          "cc": 74,
+          "channel": 0
+        },
+        "resonance": {
+          "type": "cc",
+          "cc": 71,
+          "channel": 0
+        }
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "project"
+  }
+}

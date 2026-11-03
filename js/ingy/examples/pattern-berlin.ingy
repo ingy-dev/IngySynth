@@ -1,0 +1,42 @@
+{
+  "format": "ingysynth",
+  "version": 1,
+  "kind": "pattern",
+  "name": "Berlin school",
+  "by": "ingy",
+  "pattern": {
+    "params": { "tempo": 112 },
+    "slot": 2,
+    "slots": [
+      { "steps": [ { "tune": 0 }, { "tune": 7 }, { "tune": 12 }, { "tune": 15 } ] },
+      {},
+      { "stepCount": 6, "division": 16, "reverse": true, "steps": [ { "tune": -5 }, { "tune": 2, "fine": 49 } ] }
+    ],
+    "berlin": {
+      "enabled": true,
+      "seeded": true,
+      "slot": 1,
+      "slots": [
+        {},
+        {
+          "oscCount": 2,
+          "modCount": 2,
+          "repeat": 4,
+          "lanes": [
+            { "stepCount": 7, "division": 16, "steps": [ { "tune": 0 }, { "tune": 3 }, { "tune": 7 }, { "tune": 10 }, { "tune": 12 }, { "tune": 10 }, { "tune": 7 } ] },
+            { "stepCount": 5, "division": 8, "gate": 0.5, "steps": [ { "tune": -12 }, { "tune": -5 }, { "tune": -12, "slide": true }, { "tune": -7 }, { "tune": -12 } ] },
+            {},
+            {},
+            { "destination": "cutoff", "amount": 0.6, "stepCount": 3, "steps": [ { "tune": 0 }, { "tune": 12 }, { "tune": 24 } ] },
+            { "destination": "resonance", "amount": 0.3 },
+            {},
+            {}
+          ]
+        }
+      ]
+    },
+    "automation": {
+      "b1": { "lanes": { "pitchBend": { "samples": [0, 0.5, 1, 1.5, 2, 1.5, 1, 0.5, 0] } }, "offsets": {} }
+    }
+  }
+}

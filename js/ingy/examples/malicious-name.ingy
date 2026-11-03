@@ -1,0 +1,8 @@
+{
+  "format": "ingysynth",
+  "version": 1,
+  "kind": "patch",
+  "name": "  <img src=x onerror=alert(1)>\u0000\u0007\u001b[31m\u202eevil\u202c \ud83c\udfb9 Long name that keeps going and going well past the sixty-four character limit for names  ",
+  "by": "<script>alert('by')</script>\u2066\u2069\n\r\t",
+  "voice": { "params": {}, "flags": {} }
+}

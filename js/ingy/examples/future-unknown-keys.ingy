@@ -1,0 +1,40 @@
+{
+  "format": "ingysynth",
+  "version": 2,
+  "kind": "project",
+  "name": "From the future",
+  "by": "v2 app",
+  "savedAt": "2027-03-01T12:00:00Z",
+  "app": { "name": "IngySynth Bare Metal", "version": "2.4.0" },
+  "hologram": { "enabled": true, "depth": 3 },
+  "voice": {
+    "params": { "cutoff": 900, "futureKnob": 0.75, "osc-shape-9": "spline" },
+    "flags": { "acid": false, "quantumMode": true },
+    "wavetables": [ "a", "b" ]
+  },
+  "pattern": {
+    "params": { "tempo": 128, "swing": 0.56 },
+    "slots": [
+      {
+        "probability": 0.5,
+        "steps": [ { "tune": 3, "velocity": 0.4, "probability": 0.8 }, { "tune": 5, "microshift": -3 } ]
+      }
+    ],
+    "drums": [ { "lanes": [ { "laneSwing": 0.1 } ], "kitName": "future kit" } ],
+    "berlin": { "enabled": false, "polymeter": "on", "slots": [ { "lanes": [ { "curve": "exp" } ], "color": "teal" } ] },
+    "automation": {
+      "n0": { "lanes": { "cutoff": { "samples": [1000], "interp": "cubic" } }, "offsets": {}, "mode": "latch" },
+      "s": { "lanes": {}, "offsets": {} },
+      "x9": { "anything": true }
+    },
+    "scenes": [ 1, 2, 3 ]
+  },
+  "session": {
+    "params": { "scaleToggle": false, "scaleSelect": "", "tuningFuture": 19 },
+    "xy": { "x": "cutoff", "y": "resonance", "z": "reverbAmount" },
+    "chordMemory": { "on": true, "intervals": [4, 7], "voicing": "drop2" },
+    "gestures": { "shake": "randomize" }
+  },
+  "mix": { "channels": [ { "id": "synth", "inserts": [ { "type": "delay" } ], "sends": [ { "bus": 0, "level": 0.3 } ] } ], "buses": [ { "inserts": [ { "type": "reverb" } ] } ] },
+  "arrangement": { "clips": [] }
+}

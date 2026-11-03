@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "error": "",
+  "warnings": [],
+  "doc": {
+    "name": "Rubber 303",
+    "voice": {
+      "params": {
+        "cutoff": 380,
+        "resonance": 17,
+        "filterEnvToggle": true,
+        "filterDecay": 0.18,
+        "distortionToggle": true,
+        "distortion": 35,
+        "osc-toggle-1": false
+      },
+      "flags": {
+        "acid": true
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "patch"
+  }
+}

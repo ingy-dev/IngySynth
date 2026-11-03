@@ -1,0 +1,149 @@
+{
+  "ok": true,
+  "error": "",
+  "warnings": [],
+  "doc": {
+    "name": "Berlin school",
+    "by": "ingy",
+    "pattern": {
+      "params": {
+        "tempo": 112
+      },
+      "slot": 2,
+      "slots": [
+        {
+          "steps": [
+            null,
+            {
+              "tune": 7
+            },
+            {
+              "tune": 12
+            },
+            {
+              "tune": 15
+            }
+          ]
+        },
+        null,
+        {
+          "steps": [
+            {
+              "tune": -5
+            },
+            {
+              "tune": 2,
+              "fine": 49
+            }
+          ],
+          "stepCount": 6,
+          "division": 16,
+          "reverse": true
+        }
+      ],
+      "berlin": {
+        "enabled": true,
+        "seeded": true,
+        "slot": 1,
+        "slots": [
+          null,
+          {
+            "lanes": [
+              {
+                "steps": [
+                  null,
+                  {
+                    "tune": 3
+                  },
+                  {
+                    "tune": 7
+                  },
+                  {
+                    "tune": 10
+                  },
+                  {
+                    "tune": 12
+                  },
+                  {
+                    "tune": 10
+                  },
+                  {
+                    "tune": 7
+                  }
+                ],
+                "stepCount": 7,
+                "division": 16
+              },
+              {
+                "steps": [
+                  {
+                    "tune": -12
+                  },
+                  {
+                    "tune": -5
+                  },
+                  {
+                    "tune": -12,
+                    "slide": true
+                  },
+                  {
+                    "tune": -7
+                  },
+                  {
+                    "tune": -12
+                  }
+                ],
+                "stepCount": 5,
+                "gate": 0.5
+              },
+              null,
+              null,
+              {
+                "steps": [
+                  null,
+                  {
+                    "tune": 12
+                  },
+                  {
+                    "tune": 24
+                  }
+                ],
+                "stepCount": 3,
+                "amount": 0.6
+              },
+              {
+                "amount": 0.3
+              }
+            ],
+            "oscCount": 2,
+            "modCount": 2,
+            "repeat": 4
+          }
+        ]
+      },
+      "automation": {
+        "b1": {
+          "lanes": {
+            "pitchBend": {
+              "samples": [
+                0,
+                0.5,
+                1,
+                1.5,
+                2,
+                1.5,
+                1,
+                0.5,
+                0
+              ]
+            }
+          },
+          "offsets": {}
+        }
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "pattern"
+  }
+}

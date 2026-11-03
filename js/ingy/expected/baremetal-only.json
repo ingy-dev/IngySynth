@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "error": "",
+  "warnings": [],
+  "doc": {
+    "name": "App-only sound",
+    "by": "ingy",
+    "voice": {
+      "params": {
+        "cutoff": 520,
+        "resonance": 14,
+        "osc-type-0": "square",
+        "osc-pw-0": 0.22,
+        "osc-pwm-0": 0.4,
+        "osc-sync-1": true,
+        "subVol": 0.5,
+        "subOctave": "-2",
+        "osc-engine-2": "digital",
+        "osc-model-2": "string",
+        "osc-harmonics-2": 0.3,
+        "filterModel": "tb303",
+        "filterDrive": 0.35
+      },
+      "flags": {
+        "acid": true
+      }
+    },
+    "pattern": {
+      "params": {
+        "tempo": 100
+      },
+      "slots": [
+        {
+          "steps": [
+            null,
+            {
+              "tune": 1
+            },
+            {
+              "tune": 2
+            },
+            {
+              "tune": 3
+            }
+          ]
+        }
+      ]
+    },
+    "session": {
+      "params": {
+        "scaleToggle": true,
+        "scaleSelect": "custom-1",
+        "scaleRoot": 2
+      },
+      "tuning": {
+        "custom": [
+          {
+            "id": "custom-1",
+            "name": "Quarter-tone pent",
+            "degrees": [
+              0,
+              2.5,
+              5,
+              7,
+              9.5
+            ],
+            "period": 12
+          }
+        ]
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "project"
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ingysynth.com/schema/ingy-v1.json",
+  "title": "IngySynth document (.ingy), version 1",
+  "description": "Structural schema for editors and validators. Normative rules (defaults, clamping, minimal form, warnings) are in SPEC.md and js/ingy-codec.js. Unknown keys are allowed everywhere. Param keys and ranges are in params.json / params-baremetal.json.",
+  "type": "object",
+  "required": ["format", "kind"],
+  "properties": {
+    "format": { "const": "ingysynth" },
+    "version": { "type": "integer", "minimum": 1 },
+    "kind": { "enum": ["project", "patch", "pattern"] },
+    "name": { "type": "string" },
+    "by": { "type": "string" },
+    "voice": { "$ref": "#/$defs/voice" },
+    "pattern": { "$ref": "#/$defs/pattern" },
+    "session": { "$ref": "#/$defs/session" },
+    "mix": { "type": "object" },
+    "arrangement": { "type": "object" }
+  },
+  "$defs": {
+    "params": {
+      "type": "object",
+      "additionalProperties": { "type": ["number", "boolean", "string"] }
+    },
+    "step": {
+      "type": ["object", "null"],
+      "properties": {
+        "tune": { "type": "integer", "minimum": -39, "maximum": 48 },
+        "fine": { "type": "integer", "minimum": -100, "maximum": 100 },
+        "on": { "type": "boolean" },
+        "accent": { "type": "boolean" },
+        "slide": { "type": "boolean" },
+        "ratch": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "chord": { "type": "array", "items": { "type": "integer" }, "maxItems": 5 }
+      }
+    },
+    "steps": { "type": "array", "items": { "$ref": "#/$defs/step" }, "maxItems": 32 },
+    "clock": {
+      "properties": {
+        "steps": { "$ref": "#/$defs/steps" },
+        "stepCount": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "division": { "enum": [2, 4, 8, 16, "2", "4", "8", "16"] },
+        "reverse": { "type": "boolean" },
+        "enabled": { "type": "boolean" },
+        "gate": { "type": "number", "minimum": 0.05, "maximum": 1 }
+      }
+    },
+    "slot": {
+      "type": ["object", "null"],
+      "allOf": [{ "$ref": "#/$defs/clock" }],
+      "properties": { "repeat": { "type": "integer", "minimum": 1, "maximum": 8 } }
+    },
+    "drumLane": { "type": ["object", "null"], "allOf": [{ "$ref": "#/$defs/clock" }] },
+    "drumSlot": {
+      "type": ["object", "null"],
+      "properties": { "lanes": { "type": "array", "items": { "$ref": "#/$defs/drumLane" }, "maxItems": 4 } }
+    },
+    "berlinLane": {
+      "type": ["object", "null"],
+      "allOf": [{ "$ref": "#/$defs/clock" }],
+      "properties": {
+        "destination": { "enum": ["osc1Pitch", "osc2Pitch", "osc3Pitch", "osc4Pitch", "cutoff", "resonance", "highpass", "off"] },
+        "amount": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "berlinPattern": {
+      "type": ["object", "null"],
+      "properties": {
+        "lanes": { "type": "array", "items": { "$ref": "#/$defs/berlinLane" }, "maxItems": 8 },
+        "oscCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "modCount": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "repeat": { "type": "integer", "minimum": 1, "maximum": 8 }
+      }
+    },
+    "automationBank": {
+      "type": "object",
+      "properties": {
+        "lanes": {
+          "type": "object",
+          "maxProperties": 128,
+          "additionalProperties": {
+            "type": "object",
+            "properties": { "samples": { "type": "array", "maxItems": 128, "items": { "type": ["number", "null"] } } },
+            "required": ["samples"]
+          }
+        },
+        "offsets": { "type": "object", "additionalProperties": { "type": "number" } }
+      }
+    },
+    "drumPatch": {
+      "type": ["object", "null"],
+      "properties": {
+        "engine": { "enum": ["analog", "plaits", "digital"] },
+        "model": { "enum": ["open_hat", "hihat", "snare", "bass_drum"] },
+        "tune": { "type": "number", "minimum": 0, "maximum": 1 },
+        "harmonics": { "type": "number", "minimum": 0, "maximum": 1 },
+        "morphX": { "type": "number", "minimum": 0, "maximum": 1 },
+        "morphY": { "type": "number", "minimum": 0, "maximum": 1 },
+        "alt": { "type": "boolean" },
+        "trigPatched": { "type": "boolean" },
+        "choke": { "type": "boolean" },
+        "vol": { "type": "number", "minimum": 0, "maximum": 1 },
+        "pan": { "type": "number", "minimum": -1, "maximum": 1 }
+      }
+    },
+    "voice": {
+      "type": "object",
+      "properties": {
+        "params": { "$ref": "#/$defs/params" },
+        "flags": {
+          "type": "object",
+          "properties": {
+            "acid": { "type": "boolean" },
+            "ingy6": { "type": "boolean" },
+            "ingy6Unison": { "type": "boolean" },
+            "ingy6VcaGate": { "type": "boolean" },
+            "multitudes": { "type": "boolean" },
+            "osc1Digital": { "type": "boolean" },
+            "osc1Alt": { "type": "boolean" },
+            "osc1TrigPatched": { "type": "boolean" },
+            "speechUserBank": { "type": "boolean" },
+            "filterEnvInvert": { "type": "boolean" },
+            "lfoAmount": { "type": "number", "minimum": 0, "maximum": 1 },
+            "drumKit": { "type": "array", "items": { "$ref": "#/$defs/drumPatch" }, "maxItems": 4 }
+          }
+        },
+        "speechBank": { "type": "object" }
+      }
+    },
+    "pattern": {
+      "type": "object",
+      "properties": {
+        "params": { "$ref": "#/$defs/params" },
+        "slot": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "slots": { "type": "array", "items": { "$ref": "#/$defs/slot" }, "maxItems": 8 },
+        "drumSlot": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "drums": { "type": "array", "items": { "$ref": "#/$defs/drumSlot" }, "maxItems": 8 },
+        "berlin": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "seeded": { "type": "boolean" },
+            "slot": { "type": "integer", "minimum": 0, "maximum": 7 },
+            "slots": { "type": "array", "items": { "$ref": "#/$defs/berlinPattern" }, "maxItems": 8 }
+          }
+        },
+        "automation": {
+          "type": "object",
+          "patternProperties": { "^[nb][0-7]$": { "$ref": "#/$defs/automationBank" } }
+        },
+        "song": { "type": "object" }
+      }
+    },
+    "session": {
+      "type": "object",
+      "properties": {
+        "params": { "$ref": "#/$defs/params" },
+        "xy": { "type": "object", "properties": { "x": { "type": "string" }, "y": { "type": "string" } } },
+        "pitchBendRange": { "type": "integer", "minimum": 1, "maximum": 48 },
+        "arp": { "type": "boolean" },
+        "arpChord": { "type": "boolean" },
+        "arpOrder": { "enum": ["up", "down", "upDown", "random"] },
+        "arpRange": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "latch": { "type": "boolean" },
+        "transpose": { "type": "integer", "minimum": -48, "maximum": 48 },
+        "microtuneLock": { "type": "boolean" },
+        "chordMemory": {
+          "type": "object",
+          "properties": { "on": { "type": "boolean" }, "intervals": { "type": "array", "items": { "type": "integer" } } }
+        },
+        "midiBaseNote": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "midiMaps": {
+          "type": "object",
+          "maxProperties": 256,
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "object", "required": ["type", "cc"], "properties": { "type": { "const": "cc" }, "cc": { "type": "integer", "minimum": 0, "maximum": 127 }, "channel": { "type": "integer", "minimum": 0, "maximum": 15 } } },
+              { "type": "object", "required": ["type", "note"], "properties": { "type": { "const": "note" }, "note": { "type": "integer", "minimum": 0, "maximum": 127 }, "channel": { "type": "integer", "minimum": 0, "maximum": 15 } } }
+            ]
+          }
+        },
+        "tuning": { "type": "object" }
+      }
+    }
+  }
+}

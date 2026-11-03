@@ -37,6 +37,7 @@ import { initArrangeView } from './arrange-view.js?v=6';
 import { initArrangeRoll } from './arrange-roll.js?v=5';
 import { initSongConductor } from './song-conductor.js?v=4';
 import { initSongRecord } from './song-record.js?v=2';
+import { initSaveBoot } from './save-capture.js?v=1';
 
 onLfoRateApplied(() => updateLfoSmoothing());
 initLfoRateControls();
@@ -169,4 +170,5 @@ initArrangeView();
 initSongConductor();
 initSongRecord();
 initArrangeRoll();
+initSaveBoot();
 

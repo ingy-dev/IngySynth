@@ -1,0 +1,65 @@
+{
+  "ok": true,
+  "error": "",
+  "warnings": [
+    "missing:version"
+  ],
+  "doc": {
+    "name": "From an early build",
+    "voice": {
+      "params": {
+        "cutoff": 2200
+      },
+      "flags": {
+        "drumKit": [
+          {
+            "engine": "plaits",
+            "model": "hihat",
+            "choke": false
+          },
+          {
+            "model": "snare"
+          },
+          {
+            "model": "bass_drum",
+            "tune": 0.3
+          }
+        ]
+      }
+    },
+    "pattern": {
+      "slots": [
+        {
+          "steps": [
+            {
+              "tune": 4
+            },
+            {
+              "tune": 2
+            }
+          ]
+        }
+      ],
+      "drums": [
+        {
+          "lanes": [
+            {
+              "steps": [
+                {
+                  "on": true
+                }
+              ]
+            },
+            null,
+            {
+              "stepCount": 4
+            }
+          ]
+        }
+      ]
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "project"
+  }
+}

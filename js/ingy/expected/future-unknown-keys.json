@@ -1,0 +1,157 @@
+{
+  "ok": true,
+  "error": "",
+  "warnings": [
+    "newer:version"
+  ],
+  "doc": {
+    "savedAt": "2027-03-01T12:00:00Z",
+    "app": {
+      "name": "IngySynth Bare Metal",
+      "version": "2.4.0"
+    },
+    "hologram": {
+      "enabled": true,
+      "depth": 3
+    },
+    "version": 2,
+    "name": "From the future",
+    "by": "v2 app",
+    "voice": {
+      "wavetables": [
+        "a",
+        "b"
+      ],
+      "params": {
+        "futureKnob": 0.75,
+        "osc-shape-9": "spline",
+        "cutoff": 900
+      },
+      "flags": {
+        "quantumMode": true
+      }
+    },
+    "pattern": {
+      "scenes": [
+        1,
+        2,
+        3
+      ],
+      "params": {
+        "swing": 0.56,
+        "tempo": 128
+      },
+      "slots": [
+        {
+          "probability": 0.5,
+          "steps": [
+            {
+              "velocity": 0.4,
+              "probability": 0.8,
+              "tune": 3
+            },
+            {
+              "microshift": -3,
+              "tune": 5
+            }
+          ]
+        }
+      ],
+      "drums": [
+        {
+          "kitName": "future kit",
+          "lanes": [
+            {
+              "laneSwing": 0.1
+            }
+          ]
+        }
+      ],
+      "berlin": {
+        "polymeter": "on",
+        "slots": [
+          {
+            "color": "teal",
+            "lanes": [
+              {
+                "curve": "exp"
+              }
+            ]
+          }
+        ]
+      },
+      "automation": {
+        "n0": {
+          "mode": "latch",
+          "lanes": {
+            "cutoff": {
+              "interp": "cubic",
+              "samples": [
+                1000
+              ]
+            }
+          },
+          "offsets": {}
+        },
+        "s": {
+          "lanes": {},
+          "offsets": {}
+        },
+        "x9": {
+          "anything": true
+        }
+      }
+    },
+    "session": {
+      "gestures": {
+        "shake": "randomize"
+      },
+      "params": {
+        "tuningFuture": 19
+      },
+      "xy": {
+        "z": "reverbAmount"
+      },
+      "chordMemory": {
+        "voicing": "drop2",
+        "on": true,
+        "intervals": [
+          4,
+          7
+        ]
+      }
+    },
+    "mix": {
+      "channels": [
+        {
+          "id": "synth",
+          "inserts": [
+            {
+              "type": "delay"
+            }
+          ],
+          "sends": [
+            {
+              "bus": 0,
+              "level": 0.3
+            }
+          ]
+        }
+      ],
+      "buses": [
+        {
+          "inserts": [
+            {
+              "type": "reverb"
+            }
+          ]
+        }
+      ]
+    },
+    "arrangement": {
+      "clips": []
+    },
+    "format": "ingysynth",
+    "kind": "project"
+  }
+}

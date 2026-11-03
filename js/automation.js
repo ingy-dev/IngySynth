@@ -3,17 +3,17 @@
 // the pattern loop wraps → punch out → playback on subsequent loops.
 // Rec off + existing lane → knob tweaks set a persistent offset (curve shape kept).
 
-import { state } from './state.js?v=119';
+import { state } from './state.js?v=120';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=75';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=119';
-import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=87';
-import { ensureDisplayStep } from './knobs.js?v=163';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=123';
+import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=88';
+import { ensureDisplayStep } from './knobs.js?v=167';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
-} from './param-status.js?v=15';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=98';
-import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=23';
+} from './param-status.js?v=16';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=102';
+import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=24';
 import { clampToCatalog, getParam } from './param-catalog.js?v=4';
 import {
     flashCopiedToast,
@@ -21,7 +21,7 @@ import {
     getBerlinPattern,
     patternRepeat,
     setPatternAutomationBridge,
-} from './pattern-bank.js?v=30';
+} from './pattern-bank.js?v=31';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */
@@ -76,7 +76,7 @@ const takeWriteIndex = new Map();
 /** Last applied playback value per param (for epsilon / smooth updates). */
 const lastApplied = new Map();
 
-/** Per-pattern automation. Keys are n0–n7 (normal) and b0–b7 (Berlin). */
+/** Per-pattern automation. Keys are n0–n7 (normal), b0–b7 (Berlin), and s while a song plays. */
 const automationBanks = {};
 let activeBankKey = 'n0';
 
@@ -95,6 +95,7 @@ function dispatchAutomationChanged() {
 }
 
 function bankKeyFromState() {
+    if (state.songPlaying) return 's';
     if (state.berlinMode) {
         const slot = Math.max(0, Math.min(7, state.berlinSlot | 0));
         return `b${slot}`;
@@ -123,7 +124,7 @@ function updateAutomationButtonLabels() {
     });
 }
 
-function useAutomationBank(key) {
+export function useAutomationBank(key) {
     const next = key || bankKeyFromState();
     if (next === activeBankKey) return;
     punchOutAllTakes();

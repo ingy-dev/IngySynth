@@ -1,9 +1,9 @@
 // Global unison stacks for the phase-reset oscillator path.
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
-import { state } from './state.js?v=119';
-import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=23';
-import { createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=134';
+import { state } from './state.js?v=120';
+import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=24';
+import { createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=135';
 
 const ALLOWED_VOICES = [3];
 

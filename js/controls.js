@@ -1,28 +1,28 @@
-import { state, OSC_COUNT } from './state.js?v=119';
-import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=23';
-import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=65';
+import { state, OSC_COUNT } from './state.js?v=120';
+import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=24';
+import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=69';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=223';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=39';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=92';
-import { clearAccentSweep } from './acid-env.js?v=56';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=432';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=130';
-import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=88';
-import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=141';
-import { applyScaleState } from './keyboard.js?v=253';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=154';
-import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=195';
-import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=163';
-import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=48';
-import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=45';
-import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=27';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=168';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=63';
+} from './audio-engine.js?v=227';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=40';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=93';
+import { clearAccentSweep } from './acid-env.js?v=57';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=436';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=132';
+import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=89';
+import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=145';
+import { applyScaleState } from './keyboard.js?v=257';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=158';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=196';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=167';
+import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=52';
+import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=49';
+import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=28';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=172';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=67';
 import {
     ensurePlaitsWorklet,
     createOscSource,
@@ -34,8 +34,8 @@ import {
     applyFm6BankToLive,
     readFm6PatchName,
     fm6PresetFromHarmonics,
-} from './osc-source.js?v=134';
-import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=30';
+} from './osc-source.js?v=135';
+import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=31';
 
 function syncAcidModeUi() {
     syncAcidStripUi();

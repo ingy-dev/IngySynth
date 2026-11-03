@@ -1,5 +1,5 @@
-import { state } from './state.js?v=119';
-import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=23';
+import { state } from './state.js?v=120';
+import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=24';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -10,27 +10,27 @@ import {
     midiPitchBendValue,
     getGlobalTune,
     semitonesToFrequency,
-} from './tuning.js?v=88';
-import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=130';
-import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=92';
-import { forceNoteOff } from './voice.js?v=168';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=45';
-import { bentFrequency } from './pitch-bend.js?v=119';
+} from './tuning.js?v=89';
+import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=132';
+import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=93';
+import { forceNoteOff } from './voice.js?v=172';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=49';
+import { bentFrequency } from './pitch-bend.js?v=123';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { setKeyboardStepActive } from './keyboard-steps.js?v=154';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=195';
-import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=134';
-import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=20';
-import { notifyAutomationLoopAnchor } from './automation.js?v=77';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=158';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=196';
+import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=135';
+import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=21';
+import { notifyAutomationLoopAnchor } from './automation.js?v=81';
 import { nextCyclePass } from './pattern-repeat.js?v=3';
-import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=11';
+import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=13';
 import {
     scheduleAcidAmpEnvelope,
     scheduleAcidFilterEnvelope,
     clearAccentSweep,
     acidVegDecaySec,
     releaseAcidHeldEnvelopes,
-} from './acid-env.js?v=56';
+} from './acid-env.js?v=57';
 import {
     isBerlinOn,
     berlinActiveRows,
@@ -53,7 +53,7 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=98';
+} from './berlin.js?v=102';
 import {
     getPattern,
     getBerlinLane,
@@ -68,11 +68,11 @@ import {
     stepChordCount,
     patternRepeat,
     patternStepCount,
-} from './pattern-bank.js?v=30';
-import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=168';
-import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=32';
-import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=29';
-import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=26';
+} from './pattern-bank.js?v=31';
+import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=172';
+import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=34';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=33';
+import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=30';
 import {
     clampRatch,
     nextRatch,
@@ -1084,13 +1084,37 @@ function warmBerlinAnalogDrums() {
     }
 }
 
+/** Song conductor, registered from song-conductor.js. Sequencer does not import it. */
+let songConductor = null;
+/** Returns true when Arrange record handled this Play press (count-in). */
+let songRecordGate = null;
+/** Seconds to advance instead of a pattern step while a song gap is silent. */
+let songSilenceAdvance = null;
+
+export function setSongConductor(c) {
+    songConductor = c || null;
+}
+
+export function setSongRecordGate(fn) {
+    songRecordGate = typeof fn === 'function' ? fn : null;
+}
+
 function togglePlay() {
     if (!state.audioContext) return;
+    if (songRecordGate && songRecordGate()) return;
 
     // Safari (and other browsers) can suspend the context after idle time;
     // resume on every Start/Stop click so scheduled audio actually renders.
     if (state.audioContext.state === 'suspended') {
         state.audioContext.resume();
+    }
+
+    const arrange = document.body.classList.contains('is-arrange');
+    const stoppingSong = !!state.songPlaying && !!state.isPlaying;
+    const startingSong = arrange && !state.isPlaying && !!songConductor;
+    if (startingSong) {
+        if (!state.songPlaying) songConductor.rememberPerform();
+        state.songPlaying = true;
     }
 
     state.isPlaying = !state.isPlaying;
@@ -1135,25 +1159,37 @@ function togglePlay() {
         state.berlinCyclePass = 0;
         // Berlin's start anchor below IS pass 1. Normal mode's first step consumes cycleFirstPass.
         state.berlinCycleFirstPass = false;
+        if (state.songPlaying && songConductor) songConductor.begin(state.nextStepTime);
         // Every Berlin row restarts from its own beginning on the same downbeat
         if (isBerlinOn()) {
             warmPlaitsPool(state.audioContext, 6);
             warmAnalogShells(state.audioContext);
             warmBerlinAnalogDrums();
-            resetBerlinPlayheads(state.nextStepTime);
-            notifyAutomationLoopAnchor(state.nextStepTime);
-            queuePatternPass(
-                state.nextStepTime,
-                1,
-                patternRepeat(getBerlinPattern(state.berlinSlot)),
-            );
+            if (state.songPlaying && songConductor) {
+                const info = songConductor.armBerlin(state.nextStepTime);
+                if (info?.armed && !info?.silent) {
+                    queuePatternPass(
+                        state.nextStepTime,
+                        (state.berlinCyclePass | 0) + 1,
+                        patternRepeat(getBerlinPattern(state.berlinSlot)),
+                    );
+                }
+            } else {
+                resetBerlinPlayheads(state.nextStepTime);
+                notifyAutomationLoopAnchor(state.nextStepTime);
+                queuePatternPass(
+                    state.nextStepTime,
+                    1,
+                    patternRepeat(getBerlinPattern(state.berlinSlot)),
+                );
+            }
         }
         if (state.berlinDrumMode) {
             warmPlaitsPool(state.audioContext, 6);
             warmAnalogShells(state.audioContext);
             warmBerlinAnalogDrums();
         }
-        resetDrumPlayheads(state.nextStepTime);
+        if (!(state.songPlaying && songConductor)) resetDrumPlayheads(state.nextStepTime);
         resetSidechainDucker(state.nextStepTime);
         scheduleNextStep();
         
@@ -1175,6 +1211,7 @@ function togglePlay() {
             btn.classList.add('stop');
         });
     } else {
+        if (stoppingSong && songConductor) songConductor.restorePerformSlots();
         state.playGeneration += 1;
         bumpSeqEngine();
         midiAllNotesOff();
@@ -1217,6 +1254,10 @@ function togglePlay() {
             window.noteVisualizerPreviewTimeout = null;
         }
         clearNoteVisualizer();
+        if (stoppingSong) {
+            state.songPlaying = false;
+            if (songConductor) songConductor.finishSong();
+        }
     }
 }
 
@@ -1306,14 +1347,35 @@ function scheduleNextStep() {
     
     // Schedule notes in the next scheduling window.
     // Duration is re-read after each step: a cycle-boundary switch can change division.
+    let songSpins = 0;
     while (state.nextStepTime < state.audioContext.currentTime + lookAheadTime) {
-        const startTime = state.nextStepTime;
+        if (state.songPlaying && ++songSpins > 64) break;
+        let startTime = state.nextStepTime;
+        if (state.songPlaying && songConductor) {
+            const prep = songConductor.prepareStepTime(startTime);
+            if (prep?.rewind) {
+                state.nextStepTime = prep.time;
+                continue;
+            }
+            if (prep && Number.isFinite(prep.time)) startTime = prep.time;
+        }
         // Finish the current drum pattern on this downbeat before a queued P switch
         // restarts all four lanes at step 1.
-        if (upcomingNormalCycleStart(state.currentStep)) {
+        if (!state.songPlaying && upcomingNormalCycleStart(state.currentStep)) {
             scheduleDrumLanesUntil(startTime);
         }
         playStep(state.currentStep, startTime, currentStepDuration(), null);
+
+        if (state.songPlaying && songSilenceAdvance != null) {
+            const adv = songSilenceAdvance;
+            songSilenceAdvance = null;
+            let next = startTime + adv;
+            const cap = songConductor?.nextNormalAdvanceCap?.(startTime);
+            if (Number.isFinite(cap) && cap < next) next = cap;
+            if (!(next > startTime + 1e-5)) next = startTime + Math.max(adv, 1e-3);
+            state.nextStepTime = next;
+            continue;
+        }
 
         // Re-read: an armed bank switch can swap pattern length mid-window
         const stepCount = getNumber('stepCount', 8);
@@ -1327,6 +1389,12 @@ function scheduleNextStep() {
         }
         
         state.nextStepTime += stepDuration;
+        if (state.songPlaying && songConductor) {
+            const cap = songConductor.nextNormalAdvanceCap(startTime);
+            if (Number.isFinite(cap) && cap > startTime + 1e-5 && state.nextStepTime > cap) {
+                state.nextStepTime = cap;
+            }
+        }
     }
     scheduleDrumLanes();
     const seqMs = performance.now() - seqT0;
@@ -1351,7 +1419,7 @@ const UI_DUE_SLACK = 0.008;
  * step strip visibly fires before the note. Read live: latency changes when
  * a Bluetooth sink connects.
  */
-function uiOutputLatency() {
+export function uiOutputLatency() {
     const ctx = state.audioContext;
     if (!ctx) return 0;
     const total = (Number(ctx.baseLatency) || 0) + (Number(ctx.outputLatency) || 0);
@@ -2784,9 +2852,10 @@ function triggerBerlinDrumLane(lane, pattern, startTime, stepDuration, data, pla
     const accentAmount = getAccentAmount();
     const accentThisStep = !!data.accent && !slideIn;
     const gateLen = Math.max(0.05, Math.min(1, patternGate(pattern) * getGateLength()));
-    const stepHz = berlinFrequency(playhead.semi, playhead.fine, undefined);
+    const allowKb = !state.songPlaying;
+    const stepHz = berlinFrequency(playhead.semi, playhead.fine, undefined, allowKb);
     const stepToHz = nextPitch
-        ? berlinFrequency(nextPitch.semi, nextPitch.fine, undefined)
+        ? berlinFrequency(nextPitch.semi, nextPitch.fine, undefined, allowKb)
         : stepHz;
     const fromHz = analog
         ? analogKitHz(patch.model, patch.tune, playhead.semi, playhead.fine)
@@ -2972,6 +3041,47 @@ function scheduleDrumLanesUntil(until) {
     const tempo = getNumber('tempo', 120);
     ensureDrumPlayheads();
     const hard = Number.isFinite(Number(until)) ? Number(until) : ctx.currentTime + 0.3;
+    if (state.songPlaying && songConductor) {
+        let guard = 0;
+        while (guard++ < 12) {
+            let head = Infinity;
+            for (let lane = 0; lane < DRUM_LANE_COUNT; lane++) {
+                const t = state.drumPlayheads[lane]?.nextStepTime;
+                if (Number.isFinite(t)) head = Math.min(head, t);
+            }
+            if (!Number.isFinite(head)) head = ctx.currentTime;
+            const cap = songConductor.nextDrumCapFrom(head);
+            const limit = Math.min(hard, Number.isFinite(cap) ? cap : hard);
+            for (let lane = 0; lane < DRUM_LANE_COUNT; lane++) {
+                const pattern = getDrumPattern(lane);
+                const playhead = state.drumPlayheads[lane];
+                const stepDuration = rowStepDuration(pattern, tempo);
+                if (!(stepDuration > 0)) continue;
+                // Rejoin a stalled lane, but do not jump across the next drum cue.
+                if (playhead.nextStepTime < ctx.currentTime - 1) {
+                    const rejoin = ctx.currentTime;
+                    playhead.nextStepTime = Number.isFinite(cap) ? Math.min(rejoin, cap) : rejoin;
+                }
+                let spins = 0;
+                while (playhead.nextStepTime < limit && spins++ < 64) {
+                    fireDrumLane(lane, pattern, playhead, playhead.nextStepTime, stepDuration);
+                    advanceDrumPlayhead(lane);
+                    playhead.nextStepTime += stepDuration;
+                }
+            }
+            // A step can land on the cue before the lookahead reaches it.
+            // Switch on that landing, or the next pass no longer sees the cue.
+            let earliest = Infinity;
+            for (let lane = 0; lane < DRUM_LANE_COUNT; lane++) {
+                const t = state.drumPlayheads[lane]?.nextStepTime;
+                if (Number.isFinite(t)) earliest = Math.min(earliest, t);
+            }
+            const reached = Number.isFinite(cap) && earliest >= cap - 1e-4;
+            if (!(reached || (Number.isFinite(cap) && cap <= hard + 1e-4))) break;
+            if (!songConductor.arriveDrum(cap)) break;
+        }
+        return;
+    }
     const boundary = nextCycleBoundaryTime();
     const limit = Math.min(hard, Number.isFinite(boundary) ? boundary : hard);
     for (let lane = 0; lane < DRUM_LANE_COUNT; lane++) {
@@ -3024,8 +3134,11 @@ function scheduleBerlinSteps() {
             let guard = 0;
             while (playhead.nextStepTime < limit && guard++ < 64) {
                 // Mute / Solo silence skips CV/pitch only — playhead keeps phase
-                if (isRowSounding(row)) {
+                if (isRowSounding(row) && !(state.songPlaying && songConductor?.berlinSilent())) {
                     try {
+                        if (state.songPlaying && songConductor?.preparePitch) {
+                            songConductor.preparePitch(playhead.nextStepTime);
+                        }
                         fireBerlinRow(row, pattern, playhead, playhead.nextStepTime, stepDuration, row === kbRow);
                     } catch (_) { /* keep Berlin clock alive */ }
                 } else {
@@ -3048,10 +3161,32 @@ function scheduleBerlinSteps() {
         while (guard++ < 64) {
             const loopSeconds = masterLoopSeconds(tempo);
             if (!(loopSeconds > 0.01)) break;
-            const boundary = state.berlinLoopAnchor + loopSeconds;
+            const natural = state.berlinLoopAnchor + loopSeconds;
+            let boundary = natural;
+            let songCut = false;
+            if (state.songPlaying && songConductor) {
+                const cap = songConductor.nextSynthCapFrom(state.berlinLoopAnchor);
+                if (Number.isFinite(cap) && cap <= natural + 1e-3) {
+                    boundary = cap;
+                    songCut = true;
+                }
+            }
             if (!(boundary < horizon())) break;
             // Finish this pattern through the boundary before any switch.
             scheduleBerlinRows(boundary);
+            if (songCut) {
+                state.berlinLoopAnchor = boundary;
+                const info = songConductor.onBerlinBoundary(boundary);
+                if (info?.silent) releaseBerlinOscVoices(boundary);
+                if (info?.armed && !info?.silent) {
+                    queuePatternPass(
+                        state.berlinLoopAnchor,
+                        (state.berlinCyclePass | 0) + 1,
+                        patternRepeat(getBerlinPattern(state.berlinSlot)),
+                    );
+                }
+                break;
+            }
             state.berlinLoopAnchor = boundary;
             const first = !!state.berlinCycleFirstPass;
             state.berlinCycleFirstPass = false;
@@ -3081,7 +3216,13 @@ function scheduleBerlinSteps() {
         }
     }
 
-    scheduleBerlinRows(horizon());
+    if (state.songPlaying && songConductor) {
+        const cap = songConductor.nextSynthCapFrom(state.berlinLoopAnchor);
+        const until = Number.isFinite(cap) ? Math.min(horizon(), cap) : horizon();
+        scheduleBerlinRows(until);
+    } else {
+        scheduleBerlinRows(horizon());
+    }
 }
 
 // Osc / drum lane muted / solo-silenced — release that row's independent voices
@@ -3667,11 +3808,47 @@ function playPolySeqStep({
     state.lastStepSounded = true;
 }
 
+function releaseSongHold(startTime) {
+    if (lastPolySeqHeld) releasePolySeqHold(startTime);
+    clearLastPolySounding();
+    if (state.acidMode) {
+        releaseAcidHeldEnvelopes(startTime);
+    } else {
+        if (state.envelopeHeld && state.envelope) {
+            scheduleBusRelease(state.envelope.gain, startTime, seqReleaseTau(getNumber('release')));
+            state.envelopeHeld = false;
+        }
+        if (state.filterEnvelopeHeld && state.filterEnvGain) {
+            scheduleBusRelease(state.filterEnvGain.gain, startTime, seqReleaseTau(getNumber('filterRelease')));
+            state.filterEnvelopeHeld = false;
+        }
+    }
+    state.lastStepSounded = false;
+}
+
 function playStep(step, startTime, stepDuration, scheduled) {
     if (!state.isPlaying && !state.isArping) return;
 
     let playIndex = step;
     let refreshSnap = !scheduled;
+    if (state.isPlaying && state.songPlaying && songConductor) {
+        songSilenceAdvance = null;
+        const cue = songConductor.onSynthStep(startTime);
+        if (cue?.action === 'silence') {
+            if (cue.entered) releaseSongHold(startTime);
+            songSilenceAdvance = cue.advanceSec;
+            return;
+        }
+        if (cue?.action === 'arm') {
+            step = cue.stepIndex;
+            playIndex = cue.stepIndex;
+            state.currentStep = cue.stepIndex;
+            state.cyclePass = cue.cyclePass;
+            state.cycleFirstPass = cue.cycleFirstPass;
+            stepDuration = currentStepDuration();
+            refreshSnap = true;
+        }
+    }
     // Cycle boundary: Repeat passes, then automation + a queued pattern, from step 1.
     if (state.isPlaying) {
         const stepsN = Math.max(1, Math.round(getNumber('stepCount', 8)) || 8);

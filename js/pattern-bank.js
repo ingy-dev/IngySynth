@@ -4,9 +4,9 @@
 // Repeat Pattern (×1–×8) is stored on each pattern. One cycle = one pass × repeat.
 // The first time Berlin opens, each main pattern is copied onto that slot's O1.
 
-import { state } from './state.js?v=119';
+import { state } from './state.js?v=120';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
-import { getNumber, getString, set } from './params.js?v=23';
+import { getNumber, getString, set } from './params.js?v=24';
 import { clampRepeat, nextRepeat, REPEAT_MAX } from './pattern-repeat.js?v=3';
 
 export { clampRepeat, REPEAT_MAX };
@@ -15,6 +15,12 @@ export { clampRepeat, REPEAT_MAX };
 export const PATTERN_COUNT = 8;
 /** Normal-mode P1–P8 slots. */
 export const BANK_COUNT = 8;
+/** Hidden scratch slot. Not a P1–P8 button and not an entry in those banks. */
+export const SONG_SLOT = 8;
+
+function isSongSlot(slot) {
+    return (slot | 0) === SONG_SLOT;
+}
 export const STEP_SLOTS = 32;
 
 export const OSC_LANE_COUNT = 4;
@@ -284,15 +290,30 @@ function createDrumBankSlot() {
     };
 }
 
+function ensureSongDrumLanes() {
+    let lanes = state.songDrumLanes;
+    if (!Array.isArray(lanes) || lanes.length !== DRUM_LANE_COUNT) {
+        lanes = Array.from({ length: DRUM_LANE_COUNT }, (_, i) => createDrumPattern(i));
+        state.songDrumLanes = lanes;
+    }
+    for (let i = 0; i < DRUM_LANE_COUNT; i++) {
+        lanes[i] = normalizeDrumLane(lanes[i], i);
+    }
+    state.songDrumLanes = lanes;
+    return lanes;
+}
+
 /**
  * Eight drum patterns. `state.drumPatterns` stays pointed at the current slot's
  * lanes so the scheduler and dock keep reading the same place.
  * Sounds (kit, patch, mix) stay on `state.berlinDrum` / the mixer — not per slot.
+ * Slot 8 points at `state.songDrumLanes` and does not rewrite `state.drumBank`.
  */
 export function ensureDrumPatterns() {
-    const slot = clampBankSlot(state.drumSlot || 0);
+    const onSong = isSongSlot(state.drumSlot);
+    const slot = onSong ? SONG_SLOT : clampBankSlot(state.drumSlot || 0);
     if (!Array.isArray(state.drumBank) || state.drumBank.length !== BANK_COUNT) {
-        const legacy = adoptDrumLanes(state.drumPatterns);
+        const legacy = onSong ? null : adoptDrumLanes(state.drumPatterns);
         state.drumBank = Array.from({ length: BANK_COUNT }, (_, s) => (
             s === 0 && legacy ? { lanes: legacy } : createDrumBankSlot()
         ));
@@ -307,9 +328,11 @@ export function ensureDrumPatterns() {
         for (let i = 0; i < DRUM_LANE_COUNT; i++) {
             lanes[i] = normalizeDrumLane(lanes[i], i);
         }
-        state.drumBank[s] = { lanes };
+        if (!onSong || state.drumBank[s]?.lanes !== lanes) {
+            state.drumBank[s] = { lanes };
+        }
     }
-    state.drumPatterns = state.drumBank[state.drumSlot].lanes;
+    state.drumPatterns = onSong ? ensureSongDrumLanes() : state.drumBank[state.drumSlot].lanes;
     return state.drumPatterns;
 }
 
@@ -319,12 +342,13 @@ export function getDrumPattern(lane) {
 }
 
 /**
- * Point the drum machine at one P1–P8 slot without touching the synth.
+ * Point the drum machine at one P1–P8 slot, or the song scratch (8), without
+ * touching the synth. Slot 8 does not write `state.drumBank`.
  * `startTime` is the audio-time downbeat the four lanes should restart on.
  * The sequencer listens for `ingysynth:drum-slot` and resets the playheads.
  */
 export function setDrumSlot(slot, { startTime } = {}) {
-    const next = clampBankSlot(slot);
+    const next = isSongSlot(slot) ? SONG_SLOT : clampBankSlot(slot);
     state.drumSlot = next;
     ensureDrumPatterns();
     const when = Number(startTime);
@@ -409,8 +433,16 @@ export function ensureBank() {
     return state.patterns;
 }
 
+function ensureSongPattern() {
+    if (!state.songPattern || typeof state.songPattern !== 'object') {
+        state.songPattern = createPattern();
+    }
+    return state.songPattern;
+}
+
 export function getPattern(slot) {
     ensureBank();
+    if (isSongSlot(slot)) return ensureSongPattern();
     return state.patterns[Math.max(0, Math.min(PATTERN_COUNT - 1, slot | 0))];
 }
 
@@ -549,13 +581,24 @@ export function ensureBerlinBank() {
         }
     }
     state.berlinBank.forEach((p) => normalizeBerlinPattern(p));
-    if ((state.berlinSlot | 0) < 0 || (state.berlinSlot | 0) >= BANK_COUNT) state.berlinSlot = 0;
+    if (!isSongSlot(state.berlinSlot)
+        && ((state.berlinSlot | 0) < 0 || (state.berlinSlot | 0) >= BANK_COUNT)) {
+        state.berlinSlot = 0;
+    }
     berlinEnsured = true;
     return state.berlinBank;
 }
 
+function ensureSongBerlinPattern() {
+    if (!berlinPatternShapeOk(state.songBerlinPattern)) {
+        state.songBerlinPattern = createBerlinPattern();
+    }
+    return normalizeBerlinPattern(state.songBerlinPattern);
+}
+
 export function getBerlinPattern(slot = state.berlinSlot) {
     ensureBerlinBank();
+    if (isSongSlot(slot)) return ensureSongBerlinPattern();
     const i = Math.max(0, Math.min(BANK_COUNT - 1, slot | 0));
     return state.berlinBank[i];
 }
@@ -620,11 +663,13 @@ export function patternHasAutomation(slot, berlin = !!state.berlinMode) {
 }
 
 // --- Clipboard --------------------------------------------------------------
-// The synth Copy / Paste / Clear shares one clipboard with Berlin lanes and
-// drum lanes, so a pattern can land on any of them. On the main stage a P
-// copy also carries that slot's drum pattern. Copy P1 / Paste P1 / Clear P1
-// in the pattern selector copies the current slot: the synth pattern plus
-// its drums, or the whole Berlin pattern.
+// The step clipboard is shared with Berlin lanes and individual drum lanes
+// (copyBerlinLane / copyDrumPatternContent / pasteDrumPatternContent), so a
+// row of steps can land on a synth pattern, a Berlin lane, or one drum lane.
+// A P-slot copy does not carry that slot's drums. The whole D1–D4 pattern
+// has its own clipboard (copyDrumBank / pasteDrumBank / clearDrumBank).
+// Copy P1 / Paste P1 / Clear P1 copies the current synth pattern, or the
+// whole Berlin pattern.
 
 /** @type {null | { steps: object[], stepCount: number, division: number, reverse: boolean, amount: number, gate: number }} */
 let patternClipboard = null;
@@ -709,9 +754,11 @@ function emptyAutomationSnap() {
     return { lanes: {}, offsets: {} };
 }
 
-function snapshotDrumSlot(slot) {
-    ensureDrumPatterns();
-    const lanes = state.drumBank[clampBankSlot(slot)]?.lanes || [];
+/** Deep copy of one drum slot's four lanes. Slot 8 reads the song scratch. */
+export function snapshotDrumSlot(slot) {
+    const lanes = isSongSlot(slot)
+        ? ensureSongDrumLanes()
+        : (ensureDrumPatterns(), state.drumBank[clampBankSlot(slot)]?.lanes || []);
     return lanes.map((lane) => ({
         steps: cloneSteps(lane.steps),
         stepCount: patternStepCount(lane),
@@ -722,11 +769,13 @@ function snapshotDrumSlot(slot) {
     }));
 }
 
-function writeDrumSlot(slot, lanes) {
+/** Deep-write four drum lanes. Slot 8 writes `songDrumLanes` only. */
+export function writeDrumSlot(slot, lanes) {
     if (!Array.isArray(lanes)) return;
-    ensureDrumPatterns();
-    const next = clampBankSlot(slot);
-    const dest = state.drumBank[next].lanes;
+    const song = isSongSlot(slot);
+    if (!song) ensureDrumPatterns();
+    const next = song ? SONG_SLOT : clampBankSlot(slot);
+    const dest = song ? ensureSongDrumLanes() : state.drumBank[next].lanes;
     lanes.forEach((snap, i) => {
         const lane = dest[i];
         if (!lane || !snap) return;
@@ -745,10 +794,50 @@ function writeDrumSlot(slot, lanes) {
     }
 }
 
-/** Snapshot a normal pattern: steps, clock, repeat, automation, and that slot's drums. */
+/** Whole P1–P8 drum pattern. Separate from the step clipboard. */
+let drumBankClipboard = null;
+
+export function hasDrumBankClipboard() {
+    return !!drumBankClipboard;
+}
+
+export function copyDrumBank(slot = state.drumSlot) {
+    drumBankClipboard = snapshotDrumSlot(slot);
+    return true;
+}
+
+/** @returns {boolean} false when nothing has been copied. */
+export function pasteDrumBank(slot = state.drumSlot) {
+    if (!drumBankClipboard) return false;
+    writeDrumSlot(slot, drumBankClipboard);
+    return true;
+}
+
+/** Rests on D1–D4. Keeps each lane's stepCount, division, reverse, gate, and enabled. */
+export function clearDrumBank(slot = state.drumSlot) {
+    const song = isSongSlot(slot);
+    if (!song) ensureDrumPatterns();
+    const dest = song ? ensureSongDrumLanes() : state.drumBank[clampBankSlot(slot)].lanes;
+    for (let i = 0; i < DRUM_LANE_COUNT; i++) {
+        const lane = dest[i];
+        if (!lane) continue;
+        if (!Array.isArray(lane.steps)) lane.steps = [];
+        for (let s = 0; s < STEP_SLOTS; s++) lane.steps[s] = restStep();
+    }
+    return true;
+}
+
+function automationKey(kind, slot) {
+    if (isSongSlot(slot)) return null;
+    if (kind === 'b') return berlinBankKey(slot);
+    if (kind === 'n') return normalBankKey(slot);
+    return null;
+}
+
+/** Snapshot a normal pattern: steps, clock, repeat, and automation. Drums stay put. */
 export function copyPatternContent(slot) {
     const pattern = getPattern(slot);
-    const key = normalBankKey(slot);
+    const key = automationKey('n', slot);
     patternClipboard = {
         kind: 'pattern',
         source: `P${(slot | 0) + 1}`,
@@ -759,8 +848,7 @@ export function copyPatternContent(slot) {
         amount: 1,
         gate: clampGate(pattern.gate),
         repeat: patternRepeat(pattern),
-        automation: automationBridge?.snapshot?.(key) || emptyAutomationSnap(),
-        drums: snapshotDrumSlot(slot),
+        automation: (key && automationBridge?.snapshot?.(key)) || emptyAutomationSnap(),
     };
     document.dispatchEvent(new CustomEvent('ingysynth:pattern-clipboard', {
         detail: { action: 'copy', slot },
@@ -779,11 +867,13 @@ export function pastePatternContent(slot) {
     pattern.gate = clampGate(patternClipboard.gate ?? pattern.gate);
     if (patternClipboard.kind !== 'lane') {
         pattern.repeat = clampRepeat(patternClipboard.repeat);
-        automationBridge?.apply?.(
-            normalBankKey(slot),
-            patternClipboard.automation || emptyAutomationSnap(),
-        );
-        writeDrumSlot(slot, patternClipboard.drums);
+        const key = automationKey('n', slot);
+        if (key) {
+            automationBridge?.apply?.(
+                key,
+                patternClipboard.automation || emptyAutomationSnap(),
+            );
+        }
     }
     document.dispatchEvent(new CustomEvent('ingysynth:pattern-clipboard', {
         detail: { action: 'paste', slot },
@@ -920,7 +1010,7 @@ export function hasBerlinPatternClipboard() {
 /** Whole Berlin pattern — not interchangeable with a normal P1–P8 copy. */
 export function copyBerlinPattern(slot = state.berlinSlot) {
     const pattern = getBerlinPattern(slot);
-    const key = berlinBankKey(slot);
+    const key = automationKey('b', slot);
     berlinPatternClipboard = {
         kind: 'berlin',
         source: `P${(slot | 0) + 1}`,
@@ -928,7 +1018,7 @@ export function copyBerlinPattern(slot = state.berlinSlot) {
         oscCount: pattern.oscCount,
         modCount: pattern.modCount,
         repeat: patternRepeat(pattern),
-        automation: automationBridge?.snapshot?.(key) || emptyAutomationSnap(),
+        automation: (key && automationBridge?.snapshot?.(key)) || emptyAutomationSnap(),
     };
     document.dispatchEvent(new CustomEvent('ingysynth:pattern-clipboard', {
         detail: { action: 'copy', slot: `berlin-${(slot | 0) + 1}` },
@@ -956,10 +1046,13 @@ export function pasteBerlinPattern(slot = state.berlinSlot) {
     pattern.repeat = clampRepeat(berlinPatternClipboard.repeat);
     state.berlinOscCount = pattern.oscCount;
     state.berlinModCount = pattern.modCount;
-    automationBridge?.apply?.(
-        berlinBankKey(slot),
-        berlinPatternClipboard.automation || emptyAutomationSnap(),
-    );
+    const key = automationKey('b', slot);
+    if (key) {
+        automationBridge?.apply?.(
+            key,
+            berlinPatternClipboard.automation || emptyAutomationSnap(),
+        );
+    }
     document.dispatchEvent(new CustomEvent('ingysynth:pattern-clipboard', {
         detail: { action: 'paste', slot: `berlin-${(slot | 0) + 1}` },
     }));
@@ -975,6 +1068,188 @@ export function clearBerlinPattern(slot = state.berlinSlot) {
     document.dispatchEvent(new CustomEvent('ingysynth:pattern-clipboard', {
         detail: { action: 'clear', slot: `berlin-${(slot | 0) + 1}` },
     }));
+}
+
+function copyNormalFields(pattern, data) {
+    pattern.steps = cloneSteps(data?.steps);
+    pattern.stepCount = patternStepCount(data);
+    pattern.division = parseInt(data?.division, 10) || 8;
+    pattern.reverse = !!data?.reverse;
+    pattern.gate = clampGate(data?.gate ?? pattern.gate);
+    pattern.repeat = clampRepeat(data?.repeat);
+    if (data && data.enabled !== undefined) pattern.enabled = data.enabled !== false;
+}
+
+function copyBerlinFields(slot, data) {
+    const pattern = getBerlinPattern(slot);
+    const lanes = Array.isArray(data?.lanes) ? data.lanes : [];
+    lanes.forEach((lane, row) => {
+        if (row >= PATTERN_COUNT) return;
+        const dest = getBerlinLane(row, slot);
+        dest.steps = cloneSteps(lane.steps);
+        dest.stepCount = patternStepCount(lane);
+        dest.division = parseInt(lane.division, 10) || 8;
+        dest.reverse = !!lane.reverse;
+        dest.enabled = lane.enabled !== false;
+        dest.gate = clampGate(lane.gate);
+        dest.amount = isOscLane(row) ? 1 : Math.max(0, Math.min(1, Number(lane.amount ?? 1)));
+        dest.destination = isOscLane(row) ? OSC_DESTINATIONS[row] : (lane.destination || dest.destination);
+        dest.laneKind = isOscLane(row) ? 'osc' : 'mod';
+    });
+    pattern.oscCount = clampLaneCount(data?.oscCount, pattern.oscCount ?? 3);
+    pattern.modCount = clampLaneCount(data?.modCount, pattern.modCount ?? 1);
+    pattern.repeat = clampRepeat(data?.repeat ?? pattern.repeat);
+    return pattern;
+}
+
+function applySlotAutomation(kind, slot, automation) {
+    if (automation === undefined) return;
+    if (kind !== 'n' && kind !== 'b') return;
+    const key = automationKey(kind, slot);
+    if (!key) return;
+    automationBridge?.apply?.(key, automation);
+}
+
+function revealSynthSlot(kind, slot) {
+    if (kind === 'n' && !state.berlinMode && (state.editSlot | 0) === (slot | 0)) {
+        hydratePatternToDom(slot);
+        syncPatternSlotUi();
+        return;
+    }
+    if (kind === 'b' && state.berlinMode && (state.berlinSlot | 0) === (slot | 0)) {
+        const pattern = getBerlinPattern(slot);
+        state.berlinOscCount = pattern.oscCount;
+        state.berlinModCount = pattern.modCount;
+        syncPatternSlotUi();
+        document.dispatchEvent(new CustomEvent('ingysynth:berlin-slot', {
+            detail: { slot },
+        }));
+    }
+}
+
+/** Deep copy of a normal or Berlin slot, including the song scratch. */
+export function snapshotSynthSlot(kind, slot) {
+    if (kind === 'b') {
+        const pattern = getBerlinPattern(slot);
+        return {
+            lanes: pattern.lanes.map((lane, row) => cloneBerlinLaneRecord(lane, row)),
+            oscCount: pattern.oscCount,
+            modCount: pattern.modCount,
+            repeat: patternRepeat(pattern),
+        };
+    }
+    if (kind !== 'n') return null;
+    const pattern = getPattern(slot);
+    return {
+        steps: cloneSteps(pattern.steps),
+        stepCount: patternStepCount(pattern),
+        division: parseInt(pattern.division, 10) || 8,
+        reverse: !!pattern.reverse,
+        gate: clampGate(pattern.gate),
+        repeat: patternRepeat(pattern),
+        enabled: pattern.enabled !== false,
+    };
+}
+
+/**
+ * Deep-write a normal or Berlin slot.
+ * `automation` is applied for P1–P8 (n0–n7 / b0–b7) when it is not undefined.
+ * Slot 8 has no automation key.
+ */
+export function writeSynthSlot(kind, slot, data, automation) {
+    if (kind === 'n') {
+        copyNormalFields(getPattern(slot), data);
+        applySlotAutomation('n', slot, automation);
+        revealSynthSlot('n', slot);
+        return true;
+    }
+    if (kind === 'b') {
+        copyBerlinFields(slot, data);
+        applySlotAutomation('b', slot, automation);
+        revealSynthSlot('b', slot);
+        return true;
+    }
+    return false;
+}
+
+/** Deep-copy into the song scratch only. Does not select a slot or dispatch. */
+export function loadSongSlot(kind, data) {
+    if (kind === 'n') {
+        copyNormalFields(ensureSongPattern(), data);
+        return true;
+    }
+    if (kind === 'b') {
+        copyBerlinFields(SONG_SLOT, data);
+        return true;
+    }
+    if (kind === 'd') {
+        const lanes = Array.isArray(data) ? data : data?.lanes;
+        if (!Array.isArray(lanes)) return false;
+        writeDrumSlot(SONG_SLOT, lanes);
+        return true;
+    }
+    return false;
+}
+
+function stableStringify(value) {
+    if (value === null || typeof value !== 'object') {
+        const text = JSON.stringify(value);
+        return text === undefined ? 'null' : text;
+    }
+    if (Array.isArray(value)) {
+        return `[${value.map((item) => stableStringify(item)).join(',')}]`;
+    }
+    const keys = Object.keys(value).sort();
+    return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+}
+
+function plainRecord(value) {
+    if (!value) return {};
+    if (value instanceof Map) {
+        const out = {};
+        value.forEach((item, key) => { out[key] = item; });
+        return out;
+    }
+    if (typeof value === 'object') return value;
+    return {};
+}
+
+function automationForHash(kind, slot) {
+    const key = automationKey(kind, slot);
+    if (!key || !automationBridge?.snapshot) return emptyAutomationSnap();
+    const snap = automationBridge.snapshot(key);
+    if (!snap || typeof snap !== 'object') return emptyAutomationSnap();
+    return {
+        lanes: plainRecord(snap.lanes),
+        offsets: plainRecord(snap.offsets),
+    };
+}
+
+/** Stable JSON of steps, clock, repeat, and lanes. Key order does not change the hash. */
+export function patternHash(kind, slot) {
+    if (kind === 'd') return stableStringify({ lanes: snapshotDrumSlot(slot) });
+    if (kind === 'b') {
+        const pattern = snapshotSynthSlot('b', slot);
+        return stableStringify({
+            lanes: pattern?.lanes || [],
+            repeat: pattern?.repeat ?? 1,
+            oscCount: pattern?.oscCount,
+            modCount: pattern?.modCount,
+            automation: automationForHash('b', slot),
+        });
+    }
+    const pattern = snapshotSynthSlot('n', slot);
+    return stableStringify({
+        steps: pattern?.steps || [],
+        clock: {
+            stepCount: pattern?.stepCount,
+            division: pattern?.division,
+            reverse: pattern?.reverse,
+            gate: pattern?.gate,
+        },
+        repeat: pattern?.repeat ?? 1,
+        automation: automationForHash('n', slot),
+    });
 }
 
 /** MIDI-style "Copied!" pill on a control (caller supplies phosphor via CSS var). */
@@ -1325,7 +1600,8 @@ function armCycleMeter(detail) {
 }
 
 function syncSlotButton(btn, slot) {
-    const active = slot === shownSlot();
+    const shown = shownSlot();
+    const active = slot === shown && slot >= 0 && slot < BANK_COUNT;
     const armed = pendingSlot() === slot;
     const berlin = !!state.berlinMode;
     btn.classList.toggle('off', !active);
@@ -1355,12 +1631,12 @@ export function setShownPatternRepeat(repeat) {
 }
 
 /** Swap normal slots right now (stopped, or to land an armed switch). */
-export function selectSlot(slot, { flush = true, startTime } = {}) {
-    const next = clampBankSlot(slot);
+export function selectSlot(slot, { flush = true, startTime, followDrums = true } = {}) {
+    const next = isSongSlot(slot) ? SONG_SLOT : clampBankSlot(slot);
     if (flush) flushDomToPattern(state.editSlot);
     state.editSlot = next;
     state.pendingEditSlot = null;
-    setDrumSlot(next, { startTime });
+    if (followDrums) setDrumSlot(next, { startTime });
     hydratePatternToDom(next);
     syncPatternSlotUi();
     document.dispatchEvent(new CustomEvent('ingysynth:pattern-slot', { detail: { slot: next } }));
@@ -1370,16 +1646,16 @@ export function selectSlot(slot, { flush = true, startTime } = {}) {
  * Swap the Berlin pattern. Does not touch the normal bank.
  * `startTime` is the cycle boundary the new lanes should start on.
  */
-export function selectBerlinSlot(slot, { startTime } = {}) {
+export function selectBerlinSlot(slot, { startTime, followDrums = true } = {}) {
     ensureBerlinBank();
-    const next = clampBankSlot(slot);
+    const next = isSongSlot(slot) ? SONG_SLOT : clampBankSlot(slot);
     state.berlinSlot = next;
     state.berlinPendingSlot = null;
     state.berlinSoloRow = null;
     const pattern = getBerlinPattern(next);
     state.berlinOscCount = pattern.oscCount;
     state.berlinModCount = pattern.modCount;
-    setDrumSlot(next, { startTime });
+    if (followDrums) setDrumSlot(next, { startTime });
     syncPatternSlotUi();
     document.dispatchEvent(new CustomEvent('ingysynth:berlin-slot', {
         detail: { slot: next, startTime },
@@ -1392,6 +1668,7 @@ export function selectBerlinSlot(slot, { startTime } = {}) {
  * `ingysynth:loop-start`, so a queue waits until the sequencer is playing.
  */
 export function requestSlot(slot) {
+    if (state.songPlaying) return;
     const next = clampBankSlot(slot);
     const running = state.isPlaying || state.isArping;
     if (armedVisualSlot != null) {
@@ -1428,6 +1705,7 @@ export function requestSlot(slot) {
 
 /** Called at each cycle start while playing — lands any armed pattern in time. */
 export function commitPendingSlot(startTime) {
+    if (state.songPlaying) return false;
     if (state.berlinMode) {
         if (state.berlinPendingSlot === null) return false;
         const next = state.berlinPendingSlot;
@@ -1585,6 +1863,7 @@ export function initPatternBank() {
 
 /** The P1–P8 button shows a different slot when Berlin opens or closes. Drums follow it. */
 function alignDrumsToShown() {
+    if (state.songPlaying) return;
     const slot = shownSlot();
     ensureDrumPatterns();
     if ((state.drumSlot | 0) === slot) return;

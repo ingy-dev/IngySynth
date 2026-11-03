@@ -207,9 +207,13 @@ export const state = {
     berlinDrumVoices: [],              // independent drum hits (Plaits or analog 808)
     berlinDrumPanners: [],             // StereoPannerNode × 4 (not oscPanners)
     drumBank: [],                      // 8 × { lanes[4] } — steps, length, division, ratch per slot
-    drumSlot: 0,                       // drum pattern playing and shown (P1–P8)
-    drumPatterns: [],                  // drumBank[drumSlot].lanes (D1–D4)
+    drumSlot: 0,                       // drum pattern playing and shown (P1–P8, or 8 for the song scratch)
+    drumPatterns: [],                  // drumBank[drumSlot].lanes, or songDrumLanes when drumSlot is 8
     drumPlayheads: [],                 // playhead × 4 for D1–D4
+    songPlaying: false,                // arrangement conductor owns P1–P8 presses
+    songPattern: null,                 // hidden slot 8 normal pattern
+    songBerlinPattern: null,           // hidden slot 8 Berlin pattern
+    songDrumLanes: null,               // hidden slot 8 drum lanes (not a drumBank entry)
     scSourcePlayhead: undefined,       // extra playhead when SC SRC is an oscillator
     scDucker: undefined,               // GainNode after envelope, before distInput
     drumFxInput: undefined,            // post-envelope pad into distortion (Plaits FILT off)

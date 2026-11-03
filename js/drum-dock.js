@@ -1,9 +1,9 @@
 // Global D1–D4 dock between Steps and Automation. Bound to state.drumPatterns,
 // which is the current P1–P8 drum slot (state.drumBank[state.drumSlot].lanes).
 
-import { state } from './state.js?v=119';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=163';
-import { get, set, subscribe, wireToggle } from './params.js?v=23';
+import { state } from './state.js?v=120';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=167';
+import { get, set, subscribe, wireToggle } from './params.js?v=24';
 import {
     STEP_SLOTS,
     DRUM_LANE_COUNT,
@@ -15,10 +15,15 @@ import {
     copyDrumPatternContent,
     pasteDrumPatternContent,
     clearDrumPatternSteps,
+    copyDrumBank,
+    pasteDrumBank,
+    clearDrumBank,
+    hasDrumBankClipboard,
     flashCopiedToast,
     syncPatternClipboardUi,
     ensureBerlinDrumKit,
-} from './pattern-bank.js?v=30';
+    SONG_SLOT,
+} from './pattern-bank.js?v=31';
 import {
     BERLIN_COLORS,
     berlinStepDisplayValue,
@@ -26,9 +31,9 @@ import {
     setDrumMode,
     setBerlinDrumFilt,
     setDrumLanesHidden,
-} from './berlin.js?v=98';
+} from './berlin.js?v=102';
 import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
-import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=41';
+import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=45';
 
 const DIVISIONS = [
     { value: 2, label: '1/2' },
@@ -490,5 +495,36 @@ export function initDrumDock() {
             if (fieldset) attachDrumChrome(fieldset, lane);
         }
     });
+    wireDrumBankClipboard();
     syncPatternClipboardUi();
+}
+
+function syncDrumBankPasteUi() {
+    const btn = document.getElementById('drumPatternPaste');
+    if (!btn) return;
+    const has = hasDrumBankClipboard();
+    btn.disabled = !has;
+    btn.setAttribute('aria-disabled', has ? 'false' : 'true');
+    btn.classList.toggle('is-disabled', !has);
+}
+
+function wireDrumBankClipboard() {
+    const blocked = () => (state.drumSlot | 0) === SONG_SLOT;
+    document.getElementById('drumPatternCopy')?.addEventListener('click', (e) => {
+        if (blocked()) return;
+        copyDrumBank(state.drumSlot);
+        syncDrumBankPasteUi();
+        flashCopiedToast(e.currentTarget);
+    });
+    document.getElementById('drumPatternPaste')?.addEventListener('click', () => {
+        if (blocked()) return;
+        if (!pasteDrumBank(state.drumSlot)) return;
+        if (dockBuilt) syncAllDrumLanes();
+    });
+    document.getElementById('drumPatternClear')?.addEventListener('click', () => {
+        if (blocked()) return;
+        clearDrumBank(state.drumSlot);
+        if (dockBuilt) syncAllDrumLanes();
+    });
+    syncDrumBankPasteUi();
 }

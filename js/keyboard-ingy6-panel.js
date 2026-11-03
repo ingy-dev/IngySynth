@@ -1,12 +1,12 @@
 // Ingy 6 panel (poly / Juno-60): fader chrome + wiring to main synth params.
 
-import { state } from './state.js?v=119';
-import { beginMidiLearn } from './midi-learn.js?v=15';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=92';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=48';
-import { refreshFilterInputDrive } from './filter-drive.js?v=39';
-import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=111';
-import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=23';
+import { state } from './state.js?v=120';
+import { beginMidiLearn } from './midi-learn.js?v=16';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=93';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=52';
+import { refreshFilterInputDrive } from './filter-drive.js?v=40';
+import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=115';
+import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=24';
 
 const HPF_HZ = [20, 250, 700, 1400];
 

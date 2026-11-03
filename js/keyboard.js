@@ -1,8 +1,8 @@
-import { state } from './state.js?v=119';
-import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=88';
-import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=168';
-import { initAudio } from './audio-engine.js?v=223';
-import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=130';
+import { state } from './state.js?v=120';
+import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=89';
+import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=172';
+import { initAudio } from './audio-engine.js?v=227';
+import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=132';
 import {
     refreshStepTuneReadouts,
     startArp,
@@ -12,8 +12,8 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=432';
-import { refreshXYPad } from './xy-pad.js?v=87';
+} from './sequencer.js?v=436';
+import { refreshXYPad } from './xy-pad.js?v=88';
 import {
     initPatternWrite,
     writeNote,
@@ -22,7 +22,7 @@ import {
     polyWriteNoteDown,
     polyWriteNoteUp,
     getPolyWriteHeldNotes,
-} from './pattern-write.js?v=137';
+} from './pattern-write.js?v=141';
 import {
     addHeldNote,
     removeHeldNote,
@@ -37,9 +37,9 @@ import {
     recordArpChordSessionNote,
     freezeArpChordSession,
     getChordArpSourceNotes,
-} from './held-notes.js?v=11';
-import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=30';
-import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=23';
+} from './held-notes.js?v=13';
+import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=31';
+import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=24';
 import {
     toggleChordMemoryLearn,
     cancelChordMemoryLearn,
@@ -49,11 +49,11 @@ import {
     getLearnSessionNotes,
     isPolyChordMemoryOn,
     getPolyChordIntervals,
-} from './chord-memory.js?v=32';
+} from './chord-memory.js?v=34';
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=63';
+} from './keyboard-multitudes-panel.js?v=67';
 import {
     togglePolyMode,
     togglePolyUnison,
@@ -66,7 +66,7 @@ import {
     hasPolyVoices,
     initPolyVoice,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=168';
+} from './poly-voice.js?v=172';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];
@@ -275,7 +275,7 @@ function ensureAudioReady() {
 
 /** Multi-hold note on (Arp Chord / Chord Mem Learn / Poly). Used by piano, QWERTY, MIDI. */
 export function heldNoteDown(cellSemitone) {
-    if (state.isPlaying || !Number.isFinite(cellSemitone)) return;
+    if ((state.isPlaying && !state.songLiveKeys) || !Number.isFinite(cellSemitone)) return;
     if (!isInActiveScale(cellSemitone)) return;
     ensureAudioReady();
 
@@ -468,7 +468,7 @@ function handlePress(cellSemitone) {
         return;
     }
 
-    if (state.isPlaying) {
+    if (state.isPlaying && !state.songLiveKeys) {
         state.keyboardTranspose = cellSemitone;
         state.keyboardHeldSemitone = cellSemitone;
         highlightFromState();
@@ -695,7 +695,7 @@ function handleRelease() {
         return;
     }
 
-    if (state.isPlaying) {
+    if (state.isPlaying && !state.songLiveKeys) {
         if (!state.keyboardLatch) {
             highlightFromState();
         }
@@ -833,7 +833,7 @@ export function refreshKeyboard() {
             }
             const polyStyle = state.keyboardPoly || state.keyboardMultitudes;
             const polyWrite = polyStyle && state.keyboardWrite;
-            const polyLiveHold = polyStyle && !state.isPlaying && !state.keyboardWrite
+            const polyLiveHold = polyStyle && (!state.isPlaying || state.songLiveKeys) && !state.keyboardWrite
                 && !state.chordMemoryLearning
                 && !(state.keyboardArp && state.keyboardArpChord);
             // Learn banks when the last finger lifts. One activePointerId drops

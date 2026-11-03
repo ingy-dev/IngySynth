@@ -1,8 +1,8 @@
 // Acid Mode strip above Steps: visibility, saw/square switch, OSC1 lock.
 
-import { state, OSC_COUNT } from './state.js?v=119';
-import { get, getNumber, getOscType, getOscVol, set } from './params.js?v=23';
-import { refreshFilterInputDrive } from './filter-drive.js?v=39';
+import { state, OSC_COUNT } from './state.js?v=120';
+import { get, getNumber, getOscType, getOscVol, set } from './params.js?v=24';
+import { refreshFilterInputDrive } from './filter-drive.js?v=40';
 
 const ACID_WAVES = new Set(['sawtooth', 'square']);
 

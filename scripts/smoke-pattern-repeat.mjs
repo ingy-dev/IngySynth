@@ -17,7 +17,7 @@ globalThis.document = {
     getElementById() { return null; },
 };
 
-const { state } = await import('../js/state.js?v=119');
+const { state } = await import('../js/state.js?v=120');
 const {
     ensureBank,
     ensureBerlinBank,

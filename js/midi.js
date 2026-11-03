@@ -1,5 +1,5 @@
-import { state } from './state.js?v=119';
-import { refreshParamStatusIndicators } from './param-status.js?v=15';
+import { state } from './state.js?v=120';
+import { refreshParamStatusIndicators } from './param-status.js?v=16';
 import {
     heldNoteDown,
     heldNoteUp,
@@ -7,15 +7,15 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=253';
-import { needsHeldNoteSet } from './held-notes.js?v=11';
-import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=137';
+} from './keyboard.js?v=257';
+import { needsHeldNoteSet } from './held-notes.js?v=13';
+import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=141';
 import {
     catalogKeyFromLearn,
     clearMappingHighlight,
     setupMappingPointerCapture,
-} from './midi-learn.js?v=15';
-import { click, set, toggle } from './params.js?v=23';
+} from './midi-learn.js?v=16';
+import { click, set, toggle } from './params.js?v=24';
 import { getParam, isCatalogKey, scaleCcToCatalog } from './param-catalog.js?v=4';
 
 /** MIDI note number → cell semitone while held (for Chord arp / Chord Mem). */
@@ -28,7 +28,7 @@ function midiNoteToCellSemitone(note) {
 }
 
 function handleMidiHeldNote(note, isNoteOn) {
-    if (state.midiMappingMode || state.isPlaying || state.keyboardWrite || !needsHeldNoteSet()) return false;
+    if (state.midiMappingMode || (state.isPlaying && !state.songLiveKeys) || state.keyboardWrite || !needsHeldNoteSet()) return false;
     const semi = midiNoteToCellSemitone(note);
     if (semi < KEYBOARD_SEMI_MIN || semi > KEYBOARD_SEMI_MAX) return false;
     if (isNoteOn) {

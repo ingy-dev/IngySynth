@@ -2,10 +2,10 @@
 // Plaits-style engines share one pooled AudioWorkletNode shell.
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
-import { state, OSC_COUNT } from './state.js?v=119';
-import { getNumber, getOscType, getString } from './params.js?v=23';
-import { isAnalogDrumEngine } from './pattern-bank.js?v=30';
-import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=20';
+import { state, OSC_COUNT } from './state.js?v=120';
+import { getNumber, getOscType, getString } from './params.js?v=24';
+import { isAnalogDrumEngine } from './pattern-bank.js?v=31';
+import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=21';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
 export const OSC4_INDEX = 0;

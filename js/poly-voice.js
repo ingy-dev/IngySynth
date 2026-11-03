@@ -1,22 +1,22 @@
 // Kb-only 6-voice polyphonic playground (shared filter, per-voice amp).
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
-import { state, OSC_COUNT } from './state.js?v=119';
-import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=23';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=45';
-import { semitonesToFrequency } from './tuning.js?v=88';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=92';
-import { refreshFilterInputDrive } from './filter-drive.js?v=39';
+import { state, OSC_COUNT } from './state.js?v=120';
+import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=24';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=49';
+import { semitonesToFrequency } from './tuning.js?v=89';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=93';
+import { refreshFilterInputDrive } from './filter-drive.js?v=40';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=130';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=195';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=27';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=50';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=111';
+} from './visualizers.js?v=132';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=196';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=28';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=54';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=115';
 import {
     createOscSource,
     startAnalogOsc,
@@ -28,12 +28,12 @@ import {
     PLAITS_POLY_WARM_COUNT,
     hasDarkOscActive,
     wtAttackSecForFilter,
-} from './osc-source.js?v=134';
+} from './osc-source.js?v=135';
 import {
     isPolyChordMemoryOn,
     getPolyChordIntervals,
     syncChordMemUI,
-} from './chord-memory.js?v=32';
+} from './chord-memory.js?v=34';
 import {
     pairPolySeqSlidePitches,
     pairPolySeqGlissPitches,
@@ -1046,9 +1046,7 @@ function startSingleVoice(semi, sounding, cents) {
     state.keyboardVoiceActive = true;
     // Don't bump playGeneration while arping — the arp clock is keyed to it
     // and would die after the first poly gate (mono chord arp never bumps this).
-    if (!state.isArping) {
-        state.playGeneration += 1;
-    }
+    bumpPolyPlayGeneration();
 }
 
 function releaseSingleVoice(semi) {
@@ -1062,10 +1060,10 @@ function releaseSingleVoice(semi) {
         releaseSharedFilterIfIdle(now);
         releasePolyNoiseEnv(now);
         document.dispatchEvent(new CustomEvent('ingysynth:live-note-off'));
-        const release = getNumber('release', 0.5);
-        showLogoOverlay(Math.max(1500, (release + 0.1) * 1000));
-        if (!state.isPlaying && !state.isArping && !window.noteVisualizerPreviewActive) {
-            clearNoteVisualizer();
+        if (!state.isPlaying) {
+            const release = getNumber('release', 0.5);
+            showLogoOverlay(Math.max(1500, (release + 0.1) * 1000));
+            if (!state.isArping && !window.noteVisualizerPreviewActive) clearNoteVisualizer();
         }
     }
 }
@@ -1098,9 +1096,7 @@ function startUnisonStack(semi, sounding) {
     triggerSharedFilterEnvelope(now);
     triggerPolyNoiseEnv(now);
     state.keyboardVoiceActive = true;
-    if (!state.isArping) {
-        state.playGeneration += 1;
-    }
+    bumpPolyPlayGeneration();
     updateNoteVisualizer(sounding);
 }
 
@@ -1115,10 +1111,10 @@ function releaseUnisonStack() {
     releaseSharedFilterIfIdle(now);
     releasePolyNoiseEnv(now);
     document.dispatchEvent(new CustomEvent('ingysynth:live-note-off'));
-    const release = getNumber('release', 0.5);
-    showLogoOverlay(Math.max(1500, (release + 0.1) * 1000));
-    if (!state.isPlaying && !state.isArping && !window.noteVisualizerPreviewActive) {
-        clearNoteVisualizer();
+    if (!state.isPlaying) {
+        const release = getNumber('release', 0.5);
+        showLogoOverlay(Math.max(1500, (release + 0.1) * 1000));
+        if (!state.isArping && !window.noteVisualizerPreviewActive) clearNoteVisualizer();
     }
 }
 
@@ -1159,9 +1155,7 @@ function startChordStack(finger, soundingRoot, intervals) {
     triggerSharedFilterEnvelope(now);
     triggerPolyNoiseEnv(now);
     state.keyboardVoiceActive = true;
-    if (!state.isArping) {
-        state.playGeneration += 1;
-    }
+    bumpPolyPlayGeneration();
     updateNoteVisualizer(shown);
 }
 
@@ -1170,9 +1164,10 @@ function startChordStack(finger, soundingRoot, intervals) {
  * @param {number} soundingSemitones absolute semis from C4 (incl. global tune)
  */
 export function polyNoteOn(cellSemitone, soundingSemitones) {
-    if ((!state.keyboardPoly && !state.keyboardMultitudes) || state.isPlaying) return;
+    if ((!state.keyboardPoly && !state.keyboardMultitudes) || (state.isPlaying && !state.songLiveKeys)) return;
     if (!state.audioContext) return;
     if (state.audioContext.state === 'suspended') state.audioContext.resume();
+    polyLiveHook?.on?.(soundingSemitones, cellSemitone);
 
     ensureVoicePool();
     hideLogoOverlay();
@@ -1196,6 +1191,7 @@ export function polyNoteOn(cellSemitone, soundingSemitones) {
 
 export function polyNoteOff(cellSemitone) {
     if ((!state.keyboardPoly && !state.keyboardMultitudes) || !state.audioContext) return;
+    polyLiveHook?.off?.(cellSemitone);
     if (state.keyboardPolyUnison && state.keyboardPoly && !isPolyChordMemoryOn()) {
         releaseUnisonStack();
         return;
@@ -1207,6 +1203,21 @@ export function polyNoteOff(cellSemitone) {
 export function polyUnisonNoteOff() {
     if (!state.keyboardPolyUnison) return;
     releaseUnisonStack();
+}
+
+/** Song recording listens here so poly-voice.js does not import the recorder. */
+let polyLiveHook = null;
+
+export function setPolyLiveHook(hook) {
+    polyLiveHook = hook || null;
+}
+
+function bumpPolyPlayGeneration() {
+    // Don't bump playGeneration while arping — the arp clock is keyed to it.
+    // Song live keys share the running arrangement clock.
+    if (state.isArping) return;
+    if (state.isPlaying && state.songLiveKeys) return;
+    state.playGeneration += 1;
 }
 
 let seqIdCounter = 0;

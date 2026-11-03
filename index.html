@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=494">
+    <link rel="stylesheet" href="styles.css?v=504">
     <script>
         // Phone loads this over a LAN IP. That is not a secure page, so Chrome
         // hides AudioWorklet and the digital engine never arms. localhost is exempt.
@@ -51,6 +51,10 @@
                 <img src="SVG/IngySynth-logo.svg" alt="" width="116" height="32">
             </a>
             <div class="site-bar-end">
+                <div class="arrange-mode-switch" role="group" aria-label="Page">
+                    <button type="button" id="siteViewPerform" aria-pressed="true">Perform</button>
+                    <button type="button" id="siteViewArrange" aria-pressed="false">Arrange</button>
+                </div>
                 <button type="button" id="siteMenu" class="site-bar-btn site-bar-menu" aria-expanded="false" aria-controls="siteNav" aria-label="Open menu">
                     <span class="site-bar-menu-glyph" aria-hidden="true"></span>
                 </button>
@@ -64,6 +68,7 @@
         <nav id="siteNav" class="site-bar-nav" hidden>
             <ul class="site-bar-nav-list">
                 <li><a href="/" aria-current="page">Synth</a></li>
+                <li><a href="#arrange">Arrange</a></li>
             </ul>
         </nav>
     </header>
@@ -806,6 +811,9 @@
                             <div class="keyboard-drum-dock-actions">
                             <button type="button" id="kbDrumFilt" class="ingy6-switch-btn off" aria-pressed="false" hidden title="Send DRM 1–4 through the main filter">Filter</button>
                             <button type="button" id="kbDrumHide" class="ingy6-switch-btn off" aria-pressed="false" hidden title="Hide drum lanes without turning them off">Hide</button>
+                            <button type="button" id="drumPatternCopy" class="kb-step-btn" aria-label="Copy">Copy</button>
+                            <button type="button" id="drumPatternPaste" class="kb-step-btn drum-pattern-paste-btn is-disabled" aria-label="Paste" aria-disabled="true" disabled>Paste</button>
+                            <button type="button" id="drumPatternClear" class="kb-step-btn" aria-label="Clear">Clear</button>
                             </div>
                         </div>
                         <div id="keyboardDrumLanes" class="keyboard-drum-lanes" hidden></div>
@@ -2381,6 +2389,7 @@
                         </fieldset>
                     </div>
                 </fieldset>
+                <div id="arrangeView" hidden></div>
                 <div class="keyboard-play-row">
                     <fieldset class="keyboard-arp-panel collapsible-fieldset collapsible-mobile-only" id="keyboardArpPanel" aria-label="Arpeggiator">
                         <legend class="collapsible-legend">
@@ -2605,6 +2614,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=399"></script>
+    <script type="module" src="js/main.js?v=406"></script>
 </body>
 </html>

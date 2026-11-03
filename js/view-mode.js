@@ -3,7 +3,7 @@
 // sits above it, with its own active tab.
 
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
-import { state } from './state.js?v=119';
+import { state } from './state.js?v=120';
 
 export const TAB_FIELDSET_IDS = [
     'keyboardStepsFieldset',

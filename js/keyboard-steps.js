@@ -2,10 +2,10 @@
 // Each step mirrors the Sequencer section: semitone knob → .step-tune,
 // tiny microtune → .step-fine, Acc/Sld/On → accent/slide/toggle.
 
-import { state } from './state.js?v=119';
-import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=88';
-import { bindKnob } from './knobs.js?v=163';
-import { previewNoteVisualizer, soundingNotesForStep } from './visualizers.js?v=130';
+import { state } from './state.js?v=120';
+import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=89';
+import { bindKnob } from './knobs.js?v=167';
+import { previewNoteVisualizer, soundingNotesForStep } from './visualizers.js?v=132';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import {
     click,
@@ -15,12 +15,12 @@ import {
     set,
     subscribe,
     toggle,
-} from './params.js?v=23';
+} from './params.js?v=24';
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=137';
-import { paintAllStepChordMarkers } from './pattern-bank.js?v=30';
+} from './pattern-write.js?v=141';
+import { paintAllStepChordMarkers } from './pattern-bank.js?v=31';
 import { syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;

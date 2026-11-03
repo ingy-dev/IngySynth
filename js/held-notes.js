@@ -1,4 +1,4 @@
-import { state, OSC_COUNT } from './state.js?v=119';
+import { state, OSC_COUNT } from './state.js?v=120';
 
 /** Active held cell-semitones (insertion / press order preserved in pressOrder). */
 const held = new Set();
@@ -88,7 +88,7 @@ export function heldNoteCount() {
 
 /** True when multi-note hold tracking should be used (not during sequencer play). */
 export function needsHeldNoteSet() {
-    if (state.isPlaying) return false;
+    if (state.isPlaying && !state.songLiveKeys) return false;
     if (state.chordMemoryLearning) return true;
     if (state.keyboardPoly || state.keyboardMultitudes) return true;
     return !!(state.keyboardArp && state.keyboardArpChord);

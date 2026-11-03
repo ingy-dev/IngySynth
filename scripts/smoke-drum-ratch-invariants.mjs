@@ -118,8 +118,13 @@ ok(
 
 ok(
     'Berlin/ratch osc holdForDrum is OSC4 only (not every lane)',
-    /holdForDrum:\s*oscIndex === OSC4_INDEX/.test(seq)
-        && !/holdForDrum:\s*true/.test(seq),
+    (() => {
+        const start = seq.indexOf('function spawnBerlinOscVoice');
+        const end = seq.indexOf('function spawnSharedNoiseVoice');
+        const body = start >= 0 && end > start ? seq.slice(start, end) : '';
+        return /holdForDrum:\s*oscIndex === OSC4_INDEX/.test(body)
+            && !/holdForDrum:\s*true/.test(body);
+    })(),
 );
 
 ok(
@@ -538,8 +543,15 @@ ok(
 
 ok(
     'playStep ratch branch uses scheduleParallelRatchHits',
-    /hits > 1 \|\| mainIndependentVoicesRinging\(\)/.test(seq)
-        && /scheduleParallelRatchHits\(\{/.test(seq),
+    (() => {
+        const start = seq.indexOf('function playStep(');
+        const end = seq.indexOf("document.addEventListener('ingysynth-kb-steps-sync'", start);
+        const body = start >= 0 && end > start ? seq.slice(start, end) : '';
+        // The old one-line `hits > 1 || mainIndependentVoicesRinging()` was split.
+        return /hits > 1/.test(body)
+            && /mainIndependentVoicesRinging\(\)/.test(body)
+            && /scheduleParallelRatchHits\(\{/.test(seq);
+    })(),
 );
 
 ok(

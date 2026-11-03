@@ -1,9 +1,10 @@
 // Shared site header. Transport buttons exist only on the synth page.
 // Master mute holds the output at 0 without writing the volume parameter.
 
-import { state } from './state.js?v=119';
-import { togglePlay } from './sequencer.js?v=432';
-import { getNumber, subscribe } from './params.js?v=23';
+import { state } from './state.js?v=120';
+import { togglePlay } from './sequencer.js?v=436';
+import { getNumber, subscribe } from './params.js?v=24';
+import { setArrangeView } from './arrange-view.js?v=6';
 
 function writeMasterGain(level, ramp) {
     const gain = state.masterGain;
@@ -95,11 +96,21 @@ export function initSiteBar() {
         setMenuOpen(open);
     });
 
+    document.getElementById('siteViewPerform')?.addEventListener('click', () => {
+        setArrangeView(false);
+    });
+    document.getElementById('siteViewArrange')?.addEventListener('click', () => {
+        setArrangeView(true);
+    });
+
     nav?.addEventListener('click', (event) => {
         const target = event.target instanceof Element ? event.target : event.target.parentElement;
         const link = target?.closest('a');
         if (!link) return;
-        if (link.getAttribute('aria-current') === 'page') {
+        if (link.getAttribute('href') === '#arrange') {
+            event.preventDefault();
+            setArrangeView(true);
+        } else if (link.getAttribute('aria-current') === 'page') {
             event.preventDefault();
         }
         setMenuOpen(false);

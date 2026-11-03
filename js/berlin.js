@@ -1,16 +1,16 @@
 // Berlin Dream-960: eight lanes on one tempo — O1–O4 pitch+amp, M1–M4 filter CV.
 // Acid and Poly are mutually exclusive with it.
 
-import { state } from './state.js?v=119';
-import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=88';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=130';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=92';
-import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=168';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=63';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=27';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=163';
-import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=15';
-import { get, getNumber, set } from './params.js?v=23';
+import { state } from './state.js?v=120';
+import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=89';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=132';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=93';
+import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=172';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=67';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=28';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=167';
+import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=16';
+import { get, getNumber, set } from './params.js?v=24';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
@@ -43,8 +43,8 @@ import {
     syncPatternClipboardUi,
     ensureBerlinDrumKit,
     ensureDrumPatterns,
-} from './pattern-bank.js?v=30';
-import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=134';
+} from './pattern-bank.js?v=31';
+import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=135';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
@@ -334,10 +334,11 @@ export function berlinPitchSemitones(semi) {
 }
 
 /** Absolute frequency for a Berlin pitch value on one oscillator slot. */
-export function berlinFrequency(semi, fine, oscIndex) {
+export function berlinFrequency(semi, fine, oscIndex, keyboardTranspose = true) {
+    const kb = keyboardTranspose ? (state.keyboardTranspose || 0) : 0;
     const total = berlinPitchSemitones(semi)
         + getGlobalTune()
-        + (state.keyboardTranspose || 0)
+        + kb
         + (state.oscTunes?.[oscIndex] || 0)
         + (fine || 0) / 100;
     return BASE_FREQ * Math.pow(2, total / 12);

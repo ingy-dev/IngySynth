@@ -1,20 +1,31 @@
-import { state } from './state.js?v=119';
-import { getNumber } from './params.js?v=23';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=45';
-import { semitonesToFrequency } from './tuning.js?v=88';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=92';
-import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=130';
-import { bentFrequency } from './pitch-bend.js?v=119';
-import { spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=195';
-import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=134';
+import { state } from './state.js?v=120';
+import { getNumber } from './params.js?v=24';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=49';
+import { semitonesToFrequency } from './tuning.js?v=89';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=93';
+import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=132';
+import { bentFrequency } from './pitch-bend.js?v=123';
+import { firePhaseResetOscStack, spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=196';
+import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=135';
 import {
     triggerAcidLiveAmp,
     triggerAcidLiveFilter,
     releaseAcidLiveEnvelopes,
     acidVegDecaySec,
-} from './acid-env.js?v=56';
+} from './acid-env.js?v=57';
 
 const RETUNE_RAMP = 0.012; // short glide — avoids zipper clicks on legato
+
+/** Song recording listens here so voice.js does not import the recorder. */
+let liveHooks = null;
+
+export function setLiveNoteHooks(hooks) {
+    liveHooks = hooks || null;
+}
+
+function transportBlocksLive() {
+    return !!state.isPlaying && !state.songLiveKeys;
+}
 /** Above this amp level, a new noteOn reuses the voice instead of hard restarting. */
 const LEGATO_GAIN_FLOOR = 0.02;
 
@@ -257,7 +268,7 @@ function setLiveFrequencies(semitones, now, ramp = 0) {
 
 /** Start a monophonic live note (semitones from C4; caller applies global tune). */
 export function noteOn(semitonesFromC) {
-    if (!state.audioContext || state.isPlaying) return;
+    if (!state.audioContext || transportBlocksLive()) return;
 
     if (state.audioContext.state === 'suspended') {
         state.audioContext.resume();
@@ -268,7 +279,8 @@ export function noteOn(semitonesFromC) {
     const legato = shouldLegatoRetrigger();
 
     state.keyboardVoiceActive = true;
-    state.playGeneration += 1;
+    // The arrangement clock is keyed to playGeneration. Live keys must not bump it.
+    if (!(state.isPlaying && state.songLiveKeys)) state.playGeneration += 1;
 
     hideLogoOverlay();
     document.dispatchEvent(new CustomEvent('ingysynth:live-note-on'));
@@ -277,6 +289,7 @@ export function noteOn(semitonesFromC) {
     triggerLiveFilterEnvelope(now, { fromCurrent: legato });
     retriggerLfoIfNeeded(now);
     updateNoteVisualizer(semitonesFromC);
+    liveHooks?.on?.(semitonesFromC, null);
 }
 
 /**
@@ -284,7 +297,7 @@ export function noteOn(semitonesFromC) {
  * Used when dragging across keys so each new key doesn't click.
  */
 export function retuneNote(semitonesFromC) {
-    if (!state.audioContext || state.isPlaying) return;
+    if (!state.audioContext || transportBlocksLive()) return;
     if (!state.keyboardVoiceActive) {
         noteOn(semitonesFromC);
         return;
@@ -293,12 +306,14 @@ export function retuneNote(semitonesFromC) {
     const now = state.audioContext.currentTime;
     setLiveFrequencies(semitonesFromC, now, RETUNE_RAMP);
     updateNoteVisualizer(semitonesFromC);
+    liveHooks?.retune?.(semitonesFromC);
 }
 
 /** Release the live keyboard voice. */
 export function noteOff() {
     if (!state.audioContext || !state.keyboardVoiceActive) return;
-    if (state.isPlaying) {
+    liveHooks?.off?.();
+    if (transportBlocksLive()) {
         state.keyboardVoiceActive = false;
         return;
     }
@@ -308,14 +323,103 @@ export function noteOff() {
     releaseLiveEnvelopes(now);
     document.dispatchEvent(new CustomEvent('ingysynth:live-note-off'));
 
+    // Song playback keeps the scope up. Idle release still shows the logo.
+    if (state.isPlaying) return;
+
     // Match sequencer stop: keep scope visible through the release tail
     const release = getNumber('release', 0.5);
     showLogoOverlay(Math.max(1500, (release + 0.1) * 1000));
 
     // Back to idle "Note" unless a knob preview is showing
-    if (!state.isPlaying && !state.isArping && !window.noteVisualizerPreviewActive) {
+    if (!state.isArping && !window.noteVisualizerPreviewActive) {
         clearNoteVisualizer();
     }
+}
+
+/**
+ * Schedule a monophonic notes-clip voice at an audio time.
+ * Does not call noteOn and does not bump the sequencer clock.
+ */
+export function scheduleMonoNote({ semi, fine = 0, at, dur, vel = 0.8, legato = false } = {}) {
+    if (!state.audioContext || !state.envelope) return;
+    const now = state.audioContext.currentTime;
+    const t0 = Math.max(now + 0.001, Number(at) || now);
+    const length = Math.max(0.03, Number(dur) || 0.05);
+    const semis = (Number(semi) || 0) + (Number(fine) || 0) / 100;
+    const peak = Math.max(0.05, Math.min(1, Number(vel) || 0.8));
+    const useLegato = !!legato;
+
+    if (state.phaseResetEnabled) {
+        for (let i = 0; i < state.oscStates.length; i += 1) {
+            if (!state.oscStates[i]) continue;
+            const baseFreq = Math.max(20, semitonesToFrequency(semis, i));
+            firePhaseResetOscStack(i, baseFreq, t0, {
+                oscStart: t0,
+                gainRampStart: t0,
+                gainRampEnd: t0 + 0.01,
+            });
+        }
+    } else if (state.oscillators) {
+        state.oscillators.forEach((osc, i) => {
+            const baseFreq = Math.max(20, semitonesToFrequency(semis, i));
+            const freq = Math.max(20, bentFrequency(baseFreq));
+            const prev = Math.max(20, state.lastStepFreqs[i] || freq);
+            try {
+                osc.frequency.cancelScheduledValues(t0);
+                if (useLegato && Math.abs(prev - freq) > 0.5) {
+                    osc.frequency.setValueAtTime(prev, t0);
+                    osc.frequency.exponentialRampToValueAtTime(freq, t0 + RETUNE_RAMP);
+                } else {
+                    osc.frequency.setValueAtTime(freq, t0);
+                }
+            } catch (_) { /* ignore */ }
+            state.lastStepFreqs[i] = baseFreq;
+        });
+    }
+
+    const off = t0 + length;
+    if (state.acidMode) {
+        triggerAcidLiveAmp(t0, { fromCurrent: useLegato });
+        triggerAcidLiveFilter(t0, { fromCurrent: useLegato });
+        try {
+            state.envelope.gain.setTargetAtTime(0.0001, off, 0.08);
+        } catch (_) { /* ignore */ }
+        return;
+    }
+
+    const attack = Math.max(0.004, Number(getNumber('attack', 0.01)) || 0.01);
+    const decay = Math.max(0.004, Number(getNumber('decay', 0.08)) || 0.08);
+    const sustainLevel = Math.max(0.0001, Math.min(peak, (Number(getNumber('sustain', 0.6)) || 0) * peak));
+    const release = Math.max(0.02, Number(getNumber('release', 0.2)) || 0.2);
+    const attackEnd = t0 + Math.min(attack, length * 0.45);
+    const decayEnd = Math.min(off, attackEnd + decay);
+    try {
+        const gain = state.envelope.gain;
+        gain.cancelScheduledValues(t0);
+        if (useLegato) {
+            gain.setValueAtTime(Math.max(0.0001, peak), t0);
+        } else {
+            gain.setValueAtTime(0.0001, t0);
+            gain.linearRampToValueAtTime(peak, attackEnd);
+        }
+        gain.linearRampToValueAtTime(sustainLevel, Math.max(attackEnd + 0.001, decayEnd));
+        gain.setValueAtTime(sustainLevel, off);
+        gain.exponentialRampToValueAtTime(0.0001, off + release);
+        state.envelopeHeld = false;
+    } catch (_) { /* ignore */ }
+
+    if (state.filterEnvGain && getFilterEnvAmount() !== 0) {
+        const filterGain = state.filterEnvGain.gain;
+        try {
+            filterGain.cancelScheduledValues(t0);
+            filterGain.setValueAtTime(useLegato ? Math.max(0.0001, peak) : 0.0001, t0);
+            if (!useLegato) filterGain.linearRampToValueAtTime(peak, attackEnd);
+            filterGain.exponentialRampToValueAtTime(0.0001, off + release);
+            state.filterEnvelopeHeld = false;
+        } catch (_) { /* ignore */ }
+    }
+    retriggerLfoIfNeeded(t0);
+    hideLogoOverlay();
 }
 
 /** Force-stop live voice immediately (e.g. when sequencer starts). */

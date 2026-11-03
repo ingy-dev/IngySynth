@@ -5,8 +5,8 @@
 // Amounts show as 0–100 (dial position). Tempo, pitch, time, pan, and
 // bit depth keep their own units.
 
-import { state } from './state.js?v=119';
-import { formatRangeValue } from './knobs.js?v=163';
+import { state } from './state.js?v=120';
+import { formatRangeValue } from './knobs.js?v=167';
 
 const TOUCH_MQ = '(max-width: 768px), (hover: none) and (pointer: coarse)';
 const LINGER_MS = 520;

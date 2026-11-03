@@ -1,7 +1,7 @@
 // TR-808-style BD / SN / CH for Berlin D-lanes. Private oscillators + noise.
 // Never use createOscSource({ oscIndex }) or state.noiseGain.
 
-import { state } from './state.js?v=119';
+import { state } from './state.js?v=120';
 
 const HAT_RATIOS = [205.3, 304.4, 369.6, 522.7, 540.4, 800];
 

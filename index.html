@@ -55,6 +55,13 @@
                     <button type="button" id="siteViewPerform" aria-pressed="true">Perform</button>
                     <button type="button" id="siteViewArrange" aria-pressed="false">Arrange</button>
                 </div>
+                <button type="button" id="siteShare" class="site-bar-btn site-bar-share" aria-label="Share project">
+                    <span class="site-bar-share-label" aria-hidden="true">Share</span>
+                </button>
+                <button type="button" id="siteSave" class="site-bar-btn site-bar-save" aria-label="Save and library">
+                    <span class="site-bar-save-label" aria-hidden="true">Save</span>
+                </button>
+                <span id="siteShareStatus" class="site-bar-share-status sr-only" aria-live="polite"></span>
                 <button type="button" id="siteMenu" class="site-bar-btn site-bar-menu" aria-expanded="false" aria-controls="siteNav" aria-label="Open menu">
                     <span class="site-bar-menu-glyph" aria-hidden="true"></span>
                 </button>
@@ -2613,6 +2620,153 @@
             </div>
         </div>
     </div>
+
+    <div id="saveLibraryDialog" class="save-library-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="saveLibraryTitle">
+        <div class="save-library-backdrop" data-save-dismiss tabindex="-1"></div>
+        <div class="save-library-panel">
+            <header class="save-library-header">
+                <h2 id="saveLibraryTitle">Save / load</h2>
+                <button type="button" id="saveLibraryCloseBtn" class="site-bar-btn save-library-close" data-save-dismiss aria-label="Close save dialog">×</button>
+            </header>
+            <p id="saveLibraryNudge" class="save-library-nudge"></p>
+            <div class="save-library-toolbar">
+                <label class="save-library-kind-label" for="saveLibraryKind">Kind</label>
+                <select id="saveLibraryKind" class="save-library-kind" data-save-focus>
+                    <option value="project">Project</option>
+                    <option value="patch">Patch</option>
+                    <option value="pattern">Pattern</option>
+                </select>
+                <button type="button" id="saveLibrarySaveBtn" class="button button-primary">Save current</button>
+            </div>
+            <p id="saveLibraryStatus" class="save-library-status" aria-live="polite"></p>
+            <div id="saveLibraryList" class="save-library-list"></div>
+        </div>
+    </div>
+
+    <style>
+        .site-bar-share,
+        .site-bar-save {
+            font-size: 10px;
+            letter-spacing: 0.06em;
+            padding: 0 10px;
+            min-width: 44px;
+        }
+        .site-bar-share-status:not(:empty) {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+        .save-library-dialog {
+            position: fixed;
+            inset: 0;
+            z-index: 12000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        .save-library-dialog[hidden] {
+            display: none !important;
+        }
+        body.save-library-open {
+            overflow: hidden;
+        }
+        .save-library-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+        }
+        .save-library-panel {
+            position: relative;
+            width: min(520px, 100% - 24px);
+            max-height: min(80dvh, 640px);
+            overflow: auto;
+            background: #0a120a;
+            border: 1px solid #2a4a2a;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .save-library-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .save-library-header h2 {
+            margin: 0;
+            font-size: 14px;
+            letter-spacing: 0.12em;
+        }
+        .save-library-nudge {
+            font-size: 10px;
+            line-height: 1.4;
+            opacity: 0.75;
+            margin: 0 0 12px;
+        }
+        .save-library-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .save-library-kind {
+            flex: 1;
+            min-width: 120px;
+            background: #050805;
+            color: #fff;
+            border: 1px solid #2a4a2a;
+            font-family: inherit;
+            padding: 6px 8px;
+        }
+        .save-library-status {
+            min-height: 1.2em;
+            font-size: 11px;
+            margin: 0 0 8px;
+        }
+        .save-library-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .save-library-meta,
+        .save-library-empty {
+            font-size: 11px;
+            opacity: 0.8;
+            margin: 0;
+        }
+        .save-library-row {
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-top: 1px solid #1a2a1a;
+            padding-top: 8px;
+        }
+        .save-library-name {
+            font-size: 12px;
+        }
+        .save-library-by {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        .save-library-row-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: flex-end;
+        }
+        .save-library-row-actions .button {
+            font-size: 9px;
+            padding: 4px 6px;
+        }
+        .save-library-close {
+            font-size: 18px;
+            line-height: 1;
+        }
+    </style>
 
     <script type="module" src="js/main.js?v=406"></script>
 </body>

@@ -1,0 +1,25 @@
+{
+  "url": "https://ingysynth.com/#p=VY5BCsIwEEWvIrNOpSGIJWu9gHiBaZrEYJpIMi2UkrubVgTd_f_485gVTEwjEkhwwS55CfQABk8XhopeSGqrAUdd623qe50OohWVzTplFwNIXnN0qg5WMB5t3gIqVwWUJl1Y1SQcd6wmisaAFF3LYHCZYqJdIk6__R6t9fpzz8A4TzpdtMIFZHvk3Rddw_y_jFk1tJOGgzToc4VJ5xgwbA_ycynlDQ",
+  "length": 247,
+  "tooLong": false,
+  "decoded": {
+    "name": "Rubber 303",
+    "voice": {
+      "params": {
+        "cutoff": 380,
+        "resonance": 17,
+        "filterEnvToggle": true,
+        "filterDecay": 0.18,
+        "distortionToggle": true,
+        "distortion": 35,
+        "osc-toggle-1": false
+      },
+      "flags": {
+        "acid": true
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "patch"
+  }
+}

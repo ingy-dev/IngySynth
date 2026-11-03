@@ -1,0 +1,65 @@
+{
+  "format": "ingysynth",
+  "version": 1,
+  "kind": "project",
+  "name": "Everything wrong",
+  "by": "",
+  "voice": {
+    "params": {
+      "cutoff": 99999,
+      "resonance": -5,
+      "osc-tune-0": "7",
+      "osc-vol-0": "loud",
+      "osc-type-0": "supersaw",
+      "osc4Model": "fm",
+      "delayTime": 8,
+      "unisonToggle": "yes",
+      "volume": null,
+      "tempo": 140,
+      "division": "16"
+    },
+    "flags": {
+      "acid": 1,
+      "lfoAmount": 3,
+      "drumKit": [ { "model": "cowbell", "engine": "fm", "tune": 4, "pan": -9, "choke": false }, "nope", null, { "model": "open_hat", "choke": false } ]
+    }
+  },
+  "pattern": {
+    "params": { "tempo": 999, "slideTime": -1, "gateLength": "50", "cutoff": 100 },
+    "slot": 12,
+    "slots": [
+      {
+        "stepCount": 64,
+        "division": 3,
+        "gate": 0,
+        "repeat": 0,
+        "reverse": "true",
+        "steps": [
+          { "tune": 100, "fine": -400, "ratch": 9, "chord": [0, 7, 7, 3, -5, 12, 19, 24, "x", 4.6] },
+          { "tune": -100, "fine": 12.6, "ratch": 0, "on": 0 },
+          { "tune": 1.5, "chord": "maj" },
+          "not a step"
+        ]
+      }
+    ],
+    "drums": "none",
+    "berlin": { "enabled": true, "slot": -3, "slots": [ { "oscCount": 9, "modCount": 0, "lanes": [ { "destination": "cutoff", "amount": 5 }, {}, {}, {}, { "destination": "osc1Pitch", "amount": -1 } ] } ] },
+    "automation": {
+      "n0": { "lanes": { "cutoff": { "samples": [1.123456, "x", null, 1e30, -0.00004] }, "resonance": { "samples": "flat" } }, "offsets": { "cutoff": "big", "volume": 0 } },
+      "n9": { "lanes": {} },
+      "b0": { "lanes": { "cutoff": { "samples": [null, null] } }, "offsets": {} }
+    }
+  },
+  "session": {
+    "pitchBendRange": 0,
+    "arpOrder": "sideways",
+    "arpRange": 7.4,
+    "transpose": 100,
+    "midiBaseNote": 200,
+    "midiMaps": {
+      "cutoff": { "type": "cc", "cc": 300, "channel": 20 },
+      "resonance": { "type": "sysex" },
+      "volume": "cc7"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "error": "",
+  "warnings": [
+    "sanitized:by",
+    "sanitized:name"
+  ],
+  "doc": {
+    "name": "<img src=x onerror=alert(1)>[31mevil 🎹 Long name that keeps goin",
+    "by": "<script>alert('by')</script>",
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "patch"
+  }
+}

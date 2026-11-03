@@ -1,0 +1,155 @@
+{
+  "url": "https://ingysynth.com/#p=bVNNb9swDP0rgc5O4DjtuvjWHQoMQ3fpThtykG0m1qqvSXJaN8h_36PstN1QoCgckXx8fHw8Cem9qE_CSkOiFl_tYXwYbeoXX2SgxT0lqUUhjhSichYJ1epqVYpzIWQI0h7IkE1c32rlo6h_7RBqRiQeqwVDF2LvgpHIEQrYkbHx2DvtDkEaLu3I463eFIKsbDR1ok5hIAA9Kosfwgf3m9qEMqOeuaIZInGzEzAjhTR9p9HzCIHAthHn3XlXiLaX1pKekxnswuCDyo60HAWXRbLdFEIrUZeF0EDV-FptGBjcZsHugjOL1NNiP6QhEIC9TImCZZ5ySA6zZ-Ugccn_tbTMHYohuN_zl7IowBbw1KgWEFEar_OE67Isd2e0M67jdlqmltmjMhKzP3Ewvgc-_x993mYudkw9VjCLy2uioFVm5p0eDYEEOoArALWbpWmxKH5OlI0wN-HAEI7MiJ69mCXpwmCm4KNK3yd9JlkWePinmr8enjKdcrWeduUlDJFHiZfI9acCnY13ol5Xn3nSliaIdVEVm917pnBJIxulVRpzKWKJ_Iexz0AdLGXPYa2und-vzsUJHmuDi73aw7PLzSXzep4xyiN1t2znqqxuluVmWa5_rKu6LPH3k6WjGOeFt70L3T0ZF8bXNR9lNuNVcQPynMbbAAun2jwzRHS-4gM7UGTpJkF6-Zi9LW3njHohTnjTCxRRfDc5sF5veem55cvrPdwaN-BSee-vx1xNfYkz91oeMtafQdo0mPvst_kO3zpdTLstcRPTbr9Z17B4N1DcxXYJrp6WWz41D39lqk9QLfFt8-xCQqZGwNZ_AQ",
+  "length": 855,
+  "tooLong": false,
+  "decoded": {
+    "app": {
+      "name": "IngySynth Bare Metal",
+      "version": "2.4.0"
+    },
+    "hologram": {
+      "depth": 3,
+      "enabled": true
+    },
+    "savedAt": "2027-03-01T12:00:00Z",
+    "version": 2,
+    "name": "From the future",
+    "by": "v2 app",
+    "voice": {
+      "wavetables": [
+        "a",
+        "b"
+      ],
+      "params": {
+        "futureKnob": 0.75,
+        "osc-shape-9": "spline",
+        "cutoff": 900
+      },
+      "flags": {
+        "quantumMode": true
+      }
+    },
+    "pattern": {
+      "scenes": [
+        1,
+        2,
+        3
+      ],
+      "params": {
+        "swing": 0.56,
+        "tempo": 128
+      },
+      "slots": [
+        {
+          "probability": 0.5,
+          "steps": [
+            {
+              "probability": 0.8,
+              "velocity": 0.4,
+              "tune": 3
+            },
+            {
+              "microshift": -3,
+              "tune": 5
+            }
+          ]
+        }
+      ],
+      "drums": [
+        {
+          "kitName": "future kit",
+          "lanes": [
+            {
+              "laneSwing": 0.1
+            }
+          ]
+        }
+      ],
+      "berlin": {
+        "polymeter": "on",
+        "slots": [
+          {
+            "color": "teal",
+            "lanes": [
+              {
+                "curve": "exp"
+              }
+            ]
+          }
+        ]
+      },
+      "automation": {
+        "n0": {
+          "mode": "latch",
+          "lanes": {
+            "cutoff": {
+              "interp": "cubic",
+              "samples": [
+                1000
+              ]
+            }
+          },
+          "offsets": {}
+        },
+        "s": {
+          "lanes": {},
+          "offsets": {}
+        },
+        "x9": {
+          "anything": true
+        }
+      }
+    },
+    "session": {
+      "gestures": {
+        "shake": "randomize"
+      },
+      "params": {
+        "tuningFuture": 19
+      },
+      "xy": {
+        "z": "reverbAmount"
+      },
+      "chordMemory": {
+        "voicing": "drop2",
+        "on": true,
+        "intervals": [
+          4,
+          7
+        ]
+      }
+    },
+    "mix": {
+      "buses": [
+        {
+          "inserts": [
+            {
+              "type": "reverb"
+            }
+          ]
+        }
+      ],
+      "channels": [
+        {
+          "id": "synth",
+          "inserts": [
+            {
+              "type": "delay"
+            }
+          ],
+          "sends": [
+            {
+              "bus": 0,
+              "level": 0.3
+            }
+          ]
+        }
+      ]
+    },
+    "arrangement": {
+      "clips": []
+    },
+    "format": "ingysynth",
+    "kind": "project"
+  }
+}

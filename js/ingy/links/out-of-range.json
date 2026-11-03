@@ -1,0 +1,120 @@
+{
+  "url": "https://ingysynth.com/#p=XVLJbtwwDP2VQtfageUFk_jWFDml6aHobTAoFJu21ciUIMkpBoH_vaTlaTK9COLj8h6XNzFYP6soWqFxPIczxklk4kVjT5Dz9jd0kQBUMxDw8Ar-HCcK_fTHWxzJ41SM4FG0b0It0VItbTcLC36NQgj86cg5DPwLanaGwaO8kWXVZLgYkx4Jn6siK07rmgmKDhA5ly28-1htZegZvNEbFaB6NkCKo18gE8FYzjv-iz--M7w_pHe2C1LrxXoiutB9TWa9nlbuy6t5Uz6qCN8AR5pM2xRcXvfwU_NAJJkRZmdFW9bFmqhFe_iogdOJ46ZoCI3gdpaqTGYK6ibrSf8xb7Iqa7JDJkvSNGik1FwWRONV7EhATYQLo_XtSi2kCFld0Ly6YzgZJTXCrQQIYV-K8u6HwpGclDLrXt-rAN8tK5TlIUFPyv23sa7b3d2kEMGQRc3Es-ObICdvw2nSdw_Y7_UlBXiFwdmwqxV0PEkH-V6t7oBrD0aNG13vl_lRx8s4Xsg7KBOAV4E8hUuPcr3a4nXsbHvWJ6wD_DXRYfNuzWC_7LuWV6u9tEgT5hlTqjqnzYpbsd1Ezpx5se2UzPpprz_M5PcQLCrkRgo6yb8",
+  "length": 640,
+  "tooLong": false,
+  "decoded": {
+    "name": "Everything wrong",
+    "voice": {
+      "params": {
+        "osc4Model": "fm",
+        "cutoff": 10000,
+        "resonance": 0,
+        "delayTime": "8",
+        "osc-tune-0": 7
+      },
+      "flags": {
+        "lfoAmount": 1,
+        "drumKit": [
+          {
+            "tune": 1,
+            "choke": false,
+            "pan": -1
+          },
+          null,
+          null,
+          {
+            "model": "open_hat",
+            "choke": false
+          }
+        ]
+      }
+    },
+    "pattern": {
+      "params": {
+        "tempo": 240,
+        "slideTime": 10,
+        "gateLength": 50
+      },
+      "slot": 7,
+      "slots": [
+        {
+          "steps": [
+            {
+              "tune": 48,
+              "fine": -100,
+              "ratch": 4,
+              "chord": [
+                -5,
+                3,
+                5,
+                7,
+                12
+              ]
+            },
+            {
+              "tune": -39,
+              "fine": 13
+            },
+            {
+              "tune": 2
+            }
+          ],
+          "stepCount": 32,
+          "gate": 0.05
+        }
+      ],
+      "berlin": {
+        "enabled": true,
+        "slots": [
+          {
+            "lanes": [
+              null,
+              null,
+              null,
+              null,
+              {
+                "amount": 0
+              }
+            ],
+            "oscCount": 4
+          }
+        ]
+      },
+      "automation": {
+        "n0": {
+          "lanes": {
+            "cutoff": {
+              "samples": [
+                1.1235,
+                null,
+                null,
+                1e+30,
+                0
+              ]
+            }
+          },
+          "offsets": {}
+        },
+        "n9": {
+          "lanes": {}
+        }
+      }
+    },
+    "session": {
+      "pitchBendRange": 1,
+      "arpRange": 3,
+      "transpose": 48,
+      "midiBaseNote": 127,
+      "midiMaps": {
+        "cutoff": {
+          "type": "cc",
+          "cc": 127,
+          "channel": 15
+        }
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "project"
+  }
+}

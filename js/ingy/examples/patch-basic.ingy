@@ -1,0 +1,23 @@
+{
+  "format": "ingysynth",
+  "version": 1,
+  "kind": "patch",
+  "name": "Rubber 303",
+  "by": "",
+  "voice": {
+    "params": {
+      "osc-toggle-0": true,
+      "osc-toggle-1": false,
+      "osc-type-0": "sawtooth",
+      "cutoff": 380,
+      "resonance": 17,
+      "filterEnvToggle": true,
+      "filterEnvAmount": 100,
+      "filterDecay": 0.18,
+      "distortionToggle": true,
+      "distortion": 35,
+      "unisonToggle": false
+    },
+    "flags": { "acid": true }
+  }
+}

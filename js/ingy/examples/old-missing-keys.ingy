@@ -1,0 +1,19 @@
+{
+  "format": "ingysynth",
+  "kind": "project",
+  "name": "From an early build",
+  "voice": {
+    "params": { "cutoff": 2200 },
+    "flags": {
+      "drumKit": [
+        { "model": "hihat", "engine": "digital" },
+        { "model": "snare" },
+        { "model": "bass_drum", "tune": 0.3 }
+      ]
+    }
+  },
+  "pattern": {
+    "slots": [ { "steps": [ { "tune": 4 }, { "tune": 2 } ] } ],
+    "drums": [ { "lanes": [ { "steps": [ { "on": true } ] }, {}, { "stepCount": 4 } ] } ]
+  }
+}

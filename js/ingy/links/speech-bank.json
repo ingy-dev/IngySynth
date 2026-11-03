@@ -1,0 +1,20 @@
+{
+  "url": "https://ingysynth.com/#p=NY2xDsIwDER_BXnOUokpI2Jlgw8wqZtaTZwqDkhVlX_HFbDdvbvT7TCVmrGBB5a46SZtBgcLy2hoxRYOK5jJ7B2TBfH0RFWjb6rKRcAPpgsHq-wwJYx6iKJhuHLkhgl8qy9yoCtRmB9K9YKyfGl39lIx_zfnWxnJFr8y9N4_",
+  "length": 193,
+  "tooLong": false,
+  "decoded": {
+    "name": "Talking bass",
+    "voice": {
+      "params": {
+        "osc4Model": "speech"
+      },
+      "flags": {
+        "osc1Digital": true,
+        "speechUserBank": true
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "patch"
+  }
+}

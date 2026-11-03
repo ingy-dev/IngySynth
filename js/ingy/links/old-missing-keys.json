@@ -1,0 +1,63 @@
+{
+  "url": "https://ingysynth.com/#p=XZDBasQwDER_JehslnTbU66FXvoJZSnaREncteVgy4UQ_O8rJ-TQ3oan0WjQBmOIHgU6sDytaWWZwcDD8qBoieGHelHA6EnBRwy-QW4Io1ube7Zu0OGCIhQZug2GmH2C7msDh0yHSkLLoYJ6JGYqt2I4O2eO4XvIrA3eFN8MJBfk_6Jkpmowp7xWbzHwSzHZGvuiOtieaonR4ZTONp9W9oh-Dg-djugSGSCebM2BxaHVcwZ8GMgpmO2s76iXTpIYI_0hd0zpu4br3tGnvbzufRaM6PfbfZYwjtr02rallCc",
+  "length": 324,
+  "tooLong": false,
+  "decoded": {
+    "name": "From an early build",
+    "voice": {
+      "params": {
+        "cutoff": 2200
+      },
+      "flags": {
+        "drumKit": [
+          {
+            "engine": "plaits",
+            "model": "hihat",
+            "choke": false
+          },
+          {
+            "model": "snare"
+          },
+          {
+            "model": "bass_drum",
+            "tune": 0.3
+          }
+        ]
+      }
+    },
+    "pattern": {
+      "slots": [
+        {
+          "steps": [
+            {
+              "tune": 4
+            },
+            {
+              "tune": 2
+            }
+          ]
+        }
+      ],
+      "drums": [
+        {
+          "lanes": [
+            {
+              "steps": [
+                {
+                  "on": true
+                }
+              ]
+            },
+            null,
+            {
+              "stepCount": 4
+            }
+          ]
+        }
+      ]
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "project"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "$comment": "Settings outside param-catalog.js. Hand-written. `web` names where the value lives in the web app (b67a4d4). Types: bool, number (min/max), int (min/max, rounded), enum (options), string (maxLength), object. The codec takes defaults and clamps from here.",
+  "voiceFlags": {
+    "acid":            { "type": "bool", "default": false, "web": "state.acidMode" },
+    "ingy6":           { "type": "bool", "default": false, "web": "state.keyboardPoly" },
+    "ingy6Unison":     { "type": "bool", "default": false, "web": "state.keyboardPolyUnison" },
+    "ingy6VcaGate":    { "type": "bool", "default": false, "web": "state.polyVcaGate" },
+    "multitudes":      { "type": "bool", "default": false, "web": "state.keyboardMultitudes" },
+    "osc1Digital":     { "type": "bool", "default": false, "web": "state.osc4Wavetable (OSC 1 analog/digital button)" },
+    "osc1Alt":         { "type": "bool", "default": false, "web": "state.osc4Alt" },
+    "osc1TrigPatched": { "type": "bool", "default": true,  "web": "state.osc4TrigPatched" },
+    "speechUserBank":  { "type": "bool", "default": false, "web": "state.osc4SpeechUserBank" },
+    "filterEnvInvert": { "type": "bool", "default": false, "web": "state.filterEnvInvert" },
+    "lfoAmount":       { "type": "number", "min": 0, "max": 1, "default": 0, "web": "state.lfoAmount (performance strip)" },
+    "drumKit":         { "type": "drumKit", "web": "state.berlinDrum (4 patches, D1-D4)" }
+  },
+  "drumPatch": {
+    "$comment": "Mirrors pattern-bank.js defaultDrumPatch / clampDrumPatch. Lane models by index: open_hat, hihat, snare, bass_drum.",
+    "laneModels": ["open_hat", "hihat", "snare", "bass_drum"],
+    "fields": {
+      "engine":      { "type": "enum", "options": ["analog", "plaits"], "default": "analog", "aliases": { "digital": "plaits" } },
+      "model":       { "type": "enum", "options": ["open_hat", "hihat", "snare", "bass_drum"], "default": "<laneModel>" },
+      "tune":        { "type": "number", "min": 0, "max": 1, "default": 0.5 },
+      "harmonics":   { "type": "number", "min": 0, "max": 1, "default": 0.5 },
+      "morphX":      { "type": "number", "min": 0, "max": 1, "default": 0.5 },
+      "morphY":      { "type": "number", "min": 0, "max": 1, "default": 0.5, "defaultOpenHat": 0.72, "rule": "default by lane (lane 0 = 0.72), not by the patch's model" },
+      "alt":         { "type": "bool", "default": false },
+      "trigPatched": { "type": "bool", "default": true },
+      "choke":       { "type": "bool", "default": false, "rule": "model open_hat: true unless the source says choke === false; every other model: false. Minimal form always writes choke on an open_hat patch." },
+      "vol":         { "type": "number", "min": 0, "max": 1, "default": 0.8 },
+      "pan":         { "type": "number", "min": -1, "max": 1, "default": 0 }
+    }
+  },
+  "session": {
+    "xy":             { "type": "object", "default": { "x": "cutoff", "y": "resonance" }, "web": "#xAxisParam / #yAxisParam (catalog keys with xyName, or 'pitchBend')" },
+    "pitchBendRange": { "type": "int", "min": 1, "max": 48, "default": 2, "web": "#bendRange (web offers 1, 2, 12, 24)" },
+    "arp":            { "type": "bool", "default": false, "web": "state.keyboardArp" },
+    "arpChord":       { "type": "bool", "default": false, "web": "state.keyboardArpChord" },
+    "arpOrder":       { "type": "enum", "options": ["up", "down", "upDown", "random"], "default": "up", "web": "state.arpOrder" },
+    "arpRange":       { "type": "int", "min": 1, "max": 3, "default": 1, "web": "state.arpRange" },
+    "latch":          { "type": "bool", "default": false, "web": "state.keyboardLatch" },
+    "transpose":      { "type": "int", "min": -48, "max": 48, "default": 0, "web": "state.keyboardTranspose" },
+    "microtuneLock":  { "type": "bool", "default": false, "web": "state.microtuneLock" },
+    "chordMemory":    { "type": "object", "default": { "on": false, "intervals": [] }, "web": "chord-memory.js polyChordOn / polyChordIntervals" },
+    "midiBaseNote":   { "type": "int", "min": 0, "max": 127, "default": 60, "web": "#midiBaseNote / state.midiBaseNote" },
+    "midiMaps":       { "type": "object", "default": {}, "web": "state.midiMappings: { <catalogKey>: { type: 'cc', cc, channel } | { type: 'note', note, channel } }" },
+    "tuning":         { "type": "object", "optional": true, "web": "Bare Metal only: { custom: [ScaleDef], scl, kbm }" }
+  },
+  "pattern": {
+    "berlin.enabled": { "type": "bool", "default": false, "web": "state.berlinMode" },
+    "berlin.seeded":  { "type": "bool", "default": false, "web": "pattern-bank.js berlinO1Seeded" },
+    "berlin.slot":    { "type": "int", "min": 0, "max": 7, "default": 0, "web": "state.berlinSlot" },
+    "slot":           { "type": "int", "min": 0, "max": 7, "default": 0, "web": "state.editSlot" },
+    "drumSlot":       { "type": "int", "min": 0, "max": 7, "default": 0, "web": "state.drumSlot" }
+  },
+  "notSaved": [
+    "playback position and playheads", "audio graph", "undo/redo history", "view mode (full vs tabbed), collapsed panels, note in header",
+    "mixer mutes and solos (state.mixer)", "MIDI device selection (selectedMidiInput/Output, sendMidiEnabled)", "computer keyboard on/off and octave",
+    "write-mode arms", "keyboard visibility", "berlinDrumLanesHidden (UI only)", "berlinSoloRow"
+  ]
+}

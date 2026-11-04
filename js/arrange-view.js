@@ -1,12 +1,22 @@
 // Arrange page: transport, shared timeline, pattern bank, clip editing.
-// Record arms a take. Play and Stop call the sequencer.
+// Record arms a take. Play starts at the insert marker. Stop returns there,
+// and Stop again returns to bar 1. Shift+Play continues from the last stop.
+// The scrub strip launches playback and follows the pointer.
 // Drag-back and notes quantize store the overwritten bank slot on a side
 // stack because redo() always returns extra: null.
 
 import { state } from './state.js?v=120';
-import { getNumber, subscribe } from './params.js?v=24';
-import { togglePlay, stopArp } from './sequencer.js?v=436';
-import { arrangeStop, cancelArrangeCountIn } from './song-record.js?v=2';
+import { getNumber, subscribe } from './params.js?v=40';
+import { initAudio } from './audio-engine.js?v=243';
+import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=452';
+import { arrangeStop, cancelArrangeCountIn } from './song-record.js?v=18';
+import {
+    armArrangementContinue,
+    arrangementInsertTick,
+    cancelArrangementContinue,
+    homeArrangement,
+    placeArrangementInsert,
+} from './song-conductor.js?v=20';
 import {
     SONG_SLOT,
     patternHash,
@@ -14,8 +24,8 @@ import {
     snapshotSynthSlot,
     writeDrumSlot,
     writeSynthSlot,
-} from './pattern-bank.js?v=31';
-import { snapshotBankAutomation } from './automation.js?v=81';
+} from './pattern-bank.js?v=46';
+import { snapshotBankAutomation } from './automation.js?v=97';
 import {
     BAR_TICKS,
     PPQ,
@@ -36,17 +46,17 @@ import {
     retargetClip,
     setLaneMask,
     setLoop,
-    setPlayhead,
     undo,
     updateFromSource,
 } from './song-model.js?v=4';
-import { quantizeToPattern } from './song-quantize.js?v=1';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=5';
+import { quantizeToPattern } from './song-quantize.js?v=15';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=20';
 
 const MIN_PX = 24;
 const MAX_PX = 320;
 const HALF_BAR = 1920;
 const BEAT = 960;
+const SIXTEENTH = PPQ / 4;
 const SLOP = 8;
 const LONG_PRESS = 450;
 const DBL_TAP_MS = 350;
@@ -116,6 +126,7 @@ export function setArrangeView(on) {
         }
     }
     cancelArrangeCountIn();
+    cancelArrangementContinue();
     if (state.isPlaying) togglePlay();
     stopArp();
     state.songPlaying = false;
@@ -164,16 +175,19 @@ function markup() {
         <div class="arrange-timelines">
             <div class="arrange-grid">
                 <div class="arrange-gutter" aria-hidden="true">
+                    <div class="arrange-gutter-scrub">Scrub</div>
                     <div class="arrange-gutter-ruler"></div>
                     <div class="arrange-gutter-lane" data-track="synth">Synth</div>
                     <div class="arrange-gutter-lane" data-track="drums">Drums</div>
                 </div>
                 <div class="arrange-scroll" id="arrangeScroll">
                     <div class="arrange-sheet" id="arrangeSheet">
+                        <div id="arrangeScrub" class="arrange-scrub" aria-label="Scrub arrangement"></div>
                         <div id="arrangeRuler" class="arrange-ruler" aria-label="Timeline ruler"></div>
                         <div id="arrangeSynthLane" class="arrange-lane" data-track="synth" aria-label="Synth timeline"></div>
                         <div id="arrangeDrumLane" class="arrange-lane" data-track="drums" aria-label="Drums timeline"></div>
                         <div id="arrangeLoopShade" class="arrange-loop-shade" hidden></div>
+                        <div id="arrangeInsert" class="arrange-insert" hidden></div>
                         <div id="arrangePlayhead" class="arrange-playhead"></div>
                     </div>
                 </div>
@@ -199,11 +213,20 @@ function bind() {
         btn.classList.toggle('is-armed', recordArmed);
         btn.setAttribute('aria-pressed', recordArmed ? 'true' : 'false');
     });
-    document.getElementById('arrangePlay').addEventListener('click', () => {
-        togglePlay();
+    document.getElementById('arrangePlay').addEventListener('click', (event) => {
+        if (state.songCountIn || !(state.isPlaying && state.songPlaying)) {
+            if (event.shiftKey && !state.isPlaying && !state.songCountIn) armArrangementContinue();
+            else cancelArrangementContinue();
+            togglePlay();
+        } else {
+            cancelArrangementContinue();
+            const insert = arrangementInsertTick();
+            relocateArrangement(insert == null ? 0 : insert);
+        }
         syncArrangeTransport();
     });
     document.getElementById('arrangeStop').addEventListener('click', () => {
+        cancelArrangementContinue();
         arrangeStop();
         syncArrangeTransport();
     });
@@ -232,6 +255,7 @@ function bind() {
     root.querySelector('.arrange-bank').addEventListener('pointerdown', onSquarePointerDown);
     sheet.addEventListener('pointerdown', onSheetPointerDown);
     ruler.addEventListener('pointerdown', onRulerPointerDown);
+    document.getElementById('arrangeScrub').addEventListener('pointerdown', onScrubPointerDown);
     root.addEventListener('contextmenu', (event) => {
         event.preventDefault();
         if (gestureDepth > 0) return;
@@ -453,6 +477,10 @@ function syncArrangeTransport() {
     const on = (!!state.songPlaying && !!state.isPlaying) || !!state.songCountIn;
     play.classList.toggle('is-on', on);
     play.setAttribute('aria-pressed', on ? 'true' : 'false');
+    const stop = document.getElementById('arrangeStop');
+    if (stop) {
+        stop.setAttribute('aria-label', on ? 'Stop' : 'Return to start');
+    }
 }
 
 function onSongTick(event) {
@@ -478,6 +506,13 @@ function syncPlayhead() {
     const tick = Math.max(0, Number(state.song?.playheadTick) || 0);
     const line = document.getElementById('arrangePlayhead');
     if (line) line.style.left = `${(tick / BAR_TICKS) * pxPerBar}px`;
+    const insert = document.getElementById('arrangeInsert');
+    const insertTick = arrangementInsertTick();
+    if (insert) {
+        const show = insertTick != null && Math.abs(insertTick - tick) > 1;
+        insert.hidden = !show;
+        if (show) insert.style.left = `${(insertTick / BAR_TICKS) * pxPerBar}px`;
+    }
     const clock = document.getElementById('arrangeClock');
     const position = document.getElementById('arrangePosition');
     if (clock) clock.textContent = formatClock(tick);
@@ -589,6 +624,10 @@ function tickFromClientX(clientX) {
 
 function snapBeat(tick) {
     return Math.max(0, Math.round(tick / BEAT) * BEAT);
+}
+
+function snapSixteenth(tick) {
+    return Math.max(0, Math.round(tick / SIXTEENTH) * SIXTEENTH);
 }
 
 function snapBar(tick) {
@@ -717,8 +756,7 @@ function onRulerPointerDown(event) {
             return;
         }
         if (!moved) {
-            setPlayhead(state.song, snapBeat(tickFromClientX(ev.clientX)));
-            syncPlayhead();
+            placeArrangementInsert(snapBeat(tickFromClientX(ev.clientX)));
             syncLoop();
             return;
         }
@@ -738,7 +776,7 @@ function onRulerPointerDown(event) {
 
 function onSheetPointerDown(event) {
     if (event.button !== 0 || event.ctrlKey) return;
-    if (event.target.closest('#arrangeRuler')) return;
+    if (event.target.closest('#arrangeRuler, #arrangeScrub')) return;
     const clipEl = event.target.closest('.arrange-clip');
     if (clipEl) {
         beginClipGesture(event, clipEl);
@@ -764,6 +802,7 @@ function beginLaneTap(event, lane) {
         }
         selectedId = null;
         paintSelection();
+        placeArrangementInsert(snapBeat(tickFromClientX(ev.clientX)));
     };
     window.addEventListener('pointerup', up);
 }
@@ -863,6 +902,7 @@ function beginClipGesture(event, clipEl) {
             }
             return;
         }
+        placeArrangementInsert(snapBeat(tickFromClientX(ev.clientX)));
         const now = performance.now();
         if (lastClipTap && lastClipTap.id === clip.id && now - lastClipTap.at <= DBL_TAP_MS) {
             lastClipTap = null;
@@ -1448,8 +1488,81 @@ function typingTarget(target) {
     return !!el.closest('input, textarea, [contenteditable="true"]');
 }
 
+document.addEventListener('keydown', onArrangeSpace, true);
+
+function onArrangeSpace(event) {
+    if (!shown() || event.code !== 'Space' || event.repeat) return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (typingTarget(event.target)) return;
+    if (event.shiftKey && !state.isPlaying && !state.songCountIn) armArrangementContinue();
+    else cancelArrangementContinue();
+}
+
+function onScrubPointerDown(event) {
+    if (event.button !== 0 || gestureDepth > 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    gestureDepth += 1;
+    initAudio();
+    cancelArrangeCountIn();
+    cancelArrangementContinue();
+    let last = null;
+    let queued = null;
+    let frame = 0;
+    const flush = () => {
+        frame = 0;
+        if (queued == null || queued === last) return;
+        last = queued;
+        relocateArrangement(queued);
+        syncPlayhead();
+        followPlayhead(Number(state.song?.playheadTick) || queued);
+        syncArrangeTransport();
+    };
+    const aim = (clientX, immediate) => {
+        queued = snapSixteenth(tickFromClientX(clientX));
+        if (immediate) {
+            if (frame) cancelAnimationFrame(frame);
+            flush();
+            return;
+        }
+        if (frame) return;
+        frame = requestAnimationFrame(flush);
+    };
+    const move = (ev) => {
+        if (ev.pointerId !== event.pointerId) return;
+        aim(ev.clientX, false);
+    };
+    const up = (ev) => {
+        if (ev.pointerId !== event.pointerId) return;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+        gestureDepth = Math.max(0, gestureDepth - 1);
+        if (ev.type !== 'pointercancel') aim(ev.clientX, true);
+        else if (frame) {
+            cancelAnimationFrame(frame);
+            frame = 0;
+        }
+    };
+    aim(event.clientX, true);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+}
+
 function onKey(event) {
     if (!shown()) return;
+    if (event.key === 'Home' && !event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        if (typingTarget(event.target)) return;
+        event.preventDefault();
+        cancelArrangeCountIn();
+        cancelArrangementContinue();
+        if (state.isPlaying && state.songPlaying) relocateArrangement(0);
+        else homeArrangement();
+        syncPlayhead();
+        syncArrangeTransport();
+        return;
+    }
     if (event.key === 'Escape') {
         closeMenu();
         if (arrangeRollIsOpen()) closeArrangeRoll();

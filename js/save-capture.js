@@ -1,8 +1,8 @@
 // captureProject / applyDoc and #p= boot (spec/ingy). Library UI is W2.
 
 import { state } from './state.js?v=120';
-import { get, getNumber, getString, set } from './params.js?v=24';
-import { isCatalogKey, isStepKey } from './param-catalog.js?v=4';
+import { get, getNumber, getString, set } from './params.js?v=40';
+import { isCatalogKey, isStepKey } from './param-catalog.js?v=6';
 import { PARAMS, BAREMETAL_PARAMS } from './ingy/js/params-data.js';
 import { decodeLink, normalize, parse, serialize, sectionsFor } from './ingy/js/ingy-codec.js';
 import {
@@ -20,14 +20,14 @@ import {
     snapshotSynthSlot,
     writeDrumSlot,
     writeSynthSlot,
-} from './pattern-bank.js?v=31';
-import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=81';
-import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=28';
-import { setPolyMode } from './poly-voice.js?v=172';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=67';
-import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=135';
-import { setBerlinMode } from './berlin.js?v=102';
-import { applyChordMemoryIntervals } from './chord-memory.js?v=28';
+} from './pattern-bank.js?v=46';
+import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=97';
+import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=43';
+import { setPolyMode } from './poly-voice.js?v=188';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=83';
+import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=151';
+import { setBerlinMode } from './berlin.js?v=118';
+import { applyChordMemoryIntervals } from './chord-memory.js?v=43';
 const ALL_PARAMS = { ...PARAMS, ...BAREMETAL_PARAMS };
 const TOP_DOC_KEYS = new Set([
     'format', 'version', 'kind', 'name', 'by',

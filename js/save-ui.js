@@ -14,9 +14,10 @@ import {
     copyText,
     ingyFileBlob,
     probeCanShareFiles,
+    resolveShareDelivery,
     runShareProject,
     triggerIngyDownload,
-} from './save-share.js';
+} from './save-share.js?v=3';
 
 const HASH_LINK_RE = /(?:^|[&#])p=/;
 
@@ -221,6 +222,33 @@ export function initSaveLibraryUi() {
     });
 }
 
+function showShareStatus(status, message, url, offerCopy) {
+    if (!status) return;
+    status.replaceChildren(document.createTextNode(message));
+    if (!offerCopy || !url) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'site-bar-share-copy';
+    btn.textContent = 'Copy link';
+    btn.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        const ok = await copyText(url);
+        btn.textContent = ok ? 'Copied' : 'Copy failed';
+    });
+    status.append(' ', btn);
+}
+
+async function deliverLinkAndFile(doc, link) {
+    const url = link?.url || '';
+    const copied = url ? await copyText(url) : false;
+    triggerIngyDownload(doc, doc?.name);
+    return {
+        message: copied ? 'Link copied and file downloaded.' : 'File downloaded.',
+        offerCopy: Boolean(url) && !copied,
+        url,
+    };
+}
+
 export async function handleSiteShare() {
     if (shareBusy) return;
     shareBusy = true;
@@ -231,29 +259,60 @@ export async function handleSiteShare() {
         const link = await encodeLink(doc, base);
         const canShareFiles = await probeCanShareFiles();
         const hasWebShare = typeof navigator.share === 'function';
+        const plan = resolveShareDelivery({ doc, link, canShareFiles, hasWebShare });
+        const wantsSheet = plan.mode === 'share-url' || plan.mode === 'share-both' || plan.mode === 'share-file';
 
+        if (wantsSheet) {
+            try {
+                await runShareProject({
+                    doc,
+                    link,
+                    canShareFiles,
+                    hasWebShare,
+                    copyTextFn: copyText,
+                    downloadFn: triggerIngyDownload,
+                    shareFn: async ({ doc: shareDoc, link: shareLink, plan: sharePlan, fileName }) => {
+                        const payload = { title: shareDoc.name || 'INGYSYNTH', text: shareDoc.by || 'INGYSYNTH project' };
+                        if (sharePlan.mode === 'share-url' || sharePlan.mode === 'share-both') {
+                            payload.url = shareLink.url;
+                        }
+                        if (sharePlan.mode === 'share-both' || sharePlan.mode === 'share-file') {
+                            payload.files = [new File([ingyFileBlob(shareDoc)], fileName, { type: 'application/json' })];
+                        }
+                        await navigator.share(payload);
+                    },
+                });
+                setText(status, 'Share ready.');
+                return;
+            } catch (err) {
+                if (err?.name === 'AbortError') {
+                    setText(status, '');
+                    return;
+                }
+                const result = await deliverLinkAndFile(doc, link);
+                showShareStatus(status, result.message, result.url, result.offerCopy);
+                return;
+            }
+        }
+
+        const copied = link?.url ? await copyText(link.url) : false;
         await runShareProject({
             doc,
             link,
-            canShareFiles,
-            hasWebShare,
-            copyTextFn: copyText,
+            canShareFiles: false,
+            hasWebShare: false,
+            copyTextFn: async () => copied,
             downloadFn: triggerIngyDownload,
-            shareFn: async ({ doc: shareDoc, link: shareLink, plan, fileName }) => {
-                const payload = { title: shareDoc.name || 'INGYSYNTH', text: shareDoc.by || 'INGYSYNTH project' };
-                if (plan.mode === 'share-url' || plan.mode === 'share-both') {
-                    payload.url = shareLink.url;
-                }
-                if (plan.mode === 'share-both' || plan.mode === 'share-file') {
-                    payload.files = [new File([ingyFileBlob(shareDoc)], fileName, { type: 'application/json' })];
-                }
-                await navigator.share(payload);
-            },
+            shareFn: async () => {},
         });
-
-        if (status) setText(status, 'Share ready.');
+        showShareStatus(
+            status,
+            copied ? 'Link copied and file downloaded.' : 'File downloaded.',
+            link?.url || '',
+            Boolean(link?.url) && !copied,
+        );
     } catch (err) {
-        if (status) setText(status, err?.name === 'AbortError' ? '' : 'Share failed — try Save or download.');
+        setText(status, 'Share failed. Use Save, then share the file.');
     } finally {
         shareBusy = false;
     }

@@ -2,10 +2,10 @@
 // Latches on release; scales lfoMasterGain when LFO is On.
 
 import { state } from './state.js?v=120';
-import { beginMidiLearn } from './midi-learn.js?v=16';
-import { getFilterCutoffRange, getFilterEnvAmount, refreshFilterCutoffRange } from './filter-cutoff.js?v=93';
-import { getLfoRateHz } from './lfo-rate.js?v=49';
-import { getNumber, getString, set } from './params.js?v=24';
+import { beginMidiLearn } from './midi-learn.js?v=31';
+import { getFilterCutoffRange, getFilterEnvAmount, refreshFilterCutoffRange } from './filter-cutoff.js?v=108';
+import { getLfoRateHz } from './lfo-rate.js?v=65';
+import { getNumber, getString, set } from './params.js?v=40';
 
 const AMOUNT_RAMP = 0.08;
 /** Extra fade when opening from silence — avoids filter/pitch zipper clicks. */

@@ -49,9 +49,13 @@ export function triggerIngyDownload(doc, fileName) {
 }
 
 export async function copyText(text) {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return true;
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+    } catch {
+        /* user activation may already have expired */
     }
     return false;
 }

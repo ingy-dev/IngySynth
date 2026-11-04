@@ -2,22 +2,23 @@
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
 import { state, OSC_COUNT } from './state.js?v=120';
-import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=24';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=49';
-import { semitonesToFrequency } from './tuning.js?v=89';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=93';
-import { refreshFilterInputDrive } from './filter-drive.js?v=40';
+import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=40';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=65';
+import { semitonesToFrequency } from './tuning.js?v=104';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=108';
+import { refreshFilterInputDrive } from './filter-drive.js?v=55';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=132';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=196';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=28';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=54';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=115';
+} from './visualizers.js?v=147';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=211';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=43';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=70';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=131';
 import {
+    analogLogicalWave,
     createOscSource,
     startAnalogOsc,
     fadeStopOsc,
@@ -28,12 +29,12 @@ import {
     PLAITS_POLY_WARM_COUNT,
     hasDarkOscActive,
     wtAttackSecForFilter,
-} from './osc-source.js?v=135';
+} from './osc-source.js?v=151';
 import {
     isPolyChordMemoryOn,
     getPolyChordIntervals,
     syncChordMemUI,
-} from './chord-memory.js?v=34';
+} from './chord-memory.js?v=49';
 import {
     pairPolySeqSlidePitches,
     pairPolySeqGlissPitches,
@@ -1280,7 +1281,7 @@ function voiceCanRetune(v) {
     return v.oscs.every((osc) => {
         if (!want.includes(osc.oscIndex)) return false;
         if (osc.isWavetable) return typeof osc.retrigger === 'function';
-        return osc.type === analogWaveForIndex(osc.oscIndex);
+        return analogLogicalWave(osc) === analogWaveForIndex(osc.oscIndex);
     });
 }
 

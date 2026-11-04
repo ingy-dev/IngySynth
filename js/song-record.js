@@ -2,12 +2,12 @@
 // One take is one applyTake undo. Quantize is not part of this module.
 
 import { state } from './state.js?v=120';
-import { getNumber } from './params.js?v=24';
-import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=436';
-import { setSongRecordBridge, songTickAt } from './song-conductor.js?v=4';
+import { getNumber } from './params.js?v=40';
+import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=452';
+import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=20';
 import { applyTake } from './song-model.js?v=4';
-import { setLiveNoteHooks } from './voice.js?v=172';
-import { setPolyLiveHook } from './poly-voice.js?v=172';
+import { setLiveNoteHooks } from './voice.js?v=188';
+import { setPolyLiveHook } from './poly-voice.js?v=188';
 
 let countGen = 0;
 let countTimer = 0;
@@ -289,8 +289,13 @@ function recordGate() {
 }
 
 export function arrangeStop() {
+    const wasRunning = !!state.isPlaying || !!state.songCountIn;
     cancelArrangeCountIn();
-    if (state.isPlaying) togglePlay();
+    if (state.isPlaying) {
+        togglePlay();
+        return;
+    }
+    if (!wasRunning) homeArrangement();
 }
 
 export function initSongRecord() {

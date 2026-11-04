@@ -3,8 +3,8 @@
 // Chord intervals also soft-scale Q (biquad rails at high Q + multi-pitch).
 
 import { state, OSC_COUNT } from './state.js?v=120';
-import { getNumber, getOscVol } from './params.js?v=24';
-import { OSC4_INDEX } from './osc-source.js?v=135';
+import { getNumber, getOscVol } from './params.js?v=40';
+import { OSC4_INDEX } from './osc-source.js?v=151';
 
 /** Soft-clip / peak-limit curve (drive↑ = more compression of peaks). */
 export function makeFilterInputCurve(drive = 2.0) {

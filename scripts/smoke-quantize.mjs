@@ -13,7 +13,7 @@ globalThis.document ??= {
     getElementById() { return null; },
 };
 
-const { quantizeToPattern } = await import('../js/song-quantize.js?v=1');
+const { quantizeToPattern } = await import('../js/song-quantize.js?v=15');
 
 const SIXTEENTH = 240;
 let passed = 0;

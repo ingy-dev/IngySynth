@@ -1,7 +1,7 @@
 import { state } from './state.js?v=120';
-import { semitonesToNoteName } from './tuning.js?v=89';
-import { initAudio } from './audio-engine.js?v=227';
-import { togglePlay } from './sequencer.js?v=436';
+import { semitonesToNoteName } from './tuning.js?v=104';
+import { initAudio } from './audio-engine.js?v=243';
+import { togglePlay } from './sequencer.js?v=452';
 import {
     pressKey,
     releaseKey,
@@ -12,9 +12,9 @@ import {
     syncVisibilityUI,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=257';
+} from './keyboard.js?v=273';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
-import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=141';
+import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=157';
 
 /** Ableton home-row octave: relative semitones from A-key root. */
 const NOTE_CODES = {
@@ -84,6 +84,60 @@ function blurSelectFocus() {
     const el = document.activeElement;
     if (!el || !(el instanceof Element)) return;
     if (el.tagName === 'SELECT' || el.closest?.('select')) {
+        el.blur();
+    }
+}
+
+function isCommandKey(e) {
+    return !!(e.metaKey || e.ctrlKey || e.altKey);
+}
+
+function isBareMetalShell() {
+    return !!window.__JUCE__?.backend;
+}
+
+const ARROW_KEYS = new Set([
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown',
+]);
+
+function focusHandlesArrows(el) {
+    if (!el || !(el instanceof Element)) return false;
+    if (el.tagName === 'SELECT') return true;
+    const role = el.getAttribute('role');
+    if (role === 'slider' || role === 'spinbutton') return true;
+    return !!el.closest?.('[role="slider"], [role="spinbutton"]');
+}
+
+function performanceKey(code) {
+    return code === 'Space' || code === 'KeyZ' || code === 'KeyX' || code === 'KeyM'
+        || Object.prototype.hasOwnProperty.call(NOTE_CODES, code);
+}
+
+/**
+ * WKWebView re-sends any keydown the page does not cancel. AppKit then plays
+ * the system alert (the Mac "funk") from NSView keyDown. That includes
+ * auto-repeat, which used to return before preventDefault.
+ */
+function shouldSilenceKey(e) {
+    if (isTextEntryTarget(e.target) || isCommandKey(e)) return false;
+    if (e.key === 'Tab') return false;
+    if (e.code === 'KeyM') return true;
+    if (!state.keyboardVisible) return false;
+    if (isBareMetalShell()) {
+        if (ARROW_KEYS.has(e.key) && focusHandlesArrows(e.target)) return false;
+        // Enter on a control is a real activation, and AppKit does not beep for it.
+        if (e.key === 'Enter' && e.target instanceof Element
+            && e.target.closest('button, a, [role="button"]')) return false;
+        return true;
+    }
+    return performanceKey(e.code);
+}
+
+function blurButtonFocus() {
+    const el = document.activeElement;
+    if (!el || !(el instanceof Element)) return;
+    if (isTextEntryTarget(el) || focusHandlesArrows(el)) return;
+    if (el.tagName === 'BUTTON' || el.tagName === 'A' || el.getAttribute('role') === 'button') {
         el.blur();
     }
 }
@@ -437,8 +491,14 @@ function onBoardPointerUp(e) {
 function onKeyDown(e) {
     if (isTextEntryTarget(e.target)) return;
 
-    if (e.code === 'KeyM' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    // Cancel before any early return. Repeats and unmapped keys used to fall
+    // through, and Bare Metal's web view beeps for each one.
+    if (shouldSilenceKey(e)) {
         e.preventDefault();
+        blurButtonFocus();
+    }
+
+    if (e.code === 'KeyM' && !e.repeat && !isCommandKey(e)) {
         setComputerKeyboardEnabled(!state.computerKeyboardEnabled);
         return;
     }
@@ -446,7 +506,7 @@ function onKeyDown(e) {
     // QWERTY play/octave always work when the keyboard section is on,
     // whether the chromatic piano or computer-keys board is showing.
     if (!state.keyboardVisible) return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (isCommandKey(e)) return;
 
     if (e.code === 'Space') {
         // Own Space here so first keypress works before wireControls (post-initAudio).
@@ -553,6 +613,14 @@ export function initComputerKeyboard() {
 
     document.addEventListener('keydown', onKeyDown, true);
     document.addEventListener('keyup', onKeyUp, true);
+    // keypress is the insert-text default. Cancelling it covers the path
+    // where WebKit still beeps after a keydown that was not the one we saw.
+    document.addEventListener('keypress', (e) => {
+        if (shouldSilenceKey(e)) e.preventDefault();
+    }, true);
+    document.addEventListener('pointerup', () => {
+        if (isBareMetalShell()) blurButtonFocus();
+    }, true);
 
     document.addEventListener('ingysynth:keyboard-pitch-ui', () => {
         if (state.computerKeyboardEnabled) refreshComputerKeyboardLabels();

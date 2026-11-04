@@ -1,11 +1,11 @@
 // Sidechain TIME: free ms or tempo-synced beat divisions (LFO RATE pattern, shorter list).
 
 import { state } from './state.js?v=120';
-import { DRUM_LANE_COUNT } from './pattern-bank.js?v=31';
-import { get, getNumber, set, subscribe, toggle } from './params.js?v=24';
-import { getParam } from './param-catalog.js?v=4';
-import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=167';
-import { beginMidiLearn } from './midi-learn.js?v=16';
+import { DRUM_LANE_COUNT } from './pattern-bank.js?v=46';
+import { get, getNumber, set, subscribe, toggle } from './params.js?v=40';
+import { getParam } from './param-catalog.js?v=6';
+import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=183';
+import { beginMidiLearn } from './midi-learn.js?v=31';
 
 export const SC_SYNC_DIVISIONS = [
     { label: '1/4', beats: 1 },

@@ -11,15 +11,15 @@ import {
     getOscPan,
     subscribe,
     notifyKey,
-} from './params.js?v=24';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=40';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=93';
-import { previewStepsOnVfd } from './sequencer.js?v=436';
-import { resetSidechainDucker } from './sc-time.js?v=30';
-import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=132';
-import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=89';
-import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=158';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=167';
+} from './params.js?v=40';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=55';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=108';
+import { previewStepsOnVfd } from './sequencer.js?v=452';
+import { resetSidechainDucker } from './sc-time.js?v=46';
+import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=147';
+import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=104';
+import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=174';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=183';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -27,10 +27,10 @@ import {
     updateLfoSmoothing,
     updateLfoCutoffSafety,
     updateLfoHighpassSafety,
-} from './lfo-strip.js?v=52';
-import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=49';
-import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=172';
-import { applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=135';
+} from './lfo-strip.js?v=68';
+import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=65';
+import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=188';
+import { applyAnalogOscShape, applyLiveOscVolume, dutyForOsc, OSC4_INDEX } from './osc-source.js?v=151';
 
 let wired = false;
 let rebuildReverbIr = null;
@@ -206,17 +206,29 @@ function applyOscTune(index) {
     refreshFilterInputDrive();
 }
 
-function applyOscType(index) {
+function refreshOscShape(index) {
     const wave = getOscType(index);
     if (index === OSC4_INDEX && state.osc4Wavetable) return;
+    const duty = dutyForOsc(index, wave);
+    const touch = (osc) => {
+        if (!osc || osc.isWavetable) return;
+        if (osc.oscIndex != null && osc.oscIndex !== index) return;
+        applyAnalogOscShape(osc, wave, duty);
+    };
+    if (state.oscillators?.[index]) touch(state.oscillators[index]);
     if (!state.audioContext) return;
-    const persistent = state.oscillators?.[index];
-    // Never splice OscillatorNode.type on a started analog osc.
-    // Do not firePhaseReset here — that overlaps playStep's lookahead stack.
-    // Next step spawn picks up the wave.
-    if (persistent && !persistent.isWavetable && !persistent.started) {
-        persistent.type = wave;
-    }
+    state.activeOscillators?.forEach(touch);
+    forEachPolyOsc(touch);
+    state.berlinOscVoices?.forEach((voice) => {
+        if (!voice || voice.dead || voice.oscIndex !== index) return;
+        voice.oscs?.forEach((part) => touch(part?.osc));
+    });
+}
+
+function applyOscType(index) {
+    // Wave changes on a running analog osc stay stale inside applyAnalogOscShape
+    // so the next spawn picks them up. Pulse width on a square updates in place.
+    refreshOscShape(index);
 }
 
 function applyOscToggle(index, on) {
@@ -874,6 +886,7 @@ export function wireStoreEngine() {
         subscribe(`osc-pan-${i}`, () => applyOscPan(i));
         subscribe(`osc-tune-${i}`, () => applyOscTune(i));
         subscribe(`osc-type-${i}`, () => applyOscType(i));
+        subscribe(`osc-pw-${i}`, () => refreshOscShape(i));
         subscribe(`osc-toggle-${i}`, (on) => applyOscToggle(i, on));
     }
 }

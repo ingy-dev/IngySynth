@@ -2,8 +2,8 @@
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
 import { state } from './state.js?v=120';
-import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=24';
-import { createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=135';
+import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=40';
+import { analogLogicalWave, createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=151';
 
 const ALLOWED_VOICES = [3];
 
@@ -165,7 +165,7 @@ export function firePhaseResetOscStack(oscIndex, baseFreq, startTime, spawnOpts 
     const wantWave = getOscType(oscIndex);
     const canReuse = existing.length === n && existing.every((osc) => {
         if (osc.isWavetable) return typeof osc.retrigger === 'function';
-        return osc.type === wantWave;
+        return analogLogicalWave(osc) === wantWave;
     });
 
     if (canReuse) {

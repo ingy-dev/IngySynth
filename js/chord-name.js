@@ -1,5 +1,5 @@
 // Pitch-class chord names for the note VFD. Lowest note = root.
-import { NOTE_NAMES, semitonesToNoteName } from './tuning.js?v=89';
+import { NOTE_NAMES, semitonesToNoteName } from './tuning.js?v=104';
 import { NOTE_VFD_COLS } from './vfd-matrix.js?v=6';
 
 /** Unique sorted integer semitones. */

@@ -1,5 +1,5 @@
 import { state } from './state.js?v=120';
-import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=24';
+import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=40';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -10,18 +10,18 @@ import {
     midiPitchBendValue,
     getGlobalTune,
     semitonesToFrequency,
-} from './tuning.js?v=89';
-import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=132';
-import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=93';
-import { forceNoteOff } from './voice.js?v=172';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=49';
-import { bentFrequency } from './pitch-bend.js?v=123';
+} from './tuning.js?v=104';
+import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=147';
+import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=108';
+import { forceNoteOff } from './voice.js?v=188';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=65';
+import { bentFrequency } from './pitch-bend.js?v=138';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { setKeyboardStepActive } from './keyboard-steps.js?v=158';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=196';
-import { createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=135';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=174';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=211';
+import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=151';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=21';
-import { notifyAutomationLoopAnchor } from './automation.js?v=81';
+import { notifyAutomationLoopAnchor } from './automation.js?v=97';
 import { nextCyclePass } from './pattern-repeat.js?v=3';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=13';
 import {
@@ -30,7 +30,7 @@ import {
     clearAccentSweep,
     acidVegDecaySec,
     releaseAcidHeldEnvelopes,
-} from './acid-env.js?v=57';
+} from './acid-env.js?v=72';
 import {
     isBerlinOn,
     berlinActiveRows,
@@ -53,7 +53,7 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=102';
+} from './berlin.js?v=118';
 import {
     getPattern,
     getBerlinLane,
@@ -68,11 +68,11 @@ import {
     stepChordCount,
     patternRepeat,
     patternStepCount,
-} from './pattern-bank.js?v=31';
-import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=172';
-import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=34';
-import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=33';
-import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=30';
+} from './pattern-bank.js?v=46';
+import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=188';
+import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=49';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=49';
+import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=46';
 import {
     clampRatch,
     nextRatch,
@@ -1088,6 +1088,8 @@ function warmBerlinAnalogDrums() {
 let songConductor = null;
 /** Returns true when Arrange record handled this Play press (count-in). */
 let songRecordGate = null;
+/** Scrub launch starts immediately instead of opening a record count-in. */
+let skipRecordGate = false;
 /** Seconds to advance instead of a pattern step while a song gap is silent. */
 let songSilenceAdvance = null;
 
@@ -1100,8 +1102,11 @@ export function setSongRecordGate(fn) {
 }
 
 function togglePlay() {
-    if (!state.audioContext) return;
-    if (songRecordGate && songRecordGate()) return;
+    if (!state.audioContext) {
+        songConductor?.clearContinue?.();
+        return;
+    }
+    if (!skipRecordGate && songRecordGate && songRecordGate()) return;
 
     // Safari (and other browsers) can suspend the context after idle time;
     // resume on every Start/Stop click so scheduled audio actually renders.
@@ -1159,7 +1164,9 @@ function togglePlay() {
         state.berlinCyclePass = 0;
         // Berlin's start anchor below IS pass 1. Normal mode's first step consumes cycleFirstPass.
         state.berlinCycleFirstPass = false;
-        if (state.songPlaying && songConductor) songConductor.begin(state.nextStepTime);
+        if (state.songPlaying && songConductor) {
+            songConductor.begin(state.nextStepTime, { allowContinue: true });
+        }
         // Every Berlin row restarts from its own beginning on the same downbeat
         if (isBerlinOn()) {
             warmPlaitsPool(state.audioContext, 6);
@@ -1259,6 +1266,83 @@ function togglePlay() {
             if (songConductor) songConductor.finishSong();
         }
     }
+}
+
+function chokeBus(param, now) {
+    if (!param) return;
+    const cur = Math.max(0.00001, param.value || 0.00001);
+    param.cancelScheduledValues(now);
+    param.setValueAtTime(cur, now);
+    param.exponentialRampToValueAtTime(0.00001, now + 0.012);
+}
+
+function hardRelocateArrangement(tick) {
+    const ctx = state.audioContext;
+    const now = ctx.currentTime;
+    const when = now + 0.03;
+    state.playGeneration += 1;
+    clearStopCleanup();
+    bumpSeqEngine();
+    forceNoteOff();
+    midiAllNotesOff();
+    clearLastPolySounding();
+    releaseSongHold(now);
+    stopActiveVoices(now);
+    chokeBus(state.envelope?.gain, now);
+    chokeBus(state.filterEnvGain?.gain, now);
+    clearAccentSweep(now);
+    state.song.playheadTick = tick;
+    state.nextStepTime = when;
+    state.lastStepSounded = false;
+    state.envelopeHeld = false;
+    state.filterEnvelopeHeld = false;
+    state.cyclePass = 0;
+    state.cycleFirstPass = true;
+    state.berlinCyclePass = 0;
+    state.berlinCycleFirstPass = false;
+    songSilenceAdvance = null;
+    songConductor.clearContinue?.();
+    songConductor.begin(when, { allowContinue: false });
+    if (isBerlinOn()) {
+        const info = songConductor.armBerlin(when);
+        ensurePlayheads();
+        for (const ph of state.berlinPlayheads) {
+            if (ph) ph.nextStepTime = when;
+        }
+        state.berlinLoopAnchor = when;
+        if (info?.armed && !info.silent) {
+            queuePatternPass(
+                when,
+                (state.berlinCyclePass | 0) + 1,
+                patternRepeat(getBerlinPattern(state.berlinSlot)),
+            );
+        }
+    }
+}
+
+/** Move arrangement playback to a tick. Starts playback when transport is stopped. */
+function relocateArrangement(tick) {
+    if (!state.song) return false;
+    const t = Math.max(0, Math.round(Number(tick) || 0));
+    if (!state.audioContext || !songConductor?.begin) {
+        state.song.playheadTick = t;
+        return false;
+    }
+    if (!document.body.classList.contains('is-arrange')) return false;
+    songConductor.clearContinue?.();
+    if (!state.isPlaying) {
+        state.song.playheadTick = t;
+        skipRecordGate = true;
+        try {
+            togglePlay();
+        } finally {
+            skipRecordGate = false;
+        }
+        return !!state.isPlaying;
+    }
+    if (!state.songPlaying) return false;
+    hardRelocateArrangement(t);
+    return true;
 }
 
 function currentStepDuration() {
@@ -1965,7 +2049,7 @@ function berlinAnalogWaveMismatch(voice, wantWave) {
     if (!oscs?.length) return false;
     for (const { osc } of oscs) {
         if (!osc || osc.isWavetable) continue;
-        if ((osc.type || 'sawtooth') !== wantWave) return true;
+        if ((analogLogicalWave(osc) || 'sawtooth') !== wantWave) return true;
     }
     return false;
 }
@@ -4221,6 +4305,7 @@ document.addEventListener('ingysynth:live-note-off', () => {
 
 export {
     togglePlay,
+    relocateArrangement,
     scheduleNextStep,
     playStep,
     startIdleMarquee,

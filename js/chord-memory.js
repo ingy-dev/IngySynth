@@ -1,11 +1,11 @@
 import { state, OSC_COUNT } from './state.js?v=120';
-import { getOscVol, set } from './params.js?v=24';
+import { getOscVol, set } from './params.js?v=40';
 import {
     clearHeldNotes,
     intervalsFromHeldNotes,
     polyChordIntervalsFromNotes,
 } from './held-notes.js?v=13';
-import { refreshFilterInputDrive } from './filter-drive.js?v=40';
+import { refreshFilterInputDrive } from './filter-drive.js?v=55';
 
 /** Notes heard during the current Learn gesture (survives staggered key-ups). */
 let learnSessionNotes = [];

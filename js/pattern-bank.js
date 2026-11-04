@@ -6,7 +6,7 @@
 
 import { state } from './state.js?v=120';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
-import { getNumber, getString, set } from './params.js?v=24';
+import { getNumber, getString, set } from './params.js?v=40';
 import { clampRepeat, nextRepeat, REPEAT_MAX } from './pattern-repeat.js?v=3';
 
 export { clampRepeat, REPEAT_MAX };

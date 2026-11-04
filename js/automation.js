@@ -5,23 +5,23 @@
 
 import { state } from './state.js?v=120';
 import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=75';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=123';
-import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=88';
-import { ensureDisplayStep } from './knobs.js?v=167';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=138';
+import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=103';
+import { ensureDisplayStep } from './knobs.js?v=183';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
-} from './param-status.js?v=16';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=102';
-import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=24';
-import { clampToCatalog, getParam } from './param-catalog.js?v=4';
+} from './param-status.js?v=30';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=118';
+import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=40';
+import { clampToCatalog, getParam } from './param-catalog.js?v=6';
 import {
     flashCopiedToast,
     getPattern,
     getBerlinPattern,
     patternRepeat,
     setPatternAutomationBridge,
-} from './pattern-bank.js?v=31';
+} from './pattern-bank.js?v=46';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */

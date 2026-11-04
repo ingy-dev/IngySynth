@@ -2,8 +2,8 @@
 // Pointer capture runs in mapping mode so knobs/strips do not scrub while learning.
 
 import { state } from './state.js?v=120';
-import { keyFromElement } from './params.js?v=24';
-import { getParam, isCatalogKey } from './param-catalog.js?v=4';
+import { keyFromElement } from './params.js?v=40';
+import { getParam, isCatalogKey } from './param-catalog.js?v=6';
 
 const IGNORE_IDS = new Set([
     'midiMapping',
@@ -52,6 +52,7 @@ const INGY_PARAM_TO_MAIN = {
     highPass: 'highPass',
     noise: 'noiseVol',
     vcaLevel: 'volume',
+    pwm: 'osc-pw-0',
 };
 
 /** @type {((canvas: HTMLCanvasElement, e: PointerEvent) => object | null) | null} */
@@ -101,6 +102,7 @@ export function midiControlId(el) {
         if (el.classList.contains('osc-vol')) return `osc-vol-${el.dataset.osc}`;
         if (el.classList.contains('osc-toggle')) return `osc-toggle-${el.dataset.osc}`;
         if (el.classList.contains('osc-type')) return `osc-type-${el.dataset.osc}`;
+        if (el.classList.contains('kb-osc-pw') || el.classList.contains('osc-pw')) return `osc-pw-${el.dataset.osc}`;
         return `osc-${el.dataset.osc}`;
     }
     if (el.id && isCatalogKey(el.id)) return el.id;

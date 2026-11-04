@@ -1,5 +1,5 @@
 {
-  "$comment": "Bare Metal-only parameter keys. Hand-written. Same shape as params.json. The web codec knows these keys (it clamps and fills them like catalog keys) but the web engine ignores them; see fallbacks.md. Adding a key here never bumps the document version. Per-oscillator keys use the catalog's osc-<name>-<index> style with index 0-3 = OSC 1-4.",
+  "$comment": "Bare Metal-only parameter keys, plus osc-pw-N which the web catalog also defines so both engines share one duty-cycle control. Hand-written. Same shape as params.json. The web codec clamps and fills every key here. The web engine plays osc-pw-N and ignores the rest; see fallbacks.md. Adding a key here never bumps the document version. Per-oscillator keys use the catalog's osc-<name>-<index> style with index 0-3 = OSC 1-4.",
   "params": {
     "osc-pw-0": { "type": "range", "section": "voice", "min": 0.05, "max": 0.95, "step": 0.01, "default": 0.5, "group": "Oscillator 1" },
     "osc-pw-1": { "type": "range", "section": "voice", "min": 0.05, "max": 0.95, "step": 0.01, "default": 0.5, "group": "Oscillator 2" },

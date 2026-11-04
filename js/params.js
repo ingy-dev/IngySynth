@@ -2,7 +2,7 @@
 // when connected. Step keys are views of pattern.steps[] (getLiveStep), not Map copies.
 // Widgets must not use kb* mirrors as the engine source.
 
-import { getLiveStep } from './pattern-bank.js?v=31';
+import { getLiveStep } from './pattern-bank.js?v=46';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import {
     PARAMS,
@@ -11,7 +11,7 @@ import {
     getParam,
     isCatalogKey,
     isStepKey,
-} from './param-catalog.js?v=4';
+} from './param-catalog.js?v=6';
 
 const subscribers = new Map();
 const lastNotified = new Map();

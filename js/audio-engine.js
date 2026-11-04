@@ -1,12 +1,12 @@
 import { state, OSC_COUNT } from './state.js?v=120';
-import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=24';
-import { wireControls } from './controls.js?v=348';
-import { getFilterCutoffRange } from './filter-cutoff.js?v=93';
-import { updateLfoSmoothing } from './lfo-strip.js?v=52';
-import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=49';
-import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=40';
-import { ensurePlaitsWorklet, createOscSource, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=135';
-import { DRUM_LANE_COUNT } from './pattern-bank.js?v=31';
+import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=40';
+import { wireControls } from './controls.js?v=364';
+import { getFilterCutoffRange } from './filter-cutoff.js?v=108';
+import { updateLfoSmoothing } from './lfo-strip.js?v=68';
+import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=65';
+import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=55';
+import { ensurePlaitsWorklet, createOscSource, applyAnalogOscShape, dutyForOsc, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=151';
+import { DRUM_LANE_COUNT } from './pattern-bank.js?v=46';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;
@@ -483,7 +483,8 @@ function initAudio() {
     state.analyser.connect(state.audioContext.destination);
 
     state.oscillators.forEach((osc, i) => {
-        osc.type = getOscType(i);
+        const wave = getOscType(i);
+        applyAnalogOscShape(osc, wave, dutyForOsc(i, wave));
         osc.frequency.value = 261.63;
     });
     state.oscGains.forEach((gain, i) => {

@@ -6,7 +6,7 @@
 // bit depth keep their own units.
 
 import { state } from './state.js?v=120';
-import { formatRangeValue } from './knobs.js?v=167';
+import { formatRangeValue } from './knobs.js?v=183';
 
 const TOUCH_MQ = '(max-width: 768px), (hover: none) and (pointer: coarse)';
 const LINGER_MS = 520;
@@ -81,6 +81,7 @@ const CAPTION_PHRASE = {
     amt: 'amount',
     wet: 'dry/wet',
     pw: 'pulse width',
+    pwm: 'pulse width',
     arp: 'arpeggio',
     crush: 'bit depth',
     thresh: 'threshold',
@@ -116,6 +117,7 @@ const CAPTION_TOKEN = {
     asymm: 'asymmetry',
     inharm: 'inharmonicity',
     pw: 'pulse width',
+    pwm: 'pulse width',
     arp: 'arpeggio',
     crush: 'bit depth',
     thresh: 'threshold',

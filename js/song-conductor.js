@@ -2,14 +2,17 @@
 // so sequencer.js does not import this file.
 // Song mode is body.is-arrange and play started here (state.songPlaying).
 // When songPlaying is false the sequencer never calls these methods.
+// The insert marker is where Play starts. Stop returns there. Stop while
+// already stopped returns the marker to bar 1. Shift+Play continues from
+// the position where playback last stopped.
 
 import { state } from './state.js?v=120';
-import { getNumber } from './params.js?v=24';
-import { setSongConductor, uiOutputLatency } from './sequencer.js?v=436';
-import { semitonesToNoteName } from './tuning.js?v=89';
-import { scheduleMonoNote } from './voice.js?v=172';
-import { schedulePolySeqVoicing } from './poly-voice.js?v=172';
-import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=81';
+import { getNumber } from './params.js?v=40';
+import { setSongConductor, uiOutputLatency } from './sequencer.js?v=452';
+import { semitonesToNoteName } from './tuning.js?v=104';
+import { scheduleMonoNote } from './voice.js?v=188';
+import { schedulePolySeqVoicing } from './poly-voice.js?v=188';
+import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=97';
 import {
     DRUM_LANE_COUNT,
     PATTERN_COUNT,
@@ -21,7 +24,7 @@ import {
     selectBerlinSlot,
     selectSlot,
     setDrumSlot,
-} from './pattern-bank.js?v=31';
+} from './pattern-bank.js?v=46';
 import {
     BAR_TICKS,
     PPQ,
@@ -52,6 +55,12 @@ let savedTranspose = 0;
 let hasSavedTranspose = false;
 /** Note identities already handed to the voice scheduler this pass. */
 const scheduledNotes = new Set();
+/** Tick Stop returns to while transport is running. */
+let returnTick = 0;
+/** Tick Shift+Play resumes. Null until the first stop. */
+let continueTick = null;
+let pendingContinue = false;
+let hasReturn = false;
 
 const recordBridge = {
     recording: () => false,
@@ -198,6 +207,10 @@ function preparePitch(audioTime) {
     else applyLane(tick);
 }
 
+function gateSec(tps, ticks) {
+    return Math.max(0.03, tps > 0 ? ticks / tps : 0.05);
+}
+
 function scheduleNotesWindow(clip, audioTime) {
     if (!clip || clip.kind !== 'notes' || !anchors.length) return;
     const horizon = audioTime + 0.35;
@@ -209,22 +222,29 @@ function scheduleNotesWindow(clip, audioTime) {
     });
     const poly = !!(state.keyboardPoly || state.keyboardMultitudes);
     const tps = ticksPerSecondNow();
+    const origin = clip.startTick | 0;
+    const relNow = tickAt(audioTime) - origin;
     const ordered = [...groups.entries()].sort((a, b) => Number(a[0]) - Number(b[0]));
     for (const [key, group] of ordered) {
         const id = `${clip.id}:${key}`;
         if (scheduledNotes.has(id)) continue;
         const rel = Number(group[0].note.startTick) || 0;
-        const abs = (clip.startTick | 0) + rel;
-        const at = audioTimeForTick(abs);
-        if (!(at >= audioTime - 0.03 && at <= horizon)) continue;
+        const abs = origin + rel;
+        const atAbs = audioTimeForTick(abs);
+        const upcoming = atAbs >= audioTime - 0.03 && atAbs <= horizon;
+        const remainingOf = (note) => (Number(note.durTick) || 240) - (relNow - rel);
+        const chased = !upcoming && group.some((item) => remainingOf(item.note) > 1 && rel <= relNow + 0.5);
+        if (!upcoming && !chased) continue;
         scheduledNotes.add(id);
+        const at = chased ? audioTime : atAbs;
+        const durTicks = (note) => {
+            const ticks = Number(note.durTick) || 240;
+            return chased ? Math.max(1, remainingOf(note)) : ticks;
+        };
         if (poly && group.length > 1) {
             const semis = group.map((item) => Number(item.note.semi) || 0);
             const root = Math.min(...semis);
-            const dur = Math.max(...group.map((item) => {
-                const ticks = Number(item.note.durTick) || 240;
-                return Math.max(0.03, tps > 0 ? ticks / tps : 0.05);
-            }));
+            const dur = Math.max(...group.map((item) => gateSec(tps, durTicks(item.note))));
             schedulePolySeqVoicing({
                 startTime: at,
                 gateSec: dur,
@@ -236,12 +256,11 @@ function scheduleNotesWindow(clip, audioTime) {
             });
         } else {
             for (const item of group) {
-                const ticks = Number(item.note.durTick) || 240;
                 scheduleMonoNote({
                     semi: Number(item.note.semi) || 0,
                     fine: Number(item.note.fine) || 0,
                     at,
-                    dur: Math.max(0.03, tps > 0 ? ticks / tps : 0.05),
+                    dur: gateSec(tps, durTicks(item.note)),
                     vel: Number(item.note.vel) || 0.8,
                     legato: !!item.note.legato,
                 });
@@ -377,6 +396,13 @@ function restorePerformSlots() {
     setDrumSlot(saved.drumSlot);
 }
 
+function publishPlayhead() {
+    if (!state.song) return;
+    document.dispatchEvent(new CustomEvent('ingysynth:song-tick', {
+        detail: { tick: state.song.playheadTick },
+    }));
+}
+
 function finishSong() {
     stopRaf();
     let endTick = 0;
@@ -384,6 +410,7 @@ function finishSong() {
         endTick = Math.max(0, tickAt(state.audioContext.currentTime - uiOutputLatency()));
     }
     recordBridge.commit(endTick);
+    if (hasReturn) continueTick = endTick;
     state.songLiveKeys = false;
     if (hasSavedTranspose) {
         state.keyboardTranspose = savedTranspose;
@@ -404,6 +431,10 @@ function finishSong() {
     anchors = [];
     state.songSynthSilent = false;
     state.songDrumSilent = false;
+    if (hasReturn && state.song) {
+        setPlayhead(state.song, Math.max(0, returnTick || 0));
+        publishPlayhead();
+    }
 }
 
 function muteBerlinScratch() {
@@ -567,7 +598,9 @@ function stopRaf() {
     raf = 0;
 }
 
-function begin(audioTime) {
+function begin(audioTime, opts = {}) {
+    const useContinue = !!opts.allowContinue && pendingContinue && continueTick != null;
+    pendingContinue = false;
     if (!state.song) return;
     if (!hasSavedTranspose) {
         savedTranspose = state.keyboardTranspose || 0;
@@ -575,8 +608,11 @@ function begin(audioTime) {
     }
     scheduledNotes.clear();
     const tps = ticksPerSecondNow();
-    let tick = Math.max(0, Math.round(Number(state.song.playheadTick) || 0));
+    const insert = Math.max(0, Math.round(Number(state.song.playheadTick) || 0));
+    let tick = useContinue ? Math.max(0, Math.round(continueTick)) : insert;
     tick = Math.round(wrapTick(state.song, tick));
+    returnTick = useContinue ? insert : tick;
+    hasReturn = true;
     anchors = [{ tick, audioTime, tps }];
     activeSynthId = null;
     activeDrumKey = null;
@@ -598,9 +634,41 @@ function begin(audioTime) {
         }
     }
     updateLiveKeys(tick);
+    if (!recordBridge.recording()) applyLane(tick);
     recordBridge.onBegin();
     startRaf();
 }
+
+function placeArrangementInsert(tick) {
+    const t = Math.max(0, Math.round(Number(tick) || 0));
+    if (!state.song) return;
+    if (state.songPlaying && state.isPlaying) returnTick = t;
+    else setPlayhead(state.song, t);
+    hasReturn = true;
+    publishPlayhead();
+}
+
+function homeArrangement() {
+    returnTick = 0;
+    hasReturn = true;
+    if (state.song) setPlayhead(state.song, 0);
+    publishPlayhead();
+}
+
+function arrangementInsertTick() {
+    if (!(state.songPlaying && state.isPlaying) || !hasReturn) return null;
+    return Math.max(0, returnTick || 0);
+}
+
+export function armArrangementContinue() {
+    pendingContinue = true;
+}
+
+export function cancelArrangementContinue() {
+    pendingContinue = false;
+}
+
+export { placeArrangementInsert, homeArrangement, arrangementInsertTick };
 
 function prepareStepTime(audioTime) {
     if (!anchors.length) return { time: audioTime, rewind: false };
@@ -634,8 +702,10 @@ function onSynthStep(audioTime) {
         state.songSynthSilent = true;
         const when = audioTime;
         const notesClip = cueClip;
+        const gen = state.playGeneration;
         // After playStep releases a pattern hold, so that release cannot erase the note.
         queueMicrotask(() => {
+            if (gen !== state.playGeneration) return;
             if (!state.songPlaying || !state.isPlaying) return;
             scheduleNotesWindow(notesClip, when);
         });
@@ -741,5 +811,6 @@ export function initSongConductor() {
         nextDrumCapFrom,
         arriveDrum,
         preparePitch,
+        clearContinue: cancelArrangementContinue,
     });
 }

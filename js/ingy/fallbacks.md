@@ -7,7 +7,8 @@ the document untouched, and writes it back out. It may show a small "made in the
 
 | Field | Web plays | Field kept |
 |---|---|---|
-| `osc-pw-N`, `osc-pwm-N`, `osc-pwm-src-N` (pulse width / PWM) | `square` at 50% | yes |
+| `osc-pw-N` | that duty cycle when the wave is square (`0.5` is a square; other waves ignore it) | yes |
+| `osc-pwm-N`, `osc-pwm-src-N` (PWM depth / source) | no extra modulation; the stored `osc-pw-N` still sounds | yes |
 | `subVol`, `subOctave`, `subWave` | nothing (no sub oscillator) | yes |
 | `osc-sync-N` | free-running oscillators | yes |
 | `osc-engine-N = digital`, `osc-model-N`, `osc-harmonics/timbre/morph-N` (OSC 2-4 digital) | that slot's analog `osc-type-N` | yes |

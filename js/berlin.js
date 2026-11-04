@@ -2,15 +2,15 @@
 // Acid and Poly are mutually exclusive with it.
 
 import { state } from './state.js?v=120';
-import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=89';
-import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=132';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=93';
-import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=172';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=67';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=28';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=167';
-import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=16';
-import { get, getNumber, set } from './params.js?v=24';
+import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=104';
+import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=147';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=108';
+import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=188';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=83';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=43';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=183';
+import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=30';
+import { get, getNumber, set } from './params.js?v=40';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
@@ -43,8 +43,8 @@ import {
     syncPatternClipboardUi,
     ensureBerlinDrumKit,
     ensureDrumPatterns,
-} from './pattern-bank.js?v=31';
-import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=135';
+} from './pattern-bank.js?v=46';
+import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=151';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */

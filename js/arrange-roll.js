@@ -8,10 +8,10 @@ import {
     chordFromCellNotes,
     clampChord,
     stepCellNotes,
-} from './pattern-bank.js?v=31';
+} from './pattern-bank.js?v=46';
 import { nextRatch } from './step-ratch.js?v=1';
-import { semitonesToNoteName } from './tuning.js?v=89';
-import { refreshArrange, setArrangeRollOpener } from './arrange-view.js?v=6';
+import { semitonesToNoteName } from './tuning.js?v=104';
+import { refreshArrange, setArrangeRollOpener } from './arrange-view.js?v=22';
 
 const TUNE_LO = -39;
 const TUNE_HI = 48;

@@ -5068,6 +5068,98 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     text-align: center;
     white-space: nowrap;
 }
+.keyboard-osc-pw-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 100%;
+    min-width: 0;
+}
+.keyboard-osc-pw-label {
+    font-family: 'Michroma', sans-serif;
+    font-size: 7px;
+    line-height: 1;
+    color: #00aa00;
+    letter-spacing: 0.04em;
+}
+.keyboard-section input[type="range"].kb-osc-pw {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    display: block;
+    width: 40px;
+    min-width: 0;
+    max-width: 100%;
+    height: 12px;
+    margin: 1px auto 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+    cursor: pointer;
+    touch-action: none;
+}
+.keyboard-section input[type="range"].kb-osc-pw:focus {
+    outline: none;
+}
+.keyboard-section input[type="range"].kb-osc-pw::-webkit-slider-runnable-track {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 1px;
+    background: #00aa00;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+.keyboard-section input[type="range"].kb-osc-pw::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 8px;
+    height: 6px;
+    margin-top: 2px;
+    border: none;
+    border-radius: 0;
+    background: #00ff00;
+    box-shadow: none;
+    cursor: pointer;
+    clip-path: polygon(50% 0, 0 100%, 100% 100%);
+}
+.keyboard-section input[type="range"].kb-osc-pw::-moz-range-track {
+    height: 1px;
+    background: #00aa00;
+    border: none;
+}
+.keyboard-section input[type="range"].kb-osc-pw::-moz-range-thumb {
+    width: 8px;
+    height: 6px;
+    border: none;
+    border-radius: 0;
+    background: #00ff00;
+    cursor: pointer;
+    clip-path: polygon(50% 0, 0 100%, 100% 100%);
+}
+.keyboard-section .kb-osc-pw-value {
+    display: block;
+    width: 100%;
+    font-family: 'Michroma', sans-serif;
+    font-size: 6px;
+    line-height: 1;
+    color: #00aa00;
+    margin-top: 3px;
+    text-align: center;
+    white-space: nowrap;
+}
+.keyboard-osc-pw-row.is-idle {
+    opacity: 0.4;
+}
+body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-pw-row,
+body.acid-osc-locked .keyboard-osc-field[data-osc="0"] .keyboard-osc-pw-row {
+    display: none;
+}
 /* --- Pattern bank bar + Berlin Dream-960 ------------------------------- */
 
 :root {
@@ -9160,8 +9252,14 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
         width: 7px;
         height: 5px;
     }
+    .keyboard-section input[type="range"].kb-osc-pw {
+        width: 32px;
+        height: 11px;
+    }
     .keyboard-section .kb-osc-pan-value,
-    .keyboard-osc-pan-label {
+    .keyboard-section .kb-osc-pw-value,
+    .keyboard-osc-pan-label,
+    .keyboard-osc-pw-label {
         font-size: 5px;
     }
     .keyboard-filter-knobs {
@@ -9865,7 +9963,7 @@ body.poly-mode {
 .ingy6-sections {
     display: grid;
     grid-template-columns:
-        minmax(0, 2.4fr)   /* DCO: waves + 2 faders */
+        minmax(0, 3.1fr)   /* DCO: PWM + waves + SUB + NOISE */
         minmax(0, 0.85fr)  /* HPF: 1 fader */
         minmax(0, 2.4fr)   /* VCF: FREQ RES polarity ENV */
         minmax(0, 1.35fr)  /* VCA: switch + level */
@@ -10338,7 +10436,8 @@ body.poly-mode {
     text-align: center;
     font-size: 9px;
 }
-.ingy6-section--dco .ingy6-wave-group {
+.ingy6-section--dco .ingy6-wave-group,
+.ingy6-section--dco .ingy6-fader[data-param="pwm"] {
     flex: 0 0 auto;
 }
 .ingy6-section--dco .ingy6-fader-row,
@@ -10548,7 +10647,7 @@ body.poly-mode {
         min-width: 0;
         max-width: none;
     }
-    .ingy6-section--dco { min-width: 228px; }
+    .ingy6-section--dco { min-width: 300px; }
     .ingy6-section--hpf { min-width: 88px; }
     .ingy6-section--vcf { min-width: 248px; }
     .ingy6-section--vca { min-width: 148px; }
@@ -12515,6 +12614,21 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     height: 100%;
     border-right: 1px solid rgba(0, 170, 0, 0.65);
 }
+.arrange-gutter-scrub,
+.arrange-scrub {
+    height: 18px;
+    flex: 0 0 18px;
+    box-sizing: border-box;
+}
+.arrange-gutter-scrub {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 4px 2px;
+    color: #00aa00;
+    font-family: Michroma, sans-serif;
+    font-size: 7px;
+    letter-spacing: 0.04em;
+}
 .arrange-gutter-ruler {
     height: 22px;
     flex: 0 0 22px;
@@ -12557,6 +12671,28 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     height: 22px;
     touch-action: none;
     cursor: text;
+}
+.arrange-scrub {
+    position: relative;
+    touch-action: none;
+    cursor: ew-resize;
+    background-color: rgba(0, 170, 0, 0.08);
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(var(--arrange-px, 80px) - 1px),
+        rgba(0, 170, 0, 0.45) calc(var(--arrange-px, 80px) - 1px),
+        rgba(0, 170, 0, 0.45) var(--arrange-px, 80px)
+    );
+}
+.arrange-scrub::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: rgba(0, 170, 0, 0.45);
 }
 .arrange-bar-mark,
 .arrange-beat-mark {
@@ -12604,16 +12740,42 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 .arrange-lane.is-target {
     background-color: rgba(0, 255, 0, 0.06);
 }
-.arrange-playhead {
+.arrange-playhead,
+.arrange-insert {
     position: absolute;
     top: 0;
     bottom: 0;
     width: 1px;
     margin-left: -0.5px;
+    pointer-events: none;
+}
+.arrange-playhead {
     background: #00ff00;
     box-shadow: 0 0 4px #00ff00;
-    pointer-events: none;
     z-index: 5;
+}
+.arrange-insert {
+    background: rgba(0, 255, 0, 0.55);
+    z-index: 4;
+    animation: arrange-insert-blink 1s steps(2, end) infinite;
+}
+.arrange-insert::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -4px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 6px solid rgba(0, 255, 0, 0.75);
+}
+.arrange-insert[hidden] {
+    display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    .arrange-insert { animation: none; }
+}
+@keyframes arrange-insert-blink {
+    50% { opacity: 0.2; }
 }
 .arrange-loop-shade {
     position: absolute;

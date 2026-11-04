@@ -1,0 +1,55 @@
+{
+  "format": "ingysynth",
+  "version": 1,
+  "kind": "project",
+  "name": "Mix desk",
+  "by": "ingy",
+  "mix": {
+    "note": "routing",
+    "channels": [
+      {
+        "id": "osc1",
+        "inserts": [
+          { "type": "compressor", "state": { "threshold": -18 } }
+        ],
+        "sends": [
+          { "bus": 0, "level": 0.25 },
+          { "bus": 1, "level": 0 },
+          { "bus": 2, "level": 0.5 },
+          { "bus": 3, "level": 1 }
+        ],
+        "level": 0.8,
+        "pan": -0.4,
+        "mute": false,
+        "solo": false
+      },
+      {
+        "id": "noise",
+        "inserts": [
+          { "type": "external", "state": { "slot": 1 } }
+        ],
+        "sends": [
+          { "bus": 0, "level": 0 },
+          { "bus": 1, "level": 0.1 },
+          { "bus": 2, "level": 0 },
+          { "bus": 3, "level": 0 }
+        ],
+        "level": 0.3,
+        "pan": 0
+      }
+    ],
+    "buses": [
+      { "id": "aux1", "inserts": [{ "type": "reverb", "state": {} }], "level": 0.9 },
+      { "id": "aux2", "inserts": [{ "type": "delay", "state": { "time": "8" } }], "level": 1 },
+      { "id": "aux3", "inserts": [{ "type": "chorus", "state": {} }], "level": 1 },
+      { "id": "aux4", "inserts": [{ "type": "bitcrusher", "state": {} }], "level": 0.7 }
+    ],
+    "master": {
+      "inserts": [
+        { "type": "distortion", "state": { "drive": 0.2 } },
+        { "type": "ringmod", "state": {} }
+      ],
+      "level": 0.5
+    }
+  }
+}

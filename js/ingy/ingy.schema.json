@@ -14,7 +14,7 @@
     "voice": { "$ref": "#/$defs/voice" },
     "pattern": { "$ref": "#/$defs/pattern" },
     "session": { "$ref": "#/$defs/session" },
-    "mix": { "type": "object" },
+    "mix": { "$ref": "#/$defs/mix" },
     "arrangement": { "type": "object" }
   },
   "$defs": {
@@ -180,6 +180,55 @@
           }
         },
         "tuning": { "type": "object" }
+      }
+    },
+    "mixInsert": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "state": { "type": "object" }
+      }
+    },
+    "mixSend": {
+      "type": "object",
+      "properties": {
+        "bus": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "level": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "mixChannel": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "inserts": { "type": "array", "items": { "$ref": "#/$defs/mixInsert" } },
+        "sends": { "type": "array", "items": { "$ref": "#/$defs/mixSend" } },
+        "level": { "type": "number", "minimum": 0, "maximum": 1 },
+        "pan": { "type": "number", "minimum": -1, "maximum": 1 },
+        "mute": { "type": "boolean" },
+        "solo": { "type": "boolean" }
+      }
+    },
+    "mixBus": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "inserts": { "type": "array", "items": { "$ref": "#/$defs/mixInsert" } },
+        "level": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "mixMaster": {
+      "type": "object",
+      "properties": {
+        "inserts": { "type": "array", "items": { "$ref": "#/$defs/mixInsert" } },
+        "level": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "mix": {
+      "type": "object",
+      "properties": {
+        "channels": { "type": "array", "items": { "$ref": "#/$defs/mixChannel" } },
+        "buses": { "type": "array", "items": { "$ref": "#/$defs/mixBus" } },
+        "master": { "$ref": "#/$defs/mixMaster" }
       }
     }
   }

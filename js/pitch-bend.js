@@ -2,10 +2,10 @@
 // Bends sequencer + live keyboard pitch; springs back to center on release.
 
 import { state } from './state.js?v=120';
-import { beginMidiLearn } from './midi-learn.js?v=31';
-import { midiPitchBendValue } from './tuning.js?v=104';
-import { voiceTargetFreq } from './unison.js?v=211';
-import { applyPolyPitchBend, hasPolyVoices } from './poly-voice.js?v=188';
+import { beginMidiLearn } from './midi-learn.js?v=34';
+import { midiPitchBendValue } from './tuning.js?v=107';
+import { voiceTargetFreq } from './unison.js?v=214';
+import { applyPolyPitchBend, hasPolyVoices } from './poly-voice.js?v=191';
 
 const BEND_RAMP = 0.01;
 

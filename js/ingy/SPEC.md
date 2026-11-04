@@ -170,14 +170,83 @@ From `flags.json` `session`:
 | `midiMaps` | `{ key: { "type": "cc", "cc": 0..127, "channel": 0..15 } or { "type": "note", "note": 0..127, "channel": 0..15 } }`, at most 256, sorted-key order when capped | `{}` |
 | `tuning` | optional object, Bare Metal: `{ "custom": [{ "id", "name", "degrees": [semitones, may be fractional], "period": 12 }], "scl": text, "kbm": text }`. Bank 0 custom scales live here, in the file | absent |
 
-Not saved anywhere: playback position, audio graph, undo history, view mode and panel state, mixer mutes/solos,
-MIDI device selection, computer keyboard, write-mode arms (full list: `flags.json` `notSaved`).
+Not saved by the web: playback position, audio graph, undo history, view mode and panel state, mixer mutes/solos
+(`state.mixer`), MIDI device selection, computer keyboard, write-mode arms (full list: `flags.json` `notSaved`).
+A project may store per-channel `mute` and `solo` inside `mix`; a missing flag means false.
 
 ### `mix` (optional, project only)
 
-Routing for web v1.0 and Bare Metal agent K: channels, insert slots, sends, 4 aux buses, master. v1 keeps it
-verbatim; whoever builds routing first writes its schema into this file **before** code, in one commit with
-examples. Suggested shape: `{ "channels": [{ "id", "inserts": [{ "type", "state" }], "sends": [{ "bus", "level" }], "level", "pan" }], "buses": [...], "master": {...} }`, where `type`/`state` are `FxUnit::typeId()` / `getState()`.
+Routing for Bare Metal and web v1.0: channels, reorderable insert slots, sends, 4 aux buses, and a master.
+Adding this shape does not bump `version`. A `patch` or `pattern` that carries `mix` ignores it (warning
+`ignored:mix`) and does not write it back. A non-object `mix` is dropped (warning `invalid:mix`).
+
+v1 codecs keep a `mix` **object verbatim**. They do not fill defaults, clamp numbers, or drop unknown keys
+inside it. `examples/project-mix.ingy` is this shape; both codecs round-trip it. The router, not the codec,
+applies the defaults and clamps below when it loads the object. Unknown keys stay in the file either way.
+
+```json
+{
+  "channels": [
+    {
+      "id": "osc1",
+      "inserts": [{ "type": "compressor", "state": { "threshold": -18 } }],
+      "sends": [{ "bus": 0, "level": 0.25 }],
+      "level": 0.8,
+      "pan": -0.4,
+      "mute": false,
+      "solo": false
+    }
+  ],
+  "buses": [{ "id": "aux1", "inserts": [{ "type": "reverb", "state": {} }], "level": 0.9 }],
+  "master": { "inserts": [{ "type": "distortion", "state": { "drive": 0.2 } }], "level": 0.5 }
+}
+```
+
+| Field | Type | Router default when the key is missing |
+|---|---|---|
+| `channels` | array of channel objects. Array order is process order | one channel `main` (an explicit `[]` is no channels) |
+| `buses` | bus objects, indexes 0..3 | `aux1`..`aux4`, level 1, no inserts. A shorter list is padded. The router plays the first 4; further entries stay in the file |
+| `master` | object | level 1, no inserts |
+| `id` | string. The router keeps at most 64 characters | `ch1`, `ch2`, ... ; buses `aux1`..`aux4` |
+| `inserts` | array. Array order is process order | `[]` |
+| `type` | string, `FxUnit::typeId()` | `unknown` |
+| `state` | JSON object, `FxUnit::getState()` / `setState()` | `{}` |
+| `sends` | `{ "bus": 0..3, "level": 0..1 }` | no send. A `bus` outside 0..3 is ignored by the router. Level clamps to 0..1 |
+| `level` | number 0..1, linear gain | 1 |
+| `pan` | number -1..1. -1 is hard left, 0 is center, +1 is hard right | 0 |
+| `mute`, `solo` | bool | false |
+
+Stock insert `type`s, which agent H builds and the router does not: `chorus`, `ringmod`, `distortion`,
+`bitcrusher`, `delay`, `reverb`, `compressor`. Any other `type` is a placeholder that passes audio and keeps
+`state`. Do not write `sequins`, `beads`, or `clouds` as a `type` or anywhere else in `mix`.
+
+The router plays at most 16 channels and 8 inserts on a channel, a bus, or the master. Extra entries stay in
+the file. On each channel the signal flows: input, insert chain, delay compensation, sends, level, pan, onto
+the master. Sends are pre-fader and pre-pan, after that channel's inserts. Each bus sums its sends, then runs
+its inserts, then its level, then the master. The master runs its inserts, then its level. Pan is the Web Audio
+equal-power `StereoPannerNode` law: `gL = cos((pan+1)/2 * pi/2)`, `gR = sin((pan+1)/2 * pi/2)`. Buses have no
+pan; a bus return uses that law at center. Insert latency is `FxUnit::latencySamples()`. The router delays
+every shorter channel, and delays the dry master sum by the longest bus-insert latency, so channels and bus
+returns line up. Its reported latency is that compensation plus the master-insert latency.
+
+Well-known channel ids match the web mixer strips (`ui/js/mixer.js`). The web does not write this object.
+These ids are how a host maps the strips when it does:
+
+| `id` | Web strip | Where the web stores level and pan |
+|---|---|---|
+| `osc1`..`osc4` | `data-strip="osc"` index 0..3 | `osc-vol-N`, `osc-pan-N` (N = 0..3) |
+| `noise` | `data-strip="noise"` | `noiseVol`. The strip has no pan knob; pan stays 0 |
+| `d1`..`d4` | `data-strip="drum"` index 0..3 | `voice.flags.drumKit[i].vol` / `.pan` |
+
+`master.level` is not the web `volume` parameter. The web master fader writes `volume` (the engine starts that
+gain at 0.5). `mix.master.level` defaults to 1 and is a separate stage.
+
+Mute and solo follow the web when a host applies its arrays: a strip is open when it is not muted, and either
+nobody is soloed or this strip is soloed. Solo is shared across osc, noise, and drum strips. The web ramps
+that gate over 20 ms. A drum mute or solo array of length 3 is a web quirk from the old 3-lane kits: the
+router prepends `false` and then maps the flags onto `d1`..`d4`. The web compressor strip is a processor on
+the master path plus a sidechain source, not an aux bus. `compressor` may sit in any insert list. The
+sidechain source is not part of `mix`.
 
 ### `arrangement` (reserved, project only)
 

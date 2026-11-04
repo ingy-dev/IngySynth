@@ -1,5 +1,5 @@
 import { state } from './state.js?v=120';
-import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=40';
+import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=43';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -10,18 +10,18 @@ import {
     midiPitchBendValue,
     getGlobalTune,
     semitonesToFrequency,
-} from './tuning.js?v=104';
-import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=147';
-import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=108';
-import { forceNoteOff } from './voice.js?v=188';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=65';
-import { bentFrequency } from './pitch-bend.js?v=138';
+} from './tuning.js?v=107';
+import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=150';
+import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=111';
+import { forceNoteOff } from './voice.js?v=191';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=68';
+import { bentFrequency } from './pitch-bend.js?v=141';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { setKeyboardStepActive } from './keyboard-steps.js?v=174';
-import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=211';
-import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=151';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=177';
+import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=214';
+import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=155';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=21';
-import { notifyAutomationLoopAnchor } from './automation.js?v=97';
+import { notifyAutomationLoopAnchor } from './automation.js?v=100';
 import { nextCyclePass } from './pattern-repeat.js?v=3';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=13';
 import {
@@ -30,7 +30,7 @@ import {
     clearAccentSweep,
     acidVegDecaySec,
     releaseAcidHeldEnvelopes,
-} from './acid-env.js?v=72';
+} from './acid-env.js?v=75';
 import {
     isBerlinOn,
     berlinActiveRows,
@@ -53,7 +53,7 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=118';
+} from './berlin.js?v=121';
 import {
     getPattern,
     getBerlinLane,
@@ -68,11 +68,11 @@ import {
     stepChordCount,
     patternRepeat,
     patternStepCount,
-} from './pattern-bank.js?v=46';
-import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=188';
-import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=49';
-import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=49';
-import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=46';
+} from './pattern-bank.js?v=50';
+import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=191';
+import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=52';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=52';
+import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=49';
 import {
     clampRatch,
     nextRatch,
@@ -522,6 +522,8 @@ function scheduleStepEnvelope({
 /** Stop main phase-reset oscs so they don't fight independent ratch voices. */
 function silenceMainPhaseResetOscs(atTime) {
     if (!state.phaseResetEnabled || !Array.isArray(state.activeOscillators)) return;
+    // Nothing can be sounding before audio starts (Berlin switched on, or a file loaded, first).
+    if (!state.audioContext) return;
     const t = Math.max(state.audioContext.currentTime, atTime);
     const envLevel = Number(state.envelope?.gain?.value) || 0;
     // If the VCA is still open (drum ring across offs), delay the worklet
@@ -2186,7 +2188,8 @@ function createBerlinOscVoice({
 
     const n = getUnisonVoices();
     const spread = getUnisonSpread();
-    const voiceVol = vol / n;
+    // Detuned voices add in power: 1/sqrt(n) keeps one voice's loudness (unison.js).
+    const voiceVol = vol / Math.sqrt(n);
     const t0 = Math.max(ctx.currentTime, startTime);
     const lfoGain = [
         state.lfoGainOsc1Pitch,

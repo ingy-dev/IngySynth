@@ -2,12 +2,12 @@
 // One take is one applyTake undo. Quantize is not part of this module.
 
 import { state } from './state.js?v=120';
-import { getNumber } from './params.js?v=40';
-import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=452';
-import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=20';
+import { getNumber } from './params.js?v=43';
+import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=455';
+import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=23';
 import { applyTake } from './song-model.js?v=4';
-import { setLiveNoteHooks } from './voice.js?v=188';
-import { setPolyLiveHook } from './poly-voice.js?v=188';
+import { setLiveNoteHooks } from './voice.js?v=191';
+import { setPolyLiveHook } from './poly-voice.js?v=191';
 
 let countGen = 0;
 let countTimer = 0;

@@ -1,0 +1,140 @@
+{
+  "url": "https://ingysynth.com/#p=hVNbboMwELxKtd80giRV09yhJ6jyYWBT3BgbeZcIFHH3rkkanAraP3sfszPj9QXyHvag7WcPCRydrxXf7tRbriR40raUUOPdFxYsgVp3sL9A3hIS7D8uoENetV0mSW0JPV_jxIpRSocEuG_kBB7P6HMYDgkYORrYp6u3IZkg1gsQwLoOADuYwEo0qo-xshhp8y-ZonK-pUWA7b8AueZCECr0j4pew62olLVoIoccFUsOAVceqXJG6p6zXcTR1Y1kyP0asZNnaEPrURnCBBplpTNdbRMgtOUVXV5IaqOu9UsQOIazKXyPraPSqXIT2SMUyBl3G3t3yzpNuCSNjOPR2h9N2DF6q8yjos1NRPqXgjn6q2xOwAz9dDiEibUimR-YzdItvT7jaFa0aZrYedbOQsCd2Wv5MLUrHxWJheIMj3nXspSE5bVqXOR33T2VSCdxTb4EBWjx6Bs",
+  "length": 484,
+  "tooLong": false,
+  "decoded": {
+    "name": "Mix desk",
+    "by": "ingy",
+    "mix": {
+      "buses": [
+        {
+          "id": "aux1",
+          "inserts": [
+            {
+              "state": {},
+              "type": "reverb"
+            }
+          ],
+          "level": 0.9
+        },
+        {
+          "id": "aux2",
+          "inserts": [
+            {
+              "state": {
+                "time": "8"
+              },
+              "type": "delay"
+            }
+          ],
+          "level": 1
+        },
+        {
+          "id": "aux3",
+          "inserts": [
+            {
+              "state": {},
+              "type": "chorus"
+            }
+          ],
+          "level": 1
+        },
+        {
+          "id": "aux4",
+          "inserts": [
+            {
+              "state": {},
+              "type": "bitcrusher"
+            }
+          ],
+          "level": 0.7
+        }
+      ],
+      "channels": [
+        {
+          "id": "osc1",
+          "inserts": [
+            {
+              "state": {
+                "threshold": -18
+              },
+              "type": "compressor"
+            }
+          ],
+          "level": 0.8,
+          "mute": false,
+          "pan": -0.4,
+          "sends": [
+            {
+              "bus": 0,
+              "level": 0.25
+            },
+            {
+              "bus": 1,
+              "level": 0
+            },
+            {
+              "bus": 2,
+              "level": 0.5
+            },
+            {
+              "bus": 3,
+              "level": 1
+            }
+          ],
+          "solo": false
+        },
+        {
+          "id": "noise",
+          "inserts": [
+            {
+              "state": {
+                "slot": 1
+              },
+              "type": "external"
+            }
+          ],
+          "level": 0.3,
+          "pan": 0,
+          "sends": [
+            {
+              "bus": 0,
+              "level": 0
+            },
+            {
+              "bus": 1,
+              "level": 0.1
+            },
+            {
+              "bus": 2,
+              "level": 0
+            },
+            {
+              "bus": 3,
+              "level": 0
+            }
+          ]
+        }
+      ],
+      "master": {
+        "inserts": [
+          {
+            "state": {
+              "drive": 0.2
+            },
+            "type": "distortion"
+          },
+          {
+            "state": {},
+            "type": "ringmod"
+          }
+        ],
+        "level": 0.5
+      },
+      "note": "routing"
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "project"
+  }
+}

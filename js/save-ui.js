@@ -1,15 +1,14 @@
-import { captureProject, applyDoc } from './save-capture.js';
+import { captureProject, applyDoc } from './save-capture.js?v=21';
 import {
     LIBRARY_CAPS,
+    SESSION_KEY,
     docForKind,
     deleteEntry,
     listEntries,
-    readSession,
     renameEntry,
     saveEntry,
-    writeSession,
 } from './save-library.js';
-import { encodeLink } from './ingy/js/ingy-codec.js';
+import { encodeLink, parse } from './ingy/js/ingy-codec.js';
 import {
     copyText,
     ingyFileBlob,
@@ -19,14 +18,8 @@ import {
     triggerIngyDownload,
 } from './save-share.js?v=3';
 
-const HASH_LINK_RE = /(?:^|[&#])p=/;
-
 let shareBusy = false;
 let loadBusy = false;
-
-function hashHasProjectLink() {
-    return HASH_LINK_RE.test(location.hash);
-}
 
 function setText(el, text) {
     if (!el) return;
@@ -39,34 +32,14 @@ function persistStorageOnce() {
     }
 }
 
-function scheduleSessionAutosave() {
-    let timer = 0;
-    const tick = () => {
-        if (hashHasProjectLink()) return;
-        try {
-            writeSession(localStorage, captureProject());
-        } catch {
-            /* capture stub or quota */
-        }
-    };
-    const debounced = () => {
-        clearTimeout(timer);
-        timer = setTimeout(tick, 4000);
-    };
-    document.addEventListener('ingysynth:sequencer-start', debounced);
-    document.addEventListener('ingysynth:sequencer-stop', debounced);
-    window.addEventListener('beforeunload', tick);
-    debounced();
-}
-
-function restoreSessionIfAllowed() {
-    if (hashHasProjectLink()) return;
-    document.addEventListener('ingysynth:hash-project-applied', () => {}, { once: true });
-    queueMicrotask(() => {
-        if (hashHasProjectLink()) return;
-        const doc = readSession(localStorage);
-        if (doc) applyDoc(doc, 'project');
-    });
+// A fresh launch starts from the default project. Only saved or imported work
+// (library, dropped file, share link) is loaded; the old autosave is cleared.
+function clearOldSessionAutosave() {
+    try {
+        localStorage.removeItem(SESSION_KEY);
+    } catch {
+        /* storage blocked */
+    }
 }
 
 function openSaveDialog(root) {
@@ -171,8 +144,7 @@ function renderLibraryList(kind, listEl, statusEl) {
 
 export function initSaveLibraryUi() {
     persistStorageOnce();
-    restoreSessionIfAllowed();
-    scheduleSessionAutosave();
+    clearOldSessionAutosave();
 
     const dialog = document.getElementById('saveLibraryDialog');
     const openBtn = document.getElementById('siteSave');
@@ -322,5 +294,65 @@ export function initSiteShare() {
     const btn = document.getElementById('siteShare');
     btn?.addEventListener('click', () => {
         handleSiteShare();
+    });
+}
+
+const LOAD_ERRORS = {
+    'not-json': 'not a valid file',
+    'not-object': 'not a valid file',
+    'not-text': 'not a valid file',
+    'not-ingysynth': 'not an IngySynth file',
+    'bad-version': 'made by a newer IngySynth',
+    'unknown-kind': 'unknown kind of save',
+    'too-large': 'file is too large',
+};
+const loadErrorText = (code) => LOAD_ERRORS[String(code).trim()] || String(code);
+
+function dropToast(message, isError) {
+    const el = document.createElement('div');
+    el.setAttribute('role', isError ? 'alert' : 'status');
+    el.textContent = message;
+    el.style.cssText = 'position:fixed;left:50%;top:1rem;transform:translateX(-50%);padding:0.6rem 1rem;'
+        + `border:1px solid ${isError ? '#f44' : '#3f3'};background:#000;color:${isError ? '#f88' : '#3f3'};`
+        + 'z-index:99999;font:inherit;border-radius:4px;pointer-events:none';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+}
+
+function dragHasFiles(event) {
+    return Array.from(event.dataTransfer?.types || []).includes('Files');
+}
+
+/** Drop an .ingy file anywhere on the page to load it (project, patch or pattern). */
+export function initFileDrop() {
+    // Without these the browser opens the dropped file in place of the synth.
+    window.addEventListener('dragover', (event) => {
+        if (!dragHasFiles(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+    });
+    window.addEventListener('drop', async (event) => {
+        if (!dragHasFiles(event)) return;
+        event.preventDefault();
+        const file = Array.from(event.dataTransfer.files || []).find((f) => /\.ingy$/i.test(f.name));
+        if (!file) {
+            dropToast('Drop an .ingy file to load it.', true);
+            return;
+        }
+        let result;
+        try {
+            result = parse(await file.text());
+        } catch (err) {
+            result = { ok: false, error: String(err?.message || err) };
+        }
+        if (!result?.ok || !result.doc) {
+            dropToast(`Could not load ${file.name}: ${loadErrorText(result?.error || 'not-ingysynth')}`, true);
+            return;
+        }
+        if (!applyDoc(result.doc, result.doc.kind)) {
+            dropToast(`Could not load ${file.name}.`, true);
+            return;
+        }
+        dropToast(`Loaded ${result.doc.name || file.name}`, false);
     });
 }

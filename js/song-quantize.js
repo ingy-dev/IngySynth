@@ -1,7 +1,7 @@
 // Notes clip → 1/16 synth pattern. No DOM.
 // One sixteenth is 240 ticks. Onset maps to the step that contains it.
 
-import { chordFromCellNotes } from './pattern-bank.js?v=46';
+import { chordFromCellNotes } from './pattern-bank.js?v=50';
 
 const SIXTEENTH = 240;
 const STEP_SLOTS = 32;

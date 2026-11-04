@@ -2,10 +2,10 @@
 // Master mute holds the output at 0 without writing the volume parameter.
 
 import { state } from './state.js?v=120';
-import { togglePlay } from './sequencer.js?v=452';
-import { getNumber, subscribe } from './params.js?v=40';
-import { setArrangeView } from './arrange-view.js?v=22';
-import { initSaveLibraryUi, initSiteShare } from './save-ui.js?v=5';
+import { togglePlay } from './sequencer.js?v=455';
+import { getNumber, subscribe } from './params.js?v=43';
+import { setArrangeView } from './arrange-view.js?v=25';
+import { initFileDrop, initSaveLibraryUi, initSiteShare } from './save-ui.js?v=10';
 
 function writeMasterGain(level, ramp) {
     const gain = state.masterGain;
@@ -133,6 +133,7 @@ export function initSiteBar() {
     initNoteHeader();
     initSiteShare();
     initSaveLibraryUi();
+    initFileDrop();
 }
 
 // Phone portrait and short landscape: the note sits outside Scale / Tuning,

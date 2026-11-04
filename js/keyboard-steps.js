@@ -3,9 +3,9 @@
 // tiny microtune → .step-fine, Acc/Sld/On → accent/slide/toggle.
 
 import { state } from './state.js?v=120';
-import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=104';
-import { bindKnob } from './knobs.js?v=183';
-import { previewNoteVisualizer, soundingNotesForStep } from './visualizers.js?v=147';
+import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=107';
+import { bindKnob } from './knobs.js?v=186';
+import { previewNoteVisualizer, soundingNotesForStep } from './visualizers.js?v=150';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import {
     click,
@@ -15,12 +15,12 @@ import {
     set,
     subscribe,
     toggle,
-} from './params.js?v=40';
+} from './params.js?v=43';
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=157';
-import { paintAllStepChordMarkers } from './pattern-bank.js?v=46';
+} from './pattern-write.js?v=160';
+import { paintAllStepChordMarkers } from './pattern-bank.js?v=50';
 import { syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;

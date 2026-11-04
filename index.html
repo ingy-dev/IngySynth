@@ -977,13 +977,6 @@
                                            aria-label="Oscillator 1 pan">
                                     <span class="kb-osc-pan-value" data-osc="0">C</span>
                                 </div>
-                                <div class="keyboard-osc-pw-row" data-osc="0">
-                                    <span class="keyboard-osc-pw-label">PW</span>
-                                    <input type="range" class="kb-osc-pw" data-osc="0"
-                                           min="0.05" max="0.95" value="0.5" step="0.01"
-                                           aria-label="Oscillator 1 pulse width">
-                                    <span class="kb-osc-pw-value" data-osc="0">50%</span>
-                                </div>
                                 <div class="keyboard-osc-toggle-row">
                                 <button type="button" class="kb-step-btn kb-osc-toggle" data-osc="0" aria-label="Oscillator 1 on or off" aria-pressed="true">On</button>
                                 </div>
@@ -1025,13 +1018,6 @@
                                            aria-label="Oscillator 2 pan">
                                     <span class="kb-osc-pan-value" data-osc="1">C</span>
                                 </div>
-                                <div class="keyboard-osc-pw-row" data-osc="1">
-                                    <span class="keyboard-osc-pw-label">PW</span>
-                                    <input type="range" class="kb-osc-pw" data-osc="1"
-                                           min="0.05" max="0.95" value="0.5" step="0.01"
-                                           aria-label="Oscillator 2 pulse width">
-                                    <span class="kb-osc-pw-value" data-osc="1">50%</span>
-                                </div>
                                 <div class="keyboard-osc-toggle-row">
                                 <button type="button" class="kb-step-btn kb-osc-toggle" data-osc="1" aria-label="Oscillator 2 on or off" aria-pressed="true">On</button>
                                 </div>
@@ -1068,13 +1054,6 @@
                                            aria-label="Oscillator 3 pan">
                                     <span class="kb-osc-pan-value" data-osc="2">C</span>
                                 </div>
-                                <div class="keyboard-osc-pw-row" data-osc="2">
-                                    <span class="keyboard-osc-pw-label">PW</span>
-                                    <input type="range" class="kb-osc-pw" data-osc="2"
-                                           min="0.05" max="0.95" value="0.5" step="0.01"
-                                           aria-label="Oscillator 3 pulse width">
-                                    <span class="kb-osc-pw-value" data-osc="2">50%</span>
-                                </div>
                                 <div class="keyboard-osc-toggle-row">
                                 <button type="button" class="kb-step-btn kb-osc-toggle off" data-osc="2" aria-label="Oscillator 3 on or off" aria-pressed="false">Off</button>
                                 </div>
@@ -1110,13 +1089,6 @@
                                            min="-1" max="1" value="0" step="0.01"
                                            aria-label="Oscillator 4 pan">
                                     <span class="kb-osc-pan-value" data-osc="3">C</span>
-                                </div>
-                                <div class="keyboard-osc-pw-row" data-osc="3">
-                                    <span class="keyboard-osc-pw-label">PW</span>
-                                    <input type="range" class="kb-osc-pw" data-osc="3"
-                                           min="0.05" max="0.95" value="0.5" step="0.01"
-                                           aria-label="Oscillator 4 pulse width">
-                                    <span class="kb-osc-pw-value" data-osc="3">50%</span>
                                 </div>
                                 <div class="keyboard-osc-toggle-row">
                                 <button type="button" class="kb-step-btn kb-osc-toggle off" data-osc="3" aria-label="Oscillator 4 on or off" aria-pressed="false">Off</button>
@@ -1856,16 +1828,6 @@
                                     <header class="ingy6-section-header">DCO</header>
                                     <div class="ingy6-section-body">
                                         <svg class="ingy6-silk" aria-hidden="true"><polyline class="ingy6-silk-line" points="" fill="none" stroke="currentColor" stroke-width="1"/></svg>
-                                        <!-- Juno-60 DCO: PWM slider is immediately left of the waveform buttons. Bottom = square, top = narrow pulse. -->
-                                        <div class="ingy6-fader" data-param="pwm">
-                                            <div class="ingy6-fader-body">
-                                                <div class="ingy6-fader-ticks" aria-hidden="true"></div>
-                                                <div class="ingy6-fader-slot">
-                                                    <input type="range" class="ingy6-fader-input" min="0" max="10" step="0.1" value="0" orient="vertical" aria-label="Pulse width">
-                                                </div>
-                                            </div>
-                                            <span class="ingy6-fader-label">PWM</span>
-                                        </div>
                                         <div class="ingy6-wave-group" role="group" aria-label="Main DCO waveform (latching; all can be off)">
                                             <button type="button" class="ingy6-wave-btn" data-wave="sawtooth" aria-pressed="false" aria-label="Sawtooth">
                                                 <svg class="ingy6-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 24,1 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>
@@ -2831,6 +2793,6 @@
         }
     </style>
 
-    <script type="module" src="js/main.js?v=425"></script>
+    <script type="module" src="js/main.js?v=431"></script>
 </body>
 </html>

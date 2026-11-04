@@ -2,21 +2,21 @@
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
 import { state, OSC_COUNT } from './state.js?v=120';
-import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=40';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=65';
-import { semitonesToFrequency } from './tuning.js?v=104';
-import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=108';
-import { refreshFilterInputDrive } from './filter-drive.js?v=55';
+import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=43';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=68';
+import { semitonesToFrequency } from './tuning.js?v=107';
+import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=111';
+import { refreshFilterInputDrive } from './filter-drive.js?v=58';
 import {
     updateNoteVisualizer,
     clearNoteVisualizer,
     hideLogoOverlay,
     showLogoOverlay,
-} from './visualizers.js?v=147';
-import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=211';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=43';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=70';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=131';
+} from './visualizers.js?v=150';
+import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=214';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=73';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=134';
 import {
     analogLogicalWave,
     createOscSource,
@@ -29,12 +29,12 @@ import {
     PLAITS_POLY_WARM_COUNT,
     hasDarkOscActive,
     wtAttackSecForFilter,
-} from './osc-source.js?v=151';
+} from './osc-source.js?v=155';
 import {
     isPolyChordMemoryOn,
     getPolyChordIntervals,
     syncChordMemUI,
-} from './chord-memory.js?v=49';
+} from './chord-memory.js?v=52';
 import {
     pairPolySeqSlidePitches,
     pairPolySeqGlissPitches,
@@ -49,7 +49,20 @@ function bentFrequency(baseFreq) {
 
 export const POLY_VOICE_COUNT = 6;
 const POLY_OSC_MAX = 2; // OSC 1–2 only
-const POLY_DEFAULT_OSC_VOL = 0.1; // stacked chords run hot at normal mono levels
+// Same knob law as Main Stage (four oscillators at 0.25 sum to 1).
+const POLY_DEFAULT_OSC_VOL = 0.25;
+/**
+ * Fixed level per poly mode, so one default note matches one default Main
+ * Stage note (measured at the master analyser). Not a knob: saves keep their
+ * values. Bare Metal applies its own measured trims in AnalogVoice.
+ */
+const POLY_MODE_TRIM_DB = { ingy6: -1.3, multitudes: -2.3 };
+
+function polyModeTrim() {
+    const db = state.keyboardMultitudes ? POLY_MODE_TRIM_DB.multitudes
+        : (state.keyboardPoly ? POLY_MODE_TRIM_DB.ingy6 : 0);
+    return Math.pow(10, db / 20);
+}
 const BEND_RAMP = 0.01;
 /** Same short legato ramp as the mono keyboard (voice.js RETUNE_RAMP). */
 const GLIDE_RAMP = 0.012;
@@ -152,7 +165,7 @@ function readOscVol(oscIndex) {
     return getOscVol(oscIndex, POLY_DEFAULT_OSC_VOL);
 }
 
-/** Unison is coherent (1/N). Distinct chord tones are incoherent (1/√N, same RMS as one note). */
+/** Unison voices are detuned and chord tones distinct, so both add in power: 1/√N keeps one note's loudness. */
 function polyStackNorm(stackCount, sequenced, unison = false) {
     const chordN = stackCount > 1
         ? stackCount
@@ -168,13 +181,13 @@ function polyStackNorm(stackCount, sequenced, unison = false) {
     const uniDiv = liveUni ? POLY_VOICE_COUNT : 1;
     const stackDiv = uniDiv * (chordN > 1 ? chordN : 1);
     const coherent = !!(unison || liveUni);
-    const denom = coherent ? stackDiv : Math.sqrt(Math.max(1, stackDiv));
+    const denom = Math.sqrt(Math.max(1, stackDiv));
     return { chordN, uniDiv, stackDiv, coherent, denom };
 }
 
 function polyStackVoiceVol(fullVol, stackCount, sequenced, unison = false) {
     const { denom } = polyStackNorm(stackCount, sequenced, unison);
-    return Math.max(0.0001, fullVol / denom);
+    return Math.max(0.0001, (fullVol * polyModeTrim()) / denom);
 }
 
 function setOscEnabled(oscIndex, enabled) {
@@ -455,8 +468,8 @@ export function bumpSeqEngine() {
 
 function polyNoiseTargetLevel() {
     if (!state.keyboardPoly || !state.noiseState) return 0;
-    // Noise UI is 0–1; poly DCOs sit at POLY_DEFAULT_OSC_VOL so the mix matches.
-    return Math.max(0, readFloatParam('noiseVol', 0) * POLY_DEFAULT_OSC_VOL);
+    // Noise UI is 0–1; poly DCOs sit at POLY_DEFAULT_OSC_VOL (and the mode trim) so the mix matches.
+    return Math.max(0, readFloatParam('noiseVol', 0) * POLY_DEFAULT_OSC_VOL * polyModeTrim());
 }
 
 function ensurePolyNoiseSource() {

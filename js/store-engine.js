@@ -11,15 +11,15 @@ import {
     getOscPan,
     subscribe,
     notifyKey,
-} from './params.js?v=40';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=55';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=108';
-import { previewStepsOnVfd } from './sequencer.js?v=452';
-import { resetSidechainDucker } from './sc-time.js?v=46';
-import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=147';
-import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=104';
-import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=174';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=183';
+} from './params.js?v=43';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=58';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
+import { previewStepsOnVfd } from './sequencer.js?v=455';
+import { resetSidechainDucker } from './sc-time.js?v=49';
+import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=150';
+import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=107';
+import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=177';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=186';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -27,10 +27,10 @@ import {
     updateLfoSmoothing,
     updateLfoCutoffSafety,
     updateLfoHighpassSafety,
-} from './lfo-strip.js?v=68';
-import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=65';
-import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=188';
-import { applyAnalogOscShape, applyLiveOscVolume, dutyForOsc, OSC4_INDEX } from './osc-source.js?v=151';
+} from './lfo-strip.js?v=71';
+import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=68';
+import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=191';
+import { applyAnalogOscShape, applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=155';
 
 let wired = false;
 let rebuildReverbIr = null;
@@ -209,11 +209,10 @@ function applyOscTune(index) {
 function refreshOscShape(index) {
     const wave = getOscType(index);
     if (index === OSC4_INDEX && state.osc4Wavetable) return;
-    const duty = dutyForOsc(index, wave);
     const touch = (osc) => {
         if (!osc || osc.isWavetable) return;
         if (osc.oscIndex != null && osc.oscIndex !== index) return;
-        applyAnalogOscShape(osc, wave, duty);
+        applyAnalogOscShape(osc, wave);
     };
     if (state.oscillators?.[index]) touch(state.oscillators[index]);
     if (!state.audioContext) return;
@@ -227,7 +226,7 @@ function refreshOscShape(index) {
 
 function applyOscType(index) {
     // Wave changes on a running analog osc stay stale inside applyAnalogOscShape
-    // so the next spawn picks them up. Pulse width on a square updates in place.
+    // so the next spawn picks them up.
     refreshOscShape(index);
 }
 
@@ -886,7 +885,6 @@ export function wireStoreEngine() {
         subscribe(`osc-pan-${i}`, () => applyOscPan(i));
         subscribe(`osc-tune-${i}`, () => applyOscTune(i));
         subscribe(`osc-type-${i}`, () => applyOscType(i));
-        subscribe(`osc-pw-${i}`, () => refreshOscShape(i));
         subscribe(`osc-toggle-${i}`, (on) => applyOscToggle(i, on));
     }
 }

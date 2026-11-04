@@ -1,21 +1,21 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
 import { state } from './state.js?v=120';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=452';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=455';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import { isTabbedView, selectKeyboardTab } from './view-mode.js?v=13';
-import { bindKnob } from './knobs.js?v=183';
-import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=49';
-import { forceNoteOff } from './voice.js?v=188';
-import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=188';
-import { getNumber, set, subscribe } from './params.js?v=40';
-import { getGlobalTune } from './tuning.js?v=104';
-import { updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=147';
+import { bindKnob } from './knobs.js?v=186';
+import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=52';
+import { forceNoteOff } from './voice.js?v=191';
+import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=191';
+import { getNumber, set, subscribe } from './params.js?v=43';
+import { getGlobalTune } from './tuning.js?v=107';
+import { updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=150';
 import {
     getLiveStep,
     chordFromCellNotes,
     clampChord,
     paintStepChordMarker,
-} from './pattern-bank.js?v=46';
+} from './pattern-bank.js?v=50';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8

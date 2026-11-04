@@ -1,22 +1,24 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
 import { state } from './state.js?v=120';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=183';
-import { ensurePlaitsWorklet } from './osc-source.js?v=151';
-import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=43';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=186';
+import { ensurePlaitsWorklet } from './osc-source.js?v=155';
+import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
 import {
     forcePolyAllOff,
     ensureMultitudesPolyReady,
     syncMultitudesPolyLocks,
     bumpSeqEngine,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=188';
-import { syncChordMemUI } from './chord-memory.js?v=49';
-import { getParam } from './param-catalog.js?v=6';
-import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=40';
+} from './poly-voice.js?v=191';
+import { syncChordMemUI } from './chord-memory.js?v=52';
+import { getParam } from './param-catalog.js?v=9';
+import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=43';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */
-const MULTITUDES_DEFAULT_OSC_VOL = 0.1;
+// Same knob law as Main Stage (four oscillators at 0.25 sum to 1). The mode's
+// level against Main Stage comes from POLY_MODE_TRIM_DB in poly-voice.js.
+const MULTITUDES_DEFAULT_OSC_VOL = 0.25;
 const MULTITUDES_DEFAULT_OSC2_WAVE = 'sine';
 const MULTITUDES_DEFAULT_OSC2_TUNE = -12;
 

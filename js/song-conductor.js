@@ -7,12 +7,12 @@
 // the position where playback last stopped.
 
 import { state } from './state.js?v=120';
-import { getNumber } from './params.js?v=40';
-import { setSongConductor, uiOutputLatency } from './sequencer.js?v=452';
-import { semitonesToNoteName } from './tuning.js?v=104';
-import { scheduleMonoNote } from './voice.js?v=188';
-import { schedulePolySeqVoicing } from './poly-voice.js?v=188';
-import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=97';
+import { getNumber } from './params.js?v=43';
+import { setSongConductor, uiOutputLatency } from './sequencer.js?v=455';
+import { semitonesToNoteName } from './tuning.js?v=107';
+import { scheduleMonoNote } from './voice.js?v=191';
+import { schedulePolySeqVoicing } from './poly-voice.js?v=191';
+import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=100';
 import {
     DRUM_LANE_COUNT,
     PATTERN_COUNT,
@@ -24,7 +24,7 @@ import {
     selectBerlinSlot,
     selectSlot,
     setDrumSlot,
-} from './pattern-bank.js?v=46';
+} from './pattern-bank.js?v=50';
 import {
     BAR_TICKS,
     PPQ,

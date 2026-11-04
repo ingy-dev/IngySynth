@@ -7,7 +7,7 @@ import {
     hasSpeechUserBank,
     getSpeechUserBankBytes,
     setSpeechUserBankActive,
-} from './osc-source.js?v=151';
+} from './osc-source.js?v=155';
 import {
     SPEECH_LPC_MAX_SEC,
     SPEECH_LPC_MAX_FRAMES,

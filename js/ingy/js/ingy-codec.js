@@ -593,6 +593,8 @@ export function normalize(raw, warnings = []) {
     if (has.voice) doc.voice = normalizeVoice(c, raw.voice, 'voice');
     if (has.pattern) doc.pattern = normalizePattern(c, raw.pattern, 'pattern');
     if (has.session) doc.session = normalizeSession(c, raw.session, 'session');
+    // SPEC.md "mix": keep the object verbatim (no defaults, no clamps) so unknown keys round-trip.
+    // The router applies that schema when it loads the section. Same path as arrangement.
     if (has.mix) { const m = c.obj(raw, 'mix', 'mix'); if (m) doc.mix = m; }
     if (has.arrangement) { const a = c.obj(raw, 'arrangement', 'arrangement'); if (a) doc.arrangement = a; }
     return doc;

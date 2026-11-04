@@ -1,28 +1,28 @@
 import { state, OSC_COUNT } from './state.js?v=120';
-import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=40';
-import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=85';
+import { get, getNumber, getOscType, getOscVol, getString, set, subscribe, toggle } from './params.js?v=43';
+import { applyStoreToAudio, liveCutoff, setReverbIrRebuilder } from './store-engine.js?v=88';
 import {
     makeDistortionCurve,
     makeBitcrushCurve,
     renderReverbImpulse,
     applyReverbSize,
-} from './audio-engine.js?v=243';
-import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=55';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=108';
-import { clearAccentSweep } from './acid-env.js?v=72';
-import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=452';
-import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=147';
-import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=104';
-import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=161';
-import { applyScaleState } from './keyboard.js?v=273';
-import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=174';
-import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=211';
-import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=183';
-import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=68';
-import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=65';
-import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=43';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=188';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=83';
+} from './audio-engine.js?v=246';
+import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=58';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
+import { clearAccentSweep } from './acid-env.js?v=75';
+import { togglePlay, refreshStepTuneReadouts, previewStepsOnVfd } from './sequencer.js?v=455';
+import { updateNoteVisualizer, drawOscilloscope, drawADSRVisualizer, drawFilterADSRVisualizer } from './visualizers.js?v=150';
+import { calculateSemitoneShift, getQuantizedStepTune, SCALE_BANKS } from './tuning.js?v=107';
+import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutputDropdown, clearMappingHighlight } from './midi.js?v=164';
+import { applyScaleState } from './keyboard.js?v=276';
+import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=177';
+import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=214';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=186';
+import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=71';
+import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=68';
+import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=46';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=191';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=86';
 import {
     ensurePlaitsWorklet,
     createOscSource,
@@ -34,8 +34,8 @@ import {
     applyFm6BankToLive,
     readFm6PatchName,
     fm6PresetFromHarmonics,
-} from './osc-source.js?v=151';
-import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=46';
+} from './osc-source.js?v=155';
+import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=49';
 
 function syncAcidModeUi() {
     syncAcidStripUi();

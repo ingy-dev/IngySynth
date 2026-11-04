@@ -1,44 +1,14 @@
 // Ingy 6 panel (poly / Juno-60): fader chrome + wiring to main synth params.
 
 import { state } from './state.js?v=120';
-import { beginMidiLearn } from './midi-learn.js?v=31';
-import { updateFilterCutoffRange } from './filter-cutoff.js?v=108';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=68';
-import { refreshFilterInputDrive } from './filter-drive.js?v=55';
-import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=131';
-import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=40';
+import { beginMidiLearn } from './midi-learn.js?v=34';
+import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=71';
+import { refreshFilterInputDrive } from './filter-drive.js?v=58';
+import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=134';
+import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=43';
 
 const HPF_HZ = [20, 250, 700, 1400];
-
-/**
- * Juno-60 DCO PWM fader (owner's manual + the panel photo).
- * Left to right the DCO is: LFO (pitch), PWM, the LFO/MANUAL/ENV switch,
- * pulse and saw buttons, SUB OSC, NOISE. This fader sits where that PWM
- * slider sits: immediately left of the waveform buttons.
- *
- * The slider is a linear pot into a comparator on the saw ramp, so duty
- * tracks the cap in a straight line. MANUAL (the pulse-width use): bottom
- * is a 50% square, top is a narrow pulse. A measurement of a working
- * Juno-60 (Andy Harman) puts full travel 0.45 away from square, which is
- * 5% — the same floor as osc-pw. LFO and ENV modes use the same travel as
- * depth around a square; this panel is the manual law, on OSC 1.
- */
-const JUNO_PW_SWING = 0.45;
-
-function junoFaderToDuty(fader0to10, currentDuty) {
-    const t = clamp(Number(fader0to10) || 0, 0, 10) / 10;
-    const span = t * JUNO_PW_SWING;
-    const towardHigh = Number(currentDuty) > 0.5;
-    const duty = towardHigh ? 0.5 + span : 0.5 - span;
-    return Math.round(clamp(duty, 0.05, 0.95) * 100) / 100;
-}
-
-function dutyToJunoFader(duty) {
-    const d = clamp(Number(duty) || 0.5, 0.05, 0.95);
-    const travel = Math.min(JUNO_PW_SWING, Math.abs(d - 0.5));
-    const raw = (travel / JUNO_PW_SWING) * 10;
-    return Number((Math.round(raw * 10) / 10).toFixed(1));
-}
 
 /** @type {WeakMap<Element, true>} */
 const wiredSlots = new WeakMap();
@@ -129,7 +99,6 @@ function wireFaderPointer(slot) {
             highPass: 'highPass',
             noise: 'noiseVol',
             vcaLevel: 'volume',
-            pwm: 'osc-pw-0',
         }[param];
         if (beginMidiLearn(e, mainId, fader)) return;
         if (input.disabled || !state.keyboardPoly) return;
@@ -508,9 +477,6 @@ function applyFaderParam(param, faderValue) {
         case 'noise':
             applyNoiseLevel(v);
             break;
-        case 'pwm':
-            set('osc-pw-0', junoFaderToDuty(v, getNumber('osc-pw-0', 0.5)));
-            break;
         default:
             break;
     }
@@ -645,7 +611,6 @@ export function syncIngy6PanelFromMain() {
         const noiseOn = !!state.noiseState;
         const noiseVol = noiseOn ? readMainRange('noiseVol', 0) : 0;
         setFaderValue('noise', linearToFader(noiseVol, 0, 1));
-        setFaderValue('pwm', dutyToJunoFader(getNumber('osc-pw-0', 0.5)));
 
         syncWaveUi();
         syncChorusUi();
@@ -710,7 +675,6 @@ function wirePanelControls() {
     [
         'attack', 'decay', 'sustain', 'release',
         'cutoff', 'resonance', 'filterEnvAmount', 'highPass', 'volume', 'noiseVol',
-        'osc-pw-0',
     ].forEach((id) => {
         document.getElementById(id)?.addEventListener('input', () => {
             if (!state.keyboardPoly || syncingFromMain) return;

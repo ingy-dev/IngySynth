@@ -128,9 +128,6 @@ for (let i = 0; i < 4; i++) {
     PARAMS[`osc-tune-${i}`] = range(-12, 12, i === 1 ? -12 : 0, 1, { name: 'Tune', group });
     PARAMS[`osc-vol-${i}`] = range(0, 1, 0.25, 0.01, { name: 'Volume', group });
     PARAMS[`osc-pan-${i}`] = range(-1, 1, 0, 0.01);
-    // Duty cycle of the square wave. 0.5 is a square. The Ingy-6 PWM fader
-    // maps the Juno-60 manual law onto osc-pw-0 (50% at the bottom, 5% at the top).
-    PARAMS[`osc-pw-${i}`] = range(0.05, 0.95, 0.5, 0.01, { name: 'Pulse Width', group });
     PARAMS[`osc-type-${i}`] = select(OSC_WAVES, 'sawtooth');
     PARAMS[`osc-toggle-${i}`] = button(i < 2);
 }

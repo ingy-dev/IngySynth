@@ -6,7 +6,7 @@
 
 import { state } from './state.js?v=120';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
-import { getNumber, getString, set } from './params.js?v=40';
+import { getNumber, getString, set } from './params.js?v=43';
 import { clampRepeat, nextRepeat, REPEAT_MAX } from './pattern-repeat.js?v=3';
 
 export { clampRepeat, REPEAT_MAX };
@@ -611,6 +611,15 @@ export function getBerlinLane(row, slot = state.berlinSlot) {
 }
 
 let berlinO1Seeded = false;
+
+/**
+ * A loaded document says whether its O1 lanes were already seeded. A seeded
+ * file's O1 lanes are the user's: the first Berlin open must not copy main-stage
+ * patterns over them.
+ */
+export function markBerlinO1Seeded(seeded = true) {
+    berlinO1Seeded = !!seeded;
+}
 
 /**
  * First Berlin open: copy each main-stage pattern onto that slot's O1 lane.

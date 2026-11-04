@@ -6,17 +6,17 @@
 // stack because redo() always returns extra: null.
 
 import { state } from './state.js?v=120';
-import { getNumber, subscribe } from './params.js?v=40';
-import { initAudio } from './audio-engine.js?v=243';
-import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=452';
-import { arrangeStop, cancelArrangeCountIn } from './song-record.js?v=18';
+import { getNumber, subscribe } from './params.js?v=43';
+import { initAudio } from './audio-engine.js?v=246';
+import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=455';
+import { arrangeStop, cancelArrangeCountIn } from './song-record.js?v=21';
 import {
     armArrangementContinue,
     arrangementInsertTick,
     cancelArrangementContinue,
     homeArrangement,
     placeArrangementInsert,
-} from './song-conductor.js?v=20';
+} from './song-conductor.js?v=23';
 import {
     SONG_SLOT,
     patternHash,
@@ -24,8 +24,8 @@ import {
     snapshotSynthSlot,
     writeDrumSlot,
     writeSynthSlot,
-} from './pattern-bank.js?v=46';
-import { snapshotBankAutomation } from './automation.js?v=97';
+} from './pattern-bank.js?v=50';
+import { snapshotBankAutomation } from './automation.js?v=100';
 import {
     BAR_TICKS,
     PPQ,
@@ -49,8 +49,8 @@ import {
     undo,
     updateFromSource,
 } from './song-model.js?v=4';
-import { quantizeToPattern } from './song-quantize.js?v=15';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=20';
+import { quantizeToPattern } from './song-quantize.js?v=18';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=23';
 
 const MIN_PX = 24;
 const MAX_PX = 320;

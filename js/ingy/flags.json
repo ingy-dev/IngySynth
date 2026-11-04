@@ -55,7 +55,7 @@
   },
   "notSaved": [
     "playback position and playheads", "audio graph", "undo/redo history", "view mode (full vs tabbed), collapsed panels, note in header",
-    "mixer mutes and solos (state.mixer)", "MIDI device selection (selectedMidiInput/Output, sendMidiEnabled)", "computer keyboard on/off and octave",
+    "mixer mutes and solos (state.mixer); the web does not write them. Optional on mix channel mute and solo", "MIDI device selection (selectedMidiInput/Output, sendMidiEnabled)", "computer keyboard on/off and octave",
     "write-mode arms", "keyboard visibility", "berlinDrumLanesHidden (UI only)", "berlinSoloRow"
   ]
 }

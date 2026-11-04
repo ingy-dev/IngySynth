@@ -2,8 +2,8 @@
 // Each OSC becomes N detuned voices; lastStepFreqs[i] stays the shared unbent base.
 
 import { state } from './state.js?v=120';
-import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=40';
-import { analogLogicalWave, createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=151';
+import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=43';
+import { analogLogicalWave, createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=155';
 
 const ALLOWED_VOICES = [3];
 
@@ -75,7 +75,8 @@ export function spawnOscStack(oscIndex, baseFreq, startTime, {
     const spread = getUnisonSpread();
     const wave = getOscType(oscIndex);
     const fullVol = getOscVol(oscIndex);
-    const voiceVol = fullVol / n;
+    // Detuned voices add in power, so the stack keeps one voice's loudness at 1/sqrt(n).
+    const voiceVol = fullVol / Math.sqrt(n);
 
     state.lastStepFreqs[oscIndex] = baseFreq;
 

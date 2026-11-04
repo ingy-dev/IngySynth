@@ -18,7 +18,7 @@
         "osc-engine-2": "digital",
         "osc-model-2": "string",
         "osc-harmonics-2": 0.3,
-        "filterModel": "tb303",
+        "filterModel": "diode",
         "filterDrive": 0.35
       },
       "flags": {

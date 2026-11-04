@@ -1,8 +1,8 @@
 // captureProject / applyDoc and #p= boot (spec/ingy). Library UI is W2.
 
 import { state } from './state.js?v=120';
-import { get, getNumber, getString, set } from './params.js?v=40';
-import { isCatalogKey, isStepKey } from './param-catalog.js?v=6';
+import { get, getNumber, getString, set } from './params.js?v=43';
+import { isCatalogKey, isStepKey } from './param-catalog.js?v=9';
 import { PARAMS, BAREMETAL_PARAMS } from './ingy/js/params-data.js';
 import { decodeLink, normalize, parse, serialize, sectionsFor } from './ingy/js/ingy-codec.js';
 import {
@@ -12,6 +12,7 @@ import {
     ensureBerlinDrumKit,
     flushDomToPattern,
     loadSongSlot,
+    markBerlinO1Seeded,
     requestSlot,
     selectBerlinSlot,
     selectSlot,
@@ -20,14 +21,14 @@ import {
     snapshotSynthSlot,
     writeDrumSlot,
     writeSynthSlot,
-} from './pattern-bank.js?v=46';
-import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=97';
-import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=43';
-import { setPolyMode } from './poly-voice.js?v=188';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=83';
-import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=151';
-import { setBerlinMode } from './berlin.js?v=118';
-import { applyChordMemoryIntervals } from './chord-memory.js?v=43';
+} from './pattern-bank.js?v=50';
+import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=100';
+import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=46';
+import { setPolyMode } from './poly-voice.js?v=191';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=86';
+import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=155';
+import { setBerlinMode } from './berlin.js?v=121';
+import { applyChordMemoryIntervals } from './chord-memory.js?v=46';
 const ALL_PARAMS = { ...PARAMS, ...BAREMETAL_PARAMS };
 const TOP_DOC_KEYS = new Set([
     'format', 'version', 'kind', 'name', 'by',
@@ -316,6 +317,8 @@ function applyPatternSection(pattern, { whilePlaying = false } = {}) {
         if (drumData?.lanes) writeDrumSlot(i, drumData.lanes);
     }
     const berlin = pattern.berlin || {};
+    // Before setBerlinMode: its first open would copy P1-P8 over the loaded O1 lanes.
+    if (berlin.seeded) markBerlinO1Seeded(true);
     if (berlin.enabled !== undefined) setBerlinMode(!!berlin.enabled);
     for (let i = 0; i < BANK_COUNT; i++) {
         const bSlot = berlin.slots?.[i];

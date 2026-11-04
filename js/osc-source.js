@@ -3,8 +3,8 @@
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
 import { state, OSC_COUNT } from './state.js?v=120';
-import { getNumber, getOscType, getString } from './params.js?v=40';
-import { isAnalogDrumEngine } from './pattern-bank.js?v=46';
+import { getNumber, getOscType, getString } from './params.js?v=43';
+import { isAnalogDrumEngine } from './pattern-bank.js?v=50';
 import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=21';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */
@@ -12,39 +12,38 @@ export const OSC4_INDEX = 0;
 export const PLAITS_PROCESSOR = 'plaits-engine-processor';
 
 /**
- * Per-engine output trim vs analog saw (~RMS 0.577).
- * Calibrate via scripts/calibrate-levels.html.
+ * Per-engine output trim: every engine plays at the analog saw's level
+ * (Web Audio sawtooth RMS 0.4863, scripts/calibrate-levels.html).
  *
- * History: blanket WT_OUTPUT_GAIN was 0.52 during the click-war (protect shared
- * high-Q soft-clip). Integrated wavetable AA restores level; these trims target
- * ~1 dB of analog saw while staying under ~1.0 so Master-mode 16ths at max
- * cutoff/resonance do not slam the soft-clip. If soft-clip returns, lower
- * wavetable/fm first (0.70–0.75) before touching attack slews.
+ * Measured with IngySynth Bare Metal tools/measure-web-levels.mjs: median over a
+ * 3x3x3 HARM/TIMBRE/MORPH grid at C3 and C4. Held engines match the saw's RMS
+ * (50 ms to 1 s) and may peak up to 2x. Struck engines (and particle) match over
+ * the first 300 ms but stop at a full-scale peak. Bare Metal uses the same targets.
  */
 export const ENGINE_TRIM = {
-    wavetable: 0.82,
-    fm: 0.68,
-    fm6: 1.0,
-    waveshaper: 0.72,
-    modal: 0.95,
-    string: 0.88,
-    bass_drum: 0.92,
-    snare: 0.85,
-    hihat: 0.7,
-    open_hat: 0.7,
-    va: 0.75,
-    va_vcf: 0.7,
-    additive: 0.85,
-    grain: 0.95,
-    swarm: 0.7,
-    noise: 0.65,
-    particle: 0.7,
-    pd: 0.72,
-    terrain: 0.8,
-    string_machine: 0.75,
-    chiptune: 0.62,
-    chord: 0.7,
-    speech: 0.75,
+    wavetable: 2.381,
+    fm: 0.69,
+    fm6: 1.405,
+    waveshaper: 1.017,
+    modal: 6.493,
+    string: 11.83,
+    bass_drum: 1.21,
+    snare: 1.212,
+    hihat: 1.426,
+    open_hat: 1.426,
+    va: 1.254,
+    va_vcf: 1.351,
+    additive: 1.115,
+    grain: 1.661,
+    swarm: 3.376,
+    noise: 1.544,
+    particle: 2.45,
+    pd: 0.666,
+    terrain: 1.061,
+    string_machine: 3.71,
+    chiptune: 0.489,
+    chord: 2.161,
+    speech: 1.376,
 };
 
 /** Engines that ring after gate-off (trigger/exciter model). */
@@ -1154,34 +1153,6 @@ function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = fal
  * Create a voice source for one OSC slot.
  * Returns an OscillatorNode or a wavetable proxy with frequency/detune/start/stop/connect.
  */
-/** Duty-cycle ends. 0.5 is a square. Matches osc-pw-N and the polyBLEP clamp. */
-export const PW_MIN = 0.05;
-export const PW_MAX = 0.95;
-export const PW_SQUARE = 0.5;
-
-const PULSE_HARMONICS = 64;
-/** @type {WeakMap<BaseAudioContext, Map<number, PeriodicWave>>} */
-const pulseWaveCache = new WeakMap();
-
-export function quantizeDuty(duty) {
-    const n = Number(duty);
-    const d = Number.isFinite(n) ? n : PW_SQUARE;
-    const clamped = Math.min(PW_MAX, Math.max(PW_MIN, d));
-    return Math.round(clamped * 100) / 100;
-}
-
-/**
- * Duty for one analog slot.
- * Acid's square is fixed at 50%. Ingy-6 OSC 2 is the sub (a fixed square);
- * the Juno PWM fader drives OSC 1 only.
- */
-export function dutyForOsc(oscIndex, wave) {
-    if (wave !== 'square') return PW_SQUARE;
-    if (state.acidMode && oscIndex === 0) return PW_SQUARE;
-    if (state.keyboardPoly && !state.keyboardMultitudes && oscIndex === 1) return PW_SQUARE;
-    return quantizeDuty(getNumber(`osc-pw-${oscIndex}`, PW_SQUARE));
-}
-
 /** Wave the voice was shaped as. Empty when a running voice is waiting to respawn. */
 export function analogLogicalWave(osc) {
     if (!osc || osc.isWavetable) return '';
@@ -1189,69 +1160,28 @@ export function analogLogicalWave(osc) {
     return osc._ingyWave || osc.type || '';
 }
 
-function pulsePeriodicWave(ctx, duty) {
-    const q = quantizeDuty(duty);
-    let table = pulseWaveCache.get(ctx);
-    if (!table) {
-        table = new Map();
-        pulseWaveCache.set(ctx, table);
-    }
-    const cached = table.get(q);
-    if (cached) return cached;
-    // Bipolar pulse, +1 for fraction q and -1 after. Coefficients match a
-    // ±1 square at q = 0.5 (b1 = 4/π), so a 50% wave can fall back to type
-    // "square" without a level jump.
-    const real = new Float32Array(PULSE_HARMONICS);
-    const imag = new Float32Array(PULSE_HARMONICS);
-    for (let k = 1; k < PULSE_HARMONICS; k++) {
-        const theta = 2 * Math.PI * k * q;
-        real[k] = (2 / (Math.PI * k)) * Math.sin(theta);
-        imag[k] = (2 / (Math.PI * k)) * (1 - Math.cos(theta));
-    }
-    const wave = ctx.createPeriodicWave(real, imag, { disableNormalization: true });
-    table.set(q, wave);
-    return wave;
-}
-
 /**
- * Shape an analog OscillatorNode. A square at 50% stays type "square".
- * Any other duty becomes a band-limited pulse via setPeriodicWave, which is
- * safe on a voice that is already running. Changing saw/sine/tri on a running
- * voice is left stale so the next spawn picks it up — splicing .type clicks.
+ * Shape an analog OscillatorNode. Pulse width is a Bare Metal feature, so the
+ * web square is always 50%. Changing the wave on a running voice is left stale
+ * so the next spawn picks it up — splicing .type clicks.
  */
-export function applyAnalogOscShape(osc, wave, duty) {
+export function applyAnalogOscShape(osc, wave) {
     if (!osc || osc.isWavetable) return;
     const next = wave || 'sawtooth';
-    const pw = quantizeDuty(next === 'square' ? duty : PW_SQUARE);
-    const narrow = next === 'square' && Math.abs(pw - PW_SQUARE) >= 0.005;
     const first = osc._ingyWave == null;
     const waveChanged = !first && osc._ingyWave !== next;
 
-    if (osc.started && waveChanged && !(osc._ingyWave === 'square' && next === 'square')) {
+    if (osc.started && waveChanged) {
         osc._ingyWaveStale = true;
         osc._ingyWave = next;
-        osc._ingyPw = pw;
         return;
     }
 
     osc._ingyWaveStale = false;
     osc._ingyWave = next;
-    osc._ingyPw = pw;
-
-    if (!narrow) {
-        if (first || !osc.started) {
-            if (osc.type !== next) {
-                try { osc.type = next; } catch (_) { /* ignore */ }
-            }
-        } else if (next === 'square' && osc.type === 'custom') {
-            try { osc.setPeriodicWave(pulsePeriodicWave(osc.context, PW_SQUARE)); } catch (_) { /* ignore */ }
-        }
-        return;
+    if ((first || !osc.started) && osc.type !== next) {
+        try { osc.type = next; } catch (_) { /* ignore */ }
     }
-    if ((first || !osc.started) && osc.type !== 'square' && osc.type !== 'custom') {
-        try { osc.type = 'square'; } catch (_) { /* ignore */ }
-    }
-    try { osc.setPeriodicWave(pulsePeriodicWave(osc.context, pw)); } catch (_) { /* ignore */ }
 }
 
 function bumpAnalogOscCreate(ms) {
@@ -1397,15 +1327,14 @@ export function createOscSource(ctx, {
         }
     }
     const shapedWave = wave || 'sawtooth';
-    const duty = dutyForOsc(oscIndex, shapedWave);
     if (pooled) {
         const pooledOsc = takeAnalogShell(ctx, shapedWave, frequency);
-        applyAnalogOscShape(pooledOsc, shapedWave, duty);
+        applyAnalogOscShape(pooledOsc, shapedWave);
         return pooledOsc;
     }
     const osc = makeIdleAnalogOsc(ctx);
     osc.frequency.value = Math.max(20, frequency || 440);
-    applyAnalogOscShape(osc, shapedWave, duty);
+    applyAnalogOscShape(osc, shapedWave);
     return osc;
 }
 

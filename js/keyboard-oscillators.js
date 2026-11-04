@@ -2,7 +2,7 @@
 // Knobs write osc-tune-N / osc-vol-N; pan writes osc-pan-N.
 
 import { state } from './state.js?v=120';
-import { bindKnob } from './knobs.js?v=183';
+import { bindKnob } from './knobs.js?v=186';
 import {
     elementFor,
     get,
@@ -11,7 +11,7 @@ import {
     subscribe,
     wireSelect,
     wireToggle,
-} from './params.js?v=40';
+} from './params.js?v=43';
 
 const OSC_COUNT = 4;
 
@@ -152,38 +152,6 @@ function wirePhaseReset() {
     syncFns.push(wireToggle(kbBtn, 'phaseResetToggle', { syncLabel: true }));
 }
 
-function formatPulseWidth(n) {
-    const duty = Math.max(0.05, Math.min(0.95, Number(n) || 0.5));
-    return `${Math.round(duty * 100)}%`;
-}
-
-function wirePwSliders() {
-    for (let i = 0; i < OSC_COUNT; i++) {
-        const key = `osc-pw-${i}`;
-        const row = document.querySelector(`.keyboard-osc-pw-row[data-osc="${i}"]`);
-        const slider = row?.querySelector('.kb-osc-pw');
-        const valueEl = row?.querySelector('.kb-osc-pw-value');
-        if (!slider) continue;
-
-        const syncFromStore = () => {
-            const v = get(key);
-            if (v != null && String(slider.value) !== String(v)) slider.value = String(v);
-            if (valueEl) valueEl.textContent = formatPulseWidth(v);
-            const square = getString(`osc-type-${i}`) === 'square';
-            row.classList.toggle('is-idle', !square);
-        };
-        syncFns.push(syncFromStore);
-        syncFromStore();
-
-        slider.addEventListener('input', () => {
-            set(key, parseFloat(slider.value));
-            if (valueEl) valueEl.textContent = formatPulseWidth(get(key));
-        });
-        subscribe(key, syncFromStore);
-        subscribe(`osc-type-${i}`, syncFromStore);
-    }
-}
-
 function wirePanSliders() {
     for (let i = 0; i < OSC_COUNT; i++) {
         const key = `osc-pan-${i}`;
@@ -220,7 +188,6 @@ export function initKeyboardOscillators() {
         );
     });
     wirePanSliders();
-    wirePwSliders();
 
     for (let i = 0; i < OSC_COUNT; i++) {
         wireOsc(i);

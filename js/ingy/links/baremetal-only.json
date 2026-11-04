@@ -1,6 +1,6 @@
 {
-  "url": "https://ingysynth.com/#p=XVLLbtwwDPyVQGd5YXtrFPWtQK5F0Ad6KXLQylxHjSyqEp3CWPjfO7KdBi18IYfD4ZDyTV0W1SsXxkVpdeU0GTnyvAR5AvjswgAoJv5JVgAEMxGAjzFWHPxyl3kGQ6toRCgF1d8QJjPlEglNkVXf1PWqVfYsQH_cVBaKJQqz9xqsOUCyWf-G7Vt4Xh_xoZlydvyffLbG0xdmmG71nn0lX3z2ys5ZeKoadRS-8Th6CEqaCXpQx5pFZCduvgYaE1FxVuv21OlOv9cfTt2jVm74V_K4wufZJGxdCQe6ixTKgSIlx6A3LYxj0gul3XmDmJ2lMvTqzbitYGyRPky9bWZn4etV9V1b42Gcx5D75F7QW5_O3Sv0iQfysCGXc33GaM62ojC6QFULeHCjE-OPwpNJEwdnc6lBZUenIrGxs6RykR2Ov6u6sNr2NZ924N2e4_ewOMRmfEdkiVQoKv_CUQg6iTIHE8rCDdryfHmwYsoOCgM34Dv7Itqt6_oH",
-  "length": 529,
+  "url": "https://ingysynth.com/#p=XVLBbp0wEPyVyGfzBCSoKrdKuVZR2yiXKgfH7CNujNe1TSL0xL93FkijVlx2Z2dnZ9dc1NOieuXCuCitzpwmU448L6E8A3xxYQAUE_8iWwAEMxGALzFWHPxylXkGQ6toSqEUVH9BmMyUJSo0RVZ9U9erVtlzAfrzonKhKFGYvddgzQGSzfo3bD_C6_URH5opZ8f_yWdrPH1nhulW79kP8uKzV3bOhaeqUUfhnsfRQ7CkmaAHdawpIjtx8zXQmIjEWa3bU6c7_Ul_PnWPWrnhX8njCt9mk7B1VTjQVaQgB4qUHIPetDCOSa-UducNYnaWZOjZm3FbwViRPkx9bGbnwuez6ru2xsM4jyG3yb2itz5dd-_QVx7Iw8aAgYTRnG1FYXSBqnaDR1eMPwrPJk0cnM1Sg8qOTiKxsXNJcpEdjm9VLay2fc-nHbjZc_weFofYjO9IWSIJReXfOIq4SZQ5mCALN2jL89OdLUZ2UBi4AQ_sRbRb1_UP",
+  "length": 525,
   "tooLong": false,
   "decoded": {
     "name": "App-only sound",
@@ -18,7 +18,7 @@
         "osc-engine-2": "digital",
         "osc-model-2": "string",
         "osc-harmonics-2": 0.3,
-        "filterModel": "tb303",
+        "filterModel": "diode",
         "filterDrive": 0.35
       },
       "flags": {

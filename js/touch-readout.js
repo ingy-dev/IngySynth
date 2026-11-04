@@ -1,4 +1,4 @@
-// Mobile / touch value bubble. Same idea as the VR knob readout: appears on
+// Value bubble (touch and mouse, every view size). Same idea as the VR knob readout: appears on
 // grab, sits above the control (so a finger never covers the number), lingers
 // briefly after release. One document-level listener — knob code already
 // publishes its live value on aria-valuetext or the on-panel readout.
@@ -6,9 +6,8 @@
 // bit depth keep their own units.
 
 import { state } from './state.js?v=120';
-import { formatRangeValue } from './knobs.js?v=183';
+import { formatRangeValue } from './knobs.js?v=186';
 
-const TOUCH_MQ = '(max-width: 768px), (hover: none) and (pointer: coarse)';
 const LINGER_MS = 520;
 const GAP_PX = 10;
 const EDGE_PX = 8;
@@ -206,7 +205,6 @@ function isBlocked(el) {
 function gestureAllowed(e) {
     if (state.midiMappingMode) return false;
     if (e.button != null && e.button !== 0) return false;
-    if (e.pointerType === 'mouse' && !window.matchMedia(TOUCH_MQ).matches) return false;
     return true;
 }
 

@@ -16,7 +16,7 @@
       "osc-model-2": "string",
       "osc-harmonics-2": 0.3,
       "osc-sync-1": true,
-      "filterModel": "tb303",
+      "filterModel": "diode",
       "filterDrive": 0.35,
       "cutoff": 520,
       "resonance": 14

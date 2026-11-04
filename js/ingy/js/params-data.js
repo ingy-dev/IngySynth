@@ -1008,6 +1008,17 @@ export const BAREMETAL_PARAMS = {
     "default": "square",
     "group": "Oscillator 1"
   },
+  "unisonCount": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "3",
+      "5",
+      "7"
+    ],
+    "default": "3",
+    "group": "Unison"
+  },
   "osc-engine-1": {
     "type": "select",
     "section": "voice",
@@ -1209,17 +1220,90 @@ export const BAREMETAL_PARAMS = {
     "default": 0.5,
     "group": "Oscillator 4"
   },
+  "osc-alt-1": {
+    "type": "button",
+    "section": "voice",
+    "default": false,
+    "group": "Oscillator 2"
+  },
+  "osc-alt-2": {
+    "type": "button",
+    "section": "voice",
+    "default": false,
+    "group": "Oscillator 3"
+  },
+  "osc-alt-3": {
+    "type": "button",
+    "section": "voice",
+    "default": false,
+    "group": "Oscillator 4"
+  },
+  "osc-trig-1": {
+    "type": "button",
+    "section": "voice",
+    "default": true,
+    "group": "Oscillator 2"
+  },
+  "osc-trig-2": {
+    "type": "button",
+    "section": "voice",
+    "default": true,
+    "group": "Oscillator 3"
+  },
+  "osc-trig-3": {
+    "type": "button",
+    "section": "voice",
+    "default": true,
+    "group": "Oscillator 4"
+  },
+  "osc-bank-1": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "-1",
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "default": "-1",
+    "group": "Oscillator 2"
+  },
+  "osc-bank-2": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "-1",
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "default": "-1",
+    "group": "Oscillator 3"
+  },
+  "osc-bank-3": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "-1",
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "default": "-1",
+    "group": "Oscillator 4"
+  },
   "filterModel": {
     "type": "select",
     "section": "voice",
     "options": [
-      "moog",
-      "juno60",
-      "juno106",
-      "sh101",
-      "tb303"
+      "ladder",
+      "ota",
+      "diode"
     ],
-    "default": "moog",
+    "default": "ladder",
     "group": "Filter"
   },
   "hpfMode": {
@@ -1301,6 +1385,138 @@ export const BAREMETAL_PARAMS = {
     "step": 0.01,
     "default": 0,
     "group": "LFO 2"
+  },
+  "sequinsToggle": {
+    "type": "button",
+    "section": "voice",
+    "default": false,
+    "group": "Sequins"
+  },
+  "sequinsTime": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsSize": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsShape": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsPitch": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsTimeRandom": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsSizeRandom": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsShapeRandom": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsPitchRandom": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsDensity": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.65,
+    "group": "Sequins"
+  },
+  "sequinsFeedback": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.35,
+    "group": "Sequins"
+  },
+  "sequinsDryWet": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Sequins"
+  },
+  "sequinsReverb": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.2,
+    "group": "Sequins"
+  },
+  "sequinsFreeze": {
+    "type": "button",
+    "section": "voice",
+    "default": false,
+    "group": "Sequins"
+  },
+  "sequinsQuality": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "dirty",
+      "clean",
+      "vintage",
+      "digital"
+    ],
+    "default": "digital",
+    "group": "Sequins"
   },
   "scaleRoot": {
     "type": "range",
@@ -1606,7 +1822,7 @@ export const FLAGS = {
     "audio graph",
     "undo/redo history",
     "view mode (full vs tabbed), collapsed panels, note in header",
-    "mixer mutes and solos (state.mixer)",
+    "mixer mutes and solos (state.mixer); the web does not write them. Optional on mix channel mute and solo",
     "MIDI device selection (selectedMidiInput/Output, sendMidiEnabled)",
     "computer keyboard on/off and octave",
     "write-mode arms",

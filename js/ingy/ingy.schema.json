@@ -124,7 +124,14 @@
             "drumKit": { "type": "array", "items": { "$ref": "#/$defs/drumPatch" }, "maxItems": 4 }
           }
         },
-        "speechBank": { "type": "object" }
+        "speechBank": { "type": "object" },
+        "fm6Bank": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "data": { "type": "string", "description": "base64 of the 4096-byte packed DX7 32-voice payload" }
+          }
+        }
       }
     },
     "pattern": {

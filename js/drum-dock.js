@@ -2,7 +2,7 @@
 // which is the current P1–P8 drum slot (state.drumBank[state.drumSlot].lanes).
 
 import { state } from './state.js?v=120';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=186';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=189';
 import { get, set, subscribe, wireToggle } from './params.js?v=44';
 import {
     STEP_SLOTS,

@@ -6,7 +6,7 @@
 // bit depth keep their own units.
 
 import { state } from './state.js?v=120';
-import { formatRangeValue } from './knobs.js?v=186';
+import { formatRangeValue } from './knobs.js?v=189';
 
 const LINGER_MS = 520;
 const GAP_PX = 10;
@@ -91,6 +91,8 @@ const CAPTION_PHRASE = {
     'cut off frequency': 'cutoff frequency',
     'tone n': 'tone / noise',
     'inv spread': 'inversion / spread',
+    'pw sync': 'pulse width / sync',
+    'env shape': 'envelope shape',
 };
 
 const CAPTION_TOKEN = {
@@ -122,6 +124,7 @@ const CAPTION_TOKEN = {
     thresh: 'threshold',
     damp: 'damping',
     inv: 'inversion',
+    bright: 'brightness',
 };
 
 const CAPTION_CONTEXT = /\b(filter|reverb|sidechain|oscillator|master|noise|drum|lfo|compressor|unison|amplifier|delay|chorus|pitch|envelope|ring|high)\b/;
@@ -248,6 +251,9 @@ function controlKey(el) {
     if (key === 'write-fine') return 'stepFine';
     if (key) return key;
     const id = el.id || '';
+    // Digital oscillator FREQUENCY (semitones) and the bipolar envelope attenuverters.
+    if (/^(?:kbOsc4|miOsc4|kbDigOsc\d|miOsc2)FrequencyKnob$/.test(id)) return 'plaitsFrequency';
+    if (/^(?:kbOsc4|mi|kbDigOsc\d|miOsc2)Env(?:Timbre|Pitch|Morph)Knob$/.test(id)) return 'plaitsEnvAmount';
     const osc = id.match(/^(?:kb|mi)Osc(\d)TuneKnob$/);
     if (osc) return `osc-tune-${Number(osc[1]) - 1}`;
     if (id === 'kbTuningMasterTune' || id === 'kbXyTuningMasterTune') return 'masterTune';
@@ -275,6 +281,9 @@ function formatCounted(key, raw) {
     if (key === 'unisonDetune' && finite) return `${Math.round(n)}¢`;
     if (key === 'stepFine') return isLabeled(raw) ? raw : (finite ? `${signed(n, 0)}¢` : raw);
     if (key === 'pan') return raw;
+    if (key === 'plaitsFrequency' && finite) return `${signed(n, 1)} st`;
+    // -1..+1 shown as -100..+100: noon is zero, as on the hardware.
+    if (key === 'plaitsEnvAmount' && finite) return signed(Math.round(n * 100), 0);
     if (key === 'gateLength' && finite) return String(Math.round(n));
     if (
         key === 'masterTune'
@@ -326,6 +335,9 @@ function dialCaption(dial) {
 }
 
 function readDialValue(dial) {
+    // A knob can name its value outright (six-op PRESET shows the patch name).
+    const named = dial.dataset.readoutValue;
+    if (named) return named;
     // Some dials (sidechain time) refresh the on-panel span during the drag
     // and only write aria-valuetext on release.
     const raw = visibleKnobValue(dial.closest('.synth-knob'))

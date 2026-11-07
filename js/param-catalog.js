@@ -54,6 +54,14 @@ export const PARAMS = {
     osc4MorphY: range(0, 1, 0.5, 0.01, { name: 'Morph', group: 'Oscillator 1' }),
     osc4Model: select(OSC4_MODELS, 'wavetable'),
     osc4Bank: select(['-1', '0', '1', '2', '3'], '-1'),
+    // FREQUENCY knob: 8 octaves (the module's default range) around the played note.
+    osc4Frequency: range(-48, 48, 0, 0.1, { name: 'Frequency', group: 'Oscillator 1' }),
+    // Plaits internal decay envelope (voice.cc DecayEnvelope), fired on every note.
+    // The amounts are the FM / TIMBRE / MORPH attenuverters; 0 leaves the engine untouched.
+    osc4EnvDecay: range(0, 1, 0.5, 0.01, { name: 'Env Decay', group: 'Oscillator 1' }),
+    osc4EnvPitch: range(-1, 1, 0, 0.01, { name: 'Env Pitch', group: 'Oscillator 1' }),
+    osc4EnvTimbre: range(-1, 1, 0, 0.01, { name: 'Env Timbre', group: 'Oscillator 1' }),
+    osc4EnvMorph: range(-1, 1, 0, 0.01, { name: 'Env Morph', group: 'Oscillator 1' }),
 
     unisonToggle: button(false),
     unisonVoices: select(['3'], '3'),

@@ -1843,6 +1843,7 @@ export function installExtraEngines(proto) {
                 st.arp.mode = (pattern / 3) | 0;
                 st.arp.range = 1 << (pattern % 3);
                 st.arp.clock(st.chords.numNotes());
+                st.envState = 1;
             }
             const octave = 1 << st.arp.octave;
             const noteF0 = f0 * st.chords.sortedRatio(st.arp.note) * octave;
@@ -1861,6 +1862,24 @@ export function installExtraEngines(proto) {
             }
         }
         st.bass.render(f0 * 0.5 * rootX, st.aux, size);
+        // chiptune_engine.cc envelope: shape from the TIMBRE amount when clocked.
+        const envShape = this.chipEnvShape;
+        if (envShape != null) {
+            const shape = Math.abs(envShape);
+            const perHw = 1 - (2 / 48000) * Math.pow(2, (60 * shape) / 12) * shape;
+            const decay = Math.pow(Math.max(0, perHw), 47872.34 / sampleRate);
+            const auxTarget = xClamp01(envShape * 20);
+            let state = st.envState ?? 0;
+            let auxAmt = st.envAux ?? 0;
+            for (let i = 0; i < size; i++) {
+                auxAmt += 0.01 * (auxTarget - auxAmt);
+                state *= decay;
+                out[i] *= state;
+                st.aux[i] *= 1 + auxAmt * (state - 1);
+            }
+            st.envState = state;
+            st.envAux = auxAmt;
+        }
         xEmit(out, out, st.aux, alt, size);
         xApplyGate(this, out, p.gateArr, p.gate0);
         return true;

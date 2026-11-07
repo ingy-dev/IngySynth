@@ -127,7 +127,7 @@
     }
 
     async function loadWorklet(ctx) {
-      const url = new URL('../js/worklets/plaits-engine-processor.js?v=43', window.location.href);
+      const url = new URL('../js/worklets/plaits-engine-processor.js?v=45', window.location.href);
       await ctx.audioWorklet.addModule(url.href);
     }
 

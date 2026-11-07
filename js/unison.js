@@ -3,7 +3,7 @@
 
 import { state } from './state.js?v=120';
 import { getNumber, getOscType, getOscVol, getOscPan } from './params.js?v=44';
-import { analogLogicalWave, createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=155';
+import { analogLogicalWave, createOscSource, softStartVoiceGain, fadeStopOsc, startAnalogOsc } from './osc-source.js?v=157';
 
 const ALLOWED_VOICES = [3];
 

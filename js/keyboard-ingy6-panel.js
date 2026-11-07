@@ -431,6 +431,8 @@ function stopLiveNoiseSource() {
 function setNoiseEnabled(enabled) {
     const want = !!enabled;
     state.noiseState = want;
+    // Bare Metal's engine reads the param: without it the NOISE fader was silent there.
+    if (!!get('noiseToggle') !== want) set('noiseToggle', want);
     const main = document.getElementById('noiseToggle');
     if (main) {
         const front = main.querySelector('.front');

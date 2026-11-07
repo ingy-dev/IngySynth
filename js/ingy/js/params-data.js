@@ -182,6 +182,51 @@ export const PARAMS = {
     ],
     "default": "-1"
   },
+  "osc4Frequency": {
+    "type": "range",
+    "section": "voice",
+    "min": -48,
+    "max": 48,
+    "step": 0.1,
+    "default": 0,
+    "group": "Oscillator 1"
+  },
+  "osc4EnvDecay": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Oscillator 1"
+  },
+  "osc4EnvPitch": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 1"
+  },
+  "osc4EnvTimbre": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 1"
+  },
+  "osc4EnvMorph": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 1"
+  },
   "unisonToggle": {
     "type": "button",
     "section": "voice",
@@ -1327,6 +1372,141 @@ export const BAREMETAL_PARAMS = {
     "default": 0.5,
     "group": "Oscillator 4"
   },
+  "osc-frequency-1": {
+    "type": "range",
+    "section": "voice",
+    "min": -48,
+    "max": 48,
+    "step": 0.1,
+    "default": 0,
+    "group": "Oscillator 2"
+  },
+  "osc-frequency-2": {
+    "type": "range",
+    "section": "voice",
+    "min": -48,
+    "max": 48,
+    "step": 0.1,
+    "default": 0,
+    "group": "Oscillator 3"
+  },
+  "osc-frequency-3": {
+    "type": "range",
+    "section": "voice",
+    "min": -48,
+    "max": 48,
+    "step": 0.1,
+    "default": 0,
+    "group": "Oscillator 4"
+  },
+  "osc-env-decay-1": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Oscillator 2"
+  },
+  "osc-env-decay-2": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Oscillator 3"
+  },
+  "osc-env-decay-3": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "Oscillator 4"
+  },
+  "osc-env-pitch-1": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 2"
+  },
+  "osc-env-pitch-2": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 3"
+  },
+  "osc-env-pitch-3": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 4"
+  },
+  "osc-env-timbre-1": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 2"
+  },
+  "osc-env-timbre-2": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 3"
+  },
+  "osc-env-timbre-3": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 4"
+  },
+  "osc-env-morph-1": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 2"
+  },
+  "osc-env-morph-2": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 3"
+  },
+  "osc-env-morph-3": {
+    "type": "range",
+    "section": "voice",
+    "min": -1,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "Oscillator 4"
+  },
   "osc-alt-1": {
     "type": "button",
     "section": "voice",
@@ -1433,7 +1613,7 @@ export const BAREMETAL_PARAMS = {
       "2",
       "3"
     ],
-    "default": "1",
+    "default": "0",
     "group": "Filter"
   },
   "hpfCutoff": {
@@ -1461,6 +1641,16 @@ export const BAREMETAL_PARAMS = {
     "max": 1,
     "step": 0.01,
     "default": 0,
+    "group": "Filter"
+  },
+  "filterSlope": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "24",
+      "12"
+    ],
+    "default": "24",
     "group": "Filter"
   },
   "lfo2Waveform": {
@@ -1624,6 +1814,91 @@ export const BAREMETAL_PARAMS = {
     ],
     "default": "digital",
     "group": "Sequins"
+  },
+  "compType": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "web",
+      "3630"
+    ],
+    "default": "web",
+    "group": "Compressor"
+  },
+  "comp3630Threshold": {
+    "type": "range",
+    "section": "voice",
+    "min": -40,
+    "max": 20,
+    "step": 0.5,
+    "default": 0,
+    "group": "Compressor"
+  },
+  "comp3630Ratio": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0.875,
+    "group": "Compressor"
+  },
+  "comp3630Attack": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0.303,
+    "group": "Compressor"
+  },
+  "comp3630Release": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0.339,
+    "group": "Compressor"
+  },
+  "comp3630Output": {
+    "type": "range",
+    "section": "voice",
+    "min": -20,
+    "max": 20,
+    "step": 0.5,
+    "default": 6,
+    "group": "Compressor"
+  },
+  "comp3630Rms": {
+    "type": "button",
+    "section": "voice",
+    "default": false,
+    "group": "Compressor"
+  },
+  "comp3630Soft": {
+    "type": "button",
+    "section": "voice",
+    "default": false,
+    "group": "Compressor"
+  },
+  "comp3630GateThreshold": {
+    "type": "range",
+    "section": "voice",
+    "min": -70,
+    "max": -10,
+    "step": 1,
+    "default": -70,
+    "group": "Compressor"
+  },
+  "comp3630GateRate": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0.5,
+    "group": "Compressor"
   },
   "scaleRoot": {
     "type": "range",

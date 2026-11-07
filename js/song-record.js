@@ -7,7 +7,7 @@ import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v
 import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=23';
 import { applyTake } from './song-model.js?v=4';
 import { setLiveNoteHooks } from './voice.js?v=191';
-import { setPolyLiveHook } from './poly-voice.js?v=199';
+import { setPolyLiveHook } from './poly-voice.js?v=200';
 
 let countGen = 0;
 let countTimer = 0;

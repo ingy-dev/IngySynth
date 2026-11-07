@@ -17,7 +17,7 @@ import {
 } from './visualizers.js?v=150';
 import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=214';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=78';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=79';
 import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=134';
 import {
     analogLogicalWave,
@@ -31,7 +31,7 @@ import {
     PLAITS_POLY_WARM_COUNT,
     hasDarkOscActive,
     wtAttackSecForFilter,
-} from './osc-source.js?v=155';
+} from './osc-source.js?v=157';
 import {
     isPolyChordMemoryOn,
     getPolyChordIntervals,
@@ -235,6 +235,8 @@ function setNoiseEnabled(enabled) {
         return;
     }
     state.noiseState = want;
+    // Bare Metal's engine reads the param, not state.noiseState.
+    if (!!get('noiseToggle') !== want) set('noiseToggle', want);
     syncNoiseUi();
     if (state.keyboardPoly) {
         syncPolyNoiseFromUi();
@@ -474,13 +476,20 @@ function polyNoiseTargetLevel() {
     return Math.max(0, readFloatParam('noiseVol', 0) * POLY_DEFAULT_OSC_VOL * polyModeTrim());
 }
 
+/** Ingy 6 noise is always white, like the Juno-60's one noise transistor, whatever the
+ *  Main Stage noise colour. A pink or brown source left running is swapped for white. */
 function ensurePolyNoiseSource() {
     if (!state.audioContext || !state.noiseBuffers?.white) return;
-    if (state.noiseSource) return;
+    const white = state.noiseBuffers.white;
+    if (state.noiseSource && state.noiseSource.buffer === white) return;
+    if (state.noiseSource) {
+        try { state.noiseSource.stop(); } catch (_) { /* ignore */ }
+        try { state.noiseSource.disconnect(); } catch (_) { /* ignore */ }
+        state.noiseSource = null;
+    }
     try {
-        const type = getString('noiseType', 'white');
         const src = state.audioContext.createBufferSource();
-        src.buffer = state.noiseBuffers[type] || state.noiseBuffers.white;
+        src.buffer = white;
         src.loop = true;
         src.connect(state.noiseGain);
         src.start(0);

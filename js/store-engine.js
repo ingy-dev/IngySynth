@@ -19,7 +19,7 @@ import { resetSidechainDucker } from './sc-time.js?v=49';
 import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=150';
 import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=108';
 import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=177';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=186';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=189';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -29,8 +29,8 @@ import {
     updateLfoHighpassSafety,
 } from './lfo-strip.js?v=71';
 import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=68';
-import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=199';
-import { applyAnalogOscShape, applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=155';
+import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=200';
+import { applyAnalogOscShape, applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=157';
 
 let wired = false;
 let rebuildReverbIr = null;

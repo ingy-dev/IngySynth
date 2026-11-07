@@ -1,5 +1,5 @@
-import { EXTRA_ENGINE_META, installExtraEngines } from './plaits-extra-engines.js?v=6';
-import { parseSpeechBin, installSpeechEngine, applySpeechUserBank } from './plaits-speech-dsp.js?v=8';
+import { EXTRA_ENGINE_META, installExtraEngines } from './plaits-extra-engines.js?v=7';
+import { parseSpeechBin, installSpeechEngine, applySpeechUserBank } from './plaits-speech-dsp.js?v=9';
 
 // Copyright 2016 Emilie Gillet / Mutable Instruments - Plaits DSP (MIT).
 // Ported to JavaScript AudioWorklet for IngySynth OSC4 digital engines.
@@ -48,6 +48,17 @@ const ENGINE_META = {
     hihat: { triggered: true, tailSec: 2 },
     ...EXTRA_ENGINE_META,
 };
+
+/** Plaits block timing for the internal decay envelope (dsp.h kBlockSize, kCorrectedSampleRate). */
+const PLAITS_BLOCK = 12;
+const PLAITS_RATE = 47872.34;
+/** voice.cc clamps the modulated note to MIDI 120. */
+const ENV_MAX_HZ = 8372.02;
+
+/** plaits/dsp/voice.h ApplyModulations: attenuverter curve with a small deadzone. */
+function attenuverterCurve(amount) {
+    return amount * Math.max(Math.abs(amount) - 0.05, 0.05) * 1.05;
+}
 
 function gateSlewCoeff(sec) {
     return 1 - Math.exp(-1 / (sampleRate * Math.max(0.001, sec)));
@@ -1167,6 +1178,21 @@ class PlaitsEngineProcessor extends AudioWorkletProcessor {
         this.prevGate = 0;
         this.gateSmooth = 0;
 
+        // Internal decay envelope (plaits/dsp/voice.cc DecayEnvelope). Fires on every
+        // note-on (gate rising edge); the amounts are the FM / TIMBRE / MORPH attenuverters.
+        this.intEnv = { decay: 0.5, pitch: 0, timbre: 0, morph: 0, freqSemis: 0 };
+        this.envValue = 0;
+        this.envPrevGate = 0;
+        this.envParams = null;
+        this.envDetune = new Float32Array(128);
+        this.envMorphX = new Float32Array(1);
+        this.envMorphY = new Float32Array(1);
+        /** Speech word-mode prosody / speed (speech_engine set_prosody_amount / set_speed). */
+        this.intEnvProsody = 0;
+        this.intEnvSpeed = 0;
+        /** Chiptune's own envelope shape, or null for none (ChiptuneEngine::NO_ENVELOPE). */
+        this.chipEnvShape = null;
+
         // FM (2-op)
         this.carrierPhase = 0;
         this.modulatorPhase = 0;
@@ -1267,6 +1293,19 @@ class PlaitsEngineProcessor extends AudioWorkletProcessor {
             if (typeof msg.alt === 'boolean') this.alt = msg.alt;
             if (typeof msg.trigPatched === 'boolean') this.trigPatched = msg.trigPatched;
             if (typeof msg.openHat === 'boolean') this.openHat = msg.openHat;
+            if (msg.intEnv && typeof msg.intEnv === 'object') {
+                const e = msg.intEnv;
+                const amt = (v) => (Number.isFinite(Number(v)) ? Math.max(-1, Math.min(1, Number(v))) : 0);
+                const d = Number(e.decay);
+                this.intEnv = {
+                    decay: Number.isFinite(d) ? Math.max(0, Math.min(1, d)) : 0.5,
+                    pitch: amt(e.pitch),
+                    timbre: amt(e.timbre),
+                    morph: amt(e.morph),
+                    freqSemis: Number.isFinite(Number(e.freqSemis))
+                        ? Math.max(-48, Math.min(48, Number(e.freqSemis))) : 0,
+                };
+            }
             if (msg.tables) {
                 const buf = msg.tables instanceof ArrayBuffer
                     ? msg.tables
@@ -2455,9 +2494,91 @@ class PlaitsEngineProcessor extends AudioWorkletProcessor {
         return true;
     }
 
-    process(_inputs, outputs, parameters) {
+    /**
+     * Steps the internal decay envelope over this render block and returns the
+     * parameters the engine should see (the originals when every amount is zero).
+     */
+    applyInternalEnv(parameters, size) {
+        const gate0 = parameters.gate[0] ?? 0;
+        if (this.envPrevGate < 0.0001 && gate0 >= 0.0001) this.envValue = 1;
+        this.envPrevGate = gate0;
+
+        const env = this.intEnv;
+        const blockDecay = (200 * PLAITS_BLOCK) / 48000 * Math.pow(2, (-96 * env.decay) / 12);
+        const perSample = Math.exp(
+            Math.log(Math.max(1e-9, 1 - blockDecay * 2)) * PLAITS_RATE / (PLAITS_BLOCK * sampleRate),
+        );
+        const start = this.envValue;
+        this.envValue = start * Math.pow(perSample, size);
+
+        const trigPatched = ((parameters.trigPatched && parameters.trigPatched[0]) ??
+            (this.trigPatched !== false ? 1 : 0)) >= 0.5;
+        const engine = this.engine;
+        let envAmp = 1;
+        let envAmpTimbre = 1;
+        this.intEnvProsody = 0;
+        this.intEnvSpeed = 0;
+        this.chipEnvShape = null;
+        if (engine === 'speech') {
+            const harmonics = parameters.harmonics[0] ?? 0.5;
+            envAmp = Math.max(0, Math.min(1, 2 - harmonics * 6));
+            if (trigPatched) {
+                this.intEnvProsody = env.pitch;
+                this.intEnvSpeed = env.morph;
+            }
+        } else if (engine === 'chiptune' && trigPatched && env.timbre !== 0) {
+            envAmpTimbre = 0;
+            this.chipEnvShape = env.timbre;
+        }
+        if (env.pitch === 0 && env.timbre === 0 && env.morph === 0 && !env.freqSemis) return parameters;
+
+        let p = this.envParams;
+        if (!p) {
+            p = {};
+            for (const key in parameters) p[key] = parameters[key];
+            this.envParams = p;
+        } else {
+            for (const key in parameters) p[key] = parameters[key];
+        }
+
+        const timbreAmt = attenuverterCurve(env.timbre) * envAmpTimbre;
+        const morphAmt = attenuverterCurve(env.morph) * envAmp;
+        const pitchAmt = attenuverterCurve(env.pitch) * envAmp;
+        if (timbreAmt !== 0) {
+            const x = (parameters.morphX[0] ?? 0.5) + timbreAmt * start;
+            this.envMorphX[0] = Math.max(0, Math.min(1, x));
+            p.morphX = this.envMorphX;
+        }
+        if (morphAmt !== 0) {
+            const y = (parameters.morphY[0] ?? 0.5) + morphAmt * start;
+            this.envMorphY[0] = Math.max(0, Math.min(1, y));
+            p.morphY = this.envMorphY;
+        }
+        const offsetCents = (env.freqSemis || 0) * 100;
+        if (pitchAmt !== 0 || offsetCents !== 0) {
+            const freq = parameters.frequency;
+            const det = parameters.detune;
+            const out = this.envDetune.length === size ? this.envDetune : (this.envDetune = new Float32Array(size));
+            let e = start;
+            for (let i = 0; i < size; i++) {
+                const f = freq.length > 1 ? freq[i] : freq[0];
+                const d = det.length > 1 ? det[i] : (det[0] ?? 0);
+                let cents = d + offsetCents + pitchAmt * e * e * 4800;
+                const baseHz = Math.max(1, f * Math.pow(2, d / 1200));
+                const maxCents = d + 1200 * Math.log2(ENV_MAX_HZ / baseHz);
+                if (cents > maxCents) cents = Math.max(d, maxCents);
+                out[i] = cents;
+                e *= perSample;
+            }
+            p.detune = out;
+        }
+        return p;
+    }
+
+    process(_inputs, outputs, rawParameters) {
         const out = outputs[0]?.[0];
         if (!out) return true;
+        const parameters = this.applyInternalEnv(rawParameters, out.length);
 
         const engine = this.engine;
         const meta = ENGINE_META[engine] || ENGINE_META.wavetable;

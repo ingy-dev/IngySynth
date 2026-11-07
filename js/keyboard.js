@@ -53,7 +53,7 @@ import {
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=86';
+} from './keyboard-multitudes-panel.js?v=89';
 import {
     togglePolyMode,
     togglePolyUnison,
@@ -66,7 +66,7 @@ import {
     hasPolyVoices,
     initPolyVoice,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=199';
+} from './poly-voice.js?v=200';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];

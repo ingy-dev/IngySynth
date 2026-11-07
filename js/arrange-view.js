@@ -50,7 +50,7 @@ import {
     updateFromSource,
 } from './song-model.js?v=4';
 import { quantizeToPattern } from './song-quantize.js?v=18';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=23';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=24';
 
 const MIN_PX = 24;
 const MAX_PX = 320;
@@ -1489,6 +1489,18 @@ function typingTarget(target) {
 }
 
 document.addEventListener('keydown', onArrangeSpace, true);
+document.addEventListener('keydown', onViewTab, true);
+
+// Tab flips between the perform and arrange pages. Shift+Tab and text fields
+// keep normal focus behaviour.
+function onViewTab(event) {
+    if (event.key !== 'Tab' || event.repeat || event.defaultPrevented) return;
+    if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (typingTarget(event.target)) return;
+    if (!root) return;
+    event.preventDefault();
+    setArrangeView(!shown());
+}
 
 function onArrangeSpace(event) {
     if (!shown() || event.code !== 'Space' || event.repeat) return;

@@ -1808,6 +1808,115 @@ html {
         font-size: 7px;
     }
 
+    /* Digital oscillator controls laid out like the module: FREQUENCY and HARMONICS,
+     * TIMBRE and MORPH, then the TIMBRE / FM / MORPH attenuverters (FM centred and
+     * a little higher). Shared by the mainstage panels and the Multitudes module. */
+    .plaits-grid {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        grid-template-areas:
+            "freq . harm"
+            "timbre . morph"
+            "tt fm mt";
+        justify-items: center;
+        align-items: end;
+        row-gap: 10px;
+        column-gap: 4px;
+        width: 100%;
+        margin: 0 0 8px;
+    }
+    .mi-knob-row.plaits-grid {
+        display: grid;
+        flex-wrap: nowrap;
+    }
+    .pg-freq { grid-area: freq; }
+    .pg-harm { grid-area: harm; }
+    .pg-timbre { grid-area: timbre; }
+    .pg-morph { grid-area: morph; }
+    .pg-tt { grid-area: tt; margin-top: 10px; }
+    .pg-fm { grid-area: fm; margin-bottom: 10px; }
+    .pg-mt { grid-area: mt; margin-top: 10px; }
+    .plaits-grid .synth-knob-label {
+        font-size: 6px;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+    }
+    .osc1-group .plaits-grid .keyboard-osc-knob .synth-knob-label,
+    .osc1-group .plaits-grid .keyboard-osc-knob .synth-knob-value {
+        color: #aaa;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-tone-knob--lg { --mi-knob-size: 52px; }
+    .plaits-grid .keyboard-osc-knob.osc4-tone-knob--lg .synth-knob-dial-wrap {
+        width: 52px;
+        height: 52px;
+        flex: 0 0 52px;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-tone-knob--lg .synth-knob-dial:not(.mi-skirted) {
+        width: 48px;
+        height: 48px;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-tone-knob--lg .synth-knob-indicator {
+        transform-origin: 50% 20px;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-tone-knob--md { --mi-knob-size: 40px; }
+    .plaits-grid .keyboard-osc-knob.osc4-tone-knob--md .synth-knob-dial-wrap {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-tone-knob--md .synth-knob-dial:not(.mi-skirted) {
+        width: 36px;
+        height: 36px;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-tone-knob--md .synth-knob-indicator {
+        transform-origin: 50% 14px;
+    }
+    .plaits-grid .osc4-env-knob .synth-knob-value {
+        font-size: 6px;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-env-knob .synth-knob-dial-wrap {
+        width: 32px;
+        height: 32px;
+        flex: 0 0 32px;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-env-knob .synth-knob-dial {
+        width: 28px;
+        height: 28px;
+    }
+    .plaits-grid .keyboard-osc-knob.osc4-env-knob .synth-knob-indicator {
+        height: 7px;
+        top: 4px;
+        transform-origin: 50% 10px;
+    }
+    @media (max-width: 768px) {
+        .plaits-grid .keyboard-osc-knob.osc4-tone-knob--lg { --mi-knob-size: 40px; }
+        .plaits-grid .keyboard-osc-knob.osc4-tone-knob--lg .synth-knob-dial-wrap {
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+        }
+        .plaits-grid .keyboard-osc-knob.osc4-tone-knob--lg .synth-knob-dial:not(.mi-skirted) {
+            width: 36px;
+            height: 36px;
+        }
+        .plaits-grid .keyboard-osc-knob.osc4-tone-knob--lg .synth-knob-indicator {
+            transform-origin: 50% 14px;
+        }
+        .plaits-grid .keyboard-osc-knob.osc4-tone-knob--md { --mi-knob-size: 32px; }
+        .plaits-grid .keyboard-osc-knob.osc4-tone-knob--md .synth-knob-dial-wrap {
+            width: 32px;
+            height: 32px;
+            flex: 0 0 32px;
+        }
+        .plaits-grid .keyboard-osc-knob.osc4-tone-knob--md .synth-knob-dial:not(.mi-skirted) {
+            width: 28px;
+            height: 28px;
+        }
+        .plaits-grid .keyboard-osc-knob.osc4-tone-knob--md .synth-knob-indicator {
+            transform-origin: 50% 10px;
+        }
+    }
+
     /* Unison Group Start */
     fieldset.control-group.unison-group {
         border: 2px solid #555;
@@ -11575,6 +11684,18 @@ body.multitudes-mode {
     border-radius: 3px;
     box-sizing: border-box;
 }
+/* Strips the current synth doesn't use: Acid plays OSC 1 only (no noise);
+   Ingy 6 and Multitudes play OSC 1–2. */
+body.acid-osc-locked .mixer-strip[data-strip="osc"]:not([data-index="0"]),
+body.acid-osc-locked .mixer-strip[data-strip="noise"],
+body.poly-mode .mixer-strip[data-strip="osc"][data-index="2"],
+body.poly-mode .mixer-strip[data-strip="osc"][data-index="3"],
+body.multitudes-mode .mixer-strip[data-strip="osc"][data-index="2"],
+body.multitudes-mode .mixer-strip[data-strip="osc"][data-index="3"] {
+    opacity: 0.3;
+    filter: grayscale(1);
+    pointer-events: none;
+}
 .mixer-strip-master {
     flex: 1 0 68px;
     min-width: 68px;
@@ -13617,4 +13738,48 @@ body.is-arrange-roll #arrangeView {
         padding: 0 5px;
         font-size: 8px;
     }
+}
+
+/* Trimmer-to-knob connectors (mi-knob-links.js): dotted, like the printed
+ * lines on the hardware, dim at rest and lit with the trimmer. */
+.mi-link-scope {
+    position: relative;
+}
+.mi-links {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 0;
+}
+.mi-link {
+    fill: none;
+    stroke: color-mix(in srgb, var(--mi-cap, #00aa00) 55%, transparent);
+    stroke-width: 1.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 0.01 3.5;
+}
+.mi-link.is-hot {
+    stroke: var(--mi-cap, #00ff00);
+}
+.mi-knob.is-link-hot .mi-knob-dial {
+    --mi-knob-face: var(--mi-cap);
+}
+.synth-knob.is-link-hot .synth-knob-dial {
+    box-shadow: 0 0 7px color-mix(in srgb, var(--mi-cap, #00ff00) 50%, transparent);
+}
+.plaits-grid {
+    --mi-cap: #00ff00;
+}
+/* Knobs and attenuverters the current model or patch does not use (plaits-panel.js). */
+.mi-knob.is-model-inactive,
+.osc4-env-knob.is-model-inactive {
+    opacity: 0.35;
+    filter: grayscale(0.35);
+    pointer-events: none;
+}
+.mi-link.is-inactive {
+    opacity: 0.3;
 }

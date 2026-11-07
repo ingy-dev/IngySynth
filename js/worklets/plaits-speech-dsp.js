@@ -1149,14 +1149,15 @@ export function installSpeechEngine(proto) {
       } else {
         const wordBank = st.quantizer.process((group - 2) * 0.275) - 1; // -1..4
         const replayProsody = wordBank >= 0 && trigPatched;
-        // prosody/speed = 0; gain always 1 (accent unused without CV knobs)
+        // Prosody / speed come from the note envelope's PITCH / MORPH amounts
+        // (voice.cc, TRIG patched); gain always 1 (accent unused without CV knobs).
         st.lpcController.render(
           freeRunning,
           rising,
           wordBank,
           f0,
-          0,
-          0,
+          this.intEnvProsody || 0,
+          this.intEnvSpeed || 0,
           morph,
           timbre,
           replayProsody ? 1 : 1,

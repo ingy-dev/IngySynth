@@ -5,7 +5,7 @@ import { state } from './state.js?v=120';
 import { beginMidiLearn } from './midi-learn.js?v=35';
 import { midiPitchBendValue } from './tuning.js?v=108';
 import { voiceTargetFreq } from './unison.js?v=214';
-import { applyPolyPitchBend, hasPolyVoices } from './poly-voice.js?v=199';
+import { applyPolyPitchBend, hasPolyVoices } from './poly-voice.js?v=200';
 
 const BEND_RAMP = 0.01;
 

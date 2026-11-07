@@ -11,7 +11,7 @@ import { getNumber } from './params.js?v=44';
 import { setSongConductor, uiOutputLatency } from './sequencer.js?v=455';
 import { semitonesToNoteName } from './tuning.js?v=108';
 import { scheduleMonoNote } from './voice.js?v=191';
-import { schedulePolySeqVoicing } from './poly-voice.js?v=199';
+import { schedulePolySeqVoicing } from './poly-voice.js?v=200';
 import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=101';
 import {
     DRUM_LANE_COUNT,

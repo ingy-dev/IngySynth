@@ -7,7 +7,7 @@ import {
     normToValue,
     KNOB_TRAVEL,
 } from './vr-knob.js?v=13';
-import { getParam } from '../js/param-catalog.js?v=4';
+import { getParam } from '../js/param-catalog.js?v=6';
 import { createKnobReadout } from './knob-readout.js?v=3';
 import { FINGER_TIPS } from './wire-hand.js?v=1';
 import {

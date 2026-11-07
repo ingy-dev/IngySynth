@@ -650,7 +650,7 @@ export function ensurePlaitsWorklet(ctx = state.audioContext) {
     }
 
     state.plaitsWorkletCtx = ctx;
-    const url = jsAsset('worklets/plaits-engine-processor.js?v=43');
+    const url = jsAsset('worklets/plaits-engine-processor.js?v=45');
     state.plaitsWorkletPromise = Promise.all([
         ctx.audioWorklet.addModule(url),
         loadPlaitsTables(),
@@ -814,6 +814,7 @@ function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = fal
     let trigPatched;
     let velocity;
     let bank;
+    let intEnv = NO_INT_ENV;
     if (patchOverride) {
         model = patchOverride.model || 'hihat';
         openHat = model === 'open_hat';
@@ -839,6 +840,7 @@ function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = fal
         alt = !!state.osc4Alt;
         trigPatched = state.osc4TrigPatched !== false;
         velocity = Number.isFinite(state.lastVelocity) ? state.lastVelocity : 0.8;
+        intEnv = readOsc4IntEnv();
     }
     const triggered = isTriggeredEngine(model);
     const trim = engineTrim(model);
@@ -892,6 +894,7 @@ function createWavetableProxy(ctx, frequency, patchOverride = null, { drum = fal
             alt,
             trigPatched,
             openHat,
+            intEnv,
         });
     } catch (_) { /* ignore */ }
 
@@ -1407,10 +1410,40 @@ export function routeBerlinDrumPanners() {
     });
 }
 
+/** OSC 1 note envelope (osc4Env*): decay plus PITCH / TIMBRE / MORPH amounts. */
+export function readOsc4IntEnv() {
+    return {
+        decay: getNumber('osc4EnvDecay', 0.5),
+        pitch: getNumber('osc4EnvPitch', 0),
+        timbre: getNumber('osc4EnvTimbre', 0),
+        morph: getNumber('osc4EnvMorph', 0),
+        freqSemis: getNumber('osc4Frequency', 0),
+    };
+}
+
+const NO_INT_ENV = Object.freeze({ decay: 0.5, pitch: 0, timbre: 0, morph: 0, freqSemis: 0 });
+
 /** Optional live-morph hook for poly/other voice pools (avoids circular imports). */
 let osc4MorphLiveHook = null;
 export function setOsc4MorphLiveHook(fn) {
     osc4MorphLiveHook = typeof fn === 'function' ? fn : null;
+}
+
+/** Push the OSC 1 note envelope settings onto all live digital voices. */
+export function applyOsc4EnvToLive() {
+    const intEnv = readOsc4IntEnv();
+    const touch = (osc) => {
+        if (!osc?.isWavetable || !osc._worklet || osc.isBerlinDrum) return;
+        try { osc._worklet.port.postMessage({ intEnv }); } catch (_) { /* ignore */ }
+    };
+    if (Array.isArray(state.activeOscillators)) state.activeOscillators.forEach(touch);
+    if (state.oscillators?.[OSC4_INDEX]) touch(state.oscillators[OSC4_INDEX]);
+    if (Array.isArray(state.berlinOscVoices)) {
+        state.berlinOscVoices.forEach((voice) => {
+            voice?.oscs?.forEach(({ osc }) => touch(osc));
+        });
+    }
+    try { osc4MorphLiveHook?.(touch); } catch (_) { /* ignore */ }
 }
 
 /** Push ALT / TRIG-patched (Mode) onto all live digital voices. */

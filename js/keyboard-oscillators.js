@@ -2,7 +2,7 @@
 // Knobs write osc-tune-N / osc-vol-N; pan writes osc-pan-N; fine writes osc-fine-N (cents).
 
 import { state } from './state.js?v=120';
-import { bindKnob } from './knobs.js?v=186';
+import { bindKnob } from './knobs.js?v=189';
 import {
     elementFor,
     get,

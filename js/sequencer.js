@@ -19,7 +19,7 @@ import { bentFrequency } from './pitch-bend.js?v=141';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
 import { setKeyboardStepActive } from './keyboard-steps.js?v=177';
 import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=214';
-import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=155';
+import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=157';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=21';
 import { notifyAutomationLoopAnchor } from './automation.js?v=101';
 import { nextCyclePass } from './pattern-repeat.js?v=3';
@@ -69,7 +69,7 @@ import {
     patternRepeat,
     patternStepCount,
 } from './pattern-bank.js?v=50';
-import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=199';
+import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=200';
 import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=52';
 import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=52';
 import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=49';

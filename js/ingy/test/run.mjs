@@ -59,6 +59,7 @@ for (const file of names) {
     check(decoded.ok, `${name}: link did not decode (${decoded.error})`);
     check(isDeepStrictEqual(decoded.doc, codec.linkDocument(result.doc)), `${name}: link decodes to a different document`);
     check(!JSON.stringify(decoded.doc).includes('"speechBank"'), `${name}: speech bank leaked into a link`);
+    check(!JSON.stringify(decoded.doc).includes('"fm6Bank"'), `${name}: six-op bank leaked into a link`);
 
     const linkPath = join(root, 'links', `${name}.json`);
     if (update) {

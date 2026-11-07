@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=511">
+    <link rel="stylesheet" href="styles.css?v=517">
     <script>
         // Phone loads this over a LAN IP. That is not a secure page, so Chrome
         // hides AudioWorklet and the digital engine never arms. localhost is exempt.
@@ -918,33 +918,67 @@
                                         <span class="osc4-model-label">PATCH</span>
                                         <span id="kbOsc4PatchName" class="osc4-patch-name" aria-live="polite">—</span>
                                     </div>
-                                    <div class="keyboard-osc-knob-row osc4-tone-knob-row">
-                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="harmonics">
+                                    <div class="plaits-grid mi-link-scope" role="group" aria-label="Oscillator 1 digital controls">
+                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob osc4-tone-knob--lg pg-freq">
+                                            <span class="synth-knob-label">FREQUENCY</span>
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbOsc4FrequencyKnob" role="slider" aria-label="Frequency" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                            <span class="synth-knob-value" id="kbOsc4FrequencyValue">0.0</span>
+                                        </div>
+                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob osc4-tone-knob--lg pg-harm" data-osc4-tone="harmonics">
                                             <span class="synth-knob-label">HARMONICS</span>
                                             <div class="synth-knob-dial-wrap">
-                                                <div class="synth-knob-dial" id="kbOsc4HarmonicsKnob" role="slider" aria-label="Harmonics" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                <div class="synth-knob-dial" id="kbOsc4HarmonicsKnob" role="slider" aria-label="Harmonics" tabindex="0">
                                                     <span class="synth-knob-indicator"></span>
                                                 </div>
                                             </div>
                                             <span class="synth-knob-value" id="kbOsc4HarmonicsValue">0.50</span>
                                         </div>
-                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="timbre">
+                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob osc4-tone-knob--md pg-timbre" data-osc4-tone="timbre">
                                             <span class="synth-knob-label">TIMBRE</span>
                                             <div class="synth-knob-dial-wrap">
-                                                <div class="synth-knob-dial" id="kbOsc4TimbreKnob" role="slider" aria-label="Timbre" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                <div class="synth-knob-dial" id="kbOsc4TimbreKnob" role="slider" aria-label="Timbre" tabindex="0">
                                                     <span class="synth-knob-indicator"></span>
                                                 </div>
                                             </div>
                                             <span class="synth-knob-value" id="kbOsc4TimbreValue">0.50</span>
                                         </div>
-                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob" data-osc4-tone="morph">
+                                        <div class="synth-knob keyboard-osc-knob osc4-tone-knob osc4-tone-knob--md pg-morph" data-osc4-tone="morph">
                                             <span class="synth-knob-label">MORPH</span>
                                             <div class="synth-knob-dial-wrap">
-                                                <div class="synth-knob-dial" id="kbOsc4MorphKnob" role="slider" aria-label="Morph" aria-valuemin="0" aria-valuemax="1" tabindex="0">
+                                                <div class="synth-knob-dial" id="kbOsc4MorphKnob" role="slider" aria-label="Morph" tabindex="0">
                                                     <span class="synth-knob-indicator"></span>
                                                 </div>
                                             </div>
                                             <span class="synth-knob-value" id="kbOsc4MorphValue">0.50</span>
+                                        </div>
+                                        <div class="synth-knob keyboard-osc-knob osc4-env-knob pg-tt">
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbOsc4EnvTimbreKnob" data-mi-link="kbOsc4TimbreKnob" role="slider" aria-label="OSC 1 envelope to timbre" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                            <span class="synth-knob-value" id="kbOsc4EnvTimbreValue">0</span>
+                                        </div>
+                                        <div class="synth-knob keyboard-osc-knob osc4-env-knob pg-fm">
+                                            <span class="synth-knob-label">FM</span>
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbOsc4EnvPitchKnob" data-mi-link="kbOsc4FrequencyKnob" data-mi-link-route="side" role="slider" aria-label="OSC 1 envelope to pitch (FM)" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                            <span class="synth-knob-value" id="kbOsc4EnvPitchValue">0</span>
+                                        </div>
+                                        <div class="synth-knob keyboard-osc-knob osc4-env-knob pg-mt">
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbOsc4EnvMorphKnob" data-mi-link="kbOsc4MorphKnob" role="slider" aria-label="OSC 1 envelope to morph" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                            <span class="synth-knob-value" id="kbOsc4EnvMorphValue">0</span>
                                         </div>
                                     </div>
                                     <span class="osc4-multi-model-body" aria-hidden="true"></span>
@@ -2151,24 +2185,46 @@
                                             </div>
                                         </div>
                                         <div class="mi-section">
-                                            <div class="mi-knob-row">
-                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                            <div class="mi-knob-row plaits-grid mi-link-scope" role="group" aria-label="OSC 1 digital controls">
+                                                <div class="mi-knob mi-knob--lg mi-knob--white pg-freq">
+                                                    <span class="mi-knob-pill mi-knob-pill--white">FREQUENCY</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miOsc4FrequencyKnob" role="slider" tabindex="0" aria-label="OSC 1 frequency"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--lg mi-knob--teal pg-harm">
                                                     <span class="mi-knob-pill mi-knob-pill--teal" data-mi-tone="harmonics">HARMONICS</span>
                                                     <div class="mi-knob-dial-wrap">
-                                                        <div class="mi-knob-dial" id="miHarmonicsKnob" role="slider" tabindex="0" aria-label="Harmonics"></div>
+                                                        <div class="mi-knob-dial" id="miHarmonicsKnob" role="slider" tabindex="0" aria-label="OSC 1 harmonics"></div>
                                                     </div>
                                                     <span class="osc4-chord-name mi-chord-name" hidden aria-live="polite"></span>
                                                 </div>
-                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                                <div class="mi-knob mi-knob--md mi-knob--teal pg-timbre">
                                                     <span class="mi-knob-pill mi-knob-pill--teal" data-mi-tone="timbre">TIMBRE</span>
                                                     <div class="mi-knob-dial-wrap">
-                                                        <div class="mi-knob-dial" id="miTimbreKnob" role="slider" tabindex="0" aria-label="Timbre"></div>
+                                                        <div class="mi-knob-dial" id="miTimbreKnob" role="slider" tabindex="0" aria-label="OSC 1 timbre"></div>
                                                     </div>
                                                 </div>
-                                                <div class="mi-knob mi-knob--md mi-knob--teal">
+                                                <div class="mi-knob mi-knob--md mi-knob--teal pg-morph">
                                                     <span class="mi-knob-pill mi-knob-pill--teal" data-mi-tone="morph">MORPH</span>
                                                     <div class="mi-knob-dial-wrap">
-                                                        <div class="mi-knob-dial" id="miMorphKnob" role="slider" tabindex="0" aria-label="Morph"></div>
+                                                        <div class="mi-knob-dial" id="miMorphKnob" role="slider" tabindex="0" aria-label="OSC 1 morph"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--teal pg-tt">
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miEnvTimbreKnob" data-mi-link="miTimbreKnob" role="slider" tabindex="0" aria-label="OSC 1 envelope to timbre"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--teal pg-fm">
+                                                    <span class="mi-knob-pill mi-knob-pill--teal">FM</span>
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miEnvPitchKnob" data-mi-link="miOsc4FrequencyKnob" data-mi-link-route="side" role="slider" tabindex="0" aria-label="OSC 1 envelope to pitch (FM)"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="mi-knob mi-knob--sm mi-knob--teal pg-mt">
+                                                    <div class="mi-knob-dial-wrap">
+                                                        <div class="mi-knob-dial" id="miEnvMorphKnob" data-mi-link="miMorphKnob" role="slider" tabindex="0" aria-label="OSC 1 envelope to morph"></div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2176,7 +2232,7 @@
                                         <div class="mi-section">
                                             <div class="mi-knob-row">
                                                 <div class="mi-knob mi-knob--lg mi-knob--white">
-                                                    <span class="mi-knob-pill mi-knob-pill--white">FREQUENCY</span>
+                                                    <span class="mi-knob-pill mi-knob-pill--white">TUNE</span>
                                                     <div class="mi-knob-dial-wrap">
                                                         <div class="mi-knob-dial" id="miOsc1TuneKnob" role="slider" tabindex="0" aria-label="OSC 1 tune"></div>
                                                     </div>
@@ -2876,6 +2932,6 @@
         }
     </style>
 
-    <script type="module" src="js/main.js?v=431"></script>
+    <script type="module" src="js/main.js?v=438"></script>
 </body>
 </html>

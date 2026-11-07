@@ -6,7 +6,7 @@ import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?
 import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=150';
 import { bentFrequency } from './pitch-bend.js?v=141';
 import { firePhaseResetOscStack, spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=214';
-import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=155';
+import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=157';
 import {
     triggerAcidLiveAmp,
     triggerAcidLiveFilter,

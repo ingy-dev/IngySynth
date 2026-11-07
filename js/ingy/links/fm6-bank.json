@@ -1,0 +1,20 @@
+{
+  "url": "https://ingysynth.com/#p=NYyxDsMgEEN_pfKcJWrVgbHKmr3rlQA5JRwV0EpRxL_3GLr52dY74VOOVGHAEo5ySF0xYGNZtHpTtR2FolOcnpcXyabF1-XCSWBGzYmtrif8TqH0kIodJw5caYep-ePaoKpM8b_eHl1jcFVVxzktTq_w8Y7W2g8",
+  "length": 184,
+  "tooLong": false,
+  "decoded": {
+    "name": "DX bank",
+    "voice": {
+      "params": {
+        "osc4Model": "fm6",
+        "osc4Bank": "3"
+      },
+      "flags": {
+        "osc1Digital": true
+      }
+    },
+    "format": "ingysynth",
+    "version": 1,
+    "kind": "patch"
+  }
+}

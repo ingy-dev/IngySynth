@@ -17,25 +17,27 @@ import { onMIDISuccess, onMIDIFailure, setupMappingListeners, populateMidiOutput
 import { applyScaleState } from './keyboard.js?v=276';
 import { updateKeyboardStepVisibility } from './keyboard-steps.js?v=177';
 import { syncUnisonControlsEnabled, spawnOscStack } from './unison.js?v=214';
-import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=186';
+import { formatRangeValue, ensureDisplayStep, chordNameFromHarmonics } from './knobs.js?v=189';
 import { setLfoEnabled, getLfoAmount, getLfoAmountAudio, applyLfoMasterGain, updateLfoSmoothing, updateLfoCutoffSafety, updateLfoHighpassSafety } from './lfo-strip.js?v=71';
 import { initLfoRateControls, applyLfoRate } from './lfo-rate.js?v=68';
 import { syncAcidStripUi, applyAcidOscLock } from './keyboard-acid-strip.js?v=46';
-import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=199';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=86';
+import { setPolyMode, applyPolyOscPan, forEachPolyWavetableOsc, bumpSeqEngine } from './poly-voice.js?v=200';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=89';
 import {
     ensurePlaitsWorklet,
     createOscSource,
     applyOsc4MorphToLive,
     applyOsc4AltModeToLive,
+    applyOsc4EnvToLive,
     applyLiveOscVolume,
     fadeStopOsc,
     OSC4_INDEX,
     applyFm6BankToLive,
     readFm6PatchName,
     fm6PresetFromHarmonics,
-} from './osc-source.js?v=155';
+} from './osc-source.js?v=157';
 import { initSpeechRecUi, syncSpeechRecUi, setSpeechUserBankUiHook } from './speech-rec.js?v=49';
+import { applyPlaitsPanel, plaitsActive, plaitsLabels } from './plaits-panel.js?v=4';
 
 function syncAcidModeUi() {
     syncAcidStripUi();
@@ -222,119 +224,6 @@ export function wireControls() {
         speech: { harmonics: true, timbre: true, morph: true },
     };
 
-    /** Per-model knob captions (Plaits manual meanings). */
-    const OSC4_MODEL_LABELS = {
-        wavetable: {
-            harmonics: 'HARMONICS',
-            timbre: 'TIMBRE',
-            morph: 'MORPH',
-        },
-        fm: {
-            harmonics: 'RATIO',
-            timbre: 'INDEX',
-            morph: 'FEEDBACK',
-        },
-        fm6: {
-            harmonics: 'PRESET',
-            timbre: 'MOD',
-            morph: 'TIME',
-        },
-        waveshaper: {
-            harmonics: 'WAVE',
-            timbre: 'FOLDER',
-            morph: 'ASYMM',
-        },
-        modal: {
-            harmonics: 'INHARM',
-            timbre: 'BRIGHT',
-            morph: 'DECAY',
-        },
-        string: {
-            harmonics: 'INHARM',
-            timbre: 'BRIGHT',
-            morph: 'DECAY',
-        },
-        bass_drum: {
-            harmonics: 'DRIVE',
-            timbre: 'TONE',
-            morph: 'DECAY',
-        },
-        snare: {
-            harmonics: 'TONE/N',
-            timbre: 'TONE',
-            morph: 'DECAY',
-        },
-        hihat: {
-            harmonics: 'METAL',
-            timbre: 'COLOR',
-            morph: 'DECAY',
-        },
-        va: {
-            harmonics: 'DETUNE',
-            timbre: 'SQUARE',
-            morph: 'SAW',
-        },
-        va_vcf: {
-            harmonics: 'RESO',
-            timbre: 'CUTOFF',
-            morph: 'WAVE',
-        },
-        additive: {
-            harmonics: 'BUMPS',
-            timbre: 'INDEX',
-            morph: 'SHAPE',
-        },
-        grain: {
-            harmonics: 'RATIO',
-            timbre: 'FORMANT',
-            morph: 'WINDOW',
-        },
-        swarm: {
-            harmonics: 'SPREAD',
-            timbre: 'DENSITY',
-            morph: 'DURATION',
-        },
-        noise: {
-            harmonics: 'MODE',
-            timbre: 'CLOCK',
-            morph: 'RESO',
-        },
-        particle: {
-            harmonics: 'RANDOM',
-            timbre: 'DENSITY',
-            morph: 'TYPE',
-        },
-        pd: {
-            harmonics: 'FREQ',
-            timbre: 'AMOUNT',
-            morph: 'ASYMM',
-        },
-        terrain: {
-            harmonics: 'TERRAIN',
-            timbre: 'RADIUS',
-            morph: 'OFFSET',
-        },
-        string_machine: {
-            harmonics: 'CHORD',
-            timbre: 'CHORUS',
-            morph: 'WAVE',
-        },
-        chiptune: {
-            harmonics: 'CHORD',
-            timbre: 'ARP',
-            morph: 'PW',
-        },
-        chord: {
-            harmonics: 'CHORD',
-            timbre: 'INV/SPREAD',
-            morph: 'WAVE',
-        },
-        speech: {
-            harmonics: 'MODEL',
-            timbre: 'FORMANT',
-            morph: 'SPEECH',
-        },
-    };
 
     /** Models that must not run under Ingy-6 poly. Chord is allowed in Multitudes. */
     const OSC4_MONO_ONLY_MODELS = new Set(['chord']);
@@ -371,13 +260,13 @@ export function wireControls() {
         });
         document.getElementById('miHarmonicsKnob')?.closest('.mi-knob')
             ?.classList.toggle('has-chord-name', show);
-        if (show) {
-            ['kbOsc4HarmonicsValue', 'osc4HarmonicsKnobValue'].forEach((id) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = name;
-            });
-        }
-        const caption = (OSC4_MODEL_LABELS[model] || OSC4_MODEL_LABELS.wavetable).harmonics;
+        // Leaving a chord model must put the number back, or the value (and its
+        // bubble) keeps showing the last chord.
+        ['kbOsc4HarmonicsValue', 'osc4HarmonicsKnobValue'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = show ? name : formatTone01(h);
+        });
+        const caption = plaitsLabels(model, osc4PlaitsCtx()).harmonics;
         ['kbOsc4HarmonicsKnob', 'osc4HarmonicsKnob', 'miHarmonicsKnob'].forEach((id) => {
             const dial = document.getElementById(id);
             if (!dial) return;
@@ -406,6 +295,26 @@ export function wireControls() {
         bass_drum: { m1: 'DRONE', m2: 'HIT' },
         speech: { m1: 'MORPH', m2: 'TRIG' },
     };
+
+    function osc4PlaitsCtx() {
+        return {
+            trigPatched: state.osc4TrigPatched !== false,
+            harmonics: getNumber('osc4Harmonics', 0.5),
+            timbre: getNumber('osc4MorphX', 0.5),
+            bank: Number(state.osc4Bank),
+            speechUser: !!state.osc4SpeechUserBank,
+        };
+    }
+
+    /** OSC 1 panels (mainstage and Multitudes): names, unused knobs and attenuverter captions. */
+    function syncOsc4PlaitsPanel() {
+        const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
+        const ctx = osc4PlaitsCtx();
+        document.querySelectorAll('.osc4-digital-params .plaits-grid').forEach((grid) => {
+            applyPlaitsPanel(grid, model, ctx);
+        });
+        applyPlaitsPanel(document.getElementById('miHarmonicsKnob')?.closest('.plaits-grid'), model, ctx);
+    }
 
     function syncOsc4AltModeUi() {
         const model = OSC4_MODELS.has(state.osc4Model) ? state.osc4Model : 'wavetable';
@@ -443,6 +352,7 @@ export function wireControls() {
             btn.dataset.osc4Mode = mode2 ? '2' : '1';
         });
         syncSpeechRecUi();
+        syncOsc4PlaitsPanel();
     }
 
     function fillBankSelect(sel, options, value) {
@@ -467,13 +377,33 @@ export function wireControls() {
         });
         const miRow = document.getElementById('miOsc4PatchRow');
         if (miRow) miRow.hidden = !show;
-        if (!show) return;
+        const presetDials = ['kbOsc4HarmonicsKnob', 'osc4HarmonicsKnob', 'miHarmonicsKnob']
+            .map((id) => document.getElementById(id)).filter(Boolean);
+        const clearName = (dial) => {
+            if (dial.dataset.readoutOwner !== 'fm6') return;
+            delete dial.dataset.readoutValue;
+            delete dial.dataset.readoutOwner;
+        };
+        if (!show) {
+            presetDials.forEach(clearName);
+            return;
+        }
         const bank = Math.max(0, Math.min(2, Number(state.osc4Bank) || 0));
         const preset = fm6PresetFromHarmonics(state.osc4Harmonics);
-        const name = readFm6PatchName(bank, preset) || '—';
+        const found = readFm6PatchName(bank, preset);
+        const name = found || '—';
         ['osc4PatchName', 'kbOsc4PatchName', 'miOsc4PatchName'].forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.textContent = name;
+        });
+        // The value bubble shows the patch name while PRESET turns.
+        presetDials.forEach((dial) => {
+            if (!found) {
+                clearName(dial);
+                return;
+            }
+            dial.dataset.readoutValue = found;
+            dial.dataset.readoutOwner = 'fm6';
         });
     }
 
@@ -531,20 +461,10 @@ export function wireControls() {
             fillBankSelect(sel, isFm6 ? FM6_BANK_OPTIONS : WT_BANK_OPTIONS, bank);
         });
 
-        // Grey out inactive knobs + swap captions to the active model's meanings
-        const activeTones = { ...(OSC4_MODEL_TONES[model] || OSC4_MODEL_TONES.wavetable) };
-        // Wavetable: HARMONICS only live while BANK is on Scan (-1)
-        if (model === 'wavetable' && Number(bank) >= 0) {
-            activeTones.harmonics = false;
-        }
-        // Voice USER bank pins LPC words — factory MODEL (HARMONICS) is off
-        if (model === 'speech' && state.osc4SpeechUserBank) {
-            activeTones.harmonics = false;
-        }
-        const labels = { ...(OSC4_MODEL_LABELS[model] || OSC4_MODEL_LABELS.wavetable) };
-        if (model === 'speech' && state.osc4SpeechUserBank) {
-            labels.harmonics = 'USER';
-        }
+        // Names and greyed-out knobs for this model and patch (plaits-panel.js).
+        const plaitsCtx = osc4PlaitsCtx();
+        const activeTones = plaitsActive(model, plaitsCtx);
+        const labels = plaitsLabels(model, plaitsCtx);
         document.querySelectorAll('.osc4-tone-knob[data-osc4-tone]').forEach((knob) => {
             const tone = knob.dataset.osc4Tone;
             const active = !!activeTones[tone];
@@ -559,11 +479,7 @@ export function wireControls() {
                 dial.tabIndex = active ? 0 : -1;
             }
         });
-        // Multitudes MI pills
-        document.querySelectorAll('#multitudesPanel [data-mi-tone]').forEach((pill) => {
-            const tone = pill.dataset.miTone;
-            pill.textContent = labels[tone] || tone.toUpperCase();
-        });
+        syncOsc4PlaitsPanel();
         const harmInput = document.getElementById('osc4Harmonics');
         if (harmInput) harmInput.disabled = !activeTones.harmonics;
         syncFm6PatchNameUi();
@@ -866,17 +782,22 @@ export function wireControls() {
     subscribe('osc4Bank', (v) => setOsc4Bank(v));
     subscribe('osc4Harmonics', () => {
         applyOsc4MorphToLive();
+        syncOsc4PlaitsPanel();
         syncFm6PatchNameUi();
         syncOsc4ChordNameUi();
         syncOsc4ToneValueLabels();
     });
     subscribe('osc4MorphX', () => {
         applyOsc4MorphToLive();
+        syncOsc4PlaitsPanel();
         syncOsc4ToneValueLabels();
     });
     subscribe('osc4MorphY', () => {
         applyOsc4MorphToLive();
         syncOsc4ToneValueLabels();
+    });
+    ['osc4Frequency', 'osc4EnvDecay', 'osc4EnvPitch', 'osc4EnvTimbre', 'osc4EnvMorph'].forEach((key) => {
+        subscribe(key, () => applyOsc4EnvToLive());
     });
 
     initLfoRateControls();

@@ -80,6 +80,7 @@ A known key found in the wrong section is dropped (warning `misplaced:<path>`). 
 | `params` | voice-section keys |
 | `flags` | settings outside the catalog, from `flags.json` `voiceFlags`: `acid`, `ingy6`, `ingy6Unison`, `ingy6VcaGate`, `multitudes`, `osc1Digital`, `osc1Alt`, `osc1TrigPatched`, `speechUserBank`, `filterEnvInvert`, `lfoAmount`, `drumKit` |
 | `speechBank` | optional object, the speech user bank (LPC frames). **File only: never in a link.** Kept verbatim |
+| `fm6Bank` | optional object, the six-op User bank loaded from DX7 SysEx (Bare Metal): `name` (string, the source file name) and `data` (standard base64 of the 4096-byte packed 32-voice payload, the bytes between the bulk-dump header and checksum). Played when `osc4Bank` / `osc-bank-N` is `"3"` on `fm6`. **File only: never in a link.** Kept verbatim |
 
 Naming trap: the web's `osc4*` keys (`osc4Model`, `osc4Harmonics`, ...) and `state.osc4*` flags belong to **OSC 1's
 digital engine**, not oscillator 4. The file names that flag `osc1Digital`. Bare Metal's per-slot digital keys for
@@ -304,7 +305,7 @@ JS and C++ will not always produce identical text, so **documents are compared b
 ## Share links
 
 `https://<site>/#p=<payload>`, payload = base64url **without padding** of deflate-raw (RFC 1951, no zlib header) of
-the UTF-8 compact minimal serialization, with `voice.speechBank` removed.
+the UTF-8 compact minimal serialization, with `voice.speechBank` and `voice.fm6Bank` removed.
 
 - Browser: `CompressionStream('deflate-raw')` (Safari 16.4+), asynchronous. C++: zlib with `windowBits = -15`.
 - Decoding: take the `p=` parameter of the fragment (`#p=...&x=...` allowed); accept padding; any other character is
@@ -317,7 +318,7 @@ the UTF-8 compact minimal serialization, with `voice.speechBank` removed.
 ## Files
 
 - Extension `.ingy`, MIME `application/vnd.ingysynth+json`, UTI `com.ingysynth.ingy` (conforms to `public.json`).
-- Share as `Name.ingy` (name sanitized for file systems). Files carry everything, including `speechBank`.
+- Share as `Name.ingy` (name sanitized for file systems). Files carry everything, including `speechBank` and `fm6Bank`.
 - Files over 1 MB are refused (`too-large`).
 
 ## Errors

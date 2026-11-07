@@ -1,8 +1,8 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
 import { state } from './state.js?v=120';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=186';
-import { ensurePlaitsWorklet } from './osc-source.js?v=155';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=189';
+import { ensurePlaitsWorklet } from './osc-source.js?v=157';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
 import {
     forcePolyAllOff,
@@ -10,9 +10,9 @@ import {
     syncMultitudesPolyLocks,
     bumpSeqEngine,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=199';
+} from './poly-voice.js?v=200';
 import { syncChordMemUI } from './chord-memory.js?v=52';
-import { getParam } from './param-catalog.js?v=10';
+import { getParam } from './param-catalog.js?v=12';
 import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=44';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */
@@ -259,9 +259,13 @@ function wireMultitudesKnobs() {
     const pairs = [
         ['miOsc1TuneKnob', 'osc-tune-0'],
         ['miOsc1VolKnob', 'osc-vol-0'],
+        ['miOsc4FrequencyKnob', 'osc4Frequency'],
         ['miHarmonicsKnob', 'osc4Harmonics'],
         ['miTimbreKnob', 'osc4MorphX'],
         ['miMorphKnob', 'osc4MorphY'],
+        ['miEnvPitchKnob', 'osc4EnvPitch'],
+        ['miEnvTimbreKnob', 'osc4EnvTimbre'],
+        ['miEnvMorphKnob', 'osc4EnvMorph'],
         ['miOsc2TuneKnob', 'osc-tune-1'],
         ['miOsc2VolKnob', 'osc-vol-1'],
         ['miCutoffKnob', 'cutoff'],

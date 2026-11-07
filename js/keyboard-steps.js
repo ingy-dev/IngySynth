@@ -4,7 +4,7 @@
 
 import { state } from './state.js?v=120';
 import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=108';
-import { bindKnob } from './knobs.js?v=186';
+import { bindKnob } from './knobs.js?v=189';
 import { previewNoteVisualizer, soundingNotesForStep } from './visualizers.js?v=150';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import {

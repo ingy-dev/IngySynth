@@ -2,7 +2,7 @@
 
 import { state } from './state.js?v=120';
 import { get, getNumber, getString, set } from './params.js?v=44';
-import { isCatalogKey, isStepKey } from './param-catalog.js?v=10';
+import { isCatalogKey, isStepKey } from './param-catalog.js?v=12';
 import { PARAMS, BAREMETAL_PARAMS } from './ingy/js/params-data.js';
 import { decodeLink, normalize, parse, serialize, sectionsFor } from './ingy/js/ingy-codec.js';
 import {
@@ -24,9 +24,9 @@ import {
 } from './pattern-bank.js?v=50';
 import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=101';
 import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=46';
-import { setPolyMode } from './poly-voice.js?v=199';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=86';
-import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=155';
+import { setPolyMode } from './poly-voice.js?v=200';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=89';
+import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=157';
 import { setBerlinMode } from './berlin.js?v=122';
 import { applyChordMemoryIntervals } from './chord-memory.js?v=46';
 const ALL_PARAMS = { ...PARAMS, ...BAREMETAL_PARAMS };

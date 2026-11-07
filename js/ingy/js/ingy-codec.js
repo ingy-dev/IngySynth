@@ -414,7 +414,7 @@ function normalizeFlags(c, src, path) {
     return out;
 }
 
-const VOICE_KEYS = ['params', 'flags', 'speechBank'];
+const VOICE_KEYS = ['params', 'flags', 'speechBank', 'fm6Bank'];
 
 function normalizeVoice(c, src, path) {
     if (src != null && !isObject(src)) c.warn('invalid', path);
@@ -426,6 +426,8 @@ function normalizeVoice(c, src, path) {
     };
     const speech = c.obj(src, 'speechBank', `${path}.speechBank`);
     if (speech) out.speechBank = speech;
+    const fm6 = c.obj(src, 'fm6Bank', `${path}.fm6Bank`);
+    if (fm6) out.fm6Bank = fm6;
     return out;
 }
 
@@ -779,10 +781,10 @@ async function pipe(bytes, stream, cap) {
     return out;
 }
 
-/** The document a link carries: the speech bank never goes in a link. */
+/** The document a link carries: the speech and six-op user banks never go in a link. */
 export function linkDocument(doc) {
-    if (!doc?.voice?.speechBank) return doc;
-    const { speechBank, ...voice } = doc.voice;
+    if (!doc?.voice?.speechBank && !doc?.voice?.fm6Bank) return doc;
+    const { speechBank, fm6Bank, ...voice } = doc.voice;
     return { ...doc, voice };
 }
 

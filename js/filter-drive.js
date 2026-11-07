@@ -4,7 +4,7 @@
 
 import { state, OSC_COUNT } from './state.js?v=120';
 import { getNumber, getOscVol } from './params.js?v=44';
-import { OSC4_INDEX } from './osc-source.js?v=155';
+import { OSC4_INDEX } from './osc-source.js?v=157';
 
 /** Soft-clip / peak-limit curve (drive↑ = more compression of peaks). */
 export function makeFilterInputCurve(drive = 2.0) {

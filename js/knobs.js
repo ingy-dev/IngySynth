@@ -7,7 +7,7 @@ import { previewStepsOnVfd } from './sequencer.js?v=455';
 import { state } from './state.js?v=120';
 import { beginMidiLearn } from './midi-learn.js?v=35';
 import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=44';
-import { getParam, isCatalogKey } from './param-catalog.js?v=10';
+import { getParam, isCatalogKey } from './param-catalog.js?v=12';
 import { stepTuneBounds } from './step-tune-range.js?v=60';
 
 const ANGLE_MIN = -135;
@@ -220,9 +220,13 @@ const KNOB_BINDINGS = [
     { dialId: 'kbOsc3PitchModKnob', inputId: 'osc3PitchMod' },
     { dialId: 'kbOsc4PitchModKnob', inputId: 'osc4PitchMod' },
     { dialId: 'kbRingFreqModKnob', inputId: 'ringFreqMod' },
+    { dialId: 'kbOsc4FrequencyKnob', inputId: 'osc4Frequency', valueId: 'kbOsc4FrequencyValue' },
     { dialId: 'kbOsc4HarmonicsKnob', inputId: 'osc4Harmonics', valueId: 'kbOsc4HarmonicsValue' },
     { dialId: 'kbOsc4TimbreKnob', inputId: 'osc4MorphX', valueId: 'kbOsc4TimbreValue' },
     { dialId: 'kbOsc4MorphKnob', inputId: 'osc4MorphY', valueId: 'kbOsc4MorphValue' },
+    { dialId: 'kbOsc4EnvPitchKnob', inputId: 'osc4EnvPitch', valueId: 'kbOsc4EnvPitchValue' },
+    { dialId: 'kbOsc4EnvTimbreKnob', inputId: 'osc4EnvTimbre', valueId: 'kbOsc4EnvTimbreValue' },
+    { dialId: 'kbOsc4EnvMorphKnob', inputId: 'osc4EnvMorph', valueId: 'kbOsc4EnvMorphValue' },
 ];
 
 const DIVISION_STEPS = [

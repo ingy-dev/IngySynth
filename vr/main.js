@@ -71,10 +71,10 @@ async function bootEngine() {
     const lfo = await import('../js/lfo-strip.js?v=44');
     const seq = await import('../js/sequencer.js?v=428');
     const params = await import('../js/params.js?v=19');
-    const acid = await import('../js/controls.js?v=340');
+    const acid = await import('../js/controls.js?v=347');
     const berlin = await import('../js/berlin.js?v=94');
     const polyVoice = await import('../js/poly-voice.js?v=164');
-    const mult = await import('../js/keyboard-multitudes-panel.js?v=59');
+    const mult = await import('../js/keyboard-multitudes-panel.js?v=62');
     const st = await import('../js/state.js?v=118');
     const filtEnv = await import('../js/keyboard-filter-env.js?v=107');
     initAudio = ae.initAudio;

@@ -10,7 +10,7 @@ import {
     stepCellNotes,
 } from './pattern-bank.js?v=50';
 import { nextRatch } from './step-ratch.js?v=1';
-import { semitonesToNoteName } from './tuning.js?v=107';
+import { semitonesToNoteName } from './tuning.js?v=108';
 import { refreshArrange, setArrangeRollOpener } from './arrange-view.js?v=25';
 
 const TUNE_LO = -39;

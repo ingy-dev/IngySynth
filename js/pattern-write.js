@@ -6,9 +6,9 @@ import { isTabbedView, selectKeyboardTab } from './view-mode.js?v=13';
 import { bindKnob } from './knobs.js?v=186';
 import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=52';
 import { forceNoteOff } from './voice.js?v=191';
-import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=191';
-import { getNumber, set, subscribe } from './params.js?v=43';
-import { getGlobalTune } from './tuning.js?v=107';
+import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=199';
+import { getNumber, set, subscribe } from './params.js?v=44';
+import { getGlobalTune } from './tuning.js?v=108';
 import { updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=150';
 import {
     getLiveStep,

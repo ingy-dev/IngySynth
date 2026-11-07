@@ -5068,6 +5068,95 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     text-align: center;
     white-space: nowrap;
 }
+/* Per-osc fine tune slider (osc-fine-N, cents) */
+.keyboard-osc-fine-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 100%;
+    min-width: 0;
+}
+.keyboard-osc-fine-label {
+    font-family: 'Michroma', sans-serif;
+    font-size: 7px;
+    line-height: 1;
+    color: #00aa00;
+    letter-spacing: 0.04em;
+}
+.keyboard-section input[type="range"].kb-osc-fine {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    display: block;
+    width: 40px;
+    min-width: 0;
+    max-width: 100%;
+    height: 12px;
+    margin: 1px auto 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+    cursor: pointer;
+    touch-action: none;
+}
+.keyboard-section input[type="range"].kb-osc-fine:focus {
+    outline: none;
+}
+.keyboard-section input[type="range"].kb-osc-fine::-webkit-slider-runnable-track {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 1px;
+    background: #00aa00;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+.keyboard-section input[type="range"].kb-osc-fine::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 8px;
+    height: 6px;
+    margin-top: 2px;
+    border: none;
+    border-radius: 0;
+    background: #00ff00;
+    box-shadow: none;
+    cursor: pointer;
+    clip-path: polygon(50% 0, 0 100%, 100% 100%);
+}
+.keyboard-section input[type="range"].kb-osc-fine::-moz-range-track {
+    height: 1px;
+    background: #00aa00;
+    border: none;
+}
+.keyboard-section input[type="range"].kb-osc-fine::-moz-range-thumb {
+    width: 8px;
+    height: 6px;
+    border: none;
+    border-radius: 0;
+    background: #00ff00;
+    cursor: pointer;
+    clip-path: polygon(50% 0, 0 100%, 100% 100%);
+}
+.keyboard-section .kb-osc-fine-value {
+    display: block;
+    width: 100%;
+    font-family: 'Michroma', sans-serif;
+    font-size: 6px;
+    line-height: 1;
+    color: #00aa00;
+    margin-top: 3px;
+    text-align: center;
+    white-space: nowrap;
+}
+body.acid-osc-locked .keyboard-osc-field[data-osc="0"] .keyboard-osc-fine-row {
+    display: none;
+}
 /* --- Pattern bank bar + Berlin Dream-960 ------------------------------- */
 
 :root {
@@ -8768,6 +8857,13 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     color: #ccffcc;
     font-weight: bold;
 }
+/* Sequencer transpose target: cyan letters, kept while the key is lit. */
+.piano-key.key-transpose .piano-key-label,
+.piano-key.key-transpose.active .piano-key-label,
+.piano-key.key-transpose.latched .piano-key-label {
+    color: #00ffff;
+    font-weight: bold;
+}
 #keyboardVisibilityToggle.off {
     color: #ff0000;
 }
@@ -9160,8 +9256,14 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
         width: 7px;
         height: 5px;
     }
+    .keyboard-section input[type="range"].kb-osc-fine {
+        width: 32px;
+        height: 11px;
+    }
     .keyboard-section .kb-osc-pan-value,
-    .keyboard-osc-pan-label {
+    .keyboard-section .kb-osc-fine-value,
+    .keyboard-osc-pan-label,
+    .keyboard-osc-fine-label {
         font-size: 5px;
     }
     .keyboard-filter-knobs {
@@ -9865,12 +9967,16 @@ body.poly-mode {
 .ingy6-sections {
     display: grid;
     grid-template-columns:
-        minmax(0, 3.1fr)   /* DCO: PWM + waves + SUB + NOISE */
-        minmax(0, 0.85fr)  /* HPF: 1 fader */
-        minmax(0, 2.4fr)   /* VCF: FREQ RES polarity ENV */
-        minmax(0, 1.35fr)  /* VCA: switch + level */
-        minmax(0, 2.5fr)   /* ENV: ADSR */
-        minmax(0, 1.35fr); /* CHORUS: 3 square buttons */
+        /* min-content: a section never squeezes below its controls (they overlapped
+           at ~1100 px); the row scrolls if a window is narrower still. */
+        minmax(min-content, 1.6fr)   /* LFO: RATE DELAY + SYNC */
+        minmax(min-content, 3.4fr)   /* DCO: LFO + waves + SUB + NOISE */
+        minmax(min-content, 0.85fr)  /* HPF: 1 fader */
+        minmax(min-content, 3.1fr)   /* VCF: FREQ RES polarity ENV LFO */
+        minmax(min-content, 1.35fr)  /* VCA: switch + level */
+        minmax(min-content, 2.5fr)   /* ENV: ADSR */
+        minmax(min-content, 1.35fr); /* CHORUS: 3 square buttons */
+    overflow-x: auto;
     align-items: stretch;
     gap: 0;
     width: 100%;
@@ -10214,6 +10320,119 @@ body.poly-mode {
     display: block;
     pointer-events: none;
 }
+/* LFO: RATE and DELAY at their own width so SYNC has room beside them. */
+.ingy6-section--lfo .ingy6-fader-row {
+    flex: 0 0 auto;
+    width: auto;
+}
+.ingy6-section--dco .ingy6-fader[data-param="ingy6DcoLfo"] {
+    flex: 0 0 auto;
+}
+.ingy6-lfo-switch {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-self: center;
+    margin-top: 16px;
+}
+/*
+ * Juno-60 lever switches (PWM source, VCA mode), drawn like the VCF polarity
+ * switch: a dark slot, a green lever, the positions printed to the right with
+ * the selected one lit.
+ */
+#ingy6Panel .ingy6-lever {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 4px;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-top: var(--ingy6-lever-top, 58px); /* centred on the 120px fader track */
+}
+#ingy6Panel .ingy6-lever-well {
+    display: block;
+    position: relative;
+    width: 8px;
+    height: 22px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    background: #030503;
+    box-shadow:
+        inset 0 0 0 0.5px rgba(0, 170, 0, 0.45),
+        inset 0 1px 1px rgba(0, 0, 0, 0.9);
+    cursor: pointer;
+}
+#ingy6Panel .ingy6-lever--3 { --ingy6-lever-top: 52px; }
+#ingy6Panel .ingy6-lever--3 .ingy6-lever-well { height: 34px; }
+#ingy6Panel .ingy6-lever-knob {
+    position: absolute;
+    left: 50%;
+    top: 1px;
+    width: 7px;
+    height: 7px;
+    margin-left: -3.5px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #e8ffe8 0%, #a8e8a8 40%, #6ab86a 100%);
+    box-shadow:
+        0 0 0 0.5px rgba(0, 255, 0, 0.4),
+        0 1px 1px rgba(0, 0, 0, 0.55);
+    transition: top 0.12s ease;
+    pointer-events: none;
+}
+#ingy6Panel .ingy6-lever[data-pos="1"] .ingy6-lever-knob { top: 14px; }
+#ingy6Panel .ingy6-lever--3[data-pos="1"] .ingy6-lever-knob { top: 13.5px; }
+#ingy6Panel .ingy6-lever--3[data-pos="2"] .ingy6-lever-knob { top: 26px; }
+#ingy6Panel .ingy6-lever-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+#ingy6Panel .ingy6-lever-label {
+    font-family: 'Michroma', sans-serif;
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    line-height: 8px;
+    color: #007a00;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-align: left;
+    white-space: nowrap;
+}
+#ingy6Panel .ingy6-lever-label.is-on {
+    color: #00ff00;
+    text-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
+}
+#ingy6Panel .ingy6-lever-label:focus-visible {
+    outline: 1px solid #00ff00;
+    outline-offset: 1px;
+}
+#ingy6Panel .ingy6-lever-label:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+/* Tighter spacing so LFO + DCO LFO + VCF LFO fit the panel (scoped: Berlin and
+   the drum dock reuse .ingy6-switch-btn). */
+#ingy6Panel .ingy6-section { padding: 0 3px; }
+#ingy6Panel .ingy6-section-body { gap: 3px; }
+#ingy6Panel .ingy6-fader-row { gap: 2px; }
+#ingy6Panel .ingy6-fader { column-gap: 2px; grid-template-columns: auto auto 20px; }
+#ingy6Panel .ingy6-fader-ticks { width: 10px; }
+#ingy6Panel .ingy6-fader-slot { width: 20px; }
+#ingy6Panel .ingy6-switch-btn { padding: 6px 4px; min-width: 32px; }
+#ingy6Panel .ingy6-chorus-btn { width: 32px; min-width: 32px; }
+/* Labels sit centred on the fader slot (the silk brackets aim there too); the
+   tighter letter-spacing keeps SUB OSC / NOISE and RATE / DELAY apart. */
+#ingy6Panel .ingy6-fader-label { letter-spacing: 0.02em; justify-self: center; }
+/* Global LFO osc pitch destinations sit out while Ingy 6 plays its own LFO. */
+.keyboard-mod-matrix-knob.is-ingy6-off {
+    opacity: 0.35;
+    pointer-events: none;
+    filter: grayscale(1);
+}
 .ingy6-vca-switch {
     display: flex;
     flex-direction: column;
@@ -10368,7 +10587,8 @@ body.poly-mode {
 /* VCF row: FREQ | RES | (switch+glyphs + ENV under rail) */
 .ingy6-section--vcf .ingy6-fader-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.6fr);
+    grid-template-columns: auto auto auto auto;
+    justify-content: space-evenly;
     align-items: start;
     justify-items: center;
     column-gap: 6px;
@@ -10549,9 +10769,10 @@ body.poly-mode {
         min-width: 0;
         max-width: none;
     }
-    .ingy6-section--dco { min-width: 300px; }
+    .ingy6-section--lfo { min-width: 140px; }
+    .ingy6-section--dco { min-width: 340px; }
     .ingy6-section--hpf { min-width: 88px; }
-    .ingy6-section--vcf { min-width: 248px; }
+    .ingy6-section--vcf { min-width: 310px; }
     .ingy6-section--vca { min-width: 148px; }
     .ingy6-section--env { min-width: 248px; }
     .ingy6-section--chorus { min-width: 140px; }
@@ -10564,7 +10785,7 @@ body.poly-mode {
     .ingy6-section--vcf .ingy6-fader-row {
         width: max-content;
         max-width: none;
-        grid-template-columns: auto auto auto;
+        grid-template-columns: auto auto auto auto;
     }
     .ingy6-fader {
         grid-template-rows: auto 100px;

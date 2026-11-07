@@ -1,5 +1,5 @@
 // Compact oscillator controls in the keyboard Synthesizer panel.
-// Knobs write osc-tune-N / osc-vol-N; pan writes osc-pan-N.
+// Knobs write osc-tune-N / osc-vol-N; pan writes osc-pan-N; fine writes osc-fine-N (cents).
 
 import { state } from './state.js?v=120';
 import { bindKnob } from './knobs.js?v=186';
@@ -11,7 +11,7 @@ import {
     subscribe,
     wireSelect,
     wireToggle,
-} from './params.js?v=43';
+} from './params.js?v=44';
 
 const OSC_COUNT = 4;
 
@@ -175,6 +175,36 @@ function wirePanSliders() {
     }
 }
 
+function formatFineCents(n) {
+    const c = Math.round(Number(n) || 0);
+    return c > 0 ? `+${c}c` : `${c}c`;
+}
+
+// Fine tune per osc, -50..+50 cents. Double-click resets to 0.
+function wireFineSliders() {
+    for (let i = 0; i < OSC_COUNT; i++) {
+        const key = `osc-fine-${i}`;
+        const slider = document.querySelector(`.kb-osc-fine[data-osc="${i}"]`);
+        const valueEl = document.querySelector(`.kb-osc-fine-value[data-osc="${i}"]`);
+        if (!slider) continue;
+
+        const syncFromStore = () => {
+            const v = get(key);
+            if (v != null && String(slider.value) !== String(v)) slider.value = String(v);
+            if (valueEl) valueEl.textContent = formatFineCents(v);
+        };
+        syncFns.push(syncFromStore);
+        syncFromStore();
+
+        slider.addEventListener('input', () => {
+            set(key, parseFloat(slider.value));
+            if (valueEl) valueEl.textContent = formatFineCents(get(key));
+        });
+        slider.addEventListener('dblclick', () => set(key, 0));
+        subscribe(key, syncFromStore);
+    }
+}
+
 export function syncKeyboardOscillatorsFromMain() {
     syncFns.forEach((fn) => fn());
 }
@@ -188,6 +218,7 @@ export function initKeyboardOscillators() {
         );
     });
     wirePanSliders();
+    wireFineSliders();
 
     for (let i = 0; i < OSC_COUNT; i++) {
         wireOsc(i);

@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {"name": "bare-metal-ui", "runtimeExecutable": "/bin/sh", "runtimeArgs": ["-c", "cd /private/tmp/claude-501/-Users-jamesingram--claude-spares-spare-GqsQJ7/d096fa91-6cf7-4f00-b827-ff0874895afa/scratchpad/ui && exec python3 -m http.server ${PORT:-8765}"], "port": 8765},
+    {"name": "web-app", "runtimeExecutable": "/bin/sh", "runtimeArgs": ["-c", "cd /private/tmp/claude-501/-Users-jamesingram--claude-spares-spare-GqsQJ7/d096fa91-6cf7-4f00-b827-ff0874895afa/scratchpad/web && exec python3 -m http.server ${PORT:-8000}"], "port": 8000}
+  ]
+}

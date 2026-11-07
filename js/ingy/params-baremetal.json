@@ -20,6 +20,8 @@
     "subOctave": { "type": "select", "section": "voice", "options": ["-1", "-2"], "default": "-1", "group": "Oscillator 1" },
     "subWave": { "type": "select", "section": "voice", "options": ["square", "pulse25", "saw"], "default": "square", "group": "Oscillator 1" },
     "unisonCount": { "type": "select", "section": "voice", "options": ["3", "5", "7"], "default": "3", "group": "Unison" },
+    "ingy6Waves": { "type": "select", "section": "voice", "options": ["single", "saw+pulse"], "default": "single", "group": "Ingy 6" },
+    "ingy6PwmSource": { "type": "select", "section": "voice", "options": ["manual", "lfo", "env"], "default": "manual", "group": "Ingy 6" },
 
     "osc-engine-1": { "type": "select", "section": "voice", "options": ["analog", "digital"], "default": "analog", "group": "Oscillator 2" },
     "osc-engine-2": { "type": "select", "section": "voice", "options": ["analog", "digital"], "default": "analog", "group": "Oscillator 3" },

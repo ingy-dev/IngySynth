@@ -6,8 +6,8 @@
 // stack because redo() always returns extra: null.
 
 import { state } from './state.js?v=120';
-import { getNumber, subscribe } from './params.js?v=43';
-import { initAudio } from './audio-engine.js?v=246';
+import { getNumber, subscribe } from './params.js?v=44';
+import { initAudio } from './audio-engine.js?v=247';
 import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=455';
 import { arrangeStop, cancelArrangeCountIn } from './song-record.js?v=21';
 import {
@@ -25,7 +25,7 @@ import {
     writeDrumSlot,
     writeSynthSlot,
 } from './pattern-bank.js?v=50';
-import { snapshotBankAutomation } from './automation.js?v=100';
+import { snapshotBankAutomation } from './automation.js?v=101';
 import {
     BAR_TICKS,
     PPQ,

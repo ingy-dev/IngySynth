@@ -1,8 +1,8 @@
 // captureProject / applyDoc and #p= boot (spec/ingy). Library UI is W2.
 
 import { state } from './state.js?v=120';
-import { get, getNumber, getString, set } from './params.js?v=43';
-import { isCatalogKey, isStepKey } from './param-catalog.js?v=9';
+import { get, getNumber, getString, set } from './params.js?v=44';
+import { isCatalogKey, isStepKey } from './param-catalog.js?v=10';
 import { PARAMS, BAREMETAL_PARAMS } from './ingy/js/params-data.js';
 import { decodeLink, normalize, parse, serialize, sectionsFor } from './ingy/js/ingy-codec.js';
 import {
@@ -22,12 +22,12 @@ import {
     writeDrumSlot,
     writeSynthSlot,
 } from './pattern-bank.js?v=50';
-import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=100';
+import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=101';
 import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=46';
-import { setPolyMode } from './poly-voice.js?v=191';
+import { setPolyMode } from './poly-voice.js?v=199';
 import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=86';
 import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=155';
-import { setBerlinMode } from './berlin.js?v=121';
+import { setBerlinMode } from './berlin.js?v=122';
 import { applyChordMemoryIntervals } from './chord-memory.js?v=46';
 const ALL_PARAMS = { ...PARAMS, ...BAREMETAL_PARAMS };
 const TOP_DOC_KEYS = new Set([
@@ -255,6 +255,9 @@ function applySession(session) {
     state.arpRange = session.arpRange | 0 || 1;
     state.keyboardLatch = !!session.latch;
     state.keyboardTranspose = session.transpose | 0;
+    document.querySelectorAll('#chromaticKeyboard .piano-key').forEach((key) => {
+        key.classList.toggle('key-transpose', parseInt(key.dataset.semitone, 10) === state.keyboardTranspose);
+    });
     state.microtuneLock = !!session.microtuneLock;
     state.midiBaseNote = session.midiBaseNote | 0;
     state.midiMappings = JSON.parse(JSON.stringify(session.midiMaps || {}));

@@ -1,7 +1,7 @@
 import { state } from './state.js?v=120';
-import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=107';
+import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=108';
 import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=191';
-import { initAudio } from './audio-engine.js?v=246';
+import { initAudio } from './audio-engine.js?v=247';
 import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=150';
 import {
     refreshStepTuneReadouts,
@@ -39,7 +39,7 @@ import {
     getChordArpSourceNotes,
 } from './held-notes.js?v=13';
 import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=50';
-import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=43';
+import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=44';
 import {
     toggleChordMemoryLearn,
     cancelChordMemoryLearn,
@@ -66,7 +66,7 @@ import {
     hasPolyVoices,
     initPolyVoice,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=191';
+} from './poly-voice.js?v=199';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];
@@ -179,7 +179,16 @@ function notifyKeyboardPitchUi() {
     document.dispatchEvent(new CustomEvent('ingysynth:keyboard-pitch-ui'));
 }
 
+/** Cyan note letters on the key the sequencer is transposed to. */
+function paintTransposeKey() {
+    const t = state.keyboardTranspose || 0;
+    document.querySelectorAll('#chromaticKeyboard .piano-key').forEach((key) => {
+        key.classList.toggle('key-transpose', parseInt(key.dataset.semitone, 10) === t);
+    });
+}
+
 function updateTransposeReadout() {
+    paintTransposeKey();
     const t = state.keyboardTranspose || 0;
     const name = semitonesToNoteName(t).replace(/\d+$/, '');
     const num = t > 0 ? `+${t}` : `${t}`;

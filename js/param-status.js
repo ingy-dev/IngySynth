@@ -2,7 +2,7 @@
 // top-right), phosphor (Berlin Dream-960 destination, bottom-right).
 
 import { state } from './state.js?v=120';
-import { stageButtonHostsForKey } from './midi-learn.js?v=34';
+import { stageButtonHostsForKey } from './midi-learn.js?v=35';
 
 /** @type {(key: string) => boolean} */
 let hasAutomationLaneFn = () => false;

@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=506">
+    <link rel="stylesheet" href="styles.css?v=511">
     <script>
         // Phone loads this over a LAN IP. That is not a secure page, so Chrome
         // hides AudioWorklet and the digital engine never arms. localhost is exempt.
@@ -950,6 +950,13 @@
                                     <span class="osc4-multi-model-body" aria-hidden="true"></span>
                                 </div>
                                 <div class="keyboard-osc-wave" data-osc="0" role="radiogroup" aria-label="Oscillator 1 waveform"></div>
+                                <div class="keyboard-osc-fine-row" data-osc="0">
+                                    <span class="keyboard-osc-fine-label">FINE</span>
+                                    <input type="range" class="kb-osc-fine" data-osc="0"
+                                           min="-50" max="50" value="0" step="1"
+                                           aria-label="Oscillator 1 fine tune">
+                                    <span class="kb-osc-fine-value" data-osc="0">0c</span>
+                                </div>
                                 <div class="keyboard-osc-knob-row">
                                 <div class="synth-knob keyboard-osc-knob">
                                     <span class="synth-knob-label">TUNE</span>
@@ -991,6 +998,13 @@
                                 </div>
                                 <span class="osc4-plaititudes-logo osc-align-spacer" aria-hidden="true"></span>
                                 <div class="keyboard-osc-wave" data-osc="1" role="radiogroup" aria-label="Oscillator 2 waveform"></div>
+                                <div class="keyboard-osc-fine-row" data-osc="1">
+                                    <span class="keyboard-osc-fine-label">FINE</span>
+                                    <input type="range" class="kb-osc-fine" data-osc="1"
+                                           min="-50" max="50" value="0" step="1"
+                                           aria-label="Oscillator 2 fine tune">
+                                    <span class="kb-osc-fine-value" data-osc="1">0c</span>
+                                </div>
                                 <div class="keyboard-osc-knob-row">
                                 <div class="synth-knob keyboard-osc-knob">
                                     <span class="synth-knob-label">TUNE</span>
@@ -1027,6 +1041,13 @@
                                 <legend>OSC 3</legend>
                                 <div class="keyboard-osc-controls">
                                 <div class="keyboard-osc-wave" data-osc="2" role="radiogroup" aria-label="Oscillator 3 waveform"></div>
+                                <div class="keyboard-osc-fine-row" data-osc="2">
+                                    <span class="keyboard-osc-fine-label">FINE</span>
+                                    <input type="range" class="kb-osc-fine" data-osc="2"
+                                           min="-50" max="50" value="0" step="1"
+                                           aria-label="Oscillator 3 fine tune">
+                                    <span class="kb-osc-fine-value" data-osc="2">0c</span>
+                                </div>
                                 <div class="keyboard-osc-knob-row">
                                 <div class="synth-knob keyboard-osc-knob">
                                     <span class="synth-knob-label">TUNE</span>
@@ -1063,6 +1084,13 @@
                                 <legend>OSC 4</legend>
                                 <div class="keyboard-osc-controls">
                                 <div class="keyboard-osc-wave" data-osc="3" role="radiogroup" aria-label="Oscillator 4 waveform"></div>
+                                <div class="keyboard-osc-fine-row" data-osc="3">
+                                    <span class="keyboard-osc-fine-label">FINE</span>
+                                    <input type="range" class="kb-osc-fine" data-osc="3"
+                                           min="-50" max="50" value="0" step="1"
+                                           aria-label="Oscillator 4 fine tune">
+                                    <span class="kb-osc-fine-value" data-osc="3">0c</span>
+                                </div>
                                 <div class="keyboard-osc-knob-row">
                                 <div class="synth-knob keyboard-osc-knob">
                                     <span class="synth-knob-label">TUNE</span>
@@ -1824,10 +1852,50 @@
                                 <span class="ingy6-logo" aria-hidden="true"></span>
                             </div>
                             <div class="ingy6-sections">
+                                <!-- Juno-60 LFO section: one LFO for all voices. SYNC is an IngySynth extra. -->
+                                <section class="ingy6-section ingy6-section--lfo" aria-label="LFO">
+                                    <header class="ingy6-section-header">LFO</header>
+                                    <div class="ingy6-section-body">
+                                        <div class="ingy6-fader-row">
+                                            <div class="ingy6-fader" data-param="ingy6LfoRate">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="5" orient="vertical" aria-label="LFO rate">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">RATE</span>
+                                            </div>
+                                            <div class="ingy6-fader" data-param="ingy6LfoDelay">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="0" orient="vertical" aria-label="LFO delay time">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">DELAY</span>
+                                            </div>
+                                        </div>
+                                        <div class="ingy6-lfo-switch" role="group" aria-label="LFO rate mode">
+                                            <button type="button" id="ingy6LfoSync" class="ingy6-switch-btn off" aria-pressed="false" title="Lock RATE to the tempo">SYNC</button>
+                                        </div>
+                                    </div>
+                                </section>
+
                                 <section class="ingy6-section ingy6-section--dco" aria-label="DCO">
                                     <header class="ingy6-section-header">DCO</header>
                                     <div class="ingy6-section-body">
                                         <svg class="ingy6-silk" aria-hidden="true"><polyline class="ingy6-silk-line" points="" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+                                        <!-- Juno-60 DCO: the LFO (pitch depth) fader sits left of the waves. -->
+                                            <div class="ingy6-fader" data-param="ingy6DcoLfo">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="0" orient="vertical" aria-label="DCO LFO depth">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">LFO</span>
+                                            </div>
                                         <div class="ingy6-wave-group" role="group" aria-label="Main DCO waveform (latching; all can be off)">
                                             <button type="button" class="ingy6-wave-btn" data-wave="sawtooth" aria-pressed="false" aria-label="Sawtooth">
                                                 <svg class="ingy6-wave-icon" viewBox="0 0 24 12" aria-hidden="true"><polyline points="0,11 24,1 24,11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="miter"/></svg>
@@ -1929,6 +1997,15 @@
                                                     <span class="ingy6-fader-label">ENV</span>
                                                 </div>
                                             </div>
+                                            <div class="ingy6-fader" data-param="ingy6VcfLfo">
+                                                <div class="ingy6-fader-body">
+                                                    <div class="ingy6-fader-ticks" aria-hidden="true"></div>
+                                                    <div class="ingy6-fader-slot">
+                                                        <input type="range" class="ingy6-fader-input" min="0" max="10" step="1" value="0" orient="vertical" aria-label="VCF LFO depth">
+                                                    </div>
+                                                </div>
+                                                <span class="ingy6-fader-label">LFO</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </section>
@@ -1936,9 +2013,13 @@
                                 <section class="ingy6-section ingy6-section--vca" aria-label="VCA">
                                     <header class="ingy6-section-header">VCA</header>
                                     <div class="ingy6-section-body">
-                                        <div class="ingy6-vca-switch" role="group" aria-label="VCA mode">
-                                            <button type="button" class="ingy6-switch-btn off" data-vca="gate" aria-pressed="false">GATE</button>
-                                            <button type="button" class="ingy6-switch-btn" data-vca="env" aria-pressed="true">ENV</button>
+                                        <!-- Juno-60 VCA mode lever: ENV up, GATE down. -->
+                                        <div class="ingy6-lever ingy6-lever--vca" role="radiogroup" aria-label="VCA mode" data-pos="0">
+                                            <span class="ingy6-lever-well" aria-hidden="true"><span class="ingy6-lever-knob"></span></span>
+                                            <span class="ingy6-lever-labels">
+                                                <button type="button" class="ingy6-lever-label is-on" role="radio" data-vca="env" aria-checked="true">ENV</button>
+                                                <button type="button" class="ingy6-lever-label" role="radio" data-vca="gate" aria-checked="false">GATE</button>
+                                            </span>
                                         </div>
                                         <div class="ingy6-fader" data-param="vcaLevel">
                                             <div class="ingy6-fader-body">

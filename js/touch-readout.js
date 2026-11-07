@@ -433,14 +433,17 @@ function resolveFader(target) {
             },
         };
     }
-    const ingyLabel = textOf(slot.closest('.ingy6-fader')?.querySelector('.ingy6-fader-label'));
+    const ingyFader = slot.closest('.ingy6-fader');
+    const ingyLabel = textOf(ingyFader?.querySelector('.ingy6-fader-label'));
     const caption = customCaption(slot)
         || finishCaption(slot, ingyLabel, input.getAttribute('aria-label') || '');
+    // Ingy 6 faders hand over their real value (Hz, s, cents...), not the 0-10 position.
+    const ingyReadout = typeof ingyFader?.ingy6Readout === 'function' ? ingyFader.ingy6Readout : null;
     return {
         anchor: faderCap(slot),
         input,
         caption,
-        readValue: () => formatRangeValue(input),
+        readValue: () => (ingyReadout && ingyReadout()) || formatRangeValue(input),
     };
 }
 

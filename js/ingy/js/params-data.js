@@ -674,11 +674,70 @@ export const PARAMS = {
     "default": 0,
     "group": "LFO"
   },
+  "ingy6LfoRate": {
+    "type": "range",
+    "section": "voice",
+    "min": 0.3,
+    "max": 20,
+    "step": 0.01,
+    "default": 3,
+    "group": "Ingy 6"
+  },
+  "ingy6LfoDelay": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0,
+    "group": "Ingy 6"
+  },
+  "ingy6LfoSync": {
+    "type": "button",
+    "section": "voice",
+    "default": false
+  },
+  "ingy6LfoSyncDivision": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 12,
+    "step": 1,
+    "default": 6,
+    "group": "Ingy 6"
+  },
+  "ingy6DcoLfo": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0,
+    "group": "Ingy 6"
+  },
+  "ingy6VcfLfo": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0,
+    "group": "Ingy 6"
+  },
   "osc-tune-0": {
     "type": "range",
     "section": "voice",
     "min": -12,
     "max": 12,
+    "step": 1,
+    "default": 0,
+    "group": "Oscillator 1"
+  },
+  "osc-fine-0": {
+    "type": "range",
+    "section": "voice",
+    "min": -50,
+    "max": 50,
     "step": 1,
     "default": 0,
     "group": "Oscillator 1"
@@ -725,6 +784,15 @@ export const PARAMS = {
     "default": -12,
     "group": "Oscillator 2"
   },
+  "osc-fine-1": {
+    "type": "range",
+    "section": "voice",
+    "min": -50,
+    "max": 50,
+    "step": 1,
+    "default": 0,
+    "group": "Oscillator 2"
+  },
   "osc-vol-1": {
     "type": "range",
     "section": "voice",
@@ -767,6 +835,15 @@ export const PARAMS = {
     "default": 0,
     "group": "Oscillator 3"
   },
+  "osc-fine-2": {
+    "type": "range",
+    "section": "voice",
+    "min": -50,
+    "max": 50,
+    "step": 1,
+    "default": 0,
+    "group": "Oscillator 3"
+  },
   "osc-vol-2": {
     "type": "range",
     "section": "voice",
@@ -805,6 +882,15 @@ export const PARAMS = {
     "section": "voice",
     "min": -12,
     "max": 12,
+    "step": 1,
+    "default": 0,
+    "group": "Oscillator 4"
+  },
+  "osc-fine-3": {
+    "type": "range",
+    "section": "voice",
+    "min": -50,
+    "max": 50,
     "step": 1,
     "default": 0,
     "group": "Oscillator 4"
@@ -1018,6 +1104,27 @@ export const BAREMETAL_PARAMS = {
     ],
     "default": "3",
     "group": "Unison"
+  },
+  "ingy6Waves": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "single",
+      "saw+pulse"
+    ],
+    "default": "single",
+    "group": "Ingy 6"
+  },
+  "ingy6PwmSource": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "manual",
+      "lfo",
+      "env"
+    ],
+    "default": "manual",
+    "group": "Ingy 6"
   },
   "osc-engine-1": {
     "type": "select",

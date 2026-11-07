@@ -14,9 +14,9 @@ import {
     catalogKeyFromLearn,
     clearMappingHighlight,
     setupMappingPointerCapture,
-} from './midi-learn.js?v=34';
-import { click, set, toggle } from './params.js?v=43';
-import { getParam, isCatalogKey, scaleCcToCatalog } from './param-catalog.js?v=9';
+} from './midi-learn.js?v=35';
+import { click, set, toggle } from './params.js?v=44';
+import { getParam, isCatalogKey, scaleCcToCatalog } from './param-catalog.js?v=10';
 
 /** MIDI note number → cell semitone while held (for Chord arp / Chord Mem). */
 const midiHeldNotes = new Map();

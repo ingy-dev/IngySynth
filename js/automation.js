@@ -12,9 +12,9 @@ import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=33';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=121';
-import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=43';
-import { clampToCatalog, getParam } from './param-catalog.js?v=9';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=122';
+import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=44';
+import { clampToCatalog, getParam } from './param-catalog.js?v=10';
 import {
     flashCopiedToast,
     getPattern,
@@ -446,6 +446,9 @@ function paramKeyFromInput(input) {
     if (input.classList.contains('osc-pan') && input.dataset.osc != null) {
         return `osc-pan-${input.dataset.osc}`;
     }
+    if (input.classList.contains('kb-osc-fine') && input.dataset.osc != null) {
+        return `osc-fine-${input.dataset.osc}`;
+    }
     if (input.id && RANGE_IDS.includes(input.id)) return input.id;
     return null;
 }
@@ -460,6 +463,9 @@ function resolveInput(key) {
     }
     if (key.startsWith('osc-pan-')) {
         return document.querySelector(`.osc-pan[data-osc="${key.slice(8)}"]`);
+    }
+    if (key.startsWith('osc-fine-')) {
+        return document.querySelector(`.kb-osc-fine[data-osc="${key.slice(9)}"]`);
     }
     return document.getElementById(key);
 }
@@ -674,6 +680,9 @@ function highlightTargetForKey(key, fromEl) {
         const osc = key.slice(8);
         return document.querySelector(`.kb-osc-pan[data-osc="${osc}"]`)?.closest('.keyboard-osc-pan-row')
             || input.closest('.control');
+    }
+    if (key.startsWith('osc-fine-')) {
+        return input.closest('.keyboard-osc-fine-row') || input;
     }
     return input.closest('.control') || input;
 }
@@ -937,7 +946,7 @@ export function isAutomationArmed() {
 function recordableKeys() {
     const keys = RANGE_IDS.slice();
     for (let i = 0; i < 4; i++) {
-        keys.push(`osc-tune-${i}`, `osc-vol-${i}`, `osc-pan-${i}`);
+        keys.push(`osc-tune-${i}`, `osc-fine-${i}`, `osc-vol-${i}`, `osc-pan-${i}`);
     }
     return keys;
 }

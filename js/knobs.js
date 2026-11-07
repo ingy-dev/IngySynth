@@ -5,9 +5,9 @@
 
 import { previewStepsOnVfd } from './sequencer.js?v=455';
 import { state } from './state.js?v=120';
-import { beginMidiLearn } from './midi-learn.js?v=34';
-import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=43';
-import { getParam, isCatalogKey } from './param-catalog.js?v=9';
+import { beginMidiLearn } from './midi-learn.js?v=35';
+import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=44';
+import { getParam, isCatalogKey } from './param-catalog.js?v=10';
 import { stepTuneBounds } from './step-tune-range.js?v=60';
 
 const ANGLE_MIN = -135;

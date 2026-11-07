@@ -2,8 +2,8 @@
 // Pointer capture runs in mapping mode so knobs/strips do not scrub while learning.
 
 import { state } from './state.js?v=120';
-import { keyFromElement } from './params.js?v=43';
-import { getParam, isCatalogKey } from './param-catalog.js?v=9';
+import { keyFromElement } from './params.js?v=44';
+import { getParam, isCatalogKey } from './param-catalog.js?v=10';
 
 const IGNORE_IDS = new Set([
     'midiMapping',
@@ -356,6 +356,13 @@ function resolveMappingHit(target, event) {
             canonical = document.querySelector(`.step-toggle[data-step="${step}"]`);
         }
         return { key, canonical, host: stepBtn };
+    }
+
+    const oscFine = target.closest('.kb-osc-fine, .keyboard-osc-fine-row');
+    if (oscFine) {
+        const row = oscFine.closest('.keyboard-osc-fine-row') || oscFine;
+        const slider = row.querySelector('.kb-osc-fine') || oscFine;
+        return { key: `osc-fine-${row.dataset.osc}`, canonical: slider, host: row };
     }
 
     const oscToggle = target.closest('.kb-osc-toggle');

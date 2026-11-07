@@ -3,7 +3,7 @@
 // tiny microtune → .step-fine, Acc/Sld/On → accent/slide/toggle.
 
 import { state } from './state.js?v=120';
-import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=107';
+import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=108';
 import { bindKnob } from './knobs.js?v=186';
 import { previewNoteVisualizer, soundingNotesForStep } from './visualizers.js?v=150';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
@@ -15,7 +15,7 @@ import {
     set,
     subscribe,
     toggle,
-} from './params.js?v=43';
+} from './params.js?v=44';
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,

@@ -1,5 +1,5 @@
 import { state } from './state.js?v=120';
-import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=43';
+import { get, getNumber, getString, getOscType, getOscVol } from './params.js?v=44';
 import {
     getStepTotalTune,
     getStepFineCents,
@@ -10,7 +10,7 @@ import {
     midiPitchBendValue,
     getGlobalTune,
     semitonesToFrequency,
-} from './tuning.js?v=107';
+} from './tuning.js?v=108';
 import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=150';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=111';
 import { forceNoteOff } from './voice.js?v=191';
@@ -21,7 +21,7 @@ import { setKeyboardStepActive } from './keyboard-steps.js?v=177';
 import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=214';
 import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=155';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=21';
-import { notifyAutomationLoopAnchor } from './automation.js?v=100';
+import { notifyAutomationLoopAnchor } from './automation.js?v=101';
 import { nextCyclePass } from './pattern-repeat.js?v=3';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=13';
 import {
@@ -53,7 +53,7 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=121';
+} from './berlin.js?v=122';
 import {
     getPattern,
     getBerlinLane,
@@ -69,10 +69,11 @@ import {
     patternRepeat,
     patternStepCount,
 } from './pattern-bank.js?v=50';
-import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=191';
+import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=199';
 import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=52';
 import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=52';
 import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=49';
+import { rampFromHere } from './audio-param-hold.js?v=1';
 import {
     clampRatch,
     nextRatch,
@@ -403,16 +404,8 @@ function scheduleStepEnvelope({
         // drum ring-out (180ms+) is still mid-ramp steps the VCA over a
         // ringing tail — tiny click at the drum's start.
         const tPre = Math.max(nowT, t0 - 0.012);
-        try {
-            const g = state.envelope.gain;
-            if (typeof g.cancelAndHoldAtTime === 'function') {
-                g.cancelAndHoldAtTime(tPre);
-            } else {
-                g.cancelScheduledValues(tPre);
-                g.setValueAtTime(Math.max(0.00001, Number(g.value) || 0.00001), tPre);
-            }
-            g.linearRampToValueAtTime(1, t0);
-        } catch (_) { /* ignore */ }
+        // rampFromHere: a ramp after cancelAndHoldAtTime starts from a past event.
+        rampFromHere(state.envelope.gain, tPre, 1, t0 - tPre, { ctx: state.audioContext });
         state.envelopeHeld = true;
         return 0.002;
     }
@@ -2554,14 +2547,8 @@ function disposeBerlinDrumVoice(voice, { hard = false } = {}) {
     voice.dead = true;
     try {
         if (voice.amp) {
-            const cur = Math.max(0.00001, Number(voice.amp.gain.value) || 0.00001);
-            if (typeof voice.amp.gain.cancelAndHoldAtTime === 'function') {
-                voice.amp.gain.cancelAndHoldAtTime(t);
-            } else {
-                voice.amp.gain.cancelScheduledValues(t);
-                voice.amp.gain.setValueAtTime(cur, t);
-            }
-            voice.amp.gain.exponentialRampToValueAtTime(0.00001, t + (hard ? 0.02 : 0.03));
+            // rampFromHere: an exp ramp after cancelAndHoldAtTime landed instantly (click).
+            rampFromHere(voice.amp.gain, t, 0.00001, hard ? 0.02 : 0.03, { ctx: state.audioContext, curve: 'exp' });
         }
     } catch (_) { /* ignore */ }
     try {

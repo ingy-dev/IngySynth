@@ -3,10 +3,10 @@
 // the single writer to state.lfo.frequency. state.lfoSync stays the mode flag.
 
 import { state } from './state.js?v=120';
-import { getNumber, getString, set, subscribe, toggle } from './params.js?v=43';
-import { getParam } from './param-catalog.js?v=9';
+import { getNumber, getString, set, subscribe, toggle } from './params.js?v=44';
+import { getParam } from './param-catalog.js?v=10';
 import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=186';
-import { beginMidiLearn } from './midi-learn.js?v=34';
+import { beginMidiLearn } from './midi-learn.js?v=35';
 
 /** Optional hook so applyLfoRate can refresh smoothing without a circular import. */
 let onRateApplied = null;

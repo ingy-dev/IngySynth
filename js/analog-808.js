@@ -2,6 +2,7 @@
 // Never use createOscSource({ oscIndex }) or state.noiseGain.
 
 import { state } from './state.js?v=120';
+import { rampFromHere } from './audio-param-hold.js?v=1';
 
 const HAT_RATIOS = [205.3, 304.4, 369.6, 522.7, 540.4, 800];
 
@@ -431,22 +432,9 @@ export function createAnalog808Voice(ctx, {
             if (voice.dead) return;
             const t = Math.max(ctx.currentTime, when || 0);
             try {
-                const cur = Math.max(0.00001, env.gain.value || 0.00001);
-                let held = cur;
-                try {
-                    if (typeof env.gain.getValueAtTime === 'function') {
-                        const v = env.gain.getValueAtTime(t);
-                        if (Number.isFinite(v)) held = Math.max(0.00001, v);
-                    }
-                } catch (_) { /* ignore */ }
-                if (typeof env.gain.cancelAndHoldAtTime === 'function') {
-                    env.gain.cancelAndHoldAtTime(t);
-                } else {
-                    env.gain.cancelScheduledValues(t);
-                    env.gain.setValueAtTime(held, t);
-                }
                 const fade = kind === 'bass_drum' ? 0.06 : 0.02;
-                env.gain.exponentialRampToValueAtTime(0.00001, t + fade);
+                // rampFromHere: an exp ramp after cancelAndHoldAtTime landed instantly (click).
+                rampFromHere(env.gain, t, 0.00001, fade, { ctx, curve: 'exp' });
             } catch (_) { /* ignore */ }
         },
         applyKit(nextPatch, now) {

@@ -121,11 +121,21 @@ export const PARAMS = {
     osc3PitchMod: range(-12, 12, 0, 0.1, { name: 'Osc 3 Pitch Mod', group: 'LFO' }),
     osc4PitchMod: range(-12, 12, 0, 0.1, { name: 'Osc 4 Pitch Mod', group: 'LFO' }),
     ringFreqMod: range(-2000, 2000, 0, 10, { name: 'Ring Freq Mod', group: 'LFO' }),
+
+    // Ingy 6 panel LFO (Juno-60 LFO section). Drives Ingy 6 voice pitch and cutoff in
+    // place of the global LFO's osc pitch destinations.
+    ingy6LfoRate: range(0.3, 20, 3, 0.01, { name: 'Ingy 6 LFO Rate', group: 'Ingy 6' }),
+    ingy6LfoDelay: range(0, 1, 0, 0.001, { name: 'Ingy 6 LFO Delay', group: 'Ingy 6' }),
+    ingy6LfoSync: button(false),
+    ingy6LfoSyncDivision: range(0, 12, 6, 1, { name: 'Ingy 6 LFO Sync', group: 'Ingy 6' }),
+    ingy6DcoLfo: range(0, 1, 0, 0.001, { name: 'Ingy 6 DCO LFO', group: 'Ingy 6' }),
+    ingy6VcfLfo: range(0, 1, 0, 0.001, { name: 'Ingy 6 VCF LFO', group: 'Ingy 6' }),
 };
 
 for (let i = 0; i < 4; i++) {
     const group = `Oscillator ${i + 1}`;
     PARAMS[`osc-tune-${i}`] = range(-12, 12, i === 1 ? -12 : 0, 1, { name: 'Tune', group });
+    PARAMS[`osc-fine-${i}`] = range(-50, 50, 0, 1, { name: 'Fine', group });
     PARAMS[`osc-vol-${i}`] = range(0, 1, 0.25, 0.01, { name: 'Volume', group });
     PARAMS[`osc-pan-${i}`] = range(-1, 1, 0, 0.01);
     PARAMS[`osc-type-${i}`] = select(OSC_WAVES, 'sawtooth');

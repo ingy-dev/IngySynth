@@ -1,9 +1,10 @@
 import { state, OSC_COUNT } from './state.js?v=120';
-import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=43';
+import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=44';
 import { wireControls } from './controls.js?v=367';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=111';
 import { updateLfoSmoothing } from './lfo-strip.js?v=71';
 import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=68';
+import { buildIngy6Lfo } from './ingy6-lfo.js?v=1';
 import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=58';
 import { ensurePlaitsWorklet, createOscSource, applyAnalogOscShape, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=155';
 import { DRUM_LANE_COUNT } from './pattern-bank.js?v=50';
@@ -636,6 +637,9 @@ function initAudio() {
     state.lfo.start();
     state.lfo.started = true;
     registerLfoOsc(state.lfo);
+
+    // Ingy 6 panel LFO: its own triangle for the poly voices (js/ingy6-lfo.js).
+    buildIngy6Lfo(state.audioContext);
 
     generateNoiseBuffers();
 

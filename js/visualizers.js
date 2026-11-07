@@ -1,12 +1,12 @@
 import { state } from './state.js?v=120';
-import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=107';
+import { semitonesToNoteName, getStepTotalTune, getStepFineCents } from './tuning.js?v=108';
 import { ensureNoteVfd, renderNoteVfd } from './vfd-matrix.js?v=6';
 import { formatNoteOrChord } from './chord-name.js?v=29';
 import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=50';
 import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=52';
-import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=34';
-import { getNumber, set } from './params.js?v=43';
-import { getParam } from './param-catalog.js?v=9';
+import { registerAdsrMappingResolver, beginMidiLearn } from './midi-learn.js?v=35';
+import { getNumber, set } from './params.js?v=44';
+import { getParam } from './param-catalog.js?v=10';
 import { acidEnvelopeDisplay, acidDecayKnobFromSec } from './acid-env.js?v=75';
 
 const NOTE_VFD_HOSTS = ['kbPatternNoteVisualizer', 'kbXyNoteVisualizer'];

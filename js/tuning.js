@@ -1,5 +1,5 @@
 import { state } from './state.js?v=120';
-import { get, getNumber, getString } from './params.js?v=43';
+import { get, getNumber, getString } from './params.js?v=44';
 import { getLiveStep } from './pattern-bank.js?v=50';
 
 // Base reference frequency: C4.
@@ -27,10 +27,16 @@ export function getGlobalTune() {
     return masterTune + octaveSwitch + semitoneShift;
 }
 
-// Frequency for an absolute semitone offset from C4 (plus optional per-osc detune).
+// Per-osc fine tune (osc-fine-N, cents -50..+50) as semitones.
+export function oscFineSemis(oscIndex) {
+    if (oscIndex === undefined || oscIndex === null) return 0;
+    return (getNumber(`osc-fine-${oscIndex}`, 0) || 0) / 100;
+}
+
+// Frequency for an absolute semitone offset from C4 (plus optional per-osc coarse + fine tune).
 export function semitonesToFrequency(semitones, oscIndex) {
     const total = semitones
-        + (oscIndex !== undefined ? state.oscTunes[oscIndex] : 0);
+        + (oscIndex !== undefined ? state.oscTunes[oscIndex] + oscFineSemis(oscIndex) : 0);
     return BASE_FREQ * Math.pow(2, total / 12);
 }
 
@@ -167,7 +173,7 @@ export function getStepFineCents(step) {
 
 export function frequencyFromStepData(data, oscIndex) {
     const totalTune = getStepTotalTuneFromRaw(data?.tune)
-        + (oscIndex !== undefined ? state.oscTunes[oscIndex] : 0)
+        + (oscIndex !== undefined ? state.oscTunes[oscIndex] + oscFineSemis(oscIndex) : 0)
         + (Math.round(Number(data?.fine) || 0) / 100);
     return BASE_FREQ * Math.pow(2, totalTune / 12);
 }

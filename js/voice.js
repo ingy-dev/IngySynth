@@ -1,7 +1,7 @@
 import { state } from './state.js?v=120';
-import { getNumber } from './params.js?v=43';
+import { getNumber } from './params.js?v=44';
 import { retriggerLfoIfNeeded } from './lfo-rate.js?v=68';
-import { semitonesToFrequency } from './tuning.js?v=107';
+import { semitonesToFrequency } from './tuning.js?v=108';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=111';
 import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=150';
 import { bentFrequency } from './pitch-bend.js?v=141';

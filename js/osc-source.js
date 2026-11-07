@@ -3,7 +3,8 @@
 // Voices are pooled — creating AudioWorkletNode per note causes crackle.
 
 import { state, OSC_COUNT } from './state.js?v=120';
-import { getNumber, getOscType, getString } from './params.js?v=43';
+import { rampFromHere, isLiveTime } from './audio-param-hold.js?v=1';
+import { getNumber, getOscType, getString } from './params.js?v=44';
 import { isAnalogDrumEngine } from './pattern-bank.js?v=50';
 import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=21';
 
@@ -224,29 +225,10 @@ function holdThenRamp(param, when, target, endTime) {
     const end = Math.max(t, endTime || t);
     const valueNow = Number(param.value) || 0;
     const lookahead = t - now;
-    let held = false;
-    try {
-        // Prefer hold-at-t so future note-offs don't jump from a stale .value (often 0)
-        if (typeof param.cancelAndHoldAtTime === 'function') {
-            param.cancelAndHoldAtTime(t);
-            held = true;
-        } else if (t <= now + 0.0005) {
-            param.cancelScheduledValues(t);
-            param.setValueAtTime(Math.max(0.00001, valueNow), t);
-        } else {
-            // Future schedule without hold API: assume digital gate is open at release
-            param.cancelScheduledValues(t);
-            param.setValueAtTime(Math.max(0.00001, valueNow > 0.05 ? valueNow : 1), t);
-        }
-        param.linearRampToValueAtTime(target, end);
-    } catch (_) {
-        try {
-            param.cancelScheduledValues(t);
-            param.setValueAtTime(Math.max(0.00001, valueNow > 0.05 ? valueNow : 1), t);
-            param.linearRampToValueAtTime(target, end);
-        } catch (__) { /* ignore */ }
-    }
-    return { held, lookahead, valueNow };
+    // A linearRamp after cancelAndHoldAtTime starts from a past event and steps;
+    // rampFromHere pins live releases and uses setTarget for scheduled ones.
+    rampFromHere(param, t, target, end - t, { ctx });
+    return { held: !isLiveTime(ctx, t), lookahead, valueNow };
 }
 
 /**

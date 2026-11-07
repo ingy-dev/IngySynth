@@ -8,8 +8,8 @@ import {
     syncAllKeyboardStepFinesFromMain,
 } from './keyboard-steps.js?v=177';
 import { setWriteCursor } from './pattern-write.js?v=160';
-import { rotateAutomationLanes } from './automation.js?v=100';
-import { getNumber } from './params.js?v=43';
+import { rotateAutomationLanes } from './automation.js?v=101';
+import { getNumber } from './params.js?v=44';
 import {
     cloneStep,
     getPattern,

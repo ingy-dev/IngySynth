@@ -10,7 +10,7 @@ import {
     subscribe,
     wireSelect,
     wireToggle,
-} from './params.js?v=43';
+} from './params.js?v=44';
 import { initScTimeKnob } from './sc-time.js?v=49';
 
 const syncFns = [];

@@ -2,9 +2,11 @@
 // Classic unison / ring mod locked; Poly Unison stacks the 6-voice pool on one note.
 
 import { state, OSC_COUNT } from './state.js?v=120';
-import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=43';
+import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=44';
 import { retriggerLfoIfNeeded } from './lfo-rate.js?v=68';
-import { semitonesToFrequency } from './tuning.js?v=107';
+import { restartIngy6LfoDelay } from './ingy6-lfo.js?v=1';
+import { rampFromHere, isLiveTime } from './audio-param-hold.js?v=1';
+import { semitonesToFrequency } from './tuning.js?v=108';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=111';
 import { refreshFilterInputDrive } from './filter-drive.js?v=58';
 import {
@@ -15,7 +17,7 @@ import {
 } from './visualizers.js?v=150';
 import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=214';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=73';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=78';
 import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=134';
 import {
     analogLogicalWave,
@@ -581,7 +583,8 @@ function polyFilterAdsrIds() {
     };
 }
 
-function triggerSharedFilterEnvelope(now, { skipClose = false } = {}) {
+// The sequencer still passes `skipClose`; the attack no longer dips either way.
+function triggerSharedFilterEnvelope(now, _opts = {}) {
     if (state.acidMode) return; // Acid owns filter env path while active
     if (!state.filterEnvGain || getFilterEnvAmount() === 0) return;
 
@@ -592,7 +595,6 @@ function triggerSharedFilterEnvelope(now, { skipClose = false } = {}) {
     const baseCutoff = Math.max(40, readFloatParam('cutoff', 1000));
     const safeAttack = scaleAdsrTime(attack);
     const safeDecay = scaleAdsrTime(decay);
-    const minValue = 0.00001;
 
     updateFilterCutoffRange(baseCutoff, now, 0.01);
     const gainParam = state.filterEnvGain.gain;
@@ -600,19 +602,20 @@ function triggerSharedFilterEnvelope(now, { skipClose = false } = {}) {
     const qFloor = Math.max(0, Math.min(1, (qNow - 6) / 14)) * 0.014;
     const minAttack = Math.max(0.002, qFloor);
     const filtAttack = Math.max(minAttack, safeAttack);
-    const closeT = skipClose ? 0 : Math.max(0.004, qFloor * 0.6);
-    let held = false;
-    if (typeof gainParam.cancelAndHoldAtTime === 'function') {
-        try { gainParam.cancelAndHoldAtTime(now); held = true; } catch (_) { /* ignore */ }
-    }
-    if (!held) gainParam.cancelScheduledValues(now);
-    if (skipClose) {
-        gainParam.linearRampToValueAtTime(1, now + filtAttack);
-        gainParam.linearRampToValueAtTime(sustain, now + filtAttack + safeDecay);
+    // Retrigger from where the envelope is, like Bare Metal's AdsrEnvelope and an
+    // analog ADSR. This filter is shared by every voice: the old 4 ms dip to 0
+    // before each attack slammed it shut (inverted: wide open) under the notes
+    // already sounding, then reopened it in 2 ms at low ATTACK. That was the thump
+    // per note, and the click per note with the envelope inverted.
+    // Attack from the envelope's real level (audio-param-hold.js): a ramp after
+    // cancelAndHoldAtTime started from a past event and landed as a one-sample step,
+    // the thump at low ATTACK. Scheduled-ahead notes use setTarget, which is safe.
+    const ctx = state.audioContext;
+    const attackEnd = rampFromHere(gainParam, now, 1, filtAttack, { ctx });
+    if (isLiveTime(ctx, now)) {
+        gainParam.linearRampToValueAtTime(sustain, attackEnd + safeDecay);
     } else {
-        gainParam.linearRampToValueAtTime(minValue, now + closeT);
-        gainParam.linearRampToValueAtTime(1, now + closeT + filtAttack);
-        gainParam.linearRampToValueAtTime(sustain, now + closeT + filtAttack + safeDecay);
+        gainParam.setTargetAtTime(sustain, attackEnd, Math.max(0.004, safeDecay / 3));
     }
     state.filterEnvelopeHeld = true;
 }
@@ -656,15 +659,22 @@ function lfoPitchGainForOsc(oscIndex) {
 }
 
 function connectPolyOscPitchLfo(osc) {
-    const lfoGain = lfoPitchGainForOsc(osc?.oscIndex);
+    // Ingy 6 plays pitch from its own LFO (Juno-60), not the global osc pitch dests.
+    const lfoGain = state.keyboardPoly && state.ingy6DcoGain
+        ? state.ingy6DcoGain
+        : lfoPitchGainForOsc(osc?.oscIndex);
     if (!lfoGain || !osc?.detune) return;
-    try { lfoGain.connect(osc.detune); } catch (_) { /* ignore */ }
+    try {
+        lfoGain.connect(osc.detune);
+        osc.pitchLfoGain = lfoGain;
+    } catch (_) { /* ignore */ }
 }
 
 function disconnectPolyOscPitchLfo(osc) {
-    const lfoGain = lfoPitchGainForOsc(osc?.oscIndex);
+    const lfoGain = osc?.pitchLfoGain || lfoPitchGainForOsc(osc?.oscIndex);
     if (!lfoGain || !osc?.detune) return;
     try { lfoGain.disconnect(osc.detune); } catch (_) { /* ignore */ }
+    osc.pitchLfoGain = null;
 }
 
 function disconnectOscGraph(osc) {
@@ -830,6 +840,10 @@ function releaseVoiceAmp(voice, now) {
 }
 
 function spawnVoiceOscs(voice, soundingSemi, cents, now, { stackCount = 0, sequenced = false, unison = false } = {}) {
+    // Ingy 6 LFO delay restarts on a note while no other voice is held (Juno AUTO).
+    if (state.keyboardPoly && !voices.some((v) => v !== voice && v.semi != null && !v.releasing)) {
+        restartIngy6LfoDelay(now);
+    }
     stopVoiceOscs(voice, now);
     const dest = voice.ampEnv;
     let any = false;

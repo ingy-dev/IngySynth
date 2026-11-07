@@ -1,12 +1,14 @@
 // Ingy 6 panel (poly / Juno-60): fader chrome + wiring to main synth params.
 
 import { state } from './state.js?v=120';
-import { beginMidiLearn } from './midi-learn.js?v=34';
+import { beginMidiLearn } from './midi-learn.js?v=35';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
 import { updateLfoCutoffSafety } from './lfo-strip.js?v=71';
 import { refreshFilterInputDrive } from './filter-drive.js?v=58';
 import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=134';
-import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=43';
+import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=44';
+import { LFO_SYNC_DIVISIONS } from './lfo-rate.js?v=68';
+import { applyIngy6Lfo } from './ingy6-lfo.js?v=1';
 
 const HPF_HZ = [20, 250, 700, 1400];
 
@@ -36,8 +38,11 @@ function buildFaderTicks() {
 
 /** 10 / 5 / 0 beside standard faders (Juno silk-screen). Skip HPF (has 3–0). */
 function buildFaderScaleNumbers() {
-    document.querySelectorAll('#ingy6Panel .ingy6-fader:not(.ingy6-fader--hpf) .ingy6-fader-body').forEach((body) => {
-        if (body.querySelector('.ingy6-fader-scale-labels')) return;
+    // First fader of each section only (Juno silk-screen); the rest share its scale,
+    // which keeps the panel narrow enough with the LFO section added.
+    document.querySelectorAll('#ingy6Panel .ingy6-section').forEach((section) => {
+        const body = section.querySelector('.ingy6-fader:not(.ingy6-fader--hpf) .ingy6-fader-body');
+        if (!body || body.querySelector('.ingy6-fader-scale-labels')) return;
         const ticks = body.querySelector('.ingy6-fader-ticks');
         if (!ticks) return;
         const labels = document.createElement('div');
@@ -99,6 +104,10 @@ function wireFaderPointer(slot) {
             highPass: 'highPass',
             noise: 'noiseVol',
             vcaLevel: 'volume',
+            ingy6LfoRate: 'ingy6LfoRate',
+            ingy6LfoDelay: 'ingy6LfoDelay',
+            ingy6DcoLfo: 'ingy6DcoLfo',
+            ingy6VcfLfo: 'ingy6VcfLfo',
         }[param];
         if (beginMidiLearn(e, mainId, fader)) return;
         if (input.disabled || !state.keyboardPoly) return;
@@ -184,6 +193,15 @@ function silkRailY(base, labelRect) {
     return Math.max(0.5, labelRect.top - base.top - SILK_BRANCH - 1);
 }
 
+/**
+ * The tall bracket every section uses: the rail sits one branch above the label
+ * band and the branches drop two branch lengths, down to just above the labels.
+ */
+function silkTallRail(base, labelRect) {
+    const branchBottom = silkRailY(base, labelRect) + SILK_BRANCH;
+    return { railY: branchBottom - 2 * SILK_BRANCH, branchBottom };
+}
+
 function drawSilk(line, pts) {
     line.setAttribute('points', pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '));
 }
@@ -208,13 +226,14 @@ function syncDcoSilk() {
 
     const startX = sq.left + sq.width / 2 - base.left;
     const endX = slot.left + slot.width / 2 - base.left;
-    const railY = silkRailY(base, label);
+    // Tall rail, same as Bare Metal's DCO and both VCF brackets.
+    const { railY, branchBottom } = silkTallRail(base, label);
 
     drawSilk(line, [
-        [startX, railY + SILK_BRANCH],
+        [startX, branchBottom],
         [startX, railY],
         [endX, railY],
-        [endX, railY + SILK_BRANCH],
+        [endX, branchBottom],
     ]);
 }
 
@@ -238,14 +257,15 @@ function syncVcfSilk() {
 
     const stemX = sw.left + sw.width / 2 - base.left;
     const endX = slot.left + slot.width / 2 - base.left;
-    const railY = silkRailY(base, label);
-    const stemBottom = Math.max(railY + SILK_BRANCH, sw.top - base.top);
+    // Same tall rail as the DCO brackets.
+    const { railY, branchBottom } = silkTallRail(base, label);
+    const stemBottom = Math.max(branchBottom, sw.top - base.top);
 
     drawSilk(line, [
         [stemX, stemBottom],
         [stemX, railY],
         [endX, railY],
-        [endX, railY + SILK_BRANCH],
+        [endX, branchBottom],
     ]);
 }
 
@@ -260,6 +280,28 @@ function clamp(n, min, max) {
 
 function faderToLinear(fader0to10, min, max) {
     return min + (clamp(fader0to10, 0, 10) / 10) * (max - min);
+}
+
+/** Ingy 6 LFO RATE: 0.3-20 Hz (Juno-60), exponential along the fader. */
+const LFO_RATE_MIN = 0.3;
+const LFO_RATE_MAX = 20;
+
+function faderToLfoRate(v) {
+    return LFO_RATE_MIN * Math.pow(LFO_RATE_MAX / LFO_RATE_MIN, clamp(v, 0, 10) / 10);
+}
+
+function lfoRateToFader(hz) {
+    const safe = clamp(Number(hz) || LFO_RATE_MIN, LFO_RATE_MIN, LFO_RATE_MAX);
+    return Math.round((Math.log(safe / LFO_RATE_MIN) / Math.log(LFO_RATE_MAX / LFO_RATE_MIN)) * 10);
+}
+
+/** With SYNC on, RATE picks a tempo division instead (slow at the bottom). */
+function faderToSyncDivision(v) {
+    return Math.round((clamp(v, 0, 10) / 10) * (LFO_SYNC_DIVISIONS.length - 1));
+}
+
+function syncDivisionToFader(idx) {
+    return Math.round((clamp(Number(idx) || 0, 0, LFO_SYNC_DIVISIONS.length - 1) / (LFO_SYNC_DIVISIONS.length - 1)) * 10);
 }
 
 function linearToFader(value, min, max) {
@@ -294,6 +336,57 @@ function hzToHpfStep(hz) {
         }
     });
     return best;
+}
+
+/* ---- pop-up readouts: real values, worked out from the fader position ---- */
+
+function readoutHz(hz) {
+    if (!Number.isFinite(hz)) return '';
+    if (hz >= 1000) return `${(hz / 1000).toFixed(hz < 10000 ? 2 : 1)} kHz`;
+    return `${hz < 100 ? hz.toFixed(1) : Math.round(hz)} Hz`;
+}
+
+function readoutSec(sec) {
+    if (!Number.isFinite(sec)) return '';
+    if (sec < 1) return `${Math.round(sec * 1000)} ms`;
+    return `${sec.toFixed(2)} s`;
+}
+
+function readoutAmount(v) {
+    return String(Math.round(clamp(v, 0, 10) * 10));
+}
+
+/** What the touch pop-up shows for an Ingy 6 fader at position v (0-10). */
+function formatIngy6Fader(param, v) {
+    switch (param) {
+        case 'ingy6LfoRate':
+            if (get('ingy6LfoSync')) return LFO_SYNC_DIVISIONS[faderToSyncDivision(v)]?.label || '';
+            return readoutHz(faderToLfoRate(v));
+        case 'ingy6LfoDelay': {
+            const t = (clamp(v, 0, 10) / 10) * 3.786; // 2.786 s wait + 1 s fade at full
+            return t <= 0 ? 'OFF' : readoutSec(t);
+        }
+        case 'ingy6DcoLfo': return `±${Math.round((clamp(v, 0, 10) / 10) * 300)}¢`;
+        case 'ingy6VcfLfo': return `±${((clamp(v, 0, 10) / 10) * 3).toFixed(1)} oct`;
+        case 'cutoff': return readoutHz(faderToCutoff(v));
+        case 'highPass': {
+            const step = clamp(Math.round(v), 0, 3);
+            return step === 0 ? 'OFF' : readoutHz(hpfStepToHz(step));
+        }
+        case 'attack':
+        case 'decay': return readoutSec(faderToLinear(v, 0, 2));
+        case 'release': return readoutSec(faderToLinear(v, 0, 5));
+        default: return readoutAmount(v); // SUB, NOISE, RES, ENV, LEVEL, SUSTAIN
+    }
+}
+
+function attachFaderReadouts() {
+    document.querySelectorAll('#ingy6Panel .ingy6-fader').forEach((fader) => {
+        const input = fader.querySelector('.ingy6-fader-input');
+        const param = fader.dataset.param;
+        if (!input || !param) return;
+        fader.ingy6Readout = () => formatIngy6Fader(param, parseFloat(input.value));
+    });
 }
 
 function setMainRange(id, value) {
@@ -477,6 +570,20 @@ function applyFaderParam(param, faderValue) {
         case 'noise':
             applyNoiseLevel(v);
             break;
+        case 'ingy6LfoRate':
+            if (get('ingy6LfoSync')) set('ingy6LfoSyncDivision', faderToSyncDivision(v));
+            else set('ingy6LfoRate', Math.round(faderToLfoRate(v) * 100) / 100);
+            syncLfoRateLabel();
+            break;
+        case 'ingy6LfoDelay':
+            set('ingy6LfoDelay', faderToLinear(v, 0, 1));
+            break;
+        case 'ingy6DcoLfo':
+            set('ingy6DcoLfo', faderToLinear(v, 0, 1));
+            break;
+        case 'ingy6VcfLfo':
+            set('ingy6VcfLfo', faderToLinear(v, 0, 1));
+            break;
         default:
             break;
     }
@@ -563,14 +670,42 @@ function syncWaveUi() {
     });
 }
 
+/**
+ * Juno-60 lever switches (PWM source, VCA mode): a slot with a lever and the
+ * positions printed beside it. Click a label, or the slot at the height you want.
+ * The lit label and data-pos follow the state.
+ */
+function syncLever(lever, activeLabel) {
+    if (!lever) return;
+    const labels = [...lever.querySelectorAll('.ingy6-lever-label')];
+    labels.forEach((label, i) => {
+        const on = label === activeLabel;
+        label.classList.toggle('is-on', on);
+        label.setAttribute('aria-checked', on ? 'true' : 'false');
+        if (on) lever.dataset.pos = String(i);
+    });
+}
+
+function wireLeverWells(panel) {
+    panel.querySelectorAll('.ingy6-lever').forEach((lever) => {
+        const well = lever.querySelector('.ingy6-lever-well');
+        if (!well) return;
+        well.addEventListener('click', (e) => {
+            if (!state.keyboardPoly) return;
+            const labels = [...lever.querySelectorAll('.ingy6-lever-label')];
+            const r = well.getBoundingClientRect();
+            if (!labels.length || !r.height) return;
+            const i = clamp(Math.floor(((e.clientY - r.top) / r.height) * labels.length), 0, labels.length - 1);
+            labels[i].click();
+        });
+    });
+}
+
 function syncVcaGateUi() {
     const gate = !!state.polyVcaGate;
-    document.querySelectorAll('#ingy6Panel .ingy6-switch-btn[data-vca]').forEach((btn) => {
-        const match = gate ? btn.dataset.vca === 'gate' : btn.dataset.vca === 'env';
-        // Match project toggle convention: lit when not .off
-        btn.classList.toggle('off', !match);
-        btn.setAttribute('aria-pressed', match ? 'true' : 'false');
-    });
+    const want = gate ? 'gate' : 'env';
+    const label = document.querySelector(`#ingy6Panel .ingy6-lever-label[data-vca="${want}"]`);
+    syncLever(label?.closest('.ingy6-lever'), label);
 }
 
 function syncPolarityUi() {
@@ -611,6 +746,14 @@ export function syncIngy6PanelFromMain() {
         const noiseOn = !!state.noiseState;
         const noiseVol = noiseOn ? readMainRange('noiseVol', 0) : 0;
         setFaderValue('noise', linearToFader(noiseVol, 0, 1));
+        setFaderValue('ingy6LfoRate', get('ingy6LfoSync')
+            ? syncDivisionToFader(getNumber('ingy6LfoSyncDivision', 6))
+            : lfoRateToFader(getNumber('ingy6LfoRate', 3)));
+        setFaderValue('ingy6LfoDelay', linearToFader(getNumber('ingy6LfoDelay', 0), 0, 1));
+        setFaderValue('ingy6DcoLfo', linearToFader(getNumber('ingy6DcoLfo', 0), 0, 1));
+        setFaderValue('ingy6VcfLfo', linearToFader(getNumber('ingy6VcfLfo', 0), 0, 1));
+        syncLfoRateLabel();
+        syncLfoSyncUi();
 
         syncWaveUi();
         syncChorusUi();
@@ -620,6 +763,39 @@ export function syncIngy6PanelFromMain() {
     } finally {
         syncingFromMain = false;
     }
+}
+
+function syncLfoSyncUi() {
+    const btn = document.getElementById('ingy6LfoSync');
+    if (!btn) return;
+    const on = !!get('ingy6LfoSync');
+    btn.classList.toggle('off', !on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+
+/** RATE's label shows the division while synced (Juno-60 has no sync; this is ours). */
+function syncLfoRateLabel() {
+    const label = document.querySelector('#ingy6Panel .ingy6-fader[data-param="ingy6LfoRate"] .ingy6-fader-label');
+    if (!label) return;
+    if (!get('ingy6LfoSync')) {
+        label.textContent = 'RATE';
+        return;
+    }
+    const idx = clamp(Math.round(getNumber('ingy6LfoSyncDivision', 6)), 0, LFO_SYNC_DIVISIONS.length - 1);
+    label.textContent = LFO_SYNC_DIVISIONS[idx]?.label || 'RATE';
+}
+
+/**
+ * The Ingy 6 LFO plays the voices' pitch, as on the hardware, so the global LFO's
+ * osc pitch destinations sit out while Ingy 6 is on. CUT/RES/HP/RING stay live.
+ */
+function syncGlobalLfoPitchDests() {
+    const off = !!state.keyboardPoly;
+    document.querySelectorAll('.keyboard-mod-matrix-knob[data-param$="PitchMod"]').forEach((knob) => {
+        knob.classList.toggle('is-ingy6-off', off);
+        knob.setAttribute('aria-disabled', off ? 'true' : 'false');
+        knob.title = off ? 'Ingy 6 uses its own LFO for pitch (DCO LFO fader)' : '';
+    });
 }
 
 function readMainRangeFromOscVol(oscIndex) {
@@ -657,12 +833,20 @@ function wirePanelControls() {
         });
     });
 
-    panel.querySelectorAll('.ingy6-switch-btn[data-vca]').forEach((btn) => {
+    wireLeverWells(panel);
+
+    panel.querySelectorAll('.ingy6-lever-label[data-vca]').forEach((btn) => {
         btn.addEventListener('click', () => {
             if (!state.keyboardPoly) return;
             state.polyVcaGate = btn.dataset.vca === 'gate';
             syncVcaGateUi();
         });
+    });
+
+    document.getElementById('ingy6LfoSync')?.addEventListener('click', () => {
+        if (!state.keyboardPoly) return;
+        set('ingy6LfoSync', !get('ingy6LfoSync'));
+        syncIngy6PanelFromMain();
     });
 
     document.getElementById('ingy6FilterEnvInvert')?.addEventListener('click', () => {
@@ -675,6 +859,7 @@ function wirePanelControls() {
     [
         'attack', 'decay', 'sustain', 'release',
         'cutoff', 'resonance', 'filterEnvAmount', 'highPass', 'volume', 'noiseVol',
+        'ingy6LfoRate', 'ingy6LfoDelay', 'ingy6LfoSync', 'ingy6LfoSyncDivision', 'ingy6DcoLfo', 'ingy6VcfLfo',
     ].forEach((id) => {
         document.getElementById(id)?.addEventListener('input', () => {
             if (!state.keyboardPoly || syncingFromMain) return;
@@ -734,6 +919,8 @@ export function syncIngy6PanelUi() {
     const on = !!state.keyboardPoly;
     panel.hidden = !on;
     setIngy6ControlsEnabled(on);
+    syncGlobalLfoPitchDests();
+    applyIngy6Lfo();
     if (on) {
         syncIngy6PanelFromMain();
         requestAnimationFrame(() => {
@@ -747,6 +934,7 @@ export function initIngy6Panel() {
     buildFaderTicks();
     buildFaderScaleNumbers();
     ensureFaderChrome();
+    attachFaderReadouts();
     wirePanelControls();
     syncIngy6PanelUi();
     window.addEventListener('resize', () => {

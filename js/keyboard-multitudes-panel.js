@@ -10,10 +10,10 @@ import {
     syncMultitudesPolyLocks,
     bumpSeqEngine,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=191';
+} from './poly-voice.js?v=199';
 import { syncChordMemUI } from './chord-memory.js?v=52';
-import { getParam } from './param-catalog.js?v=9';
-import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=43';
+import { getParam } from './param-catalog.js?v=10';
+import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=44';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */
 // Same knob law as Main Stage (four oscillators at 0.25 sum to 1). The mode's

@@ -2,15 +2,15 @@
 // Acid and Poly are mutually exclusive with it.
 
 import { state } from './state.js?v=120';
-import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale } from './tuning.js?v=107';
+import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale, oscFineSemis } from './tuning.js?v=108';
 import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=150';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=191';
+import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=199';
 import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=86';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
 import { bindKnob, refreshKnobDial } from './knobs.js?v=186';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=33';
-import { get, getNumber, set } from './params.js?v=43';
+import { get, getNumber, set } from './params.js?v=44';
 import {
     PATTERN_COUNT,
     BANK_COUNT,
@@ -340,6 +340,7 @@ export function berlinFrequency(semi, fine, oscIndex, keyboardTranspose = true) 
         + getGlobalTune()
         + kb
         + (state.oscTunes?.[oscIndex] || 0)
+        + oscFineSemis(oscIndex)
         + (fine || 0) / 100;
     return BASE_FREQ * Math.pow(2, total / 12);
 }

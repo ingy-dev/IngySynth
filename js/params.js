@@ -11,7 +11,7 @@ import {
     getParam,
     isCatalogKey,
     isStepKey,
-} from './param-catalog.js?v=9';
+} from './param-catalog.js?v=10';
 
 const subscribers = new Map();
 const lastNotified = new Map();
@@ -65,6 +65,7 @@ export function keyFromElement(el) {
     if (el.classList.contains('osc-tune') && el.dataset.osc != null) return `osc-tune-${el.dataset.osc}`;
     if (el.classList.contains('osc-vol') && el.dataset.osc != null) return `osc-vol-${el.dataset.osc}`;
     if (el.classList.contains('osc-pan') && el.dataset.osc != null) return `osc-pan-${el.dataset.osc}`;
+    if (el.classList.contains('kb-osc-fine') && el.dataset.osc != null) return `osc-fine-${el.dataset.osc}`;
     if (el.classList.contains('osc-type') && el.dataset.osc != null) return `osc-type-${el.dataset.osc}`;
     if (el.classList.contains('osc-toggle') && el.dataset.osc != null) return `osc-toggle-${el.dataset.osc}`;
     if (el.classList.contains('step-tune') && el.dataset.step != null) return `step-slider-${el.dataset.step}`;

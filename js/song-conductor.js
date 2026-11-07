@@ -7,12 +7,12 @@
 // the position where playback last stopped.
 
 import { state } from './state.js?v=120';
-import { getNumber } from './params.js?v=43';
+import { getNumber } from './params.js?v=44';
 import { setSongConductor, uiOutputLatency } from './sequencer.js?v=455';
-import { semitonesToNoteName } from './tuning.js?v=107';
+import { semitonesToNoteName } from './tuning.js?v=108';
 import { scheduleMonoNote } from './voice.js?v=191';
-import { schedulePolySeqVoicing } from './poly-voice.js?v=191';
-import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=100';
+import { schedulePolySeqVoicing } from './poly-voice.js?v=199';
+import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=101';
 import {
     DRUM_LANE_COUNT,
     PATTERN_COUNT,
@@ -170,6 +170,8 @@ function paintTransposeReadout() {
         const el = document.getElementById(id);
         if (el) el.textContent = label;
     }
+    const kb = document.querySelectorAll('#chromaticKeyboard .piano-key');
+    kb.forEach((key) => key.classList.toggle('key-transpose', parseInt(key.dataset.semitone, 10) === t));
 }
 
 function updateLiveKeys(tick) {

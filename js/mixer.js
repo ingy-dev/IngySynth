@@ -2,7 +2,7 @@
 // Vertical channel strips; linear 0–100 scale + ticks match fader travel. INGY6 faders untouched.
 
 import { state, OSC_COUNT } from './state.js?v=120';
-import { getNumber, getOscVol, getOscPan, set, subscribe } from './params.js?v=43';
+import { getNumber, getOscVol, getOscPan, set, subscribe } from './params.js?v=44';
 import { applyMixerMutes } from './store-engine.js?v=88';
 import { applyBerlinDrumKitToLive } from './osc-source.js?v=155';
 import { DRUM_LANE_COUNT, ensureBerlinDrumKit } from './pattern-bank.js?v=50';

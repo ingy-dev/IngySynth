@@ -2,10 +2,10 @@
 
 import { state } from './state.js?v=120';
 import { DRUM_LANE_COUNT } from './pattern-bank.js?v=50';
-import { get, getNumber, set, subscribe, toggle } from './params.js?v=43';
-import { getParam } from './param-catalog.js?v=9';
+import { get, getNumber, set, subscribe, toggle } from './params.js?v=44';
+import { getParam } from './param-catalog.js?v=10';
 import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=186';
-import { beginMidiLearn } from './midi-learn.js?v=34';
+import { beginMidiLearn } from './midi-learn.js?v=35';
 
 export const SC_SYNC_DIVISIONS = [
     { label: '1/4', beats: 1 },

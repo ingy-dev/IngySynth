@@ -3,7 +3,7 @@
 
 import { state } from './state.js?v=120';
 import { bindKnob, refreshKnobDial } from './knobs.js?v=186';
-import { get, set, subscribe, wireToggle } from './params.js?v=43';
+import { get, set, subscribe, wireToggle } from './params.js?v=44';
 import {
     STEP_SLOTS,
     DRUM_LANE_COUNT,
@@ -31,7 +31,7 @@ import {
     setDrumMode,
     setBerlinDrumFilt,
     setDrumLanesHidden,
-} from './berlin.js?v=121';
+} from './berlin.js?v=122';
 import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=64';
 

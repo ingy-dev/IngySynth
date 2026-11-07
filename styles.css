@@ -4352,7 +4352,17 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
     gap: 4px;
     width: 100%;
     max-width: 148px;
-    margin: 12px auto 0;
+    margin: 6px auto 0;
+}
+.keyboard-filter-env-amount-row {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+.keyboard-filter-env-amount-row .keyboard-filter-env-knob.synth-knob {
+    width: auto;
+    max-width: none;
 }
 /* ACID mode: Decay knobs matter; A/S/R are largely ignored */
 body.acid-mode .keyboard-vol-env-knob[data-param="attack"],

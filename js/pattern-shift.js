@@ -31,8 +31,8 @@ export function rotatePattern(delta) {
     const n = stepCount();
     if (n < 2) return;
 
-    let d = Math.round(Number(delta)) || 0;
-    d = ((d % n) + n) % n;
+    const raw = Math.round(Number(delta)) || 0;
+    const d = ((raw % n) + n) % n;
     if (!d) return;
 
     const pattern = getPattern(state.editSlot);
@@ -42,7 +42,8 @@ export function rotatePattern(delta) {
     }
     // Steps only — do not write stored clock (step count / reverse / division).
     hydratePatternToDom(state.editSlot, { clock: false });
-    rotateAutomationLanes(d);
+    // Raw delta: with Repeat > 1 a -1 shift is cycle - 1 on the automation, not n - 1.
+    rotateAutomationLanes(raw);
 
     if (state.isPlaying || state.isArping) {
         state.currentStep = ((state.currentStep - d) % n + n) % n;

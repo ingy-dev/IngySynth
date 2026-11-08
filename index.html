@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=517">
+    <link rel="stylesheet" href="styles.css?v=518">
     <script>
         // Phone loads this over a LAN IP. That is not a secure page, so Chrome
         // hides AudioWorklet and the digital engine never arms. localhost is exempt.
@@ -317,129 +317,42 @@
                             </div>
                             </div>
                         </fieldset>
-                        <fieldset class="keyboard-perf-fieldset keyboard-write-fieldset" id="keyboardWriteFieldset">
-                            <legend><span class="legend-hex">Step Input</span></legend>
-                            <div class="keyboard-write-row">
+                        <fieldset class="keyboard-perf-fieldset keyboard-automation-fieldset" id="keyboardAutomationFieldset">
+                            <legend><span class="legend-hex">Automation</span></legend>
+                            <div class="keyboard-automation-row">
                                 <div class="keyboard-perf-btn-slot">
-                                <button id="kbWrite" class="pushable off keyboard-write" type="button"
-                                        aria-label="Step pattern write" aria-pressed="false">
-                                    <span class="front">
-                                        <span class="kb-write-label">Write</span>
-                                        <span class="kb-write-rec" aria-hidden="true"></span>
-                                    </span>
+                                <button id="kbAutomationRecord" class="pushable off keyboard-automation-btn" type="button" aria-pressed="false" aria-label="Record automation">
+                                    <span class="front"><span class="kb-auto-rec-label">Rec</span><span class="kb-auto-rec-dot" aria-hidden="true"></span></span>
                                 </button>
                                 </div>
-                                <div class="keyboard-write-step-select" aria-label="Step select">
-                                    <span class="keyboard-write-step-select-label">STEP SELECT</span>
-                                    <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
-                                    <div class="keyboard-write-step-select-btns">
-                                        <button id="kbWritePrev" class="pushable keyboard-write-nav" type="button"
-                                                aria-label="Previous write step" disabled>
-                                            <span class="front">
-                                                <svg class="kb-dir-arrow" width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" focusable="false">
-                                                    <path fill="currentColor" d="M13 1 L3 7 L13 13 Z"/>
-                                                </svg>
-                                            </span>
-                                        </button>
-                                        <button id="kbWriteNext" class="pushable keyboard-write-nav" type="button"
-                                                aria-label="Next write step" disabled>
-                                            <span class="front">
-                                                <svg class="kb-dir-arrow" width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" focusable="false">
-                                                    <path fill="currentColor" d="M3 1 L13 7 L3 13 Z"/>
-                                                </svg>
-                                            </span>
-                                        </button>
+                                <div class="keyboard-perf-btn-slot">
+                                <button id="kbAutomationUndo" class="pushable keyboard-automation-btn" type="button" aria-label="Undo automation" disabled>
+                                    <span class="front"><svg class="kb-auto-history-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg></span>
+                                </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                <button id="kbAutomationRedo" class="pushable keyboard-automation-btn" type="button" aria-label="Redo automation" disabled>
+                                    <span class="front"><svg class="kb-auto-history-icon kb-auto-history-icon--redo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg></span>
+                                </button>
+                                </div>
+                                <div class="keyboard-perf-btn-slot">
+                                <button id="kbAutomationClear" class="pushable keyboard-automation-btn" type="button" aria-label="Clear automation">
+                                    <span class="front">Clr</span>
+                                </button>
+                                </div>
+                                <div class="keyboard-write-step-select keyboard-automation-clipboard" role="group" aria-label="Automation clipboard">
+                                    <div class="keyboard-write-step-select-btns keyboard-automation-clipboard-btns">
+                                        <button type="button" id="kbAutomationCopy" class="kb-step-btn automation-copy-btn" aria-label="Copy P1 automation">Copy</button>
+                                        <button type="button" id="kbAutomationPaste" class="kb-step-btn automation-paste-btn is-disabled" aria-label="Paste automation to P1" aria-disabled="true" disabled>Paste</button>
                                     </div>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                <button id="kbWriteAcc" class="pushable off keyboard-write-arm" type="button"
-                                        aria-label="Arm accent for next write" aria-pressed="false" disabled>
-                                    <span class="front">Acc</span>
-                                </button>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                <button id="kbWriteSld" class="pushable off keyboard-write-arm" type="button"
-                                        aria-label="Arm slide for next write" aria-pressed="false" disabled>
-                                    <span class="front">Sld</span>
-                                </button>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                <button id="kbRest" class="pushable off keyboard-write-rest" type="button"
-                                        aria-label="Toggle rest on current step" aria-pressed="false" disabled>
-                                    <span class="front">Rst</span>
-                                </button>
-                                </div>
-                                <div class="keyboard-write-fine-col">
-                                <div class="synth-knob keyboard-write-fine-knob" data-param="write-fine">
-                                    <span class="synth-knob-label">µTUNE</span>
-                                    <span class="synth-knob-value" id="kbWriteFineValue">0¢</span>
-                                    <div class="synth-knob-dial-wrap">
-                                        <div class="synth-knob-dial" id="kbWriteFineKnob" role="slider"
-                                             aria-label="Step microtune cents" aria-valuemin="-100" aria-valuemax="100" tabindex="0">
-                                            <span class="synth-knob-indicator"></span>
-                                        </div>
-                                    </div>
-                                    <input type="range" id="kbWriteFineProxy" class="keyboard-write-fine-proxy"
-                                           min="-100" max="100" value="0" step="1" tabindex="-1" aria-hidden="true">
-                                </div>
-                                <button id="kbMicrotuneLock" class="kb-step-btn kb-microtune-lock off" type="button"
-                                        aria-label="Microtune lock" aria-pressed="false">Full</button>
                                 </div>
                             </div>
                         </fieldset>
                     </div>
                     <div id="keyboardMobileTabStrip" class="keyboard-tab-strip keyboard-tab-strip--mobile" role="tablist" aria-label="Performance tabs">
-                        <button type="button" class="keyboard-tab active" role="tab" id="tabStepInput" data-tab="keyboardWriteFieldset" aria-controls="keyboardWriteFieldset" aria-selected="true" tabindex="0"><span class="keyboard-tab-dot" aria-hidden="true"></span>step input</button>
+                        <button type="button" class="keyboard-tab active" role="tab" id="tabAutomation" data-tab="keyboardAutomationFieldset" aria-controls="keyboardAutomationFieldset" aria-selected="true" tabindex="0"><span class="keyboard-tab-dot" aria-hidden="true"></span>automation</button>
                         <button type="button" class="keyboard-tab" role="tab" id="tabTuning" data-tab="keyboardTuningFieldset" aria-controls="keyboardTuningFieldset" aria-selected="false" tabindex="-1">scale/tuning</button>
-                        <button type="button" class="keyboard-tab" role="tab" id="tabAutomation" data-tab="keyboardAutomationFieldset" aria-controls="keyboardAutomationFieldset" aria-selected="false" tabindex="-1"><span class="keyboard-tab-dot" aria-hidden="true"></span>automation</button>
                     </div>
-                    <fieldset class="keyboard-automation-fieldset collapsible-fieldset collapsed" id="keyboardAutomationFieldset">
-                        <legend class="collapsible-legend">
-                            <button id="keyboardAutomationToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="false" aria-controls="keyboardAutomationPanel">
-                                <span class="collapsible-label">Automation</span>
-                                <span class="collapsible-arrow" aria-hidden="true"></span>
-                            </button>
-                        </legend>
-                        <div id="keyboardAutomationPanel" class="keyboard-automation-panel collapsible-panel hidden" hidden>
-                            <div class="keyboard-automation-controls">
-                                <div class="keyboard-perf-btn-slot">
-                                    <button id="kbAutomationRecord" class="pushable off keyboard-automation-btn" type="button" aria-pressed="false" aria-label="Record automation">
-                                        <span class="front">
-                                            <span class="kb-auto-rec-label">Rec</span>
-                                            <span class="kb-auto-rec-dot" aria-hidden="true"></span>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                    <button id="kbAutomationUndo" class="pushable keyboard-automation-btn" type="button" aria-label="Undo automation" disabled>
-                                        <span class="front">
-                                            <svg class="kb-auto-history-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                                <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                                            </svg>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                    <button id="kbAutomationRedo" class="pushable keyboard-automation-btn" type="button" aria-label="Redo automation" disabled>
-                                        <span class="front">
-                                            <svg class="kb-auto-history-icon kb-auto-history-icon--redo" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                                <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                                            </svg>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="keyboard-perf-btn-slot">
-                                    <button id="kbAutomationClear" class="pushable keyboard-automation-btn" type="button" aria-label="Clear automation">
-                                        <span class="front">Clr</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="keyboard-automation-clipboard" role="group" aria-label="Automation clipboard">
-                                <button type="button" id="kbAutomationCopy" class="kb-step-btn automation-copy-btn" aria-label="Copy P1 automation">Copy</button>
-                                <button type="button" id="kbAutomationPaste" class="kb-step-btn automation-paste-btn is-disabled" aria-label="Paste automation to P1" aria-disabled="true" disabled>Paste</button>
-                            </div>
-                        </div>
-                    </fieldset>
                     <fieldset class="keyboard-tuning-fieldset collapsible-fieldset" id="keyboardTuningFieldset">
                         <legend class="collapsible-legend">
                             <button id="keyboardTuningToggle" class="collapsible-toggle legend-hex" type="button" aria-expanded="true" aria-controls="keyboardTuningPanel">
@@ -551,8 +464,9 @@
                         </button>
                     </div>
                     <div id="keyboardTabStrip" class="keyboard-tab-strip" role="tablist" aria-label="Panel tabs">
-                        <button type="button" class="keyboard-tab active" role="tab" id="tabSteps" data-tab="keyboardStepsFieldset" aria-controls="keyboardStepsFieldset" aria-selected="true" tabindex="0">steps</button>
+                        <button type="button" class="keyboard-tab active" role="tab" id="tabSteps" data-tab="keyboardStepsFieldset" aria-controls="keyboardStepsFieldset" aria-selected="true" tabindex="0"><span class="keyboard-tab-dot" aria-hidden="true"></span>steps</button>
                         <button type="button" class="keyboard-tab" role="tab" id="tabSynth" data-tab="keyboardSynthFieldset" aria-controls="keyboardSynthFieldset" aria-selected="false" tabindex="-1">synthesizer</button>
+                        <button type="button" class="keyboard-tab" role="tab" id="tabDrums" data-tab="keyboardDrumDock" aria-controls="keyboardDrumDock" aria-selected="false" tabindex="-1">drums</button>
                         <button type="button" class="keyboard-tab" role="tab" id="tabEffects" data-tab="keyboardEffectsFieldset" aria-controls="keyboardEffectsFieldset" aria-selected="false" tabindex="-1">effects</button>
                         <button type="button" class="keyboard-tab" role="tab" id="tabMixer" data-tab="keyboardMixerFieldset" aria-controls="keyboardMixerFieldset" aria-selected="false" tabindex="-1">mixer</button>
                     </div>
@@ -568,9 +482,111 @@
                                 <span class="berlin-mode-brand-lockup"></span>
                             </div>
                             <div class="pattern-bank-bar" aria-label="Pattern bank">
+                                <fieldset class="keyboard-perf-fieldset keyboard-write-fieldset" id="keyboardWriteFieldset">
+                                    <legend><span class="legend-hex">Step Input</span></legend>
+                                    <div class="keyboard-write-row">
+                                        <div class="keyboard-perf-btn-slot">
+                                        <button id="kbWrite" class="pushable off keyboard-write" type="button"
+                                                aria-label="Step pattern write" aria-pressed="false">
+                                            <span class="front">
+                                                <span class="kb-write-label">Write</span>
+                                                <span class="kb-write-rec" aria-hidden="true"></span>
+                                            </span>
+                                        </button>
+                                        </div>
+                                        <div class="keyboard-step-vfd-wrap keyboard-write-vfd-wrap">
+                                            <span class="keyboard-step-vfd-label">STEP</span>
+                                            <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                            <div class="keyboard-step-vfd-bezel">
+                                            <div class="keyboard-step-vfd" aria-live="polite" aria-atomic="true" aria-label="Write step">
+                                                <div class="keyboard-step-vfd-digits" id="kbWriteStepDisplay" data-value="  ">
+                                                    <div class="sixteen-seg" data-digit="sp" aria-hidden="true">
+                                                        <span class="seg a1"></span><span class="seg a2"></span>
+                                                        <span class="seg b"></span><span class="seg c"></span>
+                                                        <span class="seg d1"></span><span class="seg d2"></span>
+                                                        <span class="seg e"></span><span class="seg f"></span>
+                                                        <span class="seg g1"></span><span class="seg g2"></span>
+                                                        <span class="seg h"></span><span class="seg i"></span>
+                                                        <span class="seg j"></span><span class="seg k"></span>
+                                                        <span class="seg l"></span><span class="seg m"></span>
+                                                        <span class="seg dp"></span>
+                                                    </div>
+                                                    <div class="sixteen-seg" data-digit="sp" aria-hidden="true">
+                                                        <span class="seg a1"></span><span class="seg a2"></span>
+                                                        <span class="seg b"></span><span class="seg c"></span>
+                                                        <span class="seg d1"></span><span class="seg d2"></span>
+                                                        <span class="seg e"></span><span class="seg f"></span>
+                                                        <span class="seg g1"></span><span class="seg g2"></span>
+                                                        <span class="seg h"></span><span class="seg i"></span>
+                                                        <span class="seg j"></span><span class="seg k"></span>
+                                                        <span class="seg l"></span><span class="seg m"></span>
+                                                        <span class="seg dp"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            </div>
+                                        </div>
+                                        <div class="keyboard-write-step-select" aria-label="Step select">
+                                            <span class="keyboard-write-step-select-label">STEP SELECT</span>
+                                            <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                            <div class="keyboard-write-step-select-btns">
+                                                <button id="kbWritePrev" class="pushable keyboard-write-nav" type="button"
+                                                        aria-label="Previous write step" aria-keyshortcuts="ArrowLeft" disabled>
+                                                    <span class="front">
+                                                        <svg class="kb-dir-arrow" width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" focusable="false">
+                                                            <path fill="currentColor" d="M13 1 L3 7 L13 13 Z"/>
+                                                        </svg>
+                                                    </span>
+                                                </button>
+                                                <button id="kbWriteNext" class="pushable keyboard-write-nav" type="button"
+                                                        aria-label="Next write step" aria-keyshortcuts="ArrowRight" disabled>
+                                                    <span class="front">
+                                                        <svg class="kb-dir-arrow" width="16" height="14" viewBox="0 0 16 14" aria-hidden="true" focusable="false">
+                                                            <path fill="currentColor" d="M3 1 L13 7 L3 13 Z"/>
+                                                        </svg>
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="keyboard-perf-btn-slot">
+                                        <button id="kbWriteAcc" class="pushable off keyboard-write-arm" type="button"
+                                                aria-label="Arm accent for next write" aria-pressed="false" disabled>
+                                            <span class="front">Acc</span>
+                                        </button>
+                                        </div>
+                                        <div class="keyboard-perf-btn-slot">
+                                        <button id="kbWriteSld" class="pushable off keyboard-write-arm" type="button"
+                                                aria-label="Arm slide for next write" aria-pressed="false" disabled>
+                                            <span class="front">Sld</span>
+                                        </button>
+                                        </div>
+                                        <div class="keyboard-perf-btn-slot">
+                                        <button id="kbRest" class="pushable off keyboard-write-rest" type="button"
+                                                aria-label="Toggle rest on current step" aria-pressed="false" disabled>
+                                            <span class="front">Rst</span>
+                                        </button>
+                                        </div>
+                                        <div class="keyboard-write-fine-col">
+                                        <div class="synth-knob keyboard-write-fine-knob" data-param="write-fine">
+                                            <span class="synth-knob-label">µTUNE</span>
+                                            <span class="synth-knob-value" id="kbWriteFineValue">0¢</span>
+                                            <div class="synth-knob-dial-wrap">
+                                                <div class="synth-knob-dial" id="kbWriteFineKnob" role="slider"
+                                                     aria-label="Step microtune cents" aria-valuemin="-100" aria-valuemax="100" tabindex="0">
+                                                    <span class="synth-knob-indicator"></span>
+                                                </div>
+                                            </div>
+                                            <input type="range" id="kbWriteFineProxy" class="keyboard-write-fine-proxy"
+                                                   min="-100" max="100" value="0" step="1" tabindex="-1" aria-hidden="true">
+                                        </div>
+                                        <button id="kbMicrotuneLock" class="kb-step-btn kb-microtune-lock off" type="button"
+                                                aria-label="Microtune lock" aria-pressed="false">Full</button>
+                                        </div>
+                                    </div>
+                                </fieldset>
                                 <div class="pattern-bank-patterns">
                                     <fieldset class="pattern-bank-select">
-                                        <legend>PATTERN SELECT</legend>
+                                        <legend><span class="legend-hex">Pattern Select</span></legend>
                                         <div class="pattern-bank-grid">
                                             <div class="pattern-bank-slots" role="group" aria-label="Pattern slot">
                                                 <button type="button" class="pattern-slot-btn kb-step-btn" data-slot="0" aria-pressed="true"><span class="pattern-slot-name">P1</span><span class="pattern-slot-auto" hidden></span></button>
@@ -806,7 +822,7 @@
                             </div>
                         </div>
                     </fieldset>
-                    <div class="keyboard-drum-dock" aria-label="Drum machine">
+                    <div class="keyboard-drum-dock" id="keyboardDrumDock" aria-label="Drum machine">
                         <div class="keyboard-drum-dock-bar">
                             <button type="button" id="kbDrumMode" class="pushable off keyboard-drum-mode-toggle"
                                     aria-label="Drum mode on or off" aria-pressed="false">

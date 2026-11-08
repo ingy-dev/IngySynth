@@ -813,18 +813,54 @@ function isScaleEnabled() {
     return !!get('scaleToggle');
 }
 
-function setKeyboardStepDigits(pair, { lit = true, label = '', brand = false, cyan = false } = {}) {
-    const el = document.getElementById('kbStepDisplay');
-    if (!el) return;
-    const text = String(pair).padEnd(2, ' ').slice(0, 2);
+function paintStepVfd(el, text, { lit, label, brand, cyan }) {
+    if (!el || el.dataset.value === text && el.classList.contains('lit') === lit
+        && el.classList.contains('vfd-cyan') === !!cyan) {
+        if (el && label) el.setAttribute('aria-label', label);
+        return;
+    }
     el.dataset.value = text;
     if (label) el.setAttribute('aria-label', label);
-    const t0 = performance.now();
     const digits = el.querySelectorAll('.sixteen-seg');
     applyVfdChar(digits[0], text[0], { brand });
     applyVfdChar(digits[1], text[1], { brand });
     el.classList.toggle('lit', lit);
     el.classList.toggle('vfd-cyan', !!cyan);
+}
+
+/**
+ * Step Input's own STEP display: the same step numbers as DISP, but never the
+ * scrolling marquees. During a marquee it shows the write cursor (Write on) or
+ * goes dark.
+ */
+function setWriteStepDigits(pair, opts, marquee) {
+    const el = document.getElementById('kbWriteStepDisplay');
+    if (!el) return;
+    if (!marquee) {
+        paintStepVfd(el, String(pair).padEnd(2, ' ').slice(0, 2), opts);
+        return;
+    }
+    if (state.keyboardWrite) {
+        const text = String(state.writeStep + 1).padStart(2, '0');
+        paintStepVfd(el, text, { lit: true, label: `Write step ${text}`, brand: false, cyan: true });
+    } else {
+        paintStepVfd(el, '  ', { lit: false, label: 'Write step', brand: false, cyan: false });
+    }
+}
+
+function setKeyboardStepDigits(pair, { lit = true, label = '', brand = false, cyan = false, marquee = false } = {}) {
+    const el = document.getElementById('kbStepDisplay');
+    if (!el) return;
+    const text = String(pair).padEnd(2, ' ').slice(0, 2);
+    const t0 = performance.now();
+    el.dataset.value = text;
+    if (label) el.setAttribute('aria-label', label);
+    const digits = el.querySelectorAll('.sixteen-seg');
+    applyVfdChar(digits[0], text[0], { brand });
+    applyVfdChar(digits[1], text[1], { brand });
+    el.classList.toggle('lit', lit);
+    el.classList.toggle('vfd-cyan', !!cyan);
+    setWriteStepDigits(text, { lit, label, brand, cyan }, marquee);
     const ms = performance.now() - t0;
     const p = (window.__ingyProf ||= {});
     p.dispN = (p.dispN || 0) + 1;
@@ -883,14 +919,19 @@ function tickIdleMarquee() {
     const len = text.length;
     const a = text[idleMarqueeIndex % len];
     const b = text[(idleMarqueeIndex + 1) % len];
-    setKeyboardStepDigits(`${a}${b}`, { lit: true, label, brand, cyan: !!cyan });
+    setKeyboardStepDigits(`${a}${b}`, { lit: true, label, brand, cyan: !!cyan, marquee: true });
     idleMarqueeIndex = (idleMarqueeIndex + 1) % len;
+}
+
+/** Berlin's static "bd" owns DISP, except while Write edits lanes with the transport stopped. */
+function berlinOwnsVfd() {
+    return isBerlinOn() && !(state.keyboardWrite && !state.isPlaying);
 }
 
 function startIdleMarquee() {
     // Sequencer play owns the VFD for step numbers — never scroll brand over it
     if (state.isPlaying) return;
-    if (isBerlinOn()) {
+    if (berlinOwnsVfd()) {
         showBerlinBdOnVfd();
         return;
     }
@@ -902,7 +943,7 @@ function startIdleMarquee() {
 
 /** Refresh idle VFD (brand vs ArP vs Write vs Scale) when mode toggles. */
 export function refreshIdleVfd() {
-    if (isBerlinOn()) {
+    if (berlinOwnsVfd()) {
         clearStepsPreviewTimer();
         showBerlinBdOnVfd();
         return;
@@ -954,6 +995,7 @@ export function endScaleVfdPrompt() {
 /** Show the write-target step on the keyboard VFD (cyan). Playback owns DISP while playing. */
 export function showWriteStepOnVfd() {
     if (!state.keyboardWrite) return;
+    if (laneFlashTimer !== null) return;
     // While sequencer runs, keep green play-step numbers on DISP
     if (state.isPlaying) return;
     clearStepsPreviewTimer();
@@ -984,8 +1026,8 @@ function clearStepsPreviewTimer() {
 function updateKeyboardStepDisplay(stepIndex, { chordCount = 0 } = {}) {
     lastVfdStepIndex = stepIndex;
     // Keep STEPS knob preview on the VFD until its timeout ends
-    if (stepsPreviewTimer !== null) return;
-    if (isBerlinOn()) {
+    if (stepsPreviewTimer !== null || laneFlashTimer !== null) return;
+    if (berlinOwnsVfd()) {
         showBerlinBdOnVfd();
         return;
     }
@@ -1011,7 +1053,7 @@ function updateKeyboardStepDisplay(stepIndex, { chordCount = 0 } = {}) {
 
 function clearKeyboardStepDisplay() {
     clearStepsPreviewTimer();
-    if (isBerlinOn()) {
+    if (berlinOwnsVfd()) {
         showBerlinBdOnVfd();
         return;
     }
@@ -1036,20 +1078,41 @@ export function previewStepsOnVfd(stepCount) {
     const n = Math.max(0, Math.min(99, Math.round(Number(stepCount)) || 0));
     const text = String(n).padStart(2, '0');
     setKeyboardStepDigits(text, { lit: true, label: `Steps ${text}`, cyan: true });
-    stepsPreviewTimer = setTimeout(() => {
-        stepsPreviewTimer = null;
-        if (isBerlinOn()) {
-            showBerlinBdOnVfd();
-        } else if (state.keyboardWrite) {
-            showWriteStepOnVfd();
-        } else if (!state.isPlaying && state.keyboardArp) {
-            startIdleMarquee();
-        } else if (state.isPlaying || state.isArping) {
-            updateKeyboardStepDisplay(lastVfdStepIndex);
-        } else {
-            startIdleMarquee();
-        }
-    }, STEPS_PREVIEW_MS);
+    stepsPreviewTimer = setTimeout(restoreVfdAfterPreview, STEPS_PREVIEW_MS);
+}
+
+function restoreVfdAfterPreview() {
+    stepsPreviewTimer = null;
+    if (berlinOwnsVfd()) {
+        showBerlinBdOnVfd();
+    } else if (state.keyboardWrite) {
+        showWriteStepOnVfd();
+    } else if (!state.isPlaying && state.keyboardArp) {
+        startIdleMarquee();
+    } else if (state.isPlaying || state.isArping) {
+        updateKeyboardStepDisplay(lastVfdStepIndex);
+    } else {
+        startIdleMarquee();
+    }
+}
+
+const LANE_FLASH_MS = 900;
+let laneFlashTimer = null;
+
+/**
+ * Flash the Berlin Write lane ("o1", "m2"…) on DISP and STEP, then return to
+ * the cursor. Keeps showing while you carry on writing; its own timer ends it.
+ */
+export function flashWriteLaneOnVfd(label) {
+    clearStepsPreviewTimer();
+    if (laneFlashTimer !== null) clearTimeout(laneFlashTimer);
+    stopIdleMarquee();
+    const text = String(label).padEnd(2, ' ').slice(0, 2);
+    setKeyboardStepDigits(text, { lit: true, label: `Write lane ${text}`, cyan: true });
+    laneFlashTimer = setTimeout(() => {
+        laneFlashTimer = null;
+        restoreVfdAfterPreview();
+    }, LANE_FLASH_MS);
 }
 
 function warmBerlinAnalogDrums() {

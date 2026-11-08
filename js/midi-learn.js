@@ -172,8 +172,20 @@ export function selectMappingTarget(canonical, host, keyOverride) {
 /**
  * @returns {boolean} true if the event was consumed (learn or unmappable)
  */
+/** Outside learn mode every knob / fader grab announces its catalog key (automation latches on it). */
+function announceControlTouch(canonicalOrKey, host) {
+    const key = catalogKeyFromLearn(canonicalOrKey, host);
+    if (!key) return;
+    document.dispatchEvent(new CustomEvent('ingysynth:control-touch', {
+        detail: { key, host: host || mappingHostFor(canonicalOrKey) || null },
+    }));
+}
+
 export function beginMidiLearn(event, canonicalOrKey, host) {
-    if (!state.midiMappingMode) return false;
+    if (!state.midiMappingMode) {
+        announceControlTouch(canonicalOrKey, host);
+        return false;
+    }
     if (event) {
         event.preventDefault();
         event.stopPropagation();

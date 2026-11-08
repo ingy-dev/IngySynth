@@ -23,7 +23,7 @@ import { initKeyboardFilterEnv, syncKeyboardFilterEnvFromMain } from './keyboard
 import { initKeyboardAcidStrip } from './keyboard-acid-strip.js?v=46';
 import { initKeyboardLfo, syncKeyboardLfoFromMain } from './keyboard-lfo.js?v=34';
 import { initCollapsibles, setCollapsibleExpanded } from './collapsible.js?v=75';
-import { initViewMode } from './view-mode.js?v=13';
+import { initViewMode } from './view-mode.js?v=14';
 import { initAutomation } from './automation.js?v=101';
 import { initParamStatus } from './param-status.js?v=33';
 import { initStepTuneRange } from './step-tune-range.js?v=60';

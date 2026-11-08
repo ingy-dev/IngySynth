@@ -154,6 +154,8 @@ export const state = {
     keyboardVoiceActive: false,
     keyboardWrite: false,
     writeStep: 0,
+    /** Berlin Write lane (row index into the open OSC/MOD lanes). */
+    writeBerlinRow: 0,
     pitchBendSemitones: 0,             // live pitch-bend strip (−range…+range)
     computerKeyboardEnabled: false,
     computerKeyboardOctave: -12,       // A-key root relative to C4 (default ~C3)

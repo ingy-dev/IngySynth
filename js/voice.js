@@ -19,6 +19,16 @@ const RETUNE_RAMP = 0.012; // short glide — avoids zipper clicks on legato
 /** Song recording listens here so voice.js does not import the recorder. */
 let liveHooks = null;
 
+/**
+ * Berlin Write on an O lane: the key plays that oscillator alone, like the
+ * lane does (M lane or Write off: the whole patch). -1 when not monitoring.
+ */
+export function liveBerlinLane() {
+    if (!state.berlinMode || !state.keyboardWrite) return -1;
+    const row = state.writeBerlinRow;
+    return Number.isInteger(row) && row >= 0 && row < 4 ? row : -1;
+}
+
 export function setLiveNoteHooks(hooks) {
     liveHooks = hooks || null;
 }
@@ -119,8 +129,10 @@ function spawnLiveOscillators(semitones, now, { legato = false } = {}) {
 
     stopLiveOscillators(now);
 
+    const lane = liveBerlinLane();
     for (let i = 0; i < state.oscStates.length; i++) {
         if (!state.oscStates[i]) continue;
+        if (lane >= 0 && i !== lane) continue;
         const baseFreq = semitonesToFrequency(semitones, i);
         spawnOscStack(i, baseFreq, now, {
             oscStart: now,

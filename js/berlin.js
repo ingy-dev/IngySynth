@@ -46,6 +46,7 @@ import {
 } from './pattern-bank.js?v=50';
 import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=157';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
+import { berlinHooks } from './berlin-hooks.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
 export const BERLIN_COLORS = [
@@ -154,6 +155,38 @@ function isPitchLane(rowIndex) {
     return isOscLane(rowIndex) || isDrumLane(rowIndex);
 }
 
+/**
+ * Berlin Write monitor: the O lane being written, or null (Write off, not
+ * Berlin, or the Write lane is an M lane — then every O lane plays as usual).
+ */
+export function berlinWriteMonitorRow() {
+    if (!state.berlinMode || !state.keyboardWrite) return null;
+    const row = state.writeBerlinRow;
+    if (!isOscLane(row) || !berlinActiveRows().includes(row)) return null;
+    return row;
+}
+
+let lastSilencedMask = 0;
+
+/**
+ * Recompute which lanes are silenced right now (Solo, Write monitor, On/Off),
+ * release voices on lanes that just went quiet, repaint the rows and tell the
+ * engine. Call after anything that can change isRowSounding().
+ */
+export function refreshBerlinSounding() {
+    let mask = 0;
+    for (let row = 0; row < PATTERN_COUNT; row++) {
+        if (!isRowSounding(row)) mask |= 1 << row;
+    }
+    const newlySilent = mask & ~lastSilencedMask;
+    lastSilencedMask = mask;
+    for (let row = 0; row < PATTERN_COUNT; row++) {
+        if (newlySilent & (1 << row)) notifySoundingRowSilenced(row);
+    }
+    syncAllRowEnableUi();
+    document.dispatchEvent(new CustomEvent('ingysynth:berlin-sounding', { detail: { mask } }));
+}
+
 /** Output mute: pattern stays visible/editable; playhead keeps phase. */
 export function isRowEnabled(rowIndex) {
     const pattern = getBerlinLane(rowIndex);
@@ -175,6 +208,10 @@ export function getSoloRow() {
  * other rows stay silent without touching their remembered mute state.
  */
 export function isRowSounding(rowIndex) {
+    // Write monitor: on an O lane you hear only that oscillator. M lanes keep
+    // their normal mix, so the filter you are writing still moves the sound.
+    const monitor = berlinWriteMonitorRow();
+    if (monitor !== null && isOscLane(rowIndex)) return rowIndex === monitor;
     const solo = getSoloRow();
     if (solo !== null) return solo === rowIndex;
     return isRowEnabled(rowIndex);
@@ -646,6 +683,16 @@ function syncStepCell(row, step) {
     syncRatchButton(ratch, data.ratch);
 }
 
+/** Repaint one lane step after an outside edit (Write mode). */
+export function syncBerlinStep(row, step) {
+    syncStepCell(row, step);
+}
+
+/** Lane name for the VFD: o1–o4, m1–m4. */
+export function berlinLaneVfdLabel(row) {
+    return isOscLane(row) ? `o${row + 1}` : `m${row - OSC_LANE_COUNT + 1}`;
+}
+
 /** Keep Berlin µtune sliders on the same Lock / Full step as the main strip. */
 export function syncBerlinMicrotuneSteps() {
     const step = berlinFineStepAttr();
@@ -688,7 +735,8 @@ function syncRowEnableUi(row, fieldset = document.querySelector(`.berlin-row[dat
     const isSolo = solo === row;
     fieldset.classList.toggle('is-muted', !enabled);
     fieldset.classList.toggle('is-solo', isSolo);
-    fieldset.classList.toggle('is-solo-silenced', solo !== null && !isSolo);
+    // Dim lanes Solo or the Write monitor silence (their own On/Off is untouched)
+    fieldset.classList.toggle('is-solo-silenced', enabled && !isSolo && !isRowSounding(row));
     const btn = fieldset.querySelector('.berlin-row-enable');
     if (btn) {
         btn.classList.toggle('off', !enabled);
@@ -729,6 +777,7 @@ export function setRowEnabled(row, enabled) {
     syncRowEnableUi(row);
     refreshBerlinDots();
     if (wasSounding && !isRowSounding(row)) notifySoundingRowSilenced(row);
+    refreshBerlinSounding();
 }
 
 /**
@@ -759,6 +808,7 @@ export function setRowSolo(row, on) {
     prevSounding.forEach((i) => {
         if (!isRowSounding(i)) notifySoundingRowSilenced(i);
     });
+    refreshBerlinSounding();
 }
 
 export function clearBerlinSolo() {
@@ -766,6 +816,7 @@ export function clearBerlinSolo() {
     state.berlinSoloRow = null;
     syncAllRowEnableUi();
     refreshBerlinDots();
+    refreshBerlinSounding();
 }
 
 export function syncBerlinRowUi(row) {
@@ -1457,7 +1508,6 @@ function applyBerlinMasterGateExit() {
 function setBerlinLockedUi(on) {
     document.body.classList.toggle('berlin-mode', !!on);
     [
-        'kbWrite',
         'kbRev',
         'patternShiftBack',
         'patternShiftForward',
@@ -1548,6 +1598,7 @@ export function setBerlinMode(on) {
     }
 
     syncBerlinUi();
+    refreshBerlinSounding();
     document.dispatchEvent(new CustomEvent('ingysynth:berlin-mode', {
         detail: { on: state.berlinMode },
     }));
@@ -1577,6 +1628,7 @@ export function setBerlinOscCount(count) {
     prevSounding.forEach((i) => {
         if (i >= next || !isRowSounding(i)) notifySoundingRowSilenced(i);
     });
+    refreshBerlinSounding();
 }
 
 export function setBerlinModCount(count) {
@@ -1593,6 +1645,7 @@ export function setBerlinModCount(count) {
         state.berlinSoloRow = null;
     }
     syncBerlinUi();
+    refreshBerlinSounding();
 }
 
 export function initBerlin() {
@@ -1602,6 +1655,7 @@ export function initBerlin() {
 
     document.addEventListener('ingysynth:berlin-slot', (e) => {
         syncBerlinUi();
+        refreshBerlinSounding();
         if (!state.isPlaying || !state.audioContext) return;
         // Paste / Clear refresh the rows without a start time and must not
         // jump the running lanes back to step 1. A real P1–P8 switch passes one.
@@ -1630,3 +1684,12 @@ export function initBerlin() {
 
     syncBerlinUi();
 }
+
+// pattern-write.js reaches these through berlin-hooks.js (no import cycle)
+Object.assign(berlinHooks, {
+    isBerlinOn,
+    berlinActiveRows,
+    syncBerlinStep,
+    berlinLaneVfdLabel,
+    refreshBerlinSounding,
+});

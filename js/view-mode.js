@@ -1,6 +1,6 @@
-// Full Screen vs Tabbed layout: Steps / Synthesizer / Effects / Mixer as folder tabs.
-// At max-width 768px a second folder (Step Input / Scale/Tuning / Automation)
-// sits above it, with its own active tab.
+// Full Screen vs Tabbed layout: Steps / Synthesizer / Drums / Effects / Mixer as folder tabs.
+// At max-width 768px a second folder (Automation / Scale/Tuning) sits above it,
+// with its own active tab. Step Input lives inside the Steps panel.
 
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import { state } from './state.js?v=120';
@@ -8,14 +8,14 @@ import { state } from './state.js?v=120';
 export const TAB_FIELDSET_IDS = [
     'keyboardStepsFieldset',
     'keyboardSynthFieldset',
+    'keyboardDrumDock',
     'keyboardEffectsFieldset',
     'keyboardMixerFieldset',
 ];
 
 const MOBILE_TAB_FIELDSET_IDS = [
-    'keyboardWriteFieldset',
-    'keyboardTuningFieldset',
     'keyboardAutomationFieldset',
+    'keyboardTuningFieldset',
 ];
 
 const MOBILE_MQ = '(max-width: 768px)';
@@ -34,9 +34,9 @@ const GROUPS = [
         stripId: 'keyboardMobileTabStrip',
         ids: MOBILE_TAB_FIELDSET_IDS,
         storageKey: 'ingysynth.activeMobileTab',
-        defaultId: 'keyboardWriteFieldset',
+        defaultId: 'keyboardAutomationFieldset',
         mobileOnly: true,
-        activeId: 'keyboardWriteFieldset',
+        activeId: 'keyboardAutomationFieldset',
     },
 ];
 

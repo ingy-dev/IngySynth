@@ -1,8 +1,16 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
 import { state } from './state.js?v=120';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp } from './sequencer.js?v=455';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp, flashWriteLaneOnVfd } from './sequencer.js?v=455';
+import { berlinHooks } from './berlin-hooks.js?v=1';
+
+// Late-bound: see berlin-hooks.js for why this does not import berlin.js.
+const isBerlinOn = () => !!berlinHooks.isBerlinOn?.();
+const berlinActiveRows = () => berlinHooks.berlinActiveRows?.() ?? [];
+const syncBerlinStep = (row, step) => berlinHooks.syncBerlinStep?.(row, step);
+const berlinLaneVfdLabel = (row) => berlinHooks.berlinLaneVfdLabel?.(row) ?? '';
+const refreshBerlinSounding = () => berlinHooks.refreshBerlinSounding?.();
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
-import { isTabbedView, selectKeyboardTab } from './view-mode.js?v=13';
+import { isTabbedView, selectKeyboardTab } from './view-mode.js?v=14';
 import { bindKnob } from './knobs.js?v=189';
 import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=52';
 import { forceNoteOff } from './voice.js?v=191';
@@ -15,10 +23,16 @@ import {
     chordFromCellNotes,
     clampChord,
     paintStepChordMarker,
+    getBerlinLane,
+    patternStepCount,
+    isOscLane,
 } from './pattern-bank.js?v=50';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8
+/** Berlin MOD lanes hold CV, not pitch — keep writes on the step dial's span. */
+const BERLIN_CV_MIN = -24;
+const BERLIN_CV_MAX = 24;
 
 const polyWriteHeld = new Set();
 const polyWriteSession = new Set();
@@ -151,7 +165,43 @@ export function polyWriteNoteUp(cellSemitone) {
 let writeFineBound = false;
 let syncingWriteFineFromStep = false;
 
+// --- Berlin: Write targets one open lane at a time ------------------------
+
+function berlinWrite() {
+    return isBerlinOn();
+}
+
+/** Keep the Write lane on an open OSC/MOD row; falls back to the first one. */
+function writeRow() {
+    const rows = berlinActiveRows();
+    if (!rows.includes(state.writeBerlinRow)) state.writeBerlinRow = rows[0] ?? 0;
+    return state.writeBerlinRow;
+}
+
+function writeLaneStep(step) {
+    const lane = getBerlinLane(writeRow());
+    if (!lane.steps[step]) lane.steps[step] = { tune: 0, fine: 0, on: true };
+    return lane.steps[step];
+}
+
+/**
+ * A Write edit changed a Berlin lane step. Bare Metal's engine keeps its own
+ * copy of the lanes, so the bridge forwards it (field: 'tune' | 'fine' | 'flags').
+ */
+function berlinStepEdited(step, field) {
+    syncBerlinStep(writeRow(), step);
+    document.dispatchEvent(new CustomEvent('ingysynth:berlin-step-edit', {
+        detail: { row: writeRow(), step, field },
+    }));
+}
+
+/** Step data at the cursor: the Berlin lane step, or the main strip step. */
+function writeStepData(step) {
+    return berlinWrite() ? writeLaneStep(step) : getLiveStep(step);
+}
+
 function stepCount() {
+    if (berlinWrite()) return patternStepCount(getBerlinLane(writeRow()));
     const n = Math.round(getNumber('stepCount', 8));
     return Math.max(1, Math.min(32, Number.isFinite(n) ? n : 8));
 }
@@ -187,7 +237,7 @@ export function syncWriteFineKnob() {
     const proxy = document.getElementById('kbWriteFineProxy');
     const valueEl = document.getElementById('kbWriteFineValue');
     if (!proxy) return;
-    const cents = Math.round(Number(getLiveStep(state.writeStep).fine) || 0);
+    const cents = Math.round(Number(writeStepData(state.writeStep).fine) || 0);
     syncingWriteFineFromStep = true;
     proxy.value = String(cents);
     proxy.dispatchEvent(new Event('input', { bubbles: true }));
@@ -201,7 +251,12 @@ function applyWriteFineFromProxy() {
     const valueEl = document.getElementById('kbWriteFineValue');
     if (!proxy) return;
     const cents = Math.round(Number(proxy.value) || 0);
-    set(`step-fine-${state.writeStep}`, cents);
+    if (berlinWrite()) {
+        writeLaneStep(state.writeStep).fine = cents;
+        berlinStepEdited(state.writeStep, 'fine');
+    } else {
+        set(`step-fine-${state.writeStep}`, cents);
+    }
     if (valueEl) valueEl.textContent = formatCents(cents);
 }
 
@@ -254,11 +309,11 @@ function syncWriteNavEnabled() {
 }
 
 function isStepOn(step) {
-    return getLiveStep(step).on !== false;
+    return writeStepData(step).on !== false;
 }
 
 function isStepFlagOn(kind, step) {
-    const data = getLiveStep(step);
+    const data = writeStepData(step);
     if (kind === 'accent') return !!data.accent;
     if (kind === 'slide') return !!data.slide;
     return false;
@@ -297,24 +352,83 @@ export function syncWriteToolbarFromStep() {
 export function syncWriteCursorHighlight() {
     document.querySelectorAll('.keyboard-step.write-cursor, .sequencer-step.write-cursor')
         .forEach((el) => el.classList.remove('write-cursor'));
+    document.querySelectorAll('.berlin-step.write-cursor')
+        .forEach((el) => el.classList.remove('write-cursor'));
     if (!state.keyboardWrite) return;
     const step = state.writeStep;
+    if (berlinWrite()) {
+        document.querySelector(`.berlin-step[data-row="${writeRow()}"][data-step="${step}"]`)
+            ?.classList.add('write-cursor');
+        return;
+    }
     document.querySelector(`.keyboard-step[data-step="${step}"]`)?.classList.add('write-cursor');
     document.querySelector(`.sequencer-step[data-step="${step}"]`)?.classList.add('write-cursor');
 }
 
 function setStepOn(step, on) {
+    if (berlinWrite()) {
+        const data = writeLaneStep(step);
+        if ((data.on !== false) === !!on) return;
+        data.on = !!on;
+        berlinStepEdited(step, 'flags');
+        return;
+    }
     set(`step-toggle-${step}`, !!on);
 }
 
 function setStepFlag(kind, step, on) {
     if (kind !== 'accent' && kind !== 'slide') return;
+    if (berlinWrite()) {
+        const data = writeLaneStep(step);
+        if (!!data[kind] === !!on) return;
+        data[kind] = !!on;
+        berlinStepEdited(step, 'flags');
+        return;
+    }
     set(`step-${kind}-${step}`, !!on);
 }
 
 function setStepTune(step, semitones) {
+    if (berlinWrite()) {
+        const row = writeRow();
+        const [min, max] = isOscLane(row)
+            ? [WRITE_TUNE_MIN, WRITE_TUNE_MAX]
+            : [BERLIN_CV_MIN, BERLIN_CV_MAX];
+        writeLaneStep(step).tune = Math.max(min, Math.min(max, Math.round(semitones)));
+        berlinStepEdited(step, 'tune');
+        return;
+    }
     const clamped = Math.max(WRITE_TUNE_MIN, Math.min(WRITE_TUNE_MAX, Math.round(semitones)));
     set(`step-slider-${step}`, clamped);
+}
+
+/** Point Write at another open Berlin lane and flash its name (o1, m2…). */
+function setWriteLane(row, { step = state.writeStep } = {}) {
+    state.writeBerlinRow = row;
+    writeRow();
+    refreshBerlinSounding();
+    flashWriteLaneOnVfd(berlinLaneVfdLabel(state.writeBerlinRow));
+    setWriteCursor(step, { keepVfd: true });
+}
+
+/** Up/Down: previous/next open lane, wrapping. */
+export function nudgeWriteLane(delta) {
+    if (!state.keyboardWrite || !berlinWrite()) return;
+    const rows = berlinActiveRows();
+    if (!rows.length) return;
+    const i = Math.max(0, rows.indexOf(writeRow()));
+    setWriteLane(rows[(i + delta + rows.length) % rows.length]);
+}
+
+/** Re-target after Berlin turns on/off, the lane counts change or P1–P8 switches. */
+function resyncWriteTarget({ flash = false } = {}) {
+    if (!state.keyboardWrite) return;
+    if (berlinWrite()) refreshBerlinSounding();
+    if (berlinWrite() && flash) {
+        setWriteLane(writeRow());
+        return;
+    }
+    setWriteCursor(state.writeStep);
 }
 
 function syncArpButtonOff() {
@@ -365,7 +479,6 @@ const WRITE_VIEW_PANEL_IDS = [
     'keyboardSynthFieldset',
     'keyboardMixerFieldset',
     'keyboardXyFieldset',
-    'keyboardAutomationFieldset',
 ];
 
 /** Pre-Write expand/collapse layout — restored when Write exits. */
@@ -392,7 +505,6 @@ function applyWriteTemporaryView() {
     setCollapsibleExpanded(document.getElementById('keyboardSynthFieldset'), false);
     setCollapsibleExpanded(document.getElementById('keyboardMixerFieldset'), false);
     setCollapsibleExpanded(document.getElementById('keyboardXyFieldset'), false);
-    setCollapsibleExpanded(document.getElementById('keyboardAutomationFieldset'), false);
 }
 
 function restoreWriteTemporaryView() {
@@ -411,19 +523,43 @@ function restoreWriteTemporaryView() {
     writeViewSnapshot = null;
 }
 
-export function setWriteCursor(step) {
+export function setWriteCursor(step, { keepVfd = false } = {}) {
     if (state.keyboardWrite) commitPolyWriteIfHolding({ advance: false });
     state.writeStep = clampWriteStep(step);
     syncWriteCursorHighlight();
     syncWriteFineKnob();
     syncWriteToolbarFromStep();
     requestKeyboardStepsSync();
-    if (state.keyboardWrite) endWriteVfdPrompt();
+    // keepVfd: a lane-name flash is showing — it returns to the cursor itself
+    if (state.keyboardWrite && !keepVfd) endWriteVfdPrompt();
 }
 
 export function nudgeWriteCursor(delta) {
     if (!state.keyboardWrite) return;
     setWriteCursor(state.writeStep + delta);
+}
+
+/** Controls that already own Left/Right (knobs, sliders, menus, tab strips, the keyboard scroller). */
+const ARROW_OWNER_SELECTOR = [
+    'input', 'textarea', 'select', '[contenteditable="true"]',
+    '[role="slider"]', '[role="spinbutton"]', '[role="tab"]', '[role="radio"]',
+    '[role="listbox"]', '[role="menu"]', '.chromatic-keyboard-scroller-track',
+].join(', ');
+
+/**
+ * Left/Right arrows move STEP SELECT while Write is on (holding repeats).
+ * In Berlin, Up/Down move the Write lane through the open lanes.
+ */
+function onWriteArrowKey(e) {
+    if (!state.keyboardWrite) return;
+    const horizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+    const vertical = (e.key === 'ArrowUp' || e.key === 'ArrowDown') && berlinWrite();
+    if (!horizontal && !vertical) return;
+    if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+    if (e.target instanceof Element && e.target.closest(ARROW_OWNER_SELECTOR)) return;
+    e.preventDefault();
+    if (vertical) nudgeWriteLane(e.key === 'ArrowUp' ? -1 : 1);
+    else nudgeWriteCursor(e.key === 'ArrowLeft' ? -1 : 1);
 }
 
 export function setWriteMode(on, { refreshKeyboard } = {}) {
@@ -461,6 +597,10 @@ export function setWriteMode(on, { refreshKeyboard } = {}) {
         syncWriteToolbarFromStep();
         requestKeyboardStepsSync();
         beginWriteVfdPrompt();
+        if (berlinWrite()) {
+            flashWriteLaneOnVfd(berlinLaneVfdLabel(writeRow()));
+            refreshBerlinSounding();
+        }
     } else {
         commitPolyWriteIfHolding({ advance: false });
         resetPolyWriteCapture();
@@ -472,6 +612,7 @@ export function setWriteMode(on, { refreshKeyboard } = {}) {
         requestKeyboardStepsSync();
         refreshIdleVfd();
         syncChordMemUI();
+        if (berlinWrite()) refreshBerlinSounding();
     }
 
     if (typeof refreshKeyboard === 'function') refreshKeyboard();
@@ -501,7 +642,14 @@ export function toggleWriteSlideArm() {
     toggleWriteStepFlag('slide');
 }
 
+/** Next step; in Berlin the last step of a lane drops into the next open lane. */
 function advanceAfterWrite() {
+    if (berlinWrite() && state.writeStep + 1 >= stepCount()) {
+        const rows = berlinActiveRows();
+        const i = Math.max(0, rows.indexOf(writeRow()));
+        setWriteLane(rows[(i + 1) % rows.length], { step: 0 });
+        return;
+    }
     setWriteCursor(state.writeStep + 1);
 }
 
@@ -518,7 +666,7 @@ export function writeNote(cellSemitone) {
 
     setStepTune(step, semi);
     setStepOn(step, true);
-    clearLiveChord(step);
+    if (!berlinWrite()) clearLiveChord(step);
     // Acc/Sld are per-step edits via the toolbar — don't overwrite when entering pitch
     requestKeyboardStepsSync();
     markWriteStepProgrammed();
@@ -538,10 +686,10 @@ export function toggleWriteRest() {
         setStepOn(step, false);
         setStepFlag('accent', step, false);
         setStepFlag('slide', step, false);
-        clearLiveChord(step);
+        if (!berlinWrite()) clearLiveChord(step);
     } else {
         setStepOn(step, true);
-        clearLiveChord(step);
+        if (!berlinWrite()) clearLiveChord(step);
     }
 
     requestKeyboardStepsSync();
@@ -569,6 +717,7 @@ export function initPatternWrite(refreshKeyboard) {
     document.getElementById('kbWriteNext')?.addEventListener('click', () => {
         nudgeWriteCursor(1);
     });
+    document.addEventListener('keydown', onWriteArrowKey);
     document.getElementById('kbRest')?.addEventListener('click', () => {
         toggleWriteRest();
     });
@@ -580,7 +729,18 @@ export function initPatternWrite(refreshKeyboard) {
     });
 
     subscribe('stepCount', () => {
-        if (!state.keyboardWrite) return;
+        if (!state.keyboardWrite || berlinWrite()) return;
         setWriteCursor(state.writeStep);
+    });
+
+    // Berlin: re-target the Write lane when lanes or patterns change under it
+    document.addEventListener('ingysynth:berlin-mode', () => resyncWriteTarget({ flash: true }));
+    document.addEventListener('ingysynth:berlin-slot', () => resyncWriteTarget());
+    document.addEventListener('click', (e) => {
+        if (!(e.target instanceof Element)) return;
+        if (e.target.closest('.berlin-count-btn')) resyncWriteTarget();
+    });
+    document.addEventListener('input', (e) => {
+        if (e.target instanceof Element && e.target.matches('.berlin-row-steps')) resyncWriteTarget();
     });
 }

@@ -4,7 +4,6 @@
 // Rec off + existing lane → knob tweaks set a persistent offset (curve shape kept).
 
 import { state } from './state.js?v=120';
-import { initCollapsibles, setCollapsibleLocked } from './collapsible.js?v=75';
 import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=141';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=106';
 import { ensureDisplayStep } from './knobs.js?v=189';
@@ -14,7 +13,8 @@ import {
 } from './param-status.js?v=33';
 import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=122';
 import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=44';
-import { clampToCatalog, getParam } from './param-catalog.js?v=12';
+import { PARAMS, clampToCatalog, getParam } from './param-catalog.js?v=12';
+import { midiControlId } from './midi-learn.js?v=35';
 import {
     flashCopiedToast,
     getPattern,
@@ -27,28 +27,26 @@ const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */
 const RESOLUTION = 128;
 
-const RANGE_IDS = [
-    'masterTune', 'octaveSwitch', 'semitoneSwitch',
-    'unisonDetune',
-    'ringMod', 'noiseVol',
-    'cutoff', 'resonance', 'highPass',
-    'filterAttack', 'filterDecay', 'filterSustain', 'filterRelease',
-    'attack', 'decay', 'sustain', 'release',
-    'distortion', 'bitDepth', 'chorusAmount', 'delayAmount',
-    'reverbAmount', 'reverbSize', 'reverbDecay', 'reverbDamp',
-    'volume', 'compThreshold', 'scDepth', 'scTimeMs', 'scTimeSyncDivision',
-    'lfoSpeed',
-    'lfoSyncDivision',
-    'cutoffMod', 'resonanceMod', 'highpassMod',
-    'osc1PitchMod', 'osc2PitchMod', 'osc3PitchMod', 'osc4PitchMod',
-    'ringFreqMod',
-];
+// Every catalog range param is automatable (Plaits, digital slots, Ingy 6, filter env
+// amount ...), minus the transport / step-write keys below and per-step keys.
 
 /** Transport / pattern / write µTUNE — never automate. */
 const EXCLUDE_IDS = new Set([
     'tempo', 'stepCount', 'division', 'slideTime', 'accentAmount', 'gateLength',
     'kbSlideTime', 'kbAccentAmount', 'kbGateLength',
     'keyboardMasterTune', 'kbTuningMasterTune', 'kbXyTuningMasterTune', 'kbWriteFineProxy',
+]);
+
+function isAutomatableKey(key) {
+    if (!key || EXCLUDE_IDS.has(key)) return false;
+    const spec = getParam(key);
+    return !!spec && spec.type === 'range' && !spec.stepField;
+}
+
+/** Index-valued params: a lerped curve must land on a real division / switch position. */
+const SNAP_KEYS = new Set([
+    'lfoSyncDivision', 'ingy6LfoSyncDivision', 'scTimeSyncDivision',
+    'octaveSwitch', 'semitoneSwitch',
 ]);
 
 /** Keyboard + main-panel sequencer / step-record UI roots. */
@@ -449,8 +447,8 @@ function paramKeyFromInput(input) {
     if (input.classList.contains('kb-osc-fine') && input.dataset.osc != null) {
         return `osc-fine-${input.dataset.osc}`;
     }
-    if (input.id && RANGE_IDS.includes(input.id)) return input.id;
-    return null;
+    const key = midiControlId(input);
+    return isAutomatableKey(key) ? key : null;
 }
 
 function resolveInput(key) {
@@ -543,6 +541,7 @@ function applyManualOffset(key, userValue) {
 function setParamValue(key, value) {
     if (value == null || !Number.isFinite(value)) return;
     value = clampParam(key, value);
+    if (SNAP_KEYS.has(key)) value = Math.round(value);
 
     const prev = lastApplied.get(key);
     if (prev != null && Math.abs(prev - value) < 1e-5) return;
@@ -660,6 +659,9 @@ function highlightTargetForKey(key, fromEl) {
         return document.querySelector('.keyboard-master-tune')
             || document.getElementById('masterTune')?.closest('.control');
     }
+    const touched = lastTouch && lastTouch.key === key && performance.now() - lastTouch.at < 2000
+        ? lastTouch.host : null;
+    if (touched?.isConnected) return touched.closest?.('.synth-knob, .ingy6-fader, .control') || touched;
     const input = resolveInput(key);
     if (!input) return null;
     const kbKnob = document.querySelector(`.synth-knob[data-param="${key}"]`);
@@ -762,8 +764,6 @@ function setArmed(next) {
         btn.setAttribute('aria-pressed', armed ? 'true' : 'false');
     }
     document.body.classList.toggle('automation-mode-active', armed);
-    // Keep Automation panel open and non-collapsible while recording
-    setCollapsibleLocked(document.getElementById('keyboardAutomationFieldset'), armed);
     if (!armed) {
         punchOutAllTakes();
     }
@@ -815,7 +815,9 @@ function keyFromEventTarget(target) {
         if (param === 'tempo' || param === 'division' || param === 'steps') {
             return null;
         }
-        if (param && RANGE_IDS.includes(param)) return param;
+        if (param === 'lfoSpeed' && get('lfoSyncToggle')) return 'lfoSyncDivision';
+        if (param === 'scTimeMs' && get('scTimeSyncToggle')) return 'scTimeSyncDivision';
+        if (isAutomatableKey(param)) return param;
         const dialId = dial.id || '';
         if (dialId.startsWith('kbStepTuneDial') || dialId === 'kbWriteFineKnob'
             || dialId === 'kbTempoKnob' || dialId === 'kbDivisionKnob' || dialId === 'kbStepsKnob') {
@@ -926,7 +928,7 @@ export function rotateAutomationLanes(delta) {
     const cycle = n * repeat;
     if (cycle < 2) return;
     let d = Math.round(Number(delta)) || 0;
-    d = ((d % n) + n) % n;
+    d = ((d % cycle) + cycle) % cycle;
     if (!d) return;
     const shift = Math.round((d / cycle) * RESOLUTION);
 
@@ -937,6 +939,8 @@ export function rotateAutomationLanes(delta) {
             lane.samples[i] = src[(i + shift) % RESOLUTION];
         }
     });
+    lastApplied.clear();
+    dispatchAutomationChanged();
 }
 
 export function isAutomationArmed() {
@@ -944,16 +948,12 @@ export function isAutomationArmed() {
 }
 
 function recordableKeys() {
-    const keys = RANGE_IDS.slice();
-    for (let i = 0; i < 4; i++) {
-        keys.push(`osc-tune-${i}`, `osc-fine-${i}`, `osc-vol-${i}`, `osc-pan-${i}`);
-    }
-    return keys;
+    return Object.keys(PARAMS).filter(isAutomatableKey);
 }
 
 function onStoreParam(key, value) {
     if (applying) return;
-    if (!key || EXCLUDE_IDS.has(key)) return;
+    if (!isAutomatableKey(key)) return;
     const n = typeof value === 'number' ? value : parseFloat(value);
     if (!Number.isFinite(n)) return;
 
@@ -964,14 +964,16 @@ function onStoreParam(key, value) {
     }
     if (!armed) return;
 
+    // highlightEl belongs to whichever control was grabbed last; only reuse it for that key.
+    const fromEl = highlightKey === key ? highlightEl : null;
     if (!activeTakes.has(key)) {
-        beginTake(key, highlightEl);
+        beginTake(key, fromEl);
     } else if (canEngageTake()) {
         takeValues.set(key, n);
         writeSample(key, getPhase(), n);
-        setHighlight(key, highlightEl);
+        setHighlight(key, fromEl);
     } else {
-        setHighlight(key, highlightEl);
+        setHighlight(key, fromEl);
     }
 }
 
@@ -979,6 +981,23 @@ function wireStoreRecording() {
     recordableKeys().forEach((key) => {
         subscribe(key, (value) => onStoreParam(key, value));
     });
+}
+
+/** Last knob / fader grab announced by midi-learn (key + host), for latch and highlight. */
+let lastTouch = null;
+
+function onControlTouch(e) {
+    const key = e.detail?.key;
+    if (!isAutomatableKey(key)) return;
+    const host = e.detail?.host instanceof Element ? e.detail.host : null;
+    lastTouch = { key, host, at: performance.now() };
+    if (!armed) return;
+    if (host && isBlockedAutomationUi(host)) return;
+    if (activeTakes.has(key)) {
+        setHighlight(key, host);
+        return;
+    }
+    beginTake(key, host);
 }
 
 function onPointerDownCapture(e) {
@@ -1031,6 +1050,7 @@ function wireUi() {
 
     wireStoreRecording();
     document.addEventListener('pointerdown', onPointerDownCapture, true);
+    document.addEventListener('ingysynth:control-touch', onControlTouch);
     document.addEventListener('pointerup', commitOffsetGestures, true);
     document.addEventListener('pointercancel', commitOffsetGestures, true);
     document.addEventListener('change', commitOffsetGestures, true);
@@ -1061,8 +1081,6 @@ function wireUi() {
     document.addEventListener('ingysynth:berlin-mode', () => {
         useAutomationBank(bankKeyFromState());
     });
-
-    initCollapsibles(document.getElementById('keyboardAutomationFieldset'));
 }
 
 function recordHasData(rec) {

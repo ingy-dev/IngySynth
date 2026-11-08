@@ -2658,11 +2658,12 @@ body:not([data-page="synth"]) .site-bar-transport {
 .keyboard-section .keyboard-controls-fieldset > .collapsible-legend,
 .keyboard-section .keyboard-steps-fieldset > .collapsible-legend,
 .keyboard-section .keyboard-tuning-fieldset > .collapsible-legend,
-.keyboard-section .keyboard-automation-fieldset > .collapsible-legend,
 .keyboard-section .keyboard-synth-fieldset > .collapsible-legend,
 .keyboard-section .keyboard-xy-fieldset > .collapsible-legend,
 .keyboard-section .keyboard-transport-fieldset > legend,
 .keyboard-section .keyboard-write-fieldset > legend,
+.keyboard-section .keyboard-automation-fieldset > legend,
+.keyboard-section fieldset.pattern-bank-select > legend,
 .keyboard-section .keyboard-arp-panel > legend,
 .keyboard-section .keyboard-mod-matrix > legend,
 .midi-fieldset > .collapsible-legend {
@@ -2683,6 +2684,8 @@ body:not([data-page="synth"]) .site-bar-transport {
 }
 .keyboard-section .keyboard-transport-fieldset,
 .keyboard-section .keyboard-write-fieldset,
+.keyboard-section .keyboard-automation-fieldset,
+.keyboard-section fieldset.pattern-bank-select,
 .keyboard-section .keyboard-arp-panel,
 .keyboard-section .keyboard-mod-matrix,
 .keyboard-section .berlin-row,
@@ -2691,6 +2694,8 @@ body:not([data-page="synth"]) .site-bar-transport {
 }
 .keyboard-section .keyboard-transport-fieldset > legend,
 .keyboard-section .keyboard-write-fieldset > legend,
+.keyboard-section .keyboard-automation-fieldset > legend,
+.keyboard-section fieldset.pattern-bank-select > legend,
 .keyboard-section .keyboard-arp-panel > legend,
 .keyboard-section .keyboard-mod-matrix > legend,
 .keyboard-section .berlin-row > legend,
@@ -3436,7 +3441,7 @@ body.view-tabbed .keyboard-tab-strip {
 .keyboard-tab.active:focus-visible {
     --tab-stroke: #00aa00;
 }
-/* Reserved on step input / automation so the label does not jump when the dot appears.
+/* Reserved on steps / automation so the label does not jump when the dot appears.
    Shown by body.write-mode-on / body.automation-mode-active. */
 .keyboard-tab-dot {
     display: inline-block;
@@ -3449,7 +3454,7 @@ body.view-tabbed .keyboard-tab-strip {
     visibility: hidden;
     opacity: var(--kb-rec-blink);
 }
-body.write-mode-on #tabStepInput .keyboard-tab-dot {
+body.write-mode-on #tabSteps .keyboard-tab-dot {
     visibility: visible;
     background: #ff0000;
     box-shadow: 0 0 4px rgba(255, 0, 0, 0.65);
@@ -3476,6 +3481,7 @@ body.view-tabbed .keyboard-filter-knobs > #keyboardTabStrip {
 }
 body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardStepsFieldset,
 body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardSynthFieldset,
+body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardDrumDock,
 body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardEffectsFieldset,
 body.view-tabbed.view-tabbed .keyboard-filter-knobs > #keyboardMixerFieldset {
     order: 2;
@@ -3491,6 +3497,12 @@ body.view-tabbed #keyboardSynthFieldset,
 body.view-tabbed #keyboardEffectsFieldset,
 body.view-tabbed #keyboardMixerFieldset {
     --hex-field-pad-top: 10px;
+}
+/* The drum dock has no frame in full screen; as a tab panel it gets the folder border */
+body.view-tabbed #keyboardDrumDock {
+    border: 1px solid #00aa00;
+    border-radius: 5px;
+    padding: 12px 8px 8px;
 }
 
 @media (min-width: 769px) {
@@ -3514,7 +3526,6 @@ body.view-tabbed #keyboardMixerFieldset {
 /* Collapsible full-width sections under Transport / Write */
 .keyboard-steps-fieldset,
 .keyboard-tuning-fieldset,
-.keyboard-automation-fieldset,
 .keyboard-synth-fieldset,
 .keyboard-xy-fieldset,
 .keyboard-controls-fieldset {
@@ -3530,7 +3541,6 @@ body.view-tabbed #keyboardMixerFieldset {
 }
 .keyboard-steps-fieldset > .collapsible-panel,
 .keyboard-tuning-fieldset > .collapsible-panel,
-.keyboard-automation-fieldset > .collapsible-panel,
 .keyboard-synth-fieldset > .collapsible-panel,
 .keyboard-xy-fieldset > .collapsible-panel,
 .keyboard-controls-fieldset > .collapsible-panel {
@@ -3543,7 +3553,6 @@ body.view-tabbed #keyboardMixerFieldset {
 }
 .keyboard-steps-fieldset.collapsed,
 .keyboard-tuning-fieldset.collapsed,
-.keyboard-automation-fieldset.collapsed,
 .keyboard-synth-fieldset.collapsed,
 .keyboard-xy-fieldset.collapsed,
 .keyboard-controls-fieldset.collapsed,
@@ -3727,16 +3736,6 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
         justify-content: center;
         max-width: 100%;
     }
-}
-.keyboard-automation-panel {
-    padding: 6px 8px 4px;
-}
-.keyboard-automation-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
 }
 #kbAutomationRecord.pushable.keyboard-automation-btn,
 #kbAutomationUndo.pushable.keyboard-automation-btn,
@@ -5318,12 +5317,22 @@ body.acid-osc-locked .keyboard-osc-field[data-osc="0"] .keyboard-osc-fine-row {
     min-width: 0;
     box-sizing: border-box;
 }
-.keyboard-section fieldset.pattern-bank-select > legend {
-    padding: 0 6px;
-    font-size: 8px;
-    letter-spacing: 0.06em;
-    width: fit-content;
-    margin: 0 auto;
+/* Step Input sits left of PATTERN SELECT inside Steps (stacks under it on phones) */
+.pattern-bank-bar {
+    align-items: stretch;
+}
+.pattern-bank-patterns > fieldset.pattern-bank-select {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.pattern-bank-bar > .keyboard-write-fieldset {
+    width: auto;
+    flex: 0 1 auto;
+    margin: 0;
+    border: 1px solid #00aa00;
+    border-radius: 5px;
 }
 /* P1–P8 and the repeat row share one 8-column track */
 .pattern-bank-grid {
@@ -6410,7 +6419,8 @@ body.berlin-mode .berlin-mode-brand {
     overflow: visible;
 }
 .keyboard-transport-fieldset,
-.keyboard-write-fieldset {
+.keyboard-write-fieldset,
+.keyboard-automation-fieldset {
     min-width: 0;
     width: 100%;
     overflow: visible;
@@ -6422,7 +6432,8 @@ body.berlin-mode .berlin-mode-brand {
     --kb-perf-footer-h: 22px; /* reserved under dials for Full/Lock */
 }
 .keyboard-tempo-div-row,
-.keyboard-write-row {
+.keyboard-write-row,
+.keyboard-automation-row {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -6443,7 +6454,8 @@ body.berlin-mode .berlin-mode-brand {
     box-sizing: content-box;
 }
 .keyboard-tempo-div-row > .synth-knob,
-.keyboard-tempo-div-row > .keyboard-step-vfd-wrap {
+.keyboard-tempo-div-row > .keyboard-step-vfd-wrap,
+.keyboard-write-row > .keyboard-step-vfd-wrap {
 
     padding-bottom: var(--kb-perf-footer-h);
     box-sizing: content-box;
@@ -6623,12 +6635,13 @@ canvas.vfd-glass {
     align-items: center;
     gap: 4px;
 }
-.keyboard-automation-clipboard {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Copy over Paste, in the same 72px box as STEP SELECT's arrows */
+.keyboard-write-step-select-btns.keyboard-automation-clipboard-btns {
+    flex-direction: column;
     gap: 4px;
-    margin-top: 6px;
+}
+.keyboard-automation-clipboard-btns .kb-step-btn {
+    width: 44px;
 }
 .keyboard-pattern-clipboard .kb-step-btn,
 .keyboard-automation-clipboard .kb-step-btn,
@@ -8036,7 +8049,8 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     text-align: center;
 }
 .keyboard-transport-fieldset > legend,
-.keyboard-write-fieldset > legend {
+.keyboard-write-fieldset > legend,
+.keyboard-automation-fieldset > legend {
     margin-left: 10px;
     margin-right: 0;
     margin-inline: 10px 0;
@@ -8251,6 +8265,12 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 .sequencer-step.write-cursor {
     outline: 1px solid rgba(255, 51, 51, var(--kb-rec-blink));
     outline-offset: 2px;
+}
+.berlin-step.write-cursor {
+    outline: 1px solid rgba(255, 51, 51, var(--kb-rec-blink));
+    outline-offset: 1px;
+    box-shadow: 0 0 6px rgba(255, 0, 0, calc(0.35 * var(--kb-rec-blink)));
+    border-radius: 3px;
 }
 body.write-mode-on .keyboard-step {
     cursor: pointer;
@@ -9036,9 +9056,9 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
         scrollbar-color: #00aa00 #111;
         scrollbar-width: auto;
     }
-    /* Sequencer, then the Step Input / Scale / Automation folder, then the
-       mode toggles and the main folder. Step Input lives in .keyboard-perf-top
-       (display: contents here), so negative orders lift it past the toggles. */
+    /* Sequencer, then the Automation / Scale folder, then the mode toggles and
+       the main folder. Automation lives in .keyboard-perf-top (display: contents
+       here), so negative orders lift it past the toggles. */
     body.view-tabbed .keyboard-perf-top {
         display: contents;
     }
@@ -9048,15 +9068,13 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     body.view-tabbed .keyboard-filter-knobs > #keyboardMobileTabStrip {
         order: -2;
     }
-    body.view-tabbed #keyboardWriteFieldset,
     body.view-tabbed .keyboard-filter-knobs > #keyboardTuningFieldset,
-    body.view-tabbed .keyboard-filter-knobs > #keyboardAutomationFieldset {
+    body.view-tabbed #keyboardAutomationFieldset {
         order: -1;
         --hex-field-pad-top: 10px;
     }
-    body.view-tabbed #keyboardWriteFieldset > legend,
     body.view-tabbed #keyboardTuningFieldset > .collapsible-legend,
-    body.view-tabbed #keyboardAutomationFieldset > .collapsible-legend {
+    body.view-tabbed #keyboardAutomationFieldset > legend {
         display: none;
     }
     .keyboard-section fieldset:has(> legend .legend-hex):not(.berlin-row),
@@ -9067,7 +9085,6 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     }
     .keyboard-steps-fieldset,
     .keyboard-tuning-fieldset,
-    .keyboard-automation-fieldset,
     .keyboard-synth-fieldset,
     .keyboard-xy-fieldset,
     .keyboard-controls-fieldset {
@@ -9393,7 +9410,8 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
         gap: 6px;
     }
     .keyboard-transport-fieldset,
-    .keyboard-write-fieldset {
+    .keyboard-write-fieldset,
+    .keyboard-automation-fieldset {
         width: 100%;
     }
     .keyboard-step-vfd-digits {
@@ -9421,6 +9439,10 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     #kbWriteNext.pushable.keyboard-write-nav,
     #kbRest.pushable.keyboard-write-rest,
     #kbWriteAcc.pushable.keyboard-write-arm,
+    #kbAutomationRecord.pushable.keyboard-automation-btn,
+    #kbAutomationUndo.pushable.keyboard-automation-btn,
+    #kbAutomationRedo.pushable.keyboard-automation-btn,
+    #kbAutomationClear.pushable.keyboard-automation-btn,
     #kbWriteSld.pushable.keyboard-write-arm {
         width: 36px;
         height: 36px;
@@ -9506,7 +9528,8 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
         height: 60px;
     }
     .keyboard-transport-fieldset,
-    .keyboard-write-fieldset {
+    .keyboard-write-fieldset,
+    .keyboard-automation-fieldset {
         --kb-perf-footer-h: 20px;
     }
     #kbStartStop.pushable.keyboard-start-stop .front,
@@ -9516,6 +9539,10 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     #kbWriteNext.pushable.keyboard-write-nav .front,
     #kbRest.pushable.keyboard-write-rest .front,
     #kbWriteAcc.pushable.keyboard-write-arm .front,
+    #kbAutomationRecord.pushable.keyboard-automation-btn .front,
+    #kbAutomationUndo.pushable.keyboard-automation-btn .front,
+    #kbAutomationRedo.pushable.keyboard-automation-btn .front,
+    #kbAutomationClear.pushable.keyboard-automation-btn .front,
     #kbWriteSld.pushable.keyboard-write-arm .front {
         width: 36px;
         height: 36px;
@@ -9529,6 +9556,10 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     #kbWriteNext.pushable.keyboard-write-nav .front,
     #kbRest.pushable.keyboard-write-rest .front,
     #kbWriteAcc.pushable.keyboard-write-arm .front,
+    #kbAutomationRecord.pushable.keyboard-automation-btn .front,
+    #kbAutomationUndo.pushable.keyboard-automation-btn .front,
+    #kbAutomationRedo.pushable.keyboard-automation-btn .front,
+    #kbAutomationClear.pushable.keyboard-automation-btn .front,
     #kbWriteSld.pushable.keyboard-write-arm .front {
         font-size: 8px;
     }
@@ -12162,13 +12193,15 @@ body .mixer-level::-moz-range-thumb {
 @media (max-width: 768px) {
     /* Sequencer: Play, Rev, Tempo, Div, Steps, Disp on one row */
     .keyboard-tempo-div-row,
-    .keyboard-write-row {
+    .keyboard-write-row,
+    .keyboard-automation-row {
         flex-wrap: nowrap;
         justify-content: space-between;
         gap: 3px;
     }
     .keyboard-tempo-div-row > .synth-knob,
     .keyboard-tempo-div-row > .keyboard-step-vfd-wrap,
+    .keyboard-write-row > .keyboard-step-vfd-wrap,
     .keyboard-write-fine-col .synth-knob {
         width: 54px;
     }
@@ -12178,12 +12211,38 @@ body .mixer-level::-moz-range-thumb {
         flex-basis: 60px;
         --tick-radius: 24px;
     }
-    .keyboard-tempo-div-row .keyboard-step-vfd-bezel {
+    .keyboard-tempo-div-row .keyboard-step-vfd-bezel,
+    .keyboard-write-row .keyboard-step-vfd-bezel {
         width: 54px;
     }
-    .keyboard-tempo-div-row .keyboard-step-vfd-digits {
+    .keyboard-tempo-div-row .keyboard-step-vfd-digits,
+    .keyboard-write-row .keyboard-step-vfd-digits {
         min-width: 50px;
         padding: 3px 4px;
+    }
+    /* PATTERN SELECT above Step Input, both full width */
+    .pattern-bank-bar {
+        flex-direction: column;
+    }
+    .pattern-bank-bar > .keyboard-write-fieldset {
+        order: 1;
+        width: 100%;
+    }
+    /* Step Input is narrower inside Steps: Write / STEP / arrows, then Acc / Sld / Rst / µTune */
+    .pattern-bank-bar .keyboard-write-row {
+        flex-wrap: wrap;
+        justify-content: center;
+        column-gap: 8px;
+        row-gap: 0;
+    }
+    .pattern-bank-bar .keyboard-write-row::after {
+        content: "";
+        flex-basis: 100%;
+        order: 1;
+    }
+    .pattern-bank-bar .keyboard-write-row > .keyboard-perf-btn-slot:has(.keyboard-write-arm, .keyboard-write-rest),
+    .pattern-bank-bar .keyboard-write-row > .keyboard-write-fine-col {
+        order: 2;
     }
     #kbWrite.pushable.keyboard-write,
     #kbWrite.pushable.keyboard-write .front {
@@ -12416,28 +12475,32 @@ body .mixer-level::-moz-range-thumb {
         display: none !important;
     }
 
-    /* Sequencer + Step Input side by side, each on a single row */
+    /* Sequencer + Automation side by side, each on a single row */
     .keyboard-tempo-div-row,
-    .keyboard-write-row {
+    .keyboard-write-row,
+    .keyboard-automation-row {
         flex-wrap: nowrap;
         justify-content: space-between;
         gap: 4px;
     }
     .keyboard-tempo-div-row > .synth-knob,
     .keyboard-tempo-div-row > .keyboard-step-vfd-wrap,
+    .keyboard-write-row > .keyboard-step-vfd-wrap,
     .keyboard-write-fine-col .synth-knob {
         width: 60px;
     }
     .keyboard-tempo-div-row .synth-knob-dial-wrap,
     .keyboard-write-fine-col .synth-knob-dial-wrap,
-    .keyboard-tempo-div-row .keyboard-step-vfd-bezel {
+    .keyboard-tempo-div-row .keyboard-step-vfd-bezel,
+    .keyboard-write-row .keyboard-step-vfd-bezel {
         width: 60px;
         height: 60px;
         flex-basis: 60px;
         --tick-radius: 26px;
     }
     .keyboard-transport-fieldset,
-    .keyboard-write-fieldset {
+    .keyboard-write-fieldset,
+    .keyboard-automation-fieldset {
         --kb-perf-footer-h: 20px;
     }
     .keyboard-perf-btn-slot {
@@ -12455,12 +12518,20 @@ body .mixer-level::-moz-range-thumb {
     #kbRest.pushable.keyboard-write-rest,
     #kbWriteAcc.pushable.keyboard-write-arm,
     #kbWriteSld.pushable.keyboard-write-arm,
+    #kbAutomationRecord.pushable.keyboard-automation-btn,
+    #kbAutomationUndo.pushable.keyboard-automation-btn,
+    #kbAutomationRedo.pushable.keyboard-automation-btn,
+    #kbAutomationClear.pushable.keyboard-automation-btn,
     #kbStartStop.pushable.keyboard-start-stop .front,
     #kbRev.pushable.keyboard-rev .front,
     #kbWritePrev.pushable.keyboard-write-nav .front,
     #kbWriteNext.pushable.keyboard-write-nav .front,
     #kbRest.pushable.keyboard-write-rest .front,
     #kbWriteAcc.pushable.keyboard-write-arm .front,
+    #kbAutomationRecord.pushable.keyboard-automation-btn .front,
+    #kbAutomationUndo.pushable.keyboard-automation-btn .front,
+    #kbAutomationRedo.pushable.keyboard-automation-btn .front,
+    #kbAutomationClear.pushable.keyboard-automation-btn .front,
     #kbWriteSld.pushable.keyboard-write-arm .front {
         width: 36px;
         height: 36px;
@@ -12478,6 +12549,10 @@ body .mixer-level::-moz-range-thumb {
     #kbWriteNext.pushable.keyboard-write-nav .front,
     #kbRest.pushable.keyboard-write-rest .front,
     #kbWriteAcc.pushable.keyboard-write-arm .front,
+    #kbAutomationRecord.pushable.keyboard-automation-btn .front,
+    #kbAutomationUndo.pushable.keyboard-automation-btn .front,
+    #kbAutomationRedo.pushable.keyboard-automation-btn .front,
+    #kbAutomationClear.pushable.keyboard-automation-btn .front,
     #kbWriteSld.pushable.keyboard-write-arm .front {
         font-size: 8px;
     }

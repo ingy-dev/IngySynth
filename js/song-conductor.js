@@ -32,7 +32,7 @@ import {
     clipAt,
     setPlayhead,
     wrapTick,
-} from './song-model.js?v=9';
+} from './song-model.js?v=10';
 
 const SIXTEENTH = 240;
 const DIVS = new Set([2, 3, 4, 6, 8, 12, 16, 24, 48]);

@@ -35,6 +35,7 @@ import {
     setLoop,
     undo,
     updateFromSource,
+    visibleClips,
     wrapTick,
 } from '../js/song-model.js?v=4';
 
@@ -94,26 +95,37 @@ ok('BAR_TICKS export', BAR_TICKS === 3840);
     ok('move unchanged count', JSON.stringify(snapCounts(song)) === JSON.stringify(before));
 }
 
-// 2. Overlap refused; synth + drum may share tick
+// 2. Clips stack: a clip dropped on another covers it; synth + drum may share tick
 {
     const song = createSong();
-    placeClip(song, {
+    const under = placeClip(song, {
         track: 'synth',
         kind: 'n',
         source: 0,
         startTick: 0,
         data: { stepCount: 8, division: 8, repeat: 1 },
     });
-    const snap = JSON.stringify(song.synth.clips);
-    const bad = placeClip(song, {
+    const underLen = under.lengthTick;
+    const top = placeClip(song, {
         track: 'synth',
         kind: 'n',
         source: 1,
         startTick: 1000,
         data: { stepCount: 4, division: 8, repeat: 1 },
     });
-    ok('overlap place refused', bad === false);
-    ok('song unchanged on overlap', JSON.stringify(song.synth.clips) === snap);
+    ok('overlap place lands on top', !!top && song.synth.clips[1] === top);
+    ok('covered clip is not cut', under.startTick === 0 && under.lengthTick === underLen);
+    const shown = visibleClips(song, 'synth').filter((c) => c.id === under.id);
+    // The drop snaps to the bar, so the cover sits over the first half of the clip under it.
+    const topEnd = top.startTick + top.lengthTick;
+    ok('covered clip shows only its uncovered part',
+        top.startTick === 0 && shown.length === 1
+        && shown[0].startTick === topEnd && shown[0].lengthTick === underLen - topEnd
+        && shown[0].cropL === true && shown[0].cropR === false && shown[0].startOffset === topEnd);
+    ok('the top clip is heard where they overlap', clipAt(song, 'synth', top.startTick + 10)?.id === top.id);
+    deleteClip(song, top.id);
+    ok('deleting the top clip brings the covered one back whole',
+        visibleClips(song, 'synth').length === 1 && visibleClips(song, 'synth')[0] === under);
 
     const d = placeClip(song, {
         track: 'drums',
@@ -125,7 +137,7 @@ ok('BAR_TICKS export', BAR_TICKS === 3840);
     ok('drum at same tick as synth', d && d.startTick === 0);
 }
 
-// 3. Resize truncate/lengthen grid; lengthen refused when hitting next clip
+// 3. Resize truncate/lengthen grid; lengthening covers the next clip
 {
     const song = createSong();
     const a = placeClip(song, {
@@ -145,7 +157,7 @@ ok('BAR_TICKS export', BAR_TICKS === 3840);
     resizeClip(song, a.id, cycle + grid);
     ok('length can exceed one cycle', a.lengthTick > cycle);
 
-    placeClip(song, {
+    const next = placeClip(song, {
         track: 'synth',
         kind: 'n',
         source: 1,
@@ -153,9 +165,21 @@ ok('BAR_TICKS export', BAR_TICKS === 3840);
         data: { stepCount: 4, division: 8, repeat: 1 },
     });
     const lenBefore = a.lengthTick;
-    const refused = resizeClip(song, a.id, lenBefore + grid * 4);
-    ok('resize into next clip refused', refused === false);
-    ok('length unchanged when refused', a.lengthTick === lenBefore);
+    const nextEnd = next.startTick + next.lengthTick;
+    const nextStart = next.startTick;
+    // A lengthened clip goes on top and covers the next one without cutting it.
+    const grew = resizeClip(song, a.id, lenBefore + grid * 2);
+    ok('resize into next clip covers it', grew === true && a.lengthTick === lenBefore + grid * 2);
+    ok('the covered clip itself is unchanged', next.startTick === nextStart && next.startTick + next.lengthTick === nextEnd);
+    const piece = visibleClips(song, 'synth').find((c) => c.id === next.id);
+    ok('its visible piece starts where the cover ends',
+        !!piece && piece.startTick === a.startTick + a.lengthTick
+        && piece.startTick + piece.lengthTick === nextEnd && piece.startOffset === grid * 2 && piece.cropL === true);
+    resizeClip(song, a.id, nextEnd - a.startTick);
+    ok('a fully covered clip is hidden, not removed',
+        song.synth.clips.includes(next) && !visibleClips(song, 'synth').some((c) => c.id === next.id));
+    resizeClip(song, a.id, lenBefore);
+    ok('shortening the cover brings it back whole', visibleClips(song, 'synth').includes(next));
 
     resizeClip(song, a.id, grid + 50);
     ok('truncate floors to grid', a.lengthTick === grid);
@@ -229,7 +253,8 @@ ok('BAR_TICKS export', BAR_TICKS === 3840);
     const noteBc = buildCues(song3, 'b').find(
         (c) => c.track === 'synth' && c.tick === notes.startTick,
     );
-    ok('notes present in mode n', noteNc && noteNc.clip === notes);
+    // A cue carries a copy of its clip placed on the play span, so match by id.
+    ok('notes present in mode n', noteNc && noteNc.clip && noteNc.clip.id === notes.id);
     ok('notes null in mode b', noteBc && noteBc.clip === null);
 }
 

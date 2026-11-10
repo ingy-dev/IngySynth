@@ -33,12 +33,12 @@ import { initDrumDock } from './drum-dock.js?v=53';
 import { initMixer, syncMixerFaderCaps } from './mixer.js?v=64';
 import './params.js?v=44';
 import './mi-knob-links.js?v=8';
-import { initSiteBar } from './site-bar.js?v=56';
+import { initSiteBar } from './site-bar.js?v=57';
 import { initShareButton } from './share-button.js?v=9';
-import { initArrangeView } from './arrange-view.js?v=49';
-import { initArrangeRoll } from './arrange-roll.js?v=46';
-import { initSongConductor } from './song-conductor.js?v=29';
-import { initSongRecord } from './song-record.js?v=26';
+import { initArrangeView } from './arrange-view.js?v=50';
+import { initArrangeRoll } from './arrange-roll.js?v=47';
+import { initSongConductor } from './song-conductor.js?v=30';
+import { initSongRecord } from './song-record.js?v=27';
 import { initSaveBoot } from './save-capture.js?v=22';
 
 onLfoRateApplied(() => updateLfoSmoothing());

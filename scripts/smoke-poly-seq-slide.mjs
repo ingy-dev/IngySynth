@@ -87,13 +87,13 @@ console.log('\nsource contracts');
 const seq = read('js/sequencer.js');
 const poly = read('js/poly-voice.js');
 
-ok('lastPolySounding stores root+intervals', /lastPolySounding = \{ root: soundingRoot, intervals: intervals\.slice\(\) \}/.test(seq));
+ok('lastPolySounding stores root+intervals', /lastPolySounding = \{\s*root: soundingRoot[^,]*,\s*intervals: intervals\.slice\(\),?\s*\}/.test(seq));
 ok('playPolySeqStep receives nextStepWillSlideEnv and glissRoll', /nextStepWillSlideEnv,\s*glissRoll/.test(seq));
 ok('pulse ratch off on slide dest', /pulseRatch = hits > 1 && !slideThisStep/.test(seq));
 ok('OFF releases poly slide-hold', /lastPolySeqHeld/.test(seq) && /releasePolySeqHold\(startTime\)/.test(seq));
 ok('MIDI overlap on slide-out', /holdGate \? stepDuration \* 1\.1/.test(seq));
 ok('slew every paired voice (not root-only)', /slidePairs\[i\]/.test(poly) || /pairAt\(i\)/.test(poly));
-ok('slide dest skips amp retrigger on reused voices', /const retriggerAmp = !slideThisStep/.test(poly));
+ok('slide dest skips amp retrigger on reused voices', /if \(!slideThisStep\) \{\s*triggerVoiceAmp\(voice, when/.test(poly));
 ok('gliss uses linearRampToValueAtTime', /linearRampToValueAtTime/.test(poly));
 ok('releasePolySeqHold exported', /export function releasePolySeqHold/.test(poly));
 

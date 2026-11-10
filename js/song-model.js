@@ -6,6 +6,12 @@
  * `checkpointUndo`. `checkpointUndo` only pushes that snapshot; it does not
  * edit clips. `redo()` always returns `{ ok: true, extra: null }` — callers
  * that need the bank slot again must keep it from undo.
+ *
+ * Clips stack. Each track's `clips` is a stack, bottom first, and clips may overlap:
+ * a clip placed, moved or trimmed goes on top, and covers what is under it without
+ * cutting it. Move it away (or delete it) and the clip underneath shows and plays
+ * again. `visibleClips` gives the pieces that are actually heard and drawn; playback,
+ * cues and the native player only ever see those.
  */
 
 export const PPQ = 960;
@@ -77,6 +83,73 @@ function rangesOverlap(aStart, aLen, bStart, bLen) {
     const aEnd = aStart + aLen;
     const bEnd = bStart + bLen;
     return aStart < bEnd && bStart < aEnd;
+}
+
+/**
+ * The parts of a track's clips that show and play: each clip minus whatever is
+ * stacked above it, as pieces sorted by start. A piece is a shallow copy of its clip
+ * cropped the way a trim crops it (`startTick`, `lengthTick`, `startOffset`), with
+ * the clip's `id`. `cropL` / `cropR` are true where the piece edge is a cover, not
+ * the clip's own edge. A clip covered completely has no piece.
+ */
+export function visibleClips(song, track) {
+    const list = trackClips(song, track);
+    const out = [];
+    for (let i = 0; i < list.length; i += 1) {
+        const c = list[i];
+        const cEnd = c.startTick + c.lengthTick;
+        let parts = [[c.startTick, cEnd]];
+        for (let j = i + 1; j < list.length && parts.length; j += 1) {
+            const a = list[j].startTick;
+            const b = a + list[j].lengthTick;
+            const next = [];
+            for (const [lo, hi] of parts) {
+                if (b <= lo || a >= hi) {
+                    next.push([lo, hi]);
+                    continue;
+                }
+                if (a > lo) next.push([lo, a]);
+                if (b < hi) next.push([b, hi]);
+            }
+            parts = next;
+        }
+        for (const [lo, hi] of parts) {
+            out.push(lo === c.startTick && hi === cEnd ? c : cropClip(c, lo, hi));
+        }
+    }
+    return out.sort((x, y) => x.startTick - y.startTick);
+}
+
+/** A clip shown only over [lo, hi), cropped the way a trim crops it. Same id. */
+export function cropClip(clip, lo, hi) {
+    const end = clip.startTick + clip.lengthTick;
+    const piece = { ...clip, startTick: lo, lengthTick: hi - lo, cropL: lo > clip.startTick, cropR: hi < end };
+    const offset = clipStartOffset(clip) + (lo - clip.startTick);
+    if (offset) piece.startOffset = offset;
+    else delete piece.startOffset;
+    return piece;
+}
+
+/** True when part of another clip is hidden under this one. */
+export function coversClip(song, id) {
+    const clip = findClipById(song, id);
+    if (!clip) return false;
+    const list = trackClips(song, clip.track);
+    const idx = list.indexOf(clip);
+    for (let i = 0; i < idx; i += 1) {
+        if (rangesOverlap(clip.startTick, clip.lengthTick, list[i].startTick, list[i].lengthTick)) return true;
+    }
+    return false;
+}
+
+/** Put a clip on top of its track's stack. */
+function raiseClip(song, clip) {
+    const list = trackClips(song, clip.track);
+    const idx = list.indexOf(clip);
+    if (idx >= 0 && idx < list.length - 1) {
+        list.splice(idx, 1);
+        list.push(clip);
+    }
 }
 
 function snapshotSong(song) {
@@ -522,7 +595,7 @@ function snapStartTick(song, track, excludeId, pointerStart, grid = BAR_TICKS) {
     const unit = grid > 0 ? grid : BAR_TICKS;
     const barCandidate = Math.round(start / unit) * unit;
     const reach = unit / 2;
-    const clips = trackClips(song, track);
+    const clips = visibleClips(song, track);
     let bestEnd = null;
     let bestDist = reach + 1;
     for (const c of clips) {
@@ -568,10 +641,10 @@ function buildClipFromSpec(spec, startTick, lengthTick) {
     const offset = clipStartOffset(spec);
     if (offset) base.startOffset = offset;
     if (spec.kind === 'notes') {
-        return {
-            ...base,
-            notes: deepClone(spec.notes || []),
-        };
+        const clip = { ...base, notes: deepClone(spec.notes || []) };
+        // Imported MIDI keeps its file name as the clip label.
+        if (typeof spec.name === 'string' && spec.name) clip.name = spec.name;
+        return clip;
     }
     return {
         ...base,
@@ -602,11 +675,8 @@ export function placeClip(song, spec, grid = BAR_TICKS) {
         draft.keptHash = spec.keptHash ?? null;
     }
 
+    // Dropping over clips covers them; they stay underneath (see visibleClips).
     const snappedStart = snapStartTick(song, spec.track, null, spec.startTick, grid);
-    if (wouldOverlap(song, spec.track, null, snappedStart, draft.lengthTick)) {
-        return false;
-    }
-
     pushUndo(song);
     draft.startTick = snappedStart;
     trackClips(song, spec.track).push(draft);
@@ -617,70 +687,45 @@ export function moveClip(song, id, startTick, grid = BAR_TICKS) {
     const clip = findClipById(song, id);
     if (!clip) return false;
     const snapped = snapStartTick(song, clip.track, id, startTick, grid);
-    if (wouldOverlap(song, clip.track, id, snapped, clip.lengthTick)) {
-        return false;
-    }
     if (snapped === clip.startTick) return true;
     pushUndo(song);
+    // A moved clip lands on top, covering (not cutting) what it lands on.
+    raiseClip(song, clip);
     clip.startTick = snapped;
     return true;
 }
 
 /**
- * Make room for [start, end) on a track by cutting into other clips: a clip that
- * starts inside loses its covered start (it keeps its place in time, like a left-edge
- * trim), one that ends inside loses its covered end, and one fully covered is removed.
- * Does not push undo. Returns true when anything changed.
+ * What a clip at [start, end) would cover: ids of clips it would hide completely and
+ * clips it would hide in part. Nothing is cut; this is for the drag preview.
  */
-function overwriteRange(song, track, excludeId, start, end) {
-    const list = trackClips(song, track);
-    let changed = false;
-    for (let i = list.length - 1; i >= 0; i -= 1) {
-        const c = list[i];
-        if (c.id === excludeId) continue;
-        const cEnd = c.startTick + c.lengthTick;
-        if (cEnd <= start || c.startTick >= end) continue;
-        changed = true;
-        if (c.startTick >= start && cEnd <= end) {
-            list.splice(i, 1);
-        } else if (c.startTick >= start) {
-            const cut = end - c.startTick;
-            const offset = clipStartOffset(c) + cut;
-            if (offset) c.startOffset = offset;
-            else delete c.startOffset;
-            c.startTick = end;
-            c.lengthTick = cEnd - end;
-        } else {
-            c.lengthTick = start - c.startTick;
-        }
-    }
-    return changed;
-}
-
-/** What an edge drag to [start, end) would cut: ids of clips removed and clips cut. */
 export function overwritePreview(song, track, excludeId, start, end) {
     const removed = [];
     const cut = [];
-    for (const c of trackClips(song, track)) {
-        if (c.id === excludeId) continue;
-        const cEnd = c.startTick + c.lengthTick;
-        if (cEnd <= start || c.startTick >= end) continue;
-        if (c.startTick >= start && cEnd <= end) removed.push(c.id);
-        else cut.push(c.id);
+    const seen = new Map();
+    for (const p of visibleClips(song, track)) {
+        if (p.id === excludeId) continue;
+        const pEnd = p.startTick + p.lengthTick;
+        const hit = !(pEnd <= start || p.startTick >= end);
+        const inside = p.startTick >= start && pEnd <= end;
+        const was = seen.get(p.id) || { hit: false, all: true };
+        seen.set(p.id, { hit: was.hit || hit, all: was.all && inside });
+    }
+    for (const [id, v] of seen) {
+        if (v.all) removed.push(id);
+        else if (v.hit) cut.push(id);
     }
     return { removed, cut };
 }
 
-/** Right edge. Lengthening over the next clip writes over it (see overwriteRange). */
+/** Right edge. The trimmed clip goes on top, so lengthening covers the next clip. */
 export function resizeClip(song, id, lengthTick) {
     const clip = findClipById(song, id);
     if (!clip) return false;
     const snappedLen = snapLengthTicks(clip, lengthTick);
     if (snappedLen === clip.lengthTick) return true;
     pushUndo(song);
-    if (snappedLen > clip.lengthTick) {
-        overwriteRange(song, clip.track, id, clip.startTick + clip.lengthTick, clip.startTick + snappedLen);
-    }
+    raiseClip(song, clip);
     clip.lengthTick = snappedLen;
     return true;
 }
@@ -688,7 +733,7 @@ export function resizeClip(song, id, lengthTick) {
 /**
  * Move a clip's left edge, keeping its right edge. The pattern stays where it is in
  * time: dragging in cuts the start off, dragging out past the pattern start adds
- * silence before it, and dragging over the previous clip writes over it. Snaps to the
+ * silence before it, and dragging over the previous clip covers it. Snaps to the
  * clip's step grid.
  */
 export function trimClipStart(song, id, startTick) {
@@ -703,8 +748,7 @@ export function trimClipStart(song, id, startTick) {
     const next = start0 + steps * grid;
     if (next === start0) return true;
     pushUndo(song);
-    // Pulling the left edge back over the previous clip writes over it.
-    if (next < start0) overwriteRange(song, clip.track, id, next, start0);
+    raiseClip(song, clip);
     const offset = clipStartOffset(clip) + (next - start0);
     if (offset) clip.startOffset = offset;
     else delete clip.startOffset;
@@ -745,6 +789,7 @@ function copySpec(clip, start) {
         keptHash: clip.keptHash,
         edited: clip.edited,
         notes: clip.kind === 'notes' ? deepClone(clip.notes) : undefined,
+        name: clip.kind === 'notes' ? clip.name : undefined,
         lengthTick: clip.lengthTick,
         startOffset: clipStartOffset(clip),
     };
@@ -873,7 +918,7 @@ export function buildCues(song, mode) {
     const out = [];
 
     for (const track of ['synth', 'drums']) {
-        const clips = [...trackClips(song, track)].sort((a, b) => a.startTick - b.startTick);
+        const clips = visibleClips(song, track);
         /** @type {{ tick: number, kind: 'start'|'end'|'lead', clip: object|null }[]} */
         const events = [];
 
@@ -927,9 +972,10 @@ export function buildCues(song, mode) {
     return out;
 }
 
+/** The clip heard at a tick: the top one, cropped as a visible piece. */
 export function clipAt(song, track, tick) {
     const t = Number(tick) || 0;
-    for (const clip of trackClips(song, track)) {
+    for (const clip of visibleClips(song, track)) {
         if (t >= clip.startTick && t < clip.startTick + clip.lengthTick) {
             return clip;
         }

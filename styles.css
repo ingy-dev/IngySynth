@@ -13258,6 +13258,25 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 .arrange-clip.is-overwritten {
     opacity: 0.2;
 }
+/* Clips stack: one picked up to drag or trim comes out whole, above everything. */
+.arrange-clip.is-lifted {
+    z-index: 4;
+}
+.arrange-clip[hidden],
+.arrange-clip-handle[hidden] {
+    display: none !important;
+}
+/* A clip with another hidden under it: a small corner notch, so nothing comes back as a surprise. */
+.arrange-clip.is-covering::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    border-left: 7px solid #00ff00;
+    border-top: 7px solid transparent;
+    pointer-events: none;
+    z-index: 2;
+}
 /* Trim grip size: slim with a mouse, chunky on touch or narrow screens. */
 .arrange-lane {
     --grip: 8px;

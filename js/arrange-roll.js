@@ -2,7 +2,7 @@
 // markEdited runs once per gesture, before the mutation.
 
 import { state } from './state.js?v=120';
-import { markEdited, reverseClip, invertClip, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks } from './song-model.js?v=9';
+import { markEdited, reverseClip, invertClip, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks } from './song-model.js?v=10';
 import {
     POLY_CHORD_MAX,
     chordFromCellNotes,
@@ -14,8 +14,8 @@ import { nextRatch } from './step-ratch.js?v=1';
 import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './tuning.js?v=108';
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
-import { placeArrangementInsert } from './song-conductor.js?v=29';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=49';
+import { placeArrangementInsert } from './song-conductor.js?v=30';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=50';
 import { createIngyWindow } from './ingy-window.js?v=3';
 import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=276';
 import { needsHeldNoteSet } from './held-notes.js?v=13';

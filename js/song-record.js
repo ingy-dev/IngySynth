@@ -4,8 +4,8 @@
 import { state } from './state.js?v=120';
 import { getNumber } from './params.js?v=44';
 import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=456';
-import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=29';
-import { BAR_TICKS, applyTake } from './song-model.js?v=9';
+import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=30';
+import { BAR_TICKS, applyTake, visibleClips } from './song-model.js?v=10';
 import { setLiveNoteHooks } from './voice.js?v=191';
 import { setPolyLiveHook } from './poly-voice.js?v=200';
 
@@ -37,7 +37,7 @@ function heardTick() {
 }
 
 function patternEdges(song) {
-    return (song?.synth?.clips || [])
+    return (song ? visibleClips(song, 'synth') : [])
         .filter((clip) => clip && (clip.kind === 'n' || clip.kind === 'b'))
         .map((clip) => ({
             start: clip.startTick | 0,

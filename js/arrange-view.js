@@ -9,15 +9,15 @@ import { state } from './state.js?v=120';
 import { getNumber, subscribe } from './params.js?v=44';
 import { initAudio } from './audio-engine.js?v=247';
 import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=456';
-import { arrangeStop, cancelArrangeCountIn, liveTakeRegions } from './song-record.js?v=26';
-import { arrangeTempoMarkup, initArrangeTempo } from './arrange-tempo.js?v=2';
+import { arrangeStop, cancelArrangeCountIn, liveTakeRegions } from './song-record.js?v=27';
+import { arrangeTempoMarkup, initArrangeTempo } from './arrange-tempo.js?v=3';
 import {
     armArrangementContinue,
     arrangementInsertTick,
     cancelArrangementContinue,
     homeArrangement,
     placeArrangementInsert,
-} from './song-conductor.js?v=29';
+} from './song-conductor.js?v=30';
 import {
     SONG_SLOT,
     patternHash,
@@ -43,7 +43,9 @@ import {
     clipShowsUpdate,
     clipStartOffset,
     clipStepTicks,
+    coversClip,
     createSong,
+    cropClip,
     deleteClip,
     duplicateClip,
     keepClip,
@@ -61,9 +63,10 @@ import {
     trimClipStart,
     undo,
     updateFromSource,
-} from './song-model.js?v=9';
+    visibleClips,
+} from './song-model.js?v=10';
 import { quantizeToPattern } from './song-quantize.js?v=19';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=46';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=47';
 
 const MIN_PX = 24;
 const MAX_PX = 1280;
@@ -449,8 +452,8 @@ function layoutTimeline() {
     sheet.style.width = `${bars * pxPerBar}px`;
     sheet.style.setProperty('--arrange-px', `${pxPerBar}px`);
     paintRuler(bars);
-    paintLane(synthLane, state.song.synth.clips);
-    paintLane(drumLane, state.song.drums.clips);
+    paintLane(synthLane, visibleClips(state.song, 'synth'));
+    paintLane(drumLane, visibleClips(state.song, 'drums'));
     paintKnob();
     syncPlayhead();
     syncLoop();
@@ -551,10 +554,11 @@ function paintRuler(bars) {
     }
 }
 
+// `clips` are visible pieces (song-model visibleClips): a clip partly covered by one
+// stacked on top shows as one or more cropped pieces sharing its id.
 function paintLane(lane, clips) {
     lane.replaceChildren();
-    const ordered = clips.slice().sort((a, b) => a.startTick - b.startTick);
-    for (const clip of ordered) lane.appendChild(clipElement(clip));
+    for (const clip of clips) lane.appendChild(clipElement(clip));
 }
 
 function clipElement(clip) {
@@ -563,11 +567,16 @@ function clipElement(clip) {
     el.dataset.id = clip.id;
     if (clip.id === selectedId) el.classList.add('is-selected');
     if (isForeign(clip)) el.classList.add('is-foreign');
+    if (coversClip(state.song, clip.id)) el.classList.add('is-covering');
     el.style.left = `${(clip.startTick / BAR_TICKS) * pxPerBar}px`;
     el.style.width = `${(clip.lengthTick / BAR_TICKS) * pxPerBar}px`;
     const canvas = document.createElement('canvas');
     canvas.dataset.role = 'clip';
     canvas.dataset.id = clip.id;
+    if (clip.cropL || clip.cropR) {
+        canvas.dataset.from = String(clip.startTick);
+        canvas.dataset.to = String(clip.startTick + clip.lengthTick);
+    }
     const label = document.createElement('span');
     label.className = 'arrange-clip-label';
     label.textContent = clipLabel(clip);
@@ -578,6 +587,9 @@ function clipElement(clip) {
     const handle = document.createElement('div');
     handle.className = 'arrange-clip-handle is-right';
     handle.dataset.edge = 'r';
+    // An edge where a clip on top covers this one is not a real edge: no grip there.
+    left.hidden = !!clip.cropL;
+    handle.hidden = !!clip.cropR;
     el.append(canvas, label, left, handle);
     paintClipRange(el, clip);
     return el;
@@ -803,7 +815,7 @@ function isForeign(clip) {
 function clipLabel(clip) {
     // One mark for "differs from its pattern": edited or trimmed here, or the pattern changed since.
     const star = clip.kind !== 'notes' && (clip.edited || clipIsTrimmed(clip) || patternChanged(clip)) ? '*' : '';
-    if (clip.kind === 'notes') return 'Rec';
+    if (clip.kind === 'notes') return clip.name || 'Rec';
     if (clip.kind === 'n' && state.berlinMode) return `Normal${star}`;
     if (clip.kind === 'b' && !state.berlinMode) return `Berlin${star}`;
     return `P${(clip.source | 0) + 1}${star}`;
@@ -897,7 +909,7 @@ function previewSnapStart(track, excludeId, pointerStart) {
     const unit = startGrid();
     const barCandidate = Math.round(start / unit) * unit;
     const reach = unit / 2;
-    const clips = track === 'drums' ? state.song.drums.clips : state.song.synth.clips;
+    const clips = visibleClips(state.song, track);
     let bestEnd = null;
     let bestDist = reach + 1;
     for (const clip of clips) {
@@ -1156,6 +1168,7 @@ function beginClipGesture(event, clipEl) {
         } else if (mode === 'range-arm' && dist > SLOP) {
             mode = handle ? 'resize' : 'range';
         }
+        if (mode !== 'pending' && mode !== 'range-arm') liftClip(clipEl, clip);
         if (mode === 'move') previewMove(clipEl, clip, originStart, ev.clientX - startX, ev.clientX, ev.clientY);
         if (mode === 'resize') {
             document.documentElement.classList.add('arrange-trimming');
@@ -1333,6 +1346,25 @@ function trashClip(clip, ghost) {
     showToast('Deleted clip', -1, 0, null);
 }
 
+// A clip picked up to drag or trim comes out whole, on top: its covered parts show
+// while it is held, and the drop puts it on top of the stack.
+function liftClip(el, clip) {
+    if (el.classList.contains('is-lifted')) return;
+    el.classList.add('is-lifted');
+    root.querySelectorAll('.arrange-clip').forEach((other) => {
+        if (other !== el && other.dataset.id === clip.id) other.hidden = true;
+    });
+    const canvas = el.querySelector('canvas[data-role="clip"]');
+    if (!canvas?.dataset.from) return;
+    delete canvas.dataset.from;
+    delete canvas.dataset.to;
+    el.style.left = `${(clip.startTick / BAR_TICKS) * pxPerBar}px`;
+    el.style.width = `${(clip.lengthTick / BAR_TICKS) * pxPerBar}px`;
+    el.querySelectorAll('.arrange-clip-handle').forEach((h) => { h.hidden = false; });
+    drawCanvas(canvas);
+    paintClipRange(el, clip);
+}
+
 function previewMove(el, clip, origin, dx, clientX, clientY) {
     clearTargets();
     const square = squareAt(clientX, clientY);
@@ -1346,6 +1378,7 @@ function previewMove(el, clip, origin, dx, clientX, clientY) {
     const snapped = previewSnapStart(clip.track, clip.id, raw);
     el.style.left = `${(snapped / BAR_TICKS) * pxPerBar}px`;
     el.classList.toggle('is-blocked', overlaps(clip.track, clip.id, snapped, clip.lengthTick));
+    markOverwriteRange(clip.track, clip.id, snapped, snapped + clip.lengthTick);
 }
 
 function previewResize(el, clip, originLen, dx) {
@@ -1395,8 +1428,13 @@ function previewTrimStart(el, clip, originStart, dx) {
 // While an edge is dragged over neighbours: clips it will remove fade out; clips it
 // will cut sit under the dragged clip, which draws on top.
 function markOverwrite(clip, start, end) {
+    markOverwriteRange(clip.track, clip.id, start, end);
+}
+
+// A drop or move over clips writes over them: fade the ones it will remove.
+function markOverwriteRange(track, excludeId, start, end) {
     const { removed } = end > start
-        ? overwritePreview(state.song, clip.track, clip.id, start, end)
+        ? overwritePreview(state.song, track, excludeId, start, end)
         : { removed: [] };
     root.querySelectorAll('.arrange-clip').forEach((el) => {
         el.classList.toggle('is-overwritten', removed.includes(el.dataset.id));
@@ -1469,6 +1507,7 @@ function onSquarePointerDown(event) {
             lane.classList.add('is-target');
             const snapped = previewSnapStart(track, null, tickFromClientX(ev.clientX));
             ghost.classList.toggle('is-blocked', overlaps(track, null, snapped, dragLen));
+            markOverwriteRange(track, null, snapped, snapped + dragLen);
             ghostToLane(ghost, lane, snapped, dragLen);
         } else {
             ghost.classList.remove('is-blocked');
@@ -2071,8 +2110,8 @@ function laneAt(x, y) {
 }
 
 function clearTargets() {
-    root.querySelectorAll('.is-target, .arrange-square.is-drop').forEach((el) => {
-        el.classList.remove('is-target', 'is-drop', 'is-replace');
+    root.querySelectorAll('.is-target, .arrange-square.is-drop, .arrange-clip.is-overwritten').forEach((el) => {
+        el.classList.remove('is-target', 'is-drop', 'is-replace', 'is-overwritten');
     });
 }
 
@@ -2510,6 +2549,7 @@ function drawCanvas(canvas) {
         let clip = findClip(canvas.dataset.id);
         if (!clip) return;
         if (drawOverride?.id === clip.id) clip = { ...clip, ...drawOverride };
+        else if (canvas.dataset.from) clip = cropClip(clip, Number(canvas.dataset.from), Number(canvas.dataset.to));
         // Clips draw at the timeline's tick scale and play their pattern once: the
         // edges crop it, and space past the pattern (or before it) stays empty.
         const geom = {

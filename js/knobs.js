@@ -3,11 +3,11 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=455';
+import { previewStepsOnVfd } from './sequencer.js?v=456';
 import { state } from './state.js?v=120';
 import { beginMidiLearn } from './midi-learn.js?v=35';
 import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=44';
-import { getParam, isCatalogKey } from './param-catalog.js?v=12';
+import { getParam, isCatalogKey } from './param-catalog.js?v=13';
 import { stepTuneBounds } from './step-tune-range.js?v=60';
 
 const ANGLE_MIN = -135;
@@ -180,6 +180,7 @@ function attachVerticalDrag(dial, { allow, onArm, onDrag, onEnd }) {
 const KNOB_BINDINGS = [
     { dialId: 'kbTempoKnob', inputId: 'tempo', valueId: 'kbTempoValue' },
     { dialId: 'kbStepsKnob', inputId: 'stepCount', valueId: 'kbStepsValue' },
+    { dialId: 'kbSwingKnob', inputId: 'swing', valueId: 'kbSwingKnobValue' },
     { dialId: 'kbCutoffKnob', inputId: 'cutoff' },
     { dialId: 'kbResonanceKnob', inputId: 'resonance' },
     { dialId: 'kbHighPassKnob', inputId: 'highPass' },
@@ -231,9 +232,14 @@ const KNOB_BINDINGS = [
 
 const DIVISION_STEPS = [
     { value: '2', label: '1/2' },
+    { value: '3', label: '1/2T' },
     { value: '4', label: '1/4' },
+    { value: '6', label: '1/4T' },
     { value: '8', label: '1/8' },
+    { value: '12', label: '1/8T' },
     { value: '16', label: '1/16' },
+    { value: '24', label: '1/16T' },
+    { value: '48', label: '1/32T' },
 ];
 
 const STEPPED_DRAG_PIXELS = 90; // vertical drag for full stepped range
@@ -694,11 +700,20 @@ function setSteppedIndex(dial, key, control, steps, index) {
     }
 }
 
-function bindSteppedKnob({ dialId, controlId, steps }) {
+function bindSteppedKnob({ dialId, controlId, steps, valueId }) {
     const dial = document.getElementById(dialId);
     const key = controlId;
     const control = connectedElementFor(key);
     if (!dial || !steps?.length) return;
+    const valueEl = valueId ? document.getElementById(valueId) : null;
+    if (valueEl) {
+        const showValue = () => {
+            const step = steps[nearestSteppedIndexFromValue(get(key), steps)];
+            if (step) valueEl.textContent = step.label;
+        };
+        showValue();
+        subscribe(key, showValue);
+    }
 
     setSteppedIndex(dial, key, control, steps, nearestSteppedIndexFromValue(get(key) ?? control?.value, steps));
 
@@ -776,6 +791,7 @@ export function initKeyboardKnobs() {
         dialId: 'kbDivisionKnob',
         controlId: 'division',
         steps: DIVISION_STEPS,
+        valueId: 'kbDivisionValue',
         eventName: 'change',
     });
 }

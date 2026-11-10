@@ -6,7 +6,7 @@
 // bit depth keep their own units.
 
 import { state } from './state.js?v=120';
-import { formatRangeValue } from './knobs.js?v=189';
+import { formatRangeValue } from './knobs.js?v=191';
 
 const LINGER_MS = 520;
 const GAP_PX = 10;
@@ -285,6 +285,8 @@ function formatCounted(key, raw) {
     // -1..+1 shown as -100..+100: noon is zero, as on the hardware.
     if (key === 'plaitsEnvAmount' && finite) return signed(Math.round(n * 100), 0);
     if (key === 'gateLength' && finite) return String(Math.round(n));
+    // Swing is the MPC share of the 8th the first 16th gets: 50% straight, 75% max.
+    if (key === 'swing' && finite) return `${Math.round(n)}%`;
     if (
         key === 'masterTune'
         || key === 'semitoneSwitch'

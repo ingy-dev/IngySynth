@@ -13,7 +13,7 @@
     "wavetables": [ "a", "b" ]
   },
   "pattern": {
-    "params": { "tempo": 128, "swing": 0.56 },
+    "params": { "tempo": 128, "groove": 0.56 },
     "slots": [
       {
         "probability": 0.5,

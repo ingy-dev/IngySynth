@@ -1813,7 +1813,7 @@ html {
      * a little higher). Shared by the mainstage panels and the Multitudes module. */
     .plaits-grid {
         display: grid;
-        grid-template-columns: 1fr auto 1fr;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
         grid-template-areas:
             "freq . harm"
             "timbre . morph"
@@ -1828,6 +1828,17 @@ html {
     .mi-knob-row.plaits-grid {
         display: grid;
         flex-wrap: nowrap;
+    }
+    /* Phone layout forces .synth-knob to 60px; let the grid size the knobs instead so
+     * the panel fits a narrow OSC fieldset. */
+    .plaits-grid .synth-knob {
+        width: auto;
+        min-width: 0;
+        max-width: 100%;
+    }
+    .osc4-digital-params {
+        width: 100%;
+        min-width: 0;
     }
     .pg-freq { grid-area: freq; }
     .pg-harm { grid-area: harm; }
@@ -4797,6 +4808,7 @@ body.acid-mode .berlin-step-ratch {
 }
 .keyboard-osc-controls {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto auto;
     align-items: center;
     justify-items: center;
@@ -8755,6 +8767,14 @@ body.write-mode-on .keyboard-step {
 }
 .synth-knob-value--spacer {
     visibility: hidden;
+}
+/* Unlabelled step marks (DIV knob): the value readout names the position. */
+.synth-knob-tick.synth-knob-tick--dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #00cc00;
+    font-size: 0;
 }
 .synth-knob-dial-wrap {
     position: relative;
@@ -12771,7 +12791,13 @@ body.is-arrange .keyboard-toolbar,
 body.is-arrange .keyboard-filter-knobs,
 body.is-arrange #keyboardXyFieldset,
 body.is-arrange .keyboard-arp-panel,
-body.is-arrange #chromaticSpaceBarRow {
+body.is-arrange #chromaticSpaceBarRow,
+/* For now arrange shows no play row (bend, LFO amount, modulation, chord
+ * memory) and no keyboard; the arrange view takes the whole section. */
+body.is-arrange .keyboard-play-row,
+body.is-arrange #chromaticKeyboardPanel,
+body.is-arrange #chromaticKeyboardScroller,
+body.is-arrange #computerKeyboardPanel {
     display: none !important;
 }
 body.is-arrange .keyboard-section {
@@ -12790,6 +12816,8 @@ body.is-arrange #arrangeView:not([hidden]) {
     flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
+    container-type: size;
+    container-name: arrange;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -12867,16 +12895,24 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     cursor: default;
     box-shadow: none;
 }
+/* Record — red dot like Write / Automation Rec. Idle: steady dim red.
+   Armed: full red, blinking on the shared --kb-rec-blink timeline. */
 .arrange-icon-rec {
     display: block;
-    width: 11px;
-    height: 11px;
-    box-sizing: border-box;
-    border: 1.5px solid currentColor;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
+    background: #ff0000;
+    opacity: 0.45;
+    pointer-events: none;
+}
+#arrangeRecord.is-armed {
+    border-color: #ff3333;
+    box-shadow: 0 0 6px rgba(255, 0, 0, 0.35);
 }
 .arrange-btn.is-armed .arrange-icon-rec {
-    background: currentColor;
+    opacity: var(--kb-rec-blink);
+    box-shadow: 0 0 6px rgba(255, 0, 0, 0.65);
 }
 .arrange-icon-play {
     display: block;
@@ -12891,6 +12927,79 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     display: block;
     width: 10px;
     height: 10px;
+    background: currentColor;
+}
+.arrange-tempo {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 6px;
+}
+.arrange-tap {
+    padding: 0 7px;
+}
+.arrange-tap:active {
+    background: #00ff00;
+    border-color: #00ff00;
+    color: #000;
+}
+.arrange-bpm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 28px;
+    box-sizing: border-box;
+    border: 1px solid #00aa00;
+    background: #000;
+    color: #00ff00;
+    font-family: Michroma, sans-serif;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    cursor: ns-resize;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+.arrange-bpm:hover,
+.arrange-bpm.is-dragging {
+    border-color: #00ff00;
+}
+.arrange-bpm:focus-visible {
+    border-color: #00ff00;
+    outline: 1px solid #00ff00;
+    outline-offset: 1px;
+}
+.arrange-bpm.is-editing {
+    cursor: text;
+    border-color: #00ff00;
+}
+.arrange-bpm-input {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: #00ff00;
+    color: #000;
+    font: inherit;
+    text-align: center;
+}
+.arrange-icon-metro {
+    display: flex;
+    gap: 4px;
+}
+.arrange-icon-metro i {
+    display: block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    box-sizing: border-box;
+}
+.arrange-metronome.is-on .arrange-icon-metro i {
     background: currentColor;
 }
 .arrange-time {
@@ -12916,9 +13025,12 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     color: #00aa00;
     font-size: 13px;
 }
+/* The timeline box fits its tracks; the pads sit right under it. */
 .arrange-timelines {
-    flex: 1 1 0;
+    flex: 0 1 auto;
     min-height: 72px;
+    /* Scroll stays native; pinch is ours (arrange-view.js). */
+    touch-action: pan-x pan-y;
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
@@ -12975,8 +13087,9 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     font-size: 8px;
     letter-spacing: 0.06em;
 }
-.arrange-gutter-lane[data-track="synth"] { flex: 1.25 1 52px; }
-.arrange-gutter-lane[data-track="drums"] { flex: 1 1 42px; }
+/* Tracks keep fixed heights like Ableton's arrangement. */
+.arrange-gutter-lane[data-track="synth"] { flex: 0 1 72px; }
+.arrange-gutter-lane[data-track="drums"] { flex: 0 1 64px; }
 .arrange-scroll {
     min-width: 0;
     min-height: 0;
@@ -13056,16 +13169,17 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     box-sizing: border-box;
     min-height: 0;
     border-top: 1px solid rgba(0, 170, 0, 0.45);
-    background-image: repeating-linear-gradient(
-        to right,
-        transparent 0,
-        transparent calc(var(--arrange-px, 80px) - 1px),
-        rgba(0, 170, 0, 0.28) calc(var(--arrange-px, 80px) - 1px),
-        rgba(0, 170, 0, 0.28) var(--arrange-px, 80px)
-    );
 }
-.arrange-lane[data-track="synth"] { flex: 1.25 1 52px; }
-.arrange-lane[data-track="drums"] { flex: 1 1 42px; }
+/* The lane grid and ruler subdivisions (drawGrid): viewport-wide, behind clips. */
+.arrange-grid-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+.arrange-lane[data-track="synth"] { flex: 0 1 72px; }
+.arrange-lane[data-track="drums"] { flex: 0 1 64px; }
 .arrange-lane.is-target {
     background-color: rgba(0, 255, 0, 0.06);
 }
@@ -13079,8 +13193,8 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     pointer-events: none;
 }
 .arrange-playhead {
-    background: #00ff00;
-    box-shadow: 0 0 4px #00ff00;
+    background: #00ffff;
+    box-shadow: 0 0 4px #00ffff;
     z-index: 5;
 }
 .arrange-insert {
@@ -13125,15 +13239,51 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     bottom: 3px;
     box-sizing: border-box;
     border: 1px solid #00aa00;
-    background: rgba(5, 8, 5, 0.94);
+    /* See-through enough that the grid reads behind clips. */
+    background: rgba(5, 8, 5, 0.8);
     overflow: hidden;
     touch-action: none;
     z-index: 2;
     cursor: grab;
 }
 .arrange-clip.is-selected {
-    border-color: #00ff00;
-    box-shadow: 0 0 6px rgba(0, 255, 0, 0.4);
+    /* Final Cut style selection: a thick cyan frame (inset, so the steps don't shift). */
+    border-color: #00e5ff;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 2px #00e5ff, 0 0 6px rgba(0, 229, 255, 0.35);
+}
+.arrange-clip.is-selected {
+    z-index: 3;
+}
+.arrange-clip.is-overwritten {
+    opacity: 0.2;
+}
+/* Trim grip size: slim with a mouse, chunky on touch or narrow screens. */
+.arrange-lane {
+    --grip: 8px;
+    --grip-hit: 10px;
+}
+@media (pointer: coarse), (max-width: 760px) {
+    .arrange-lane {
+        --grip: 14px;
+        --grip-hit: 20px;
+    }
+}
+.arrange-clip.is-selected .arrange-clip-label {
+    left: calc(var(--grip) + 3px);
+    color: #00e5ff;
+}
+/* Live take while recording (arrange-view.js paintTake): red until Stop commits it. */
+.arrange-clip.arrange-take {
+    border-color: #ff3333;
+    background: rgba(40, 0, 0, 0.55);
+    box-shadow: 0 0 6px rgba(255, 0, 0, 0.35);
+    pointer-events: none;
+    z-index: 3;
+}
+.arrange-clip.arrange-take .arrange-clip-label {
+    color: #ff3333;
+    opacity: var(--kb-rec-blink);
 }
 .arrange-clip.is-foreign {
     opacity: 0.45;
@@ -13144,7 +13294,6 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     opacity: 0.55;
 }
 .arrange-clip canvas,
-.arrange-square canvas,
 .arrange-ghost canvas {
     position: absolute;
     left: 2px;
@@ -13171,30 +13320,146 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 .arrange-clip.is-foreign .arrange-clip-label {
     color: #3f7a3f;
 }
-.arrange-clip-dot {
-    position: absolute;
-    top: 3px;
-    right: 12px;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #00ff00;
-    box-shadow: 0 0 4px #00ff00;
-    pointer-events: none;
-    z-index: 2;
-}
-.arrange-clip-dot[hidden] {
-    display: none !important;
-}
 .arrange-clip-handle {
+    /* Trim grips on both edges: always grabbable, drawn only on the selected clip. */
     position: absolute;
     top: 0;
-    right: 0;
-    width: 8px;
+    width: var(--grip-hit, 10px);
     height: 100%;
-    cursor: ew-resize;
-    background: linear-gradient(90deg, transparent, rgba(0, 170, 0, 0.9));
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M2 12l5-5v3h10V7l5 5-5 5v-3H7v3z' fill='%2300e5ff' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 12 12, ew-resize;
     z-index: 3;
+}
+.arrange-clip-handle.is-left {
+    left: 0;
+}
+.arrange-clip-handle.is-right {
+    right: 0;
+}
+/* The visible grip sits at the clip's outer edge; the handle itself is a little wider. */
+.arrange-clip.is-selected .arrange-clip-handle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--grip, 8px);
+    background: #00e5ff;
+}
+.arrange-clip.is-selected .arrange-clip-handle.is-left::before {
+    left: 0;
+    border-radius: 5px 1px 1px 5px;
+}
+.arrange-clip.is-selected .arrange-clip-handle.is-right::before {
+    right: 0;
+    border-radius: 1px 5px 5px 1px;
+}
+.arrange-clip.is-selected .arrange-clip-handle::after {
+    content: "";
+    position: absolute;
+    top: 21.5%;
+    bottom: 21.5%;
+    width: 2px;
+    border-radius: 1px;
+    background: rgba(0, 0, 0, 0.75);
+}
+.arrange-clip.is-selected .arrange-clip-handle.is-left::after {
+    left: calc(var(--grip, 8px) / 2 - 1px);
+}
+.arrange-clip.is-selected .arrange-clip-handle.is-right::after {
+    right: calc(var(--grip, 8px) / 2 - 1px);
+}
+.arrange-clip-handle.is-active {
+    filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.9));
+}
+@media (hover: hover) {
+    .arrange-clip:not(.is-selected) .arrange-clip-handle:hover {
+        background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.7));
+    }
+    .arrange-clip:not(.is-selected) .arrange-clip-handle.is-left:hover {
+        background: linear-gradient(270deg, transparent, rgba(0, 229, 255, 0.7));
+    }
+}
+
+/* Copy knob: a cyan hexagon (the IngySynth motif) past the clip's right edge, half way
+   down; only where a whole copy fits. The hexagon is an inner span so its clip-path
+   doesn't cut the touch area or the connector line. */
+.arrange-knob {
+    position: absolute;
+    top: 50%;
+    width: 38px;
+    height: 26px;
+    margin-top: -13px;
+    z-index: 5;
+    cursor: grab;
+    touch-action: none;
+}
+.arrange-knob-hex {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #00e5ff;
+    clip-path: polygon(20% 0, 80% 0, 100% 50%, 80% 100%, 20% 100%, 0 50%);
+}
+.arrange-knob svg {
+    width: 21px;
+    height: 12px;
+    pointer-events: none;
+}
+/* Bigger invisible touch area; it also bridges the gap back to the clip for hover. */
+.arrange-knob::before {
+    content: "";
+    position: absolute;
+    inset: -10px;
+}
+.arrange-knob::after {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    width: 10px;
+    height: 2px;
+    margin-top: -1px;
+    background: #00e5ff;
+}
+.arrange-knob:active .arrange-knob-hex {
+    filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.9));
+}
+@media (pointer: coarse) {
+    .arrange-knob {
+        width: 46px;
+        height: 32px;
+        margin-top: -16px;
+    }
+    .arrange-knob svg {
+        width: 25px;
+        height: 15px;
+    }
+}
+.arrange-copy-ghost {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    box-sizing: border-box;
+    border: 2px dotted #00e5ff;
+    border-radius: 6px;
+    background: transparent;
+    display: grid;
+    place-items: center;
+    color: #00e5ff;
+    font-family: Michroma, sans-serif;
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 4;
+}
+/* The original's "1" while copying: just the number, over the clip's own frame. */
+.arrange-copy-ghost.is-origin {
+    border: 0;
+    z-index: 4;
+    text-shadow: 0 0 3px #000, 0 0 6px #000;
+}
+html.arrange-trimming,
+html.arrange-trimming * {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M2 12l5-5v3h10V7l5 5-5 5v-3H7v3z' fill='%2300e5ff' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E") 12 12, ew-resize !important;
 }
 .arrange-clip-range {
     position: absolute;
@@ -13226,21 +13491,238 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     background: rgba(5, 8, 5, 0.92);
     pointer-events: none;
     box-shadow: 0 0 8px rgba(0, 255, 0, 0.35);
+    transition: width 0.12s ease-out, height 0.12s ease-out, border-radius 0.12s ease-out,
+        background-color 0.12s ease-out;
 }
 .arrange-ghost.is-blocked {
     border-style: dashed;
     opacity: 0.6;
 }
+.arrange-ghost.is-pad {
+    border: 1.5px solid #00cc00;
+    border-radius: 7px;
+    background: #00cc00;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.45);
+}
+.arrange-ghost.is-pad.is-empty {
+    background: #050805;
+    border-color: #00aa00;
+}
+.arrange-ghost.is-pad canvas {
+    left: 5px;
+    top: 14px;
+    width: calc(100% - 10px);
+    height: calc(100% - 19px);
+}
+.arrange-ghost.is-pad .arrange-clip-label {
+    top: 4px;
+    left: 6px;
+    color: #000;
+}
+.arrange-ghost.is-pad.is-empty .arrange-clip-label {
+    color: #00aa00;
+}
+.arrange-ghost.is-pad.is-carry {
+    border-color: #00ff00;
+    background: #050805;
+}
+.arrange-ghost.is-pad.is-carry .arrange-clip-label {
+    color: #00ff00;
+}
+.arrange-ghost.is-landing {
+    overflow: hidden;
+    border-radius: 10px;
+    transition: none;
+}
+.arrange-ghost-flood {
+    position: absolute;
+    inset: -25%;
+    border-radius: 50%;
+    background: #00cc00;
+    transform: scale(0);
+    will-change: transform;
+}
+.arrange-clip.is-carried {
+    opacity: 0.4;
+}
+.arrange-ghost-hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 2px 0 1px;
+    background: #00ff00;
+    color: #000;
+    font-family: Michroma, sans-serif;
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.arrange-ghost-hint[hidden] {
+    display: none;
+}
+/* Touch drag-to-delete: a cyan (action) bin appears at the bottom centre while a clip moves.
+ * Margins centre it so transform stays free for the scale animations. */
+.arrange-trash {
+    position: fixed;
+    left: 50%;
+    bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+    width: 56px;
+    height: 56px;
+    margin-left: -28px;
+    z-index: 10039;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 1.5px solid #00aaaa;
+    border-radius: 50%;
+    background: #050805;
+    color: #00ffff;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    opacity: 0;
+    transform: scale(0.6);
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.14s ease-out, transform 0.14s ease-out, background-color 0.1s ease-out,
+        color 0.1s ease-out, visibility 0s linear 0.14s;
+}
+.arrange-trash svg {
+    width: 46%;
+    height: 46%;
+}
+.arrange-trash.is-on {
+    opacity: 1;
+    transform: scale(1);
+    visibility: visible;
+    transition: opacity 0.14s ease-out, transform 0.14s ease-out, background-color 0.1s ease-out,
+        color 0.1s ease-out, visibility 0s;
+}
+.arrange-trash.is-hot,
+.arrange-trash.is-gulp {
+    border-color: #00ffff;
+    background: #00ffff;
+    color: #000;
+    box-shadow: 0 0 16px rgba(0, 255, 255, 0.6);
+}
+.arrange-trash.is-hot {
+    z-index: 10041; /* over the carried clip, which shrinks in under it */
+    transform: scale(1.15);
+}
+.arrange-ghost.is-carry.is-trash {
+    opacity: 0.8;
+    transform: scale(0.55);
+}
+.arrange-square.is-replace canvas {
+    opacity: 0.25;
+}
+.arrange-bank {
+    position: relative;
+}
+/* Floats over the bank so showing it never shifts layout; JS hangs it under
+ * the replaced pad, else it sits centred on the bank's bottom stroke. */
+.arrange-toast {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 2px 2px 8px;
+    border: 1px solid #00ff00;
+    border-radius: 5px;
+    background: #050805;
+    color: #00ff00;
+    font-family: Michroma, sans-serif;
+    font-size: 8px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    opacity: 0;
+    transform: translate(-50%, calc(50% + 4px));
+    white-space: nowrap;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.16s ease-out, transform 0.16s ease-out, visibility 0s linear 0.16s;
+}
+.arrange-toast.is-on {
+    opacity: 1;
+    transform: translate(-50%, 50%);
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.16s ease-out, transform 0.16s ease-out, visibility 0s;
+}
+/* Placed under the replaced pad: top-anchored, slides up into place. */
+.arrange-toast.is-placed {
+    bottom: auto;
+    transform: translate(-50%, 4px);
+}
+.arrange-toast.is-placed.is-on {
+    transform: translate(-50%, 0);
+}
+.arrange-toast-undo {
+    margin: 0;
+    padding: 3px 8px;
+    border: 0;
+    border-radius: 3px;
+    background: #00ff00;
+    color: #000;
+    font: inherit;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.arrange-toast-undo:disabled {
+    cursor: default;
+}
+/* After undo the notice is just the word: keep its height, drop the button. */
+.arrange-toast.is-done {
+    padding: 5px 10px;
+}
+.arrange-toast.is-done .arrange-toast-undo {
+    display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .arrange-ghost,
+    .arrange-trash {
+        transition: none;
+    }
+}
 .arrange-bank {
     flex: 0 0 auto;
 }
+/* Folder tabs sit on the bank panel's top stroke, like the main page's
+ * Steps / Synthesizer tabs: the active tab punches through the line. */
+.arrange-bank-field {
+    min-width: 0;
+    margin: 0;
+    padding: 0 6px 6px;
+    border: 1px solid #00aa00;
+    border-radius: 5px; /* = main page fieldsets */
+    box-sizing: border-box;
+}
 .arrange-tab-strip {
+    /* Same indent as the main page's .keyboard-tab-strip */
+    --field-border: 1px;
+    --tab-field-pad-x: 12px;
+    --tab-legend-indent: 10px;
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: flex-end;
     gap: 3px;
-    margin: 0;
-    padding: 0 2px;
+    margin: 0 0 -1px;
+    padding: 0 10px 0 calc(var(--field-border) + var(--tab-field-pad-x) + var(--tab-legend-indent));
     min-width: 0;
+}
+@media (max-width: 768px) {
+    .arrange-tab-strip {
+        --tab-field-pad-x: 10px;
+        padding-right: 0;
+        gap: 1px;
+    }
 }
 .arrange-tab {
     --tab-h: 20px;
@@ -13316,35 +13798,95 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     outline: 1px solid #fff;
     outline-offset: 1px;
 }
+/* Pattern pads: square, rounded like MPC pads. A pad holding a pattern is
+ * lit green with a black note preview; an empty pad is black with a green
+ * outline. Phones show 4 x 2; wider screens one row of 8; always centred. Pads fill the
+ * width but shrink (staying square) when the arrange view is short, so the
+ * timelines keep their minimum height. --pad-reserve is everything above the
+ * pads: transport, clock, timelines minimum, tab strip, gaps and padding. */
 .arrange-bank-grid {
+    --pad-gap: 10px;
+    --pad-reserve: 186px;
+    --pad-cap: max(44px, calc((100cqh - var(--pad-reserve) - var(--pad-gap)) / 2));
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4px;
+    grid-template-columns: repeat(4, minmax(0, var(--pad-cap)));
+    justify-content: center;
+    gap: var(--pad-gap);
     margin-top: -1px;
-    padding-top: 4px;
+    padding: 8px 2px 4px;
 }
 .arrange-square {
     position: relative;
     min-width: 0;
-    height: 46px;
+    aspect-ratio: 1 / 1;
+    height: auto;
     min-height: 0;
     margin: 0;
     padding: 0;
-    border: 1px solid #00aa00;
-    background: #050805;
-    color: #00aa00;
+    border: 1.5px solid #00cc00;
+    border-radius: 10px;
+    background: #00cc00;
+    color: #000;
     overflow: hidden;
     box-sizing: border-box;
     touch-action: none;
     cursor: grab;
 }
+.arrange-square canvas {
+    position: absolute;
+    left: 7px;
+    top: 20px;
+    width: calc(100% - 14px);
+    height: calc(100% - 27px);
+    pointer-events: none;
+}
+.arrange-square .arrange-square-name {
+    top: 7px;
+    left: 8px;
+    color: #000;
+    font-size: 9px;
+}
 .arrange-square.is-empty {
-    opacity: 0.38;
+    background: #050805;
+    border-color: #00aa00;
+}
+.arrange-square-rev {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    z-index: 2;
+    color: #000;
+    font-family: Michroma, sans-serif;
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    pointer-events: none;
+}
+.arrange-square.is-empty .arrange-square-rev,
+.arrange-square.is-empty .arrange-square-name {
+    color: #00aa00;
 }
 .arrange-square.is-armed,
 .arrange-square.is-drop {
     border-color: #00ff00;
-    box-shadow: 0 0 6px rgba(0, 255, 0, 0.45);
+    background: #00ff00;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.55);
+}
+.arrange-square.is-empty.is-armed,
+.arrange-square.is-empty.is-drop {
+    background: #050805;
+}
+.arrange-square.is-empty.is-armed .arrange-square-rev,
+.arrange-square.is-empty.is-drop .arrange-square-rev,
+.arrange-square.is-empty.is-armed .arrange-square-name,
+.arrange-square.is-empty.is-drop .arrange-square-name {
+    color: #00ff00;
+}
+@media (min-width: 640px) {
+    .arrange-bank-grid {
+        --pad-cap: clamp(44px, calc(100cqh - var(--pad-reserve)), 112px);
+        grid-template-columns: repeat(8, minmax(0, var(--pad-cap)));
+    }
 }
 .arrange-coming {
     margin: 4px 0 0;
@@ -13427,28 +13969,24 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
         padding: 1px calc(var(--tab-cut) + 2px) 0;
     }
     .arrange-gutter-lane[data-track="synth"],
-    .arrange-lane[data-track="synth"] { flex-basis: 48px; }
+    .arrange-lane[data-track="synth"] { flex-basis: 60px; }
     .arrange-gutter-lane[data-track="drums"],
-    .arrange-lane[data-track="drums"] { flex-basis: 40px; }
-    .arrange-square { height: 48px; }
+    .arrange-lane[data-track="drums"] { flex-basis: 52px; }
+    .arrange-bank-grid { --pad-gap: 8px; }
 }
 @media (max-height: 700px) {
     .arrange-gutter-lane[data-track="synth"],
-    .arrange-lane[data-track="synth"] { flex-basis: 44px; }
+    .arrange-lane[data-track="synth"] { flex-basis: 52px; }
     .arrange-gutter-lane[data-track="drums"],
-    .arrange-lane[data-track="drums"] { flex-basis: 36px; }
-    .arrange-square { height: 44px; }
+    .arrange-lane[data-track="drums"] { flex-basis: 44px; }
     .arrange-timelines { min-height: 64px; }
     #arrangeClock { font-size: 14px; }
 }
 @media (max-height: 500px) and (orientation: landscape) {
     .arrange-bank-grid {
-        grid-template-columns: repeat(8, minmax(0, 1fr));
-    }
-    .arrange-square {
-        aspect-ratio: auto;
-        min-height: 0;
-        height: 42px;
+        --pad-gap: 8px;
+        --pad-cap: clamp(36px, calc(100cqh - var(--pad-reserve)), 112px);
+        grid-template-columns: repeat(8, minmax(0, var(--pad-cap)));
     }
     .arrange-gutter-lane[data-track="synth"],
     .arrange-lane[data-track="synth"] { height: 40px; }
@@ -13457,10 +13995,230 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     .arrange-coming { min-height: 42px; }
 }
 
-/* Step piano roll — opens in place of the timelines, above the bank. */
-.arrange-timelines[hidden] {
+/* Phosphor window: the shared floating popover (ingy-window.js). Desktop floats; phones get a bottom sheet. */
+.ingy-window {
+    --win-line: #00aa00;
+    --win-lit: #00ff00;
+    --win-bg: #030603;
+    --win-bar: 26px;
+    position: fixed;
+    z-index: 10200;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--win-bg);
+    color: var(--win-line);
+    border: 1px solid var(--win-line);
+    box-shadow:
+        0 0 0 2px #000,
+        0 0 0 3px rgba(0, 170, 0, 0.45),
+        7px 7px 0 3px rgba(0, 0, 0, 0.75),
+        0 0 24px rgba(0, 255, 0, 0.12);
+    box-sizing: border-box;
+    transform-origin: 50% 50%;
+    animation: ingy-window-on 140ms ease-out;
+}
+.ingy-window[hidden] {
     display: none !important;
 }
+.ingy-window.is-moving {
+    user-select: none;
+    -webkit-user-select: none;
+}
+@keyframes ingy-window-on {
+    0% { transform: scale(1, 0.02); filter: brightness(2.2); }
+    60% { transform: scale(1, 1.01); }
+    100% { transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ingy-window { animation: none; }
+}
+.ingy-window__bar {
+    position: relative;
+    flex: 0 0 var(--win-bar);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 0 6px;
+    background: #000;
+    border-bottom: 1px solid var(--win-line);
+    cursor: grab;
+    touch-action: none;
+    box-sizing: border-box;
+}
+.ingy-window.is-moving .ingy-window__bar {
+    cursor: grabbing;
+}
+.ingy-window__stripes {
+    flex: 1 1 0;
+    min-width: 8px;
+    height: 11px;
+    background: repeating-linear-gradient(to bottom, var(--win-line) 0 1px, transparent 1px 3px);
+    opacity: 0.35;
+}
+.ingy-window.is-front .ingy-window__stripes {
+    opacity: 1;
+}
+.ingy-window__title {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--win-lit);
+    font-family: Michroma, sans-serif;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    text-transform: uppercase;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 0 0 6px rgba(0, 255, 0, 0.45);
+}
+/* Close: an X at the right end of the title bar. Lit on hover = green square, black X. */
+.ingy-window__close {
+    --x-size: 10px;
+    --x-ink: var(--win-lit);
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    margin: 0 -2px 0 0;
+    padding: 0;
+    border: 1px solid transparent;
+    background: #000;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.ingy-window__close::before,
+.ingy-window__close::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--x-size) * 1.414);
+    height: 2px;
+    margin: -1px 0 0 calc(var(--x-size) * -0.707);
+    background: var(--x-ink);
+    box-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
+    transform: rotate(45deg);
+}
+.ingy-window__close::after {
+    transform: rotate(-45deg);
+}
+.ingy-window__close:hover,
+.ingy-window__close:active {
+    --x-ink: #000;
+    background: var(--win-lit);
+    border-color: var(--win-lit);
+}
+.ingy-window__close:hover::before,
+.ingy-window__close:hover::after,
+.ingy-window__close:active::before,
+.ingy-window__close:active::after {
+    box-shadow: none;
+}
+.ingy-window__close:focus-visible {
+    outline: 1px solid var(--win-lit);
+    outline-offset: 2px;
+}
+.ingy-window__grip {
+    display: none;
+}
+.ingy-window__body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+.ingy-window__grow {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 14px;
+    height: 14px;
+    cursor: nwse-resize;
+    touch-action: none;
+    background:
+        linear-gradient(135deg, transparent 0 45%, var(--win-line) 45% 52%, transparent 52% 64%,
+            var(--win-line) 64% 71%, transparent 71% 83%, var(--win-line) 83% 90%, transparent 90%);
+    /* Above anything sticky inside the body (the piano roll's Acc/Sld/Rat rows sit at 4–5). */
+    z-index: 20;
+}
+/* Phone: bottom sheet. Full width, safe-area aware, 44px close target, no drag or resize. */
+.ingy-window.is-sheet {
+    --win-bar: 44px;
+    /* Inset on every side so the full phosphor frame shows, clear of the notch, rounded corners
+       and home bar (the sheet is fixed, so the body's safe-area padding doesn't reach it). */
+    --sheet-gap: 4px;
+    left: max(var(--sheet-gap), env(safe-area-inset-left, 0px));
+    right: max(var(--sheet-gap), env(safe-area-inset-right, 0px));
+    bottom: max(var(--sheet-gap), env(safe-area-inset-bottom, 0px));
+    top: auto;
+    width: auto;
+    height: min(80vh, 80dvh);
+    box-shadow:
+        0 0 0 2px #000,
+        0 0 0 3px rgba(0, 170, 0, 0.45),
+        0 -12px 32px rgba(0, 0, 0, 0.8);
+    transform-origin: 50% 100%;
+}
+.ingy-window.is-sheet .ingy-window__bar {
+    cursor: default;
+    padding: 6px 10px 0;
+}
+.ingy-window.is-sheet .ingy-window__grip {
+    display: block;
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    width: 36px;
+    height: 3px;
+    margin-left: -18px;
+    background: var(--win-line);
+}
+.ingy-window.is-sheet .ingy-window__close {
+    --x-size: 14px;
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+    margin-right: -6px;
+    border-color: var(--win-line);
+}
+.ingy-window.is-sheet .ingy-window__title {
+    font-size: 11px;
+}
+.ingy-window.is-sheet .ingy-window__grow {
+    display: none;
+}
+/* Phone on its side: 80% of a ~360px screen leaves almost no room, so the sheet takes the full height
+   and the title bar drops to 36px. */
+@media (max-height: 520px) {
+    .ingy-window.is-sheet {
+        --win-bar: 36px;
+        top: max(var(--sheet-gap), env(safe-area-inset-top, 0px));
+        height: auto;
+    }
+    .ingy-window.is-sheet .ingy-window__bar {
+        padding-top: 0;
+    }
+    .ingy-window.is-sheet .ingy-window__grip {
+        display: none;
+    }
+    .ingy-window.is-sheet .ingy-window__close {
+        flex-basis: 32px;
+        width: 32px;
+        height: 32px;
+    }
+}
+
+/* Step piano roll — lives inside its phosphor window. */
 .arrange-roll {
     flex: 1 1 0;
     min-height: 0;
@@ -13469,23 +14227,9 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid #00aa00;
     background: #050805;
     color: #00aa00;
     box-sizing: border-box;
-}
-.arrange-roll[hidden] {
-    display: none !important;
-}
-body.is-arrange-roll .chromatic-keyboard-wrap {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    min-width: 0;
-    overflow: hidden;
-}
-body.is-arrange-roll #arrangeView {
-    overflow: hidden;
 }
 .arrange-roll-bar {
     flex: 0 0 auto;
@@ -13499,27 +14243,31 @@ body.is-arrange-roll #arrangeView {
     box-sizing: border-box;
     border-bottom: 1px solid rgba(0, 170, 0, 0.45);
 }
-.arrange-roll-title {
-    flex: 0 0 auto;
-    color: #00ff00;
-    font-family: Michroma, sans-serif;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    line-height: 1;
-}
 .arrange-roll-lanes,
-.arrange-roll-tools {
+.arrange-roll-transport {
     display: flex;
     flex-wrap: wrap;
     gap: 3px;
     min-width: 0;
 }
 .arrange-roll-lanes[hidden],
-.arrange-roll-tools[hidden] {
+.arrange-roll-pcorner[hidden],
+.arrange-roll-props[hidden],
+.arrange-roll-playcol[hidden] {
     display: none !important;
 }
-.arrange-roll-tools {
-    margin-left: auto;
+.arrange-roll-bar .arrange-btn {
+    height: 24px;
+    font-size: 10px;
+}
+.arrange-roll-bar .arrange-btn-icon {
+    width: 28px;
+}
+.arrange-roll-bar:has(> :not([hidden])) {
+    display: flex;
+}
+.arrange-roll-bar:not(:has(> :not([hidden]))) {
+    display: none;
 }
 .arrange-roll-tab {
     appearance: none;
@@ -13545,7 +14293,7 @@ body.is-arrange-roll #arrangeView {
 }
 .arrange-roll-tab:focus-visible,
 .arrange-roll-bar .arrange-btn:focus-visible {
-    outline: 1px solid #fff;
+    outline: 1px solid #00ff00;
     outline-offset: 1px;
 }
 .arrange-roll-hint {
@@ -13572,9 +14320,10 @@ body.is-arrange-roll #arrangeView {
 }
 .arrange-roll-sheet {
     display: grid;
-    grid-template-columns: 46px minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    width: max(100%, calc(46px + var(--cols, 8) * 36px));
+    --keys-w: 64px;
+    grid-template-columns: var(--keys-w) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    width: max(100%, calc(var(--keys-w) + var(--cols, 8) * 36px));
     min-height: 100%;
     box-sizing: border-box;
 }
@@ -13593,13 +14342,101 @@ body.is-arrange-roll #arrangeView {
     border-right: 1px solid rgba(0, 170, 0, 0.45);
 }
 .arrange-roll-heads,
-.arrange-roll-grid {
+.arrange-roll-grid,
+.arrange-roll-props {
     display: grid;
     grid-template-columns: repeat(var(--cols, 8), minmax(36px, 1fr));
     min-width: calc(var(--cols, 8) * 36px);
 }
 .arrange-roll-grid {
+    position: relative;
     grid-auto-rows: var(--row, 16px);
+}
+.arrange-roll-pcorner,
+.arrange-roll-props {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    align-self: end;
+    background: #050805;
+    border-top: 1px solid rgba(0, 170, 0, 0.65);
+}
+.arrange-roll-pcorner {
+    left: 0;
+    z-index: 5;
+    display: grid;
+    grid-auto-rows: 16px;
+    border-right: 1px solid rgba(0, 170, 0, 0.65);
+}
+.arrange-roll-plabel {
+    padding-right: 6px;
+    color: #00aa00;
+    font-family: Michroma, sans-serif;
+    font-size: 8px;
+    line-height: 16px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    user-select: none;
+}
+.arrange-roll-plabel .is-short {
+    display: none;
+}
+.arrange-roll-props {
+    grid-auto-rows: 16px;
+}
+.arrange-roll-prop {
+    position: relative;
+    box-sizing: border-box;
+    border-left: 1px solid rgba(0, 170, 0, 0.14);
+    border-bottom: 1px solid rgba(0, 170, 0, 0.16);
+    color: #050805;
+    font-family: Michroma, sans-serif;
+    font-size: 8px;
+    line-height: 15px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+}
+.arrange-roll-prop.is-bar {
+    border-left-color: rgba(0, 170, 0, 0.55);
+}
+.arrange-roll-prop.is-col {
+    box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.28);
+}
+.arrange-roll-prop.is-on {
+    background: #00cccc;
+    box-shadow: inset 0 0 0 2px #050805;
+}
+.arrange-roll-prop.is-rest.is-on {
+    background: #006666;
+}
+/* On/Off: an off step that still holds notes. */
+.arrange-roll-prop.is-held {
+    box-shadow: inset 0 0 0 4px #050805, inset 0 0 0 5px #4d574d;
+}
+.arrange-roll-prop.is-play:not(.is-on),
+.arrange-roll-head.is-play {
+    background: rgba(0, 255, 0, 0.16);
+}
+.arrange-roll-playcol {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: rgba(0, 255, 0, 0.08);
+    box-shadow: inset 1px 0 0 rgba(0, 255, 0, 0.55), inset -1px 0 0 rgba(0, 255, 0, 0.55);
+}
+.arrange-roll-playcol.is-line {
+    width: 2px;
+    margin-left: -1px;
+    background: #00ffff;
+    box-shadow: 0 0 6px rgba(0, 255, 255, 0.6);
+}
+.arrange-roll-cell.is-play {
+    background: rgba(0, 255, 0, 0.14);
 }
 .arrange-roll-keys,
 .arrange-roll-grid {
@@ -13654,6 +14491,70 @@ body.is-arrange-roll #arrangeView {
 .arrange-roll-key.is-c {
     color: #00ff00;
 }
+/* Piano keys (pitch and Rec clips). Phosphor version of a piano: no white keys, naturals are lit-edge
+   panels, sharps are black bars two thirds wide; keys in the selected step light up green with black type. */
+.arrange-roll-keys.is-piano {
+    position: sticky;
+    overflow: hidden;
+    background: #000;
+    cursor: pointer;
+    touch-action: none;
+}
+.arrange-roll-wkey,
+.arrange-roll-bkey {
+    position: absolute;
+    left: 0;
+    box-sizing: border-box;
+}
+.arrange-roll-wkey {
+    right: 0;
+    border-bottom: 1px solid rgba(0, 170, 0, 0.55);
+    background: linear-gradient(to right, #041204, #0a2a0a 70%, #0d340d);
+}
+.arrange-roll-wkey.is-c {
+    border-bottom-color: #00aa00;
+}
+.arrange-roll-bkey {
+    width: 62%;
+    height: var(--row, 16px);
+    z-index: 1;
+    border: 1px solid rgba(0, 170, 0, 0.75);
+    border-left: 0;
+    background: #000;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9);
+}
+.arrange-roll-wkey.is-lit,
+.arrange-roll-bkey.is-lit,
+.arrange-roll-wkey.is-down,
+.arrange-roll-bkey.is-down {
+    background: #00ff00;
+    border-color: #00ff00;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+}
+.arrange-roll-bkey.is-lit,
+.arrange-roll-bkey.is-down {
+    border: 1px solid #000;
+    border-left: 0;
+}
+.arrange-roll-klabel {
+    position: absolute;
+    right: 3px;
+    bottom: 1px;
+    color: #00ff00;
+    font-family: Michroma, sans-serif;
+    font-size: 7px;
+    line-height: 1;
+    pointer-events: none;
+}
+.arrange-roll-wkey.is-down,
+.arrange-roll-bkey.is-down {
+    filter: brightness(1.15);
+    box-shadow: 0 0 12px rgba(0, 255, 0, 0.85);
+}
+.arrange-roll-wkey.is-lit .arrange-roll-klabel,
+.arrange-roll-wkey.is-down .arrange-roll-klabel {
+    color: #000;
+}
 .arrange-roll-key-drum {
     display: flex;
     align-items: center;
@@ -13707,7 +14608,92 @@ body.is-arrange-roll #arrangeView {
     box-shadow: 0 0 8px rgba(0, 255, 0, 0.85);
 }
 .arrange-roll-cell.is-drag::before {
-    outline: 1px solid #fff;
+    background: #00ffff;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.75);
+}
+.arrange-roll-cell.is-out {
+    background: #020302;
+}
+.arrange-roll-cell.is-out.is-on:not(.is-drag)::before {
+    background: #005500;
+    box-shadow: none;
+}
+/* A step turned off with On/Off keeps its notes: drawn grey, no glow. */
+.arrange-roll-cell.is-on.is-ghost:not(.is-drag)::before {
+    background: #1a1f1a;
+    box-shadow: inset 0 0 0 1px #4d574d;
+}
+.arrange-roll-cell.is-ghost .arrange-roll-ratch,
+.arrange-roll-cell.is-ghost .arrange-roll-tie {
+    opacity: 0.3;
+}
+.arrange-roll-keys.is-fold {
+    display: grid;
+    grid-auto-rows: var(--row, 16px);
+    background: #000;
+    cursor: pointer;
+    touch-action: none;
+}
+.arrange-roll-fkey {
+    position: relative;
+    box-sizing: border-box;
+    border-bottom: 1px solid rgba(0, 170, 0, 0.55);
+    background: linear-gradient(to right, #041204, #0a2a0a 70%, #0d340d);
+    user-select: none;
+}
+.arrange-roll-fkey.is-root {
+    border-bottom-color: #00aa00;
+}
+.arrange-roll-fkey-cap {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 62%;
+    box-sizing: border-box;
+    border: 1px solid rgba(0, 170, 0, 0.75);
+    border-left: 0;
+    background: #000;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+}
+.arrange-roll-fkey .arrange-roll-klabel {
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.arrange-roll-fkey.is-root .arrange-roll-klabel {
+    color: #00ffff;
+}
+.arrange-roll-fkey.is-out {
+    opacity: 0.45;
+}
+.arrange-roll-fkey.is-lit,
+.arrange-roll-fkey.is-down,
+.arrange-roll-fkey.is-lit .arrange-roll-fkey-cap,
+.arrange-roll-fkey.is-down .arrange-roll-fkey-cap {
+    background: #00ff00;
+    border-color: #00ff00;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+}
+.arrange-roll-fkey.is-lit .arrange-roll-klabel,
+.arrange-roll-fkey.is-down .arrange-roll-klabel {
+    color: #000;
+}
+/* Space the clip was lengthened by: empty, a little darker, writable (grows the pattern). */
+.arrange-roll-cell.is-ext,
+.arrange-roll-head.is-ext,
+.arrange-roll-prop.is-ext {
+    background-color: rgba(0, 0, 0, 0.45);
+}
+.arrange-roll-head.is-ext {
+    color: rgba(0, 229, 255, 0.7);
+}
+.arrange-roll-prop.is-ext {
+    pointer-events: none;
+}
+.is-ext-start {
+    box-shadow: inset 2px 0 0 rgba(0, 229, 255, 0.55);
 }
 .arrange-roll-cell.is-dim {
     opacity: 0.28;
@@ -13725,11 +14711,9 @@ body.is-arrange-roll #arrangeView {
     width: calc(160% - 2px);
     bottom: 1px;
     height: 2px;
-    background: #00ff00;
+    background: #00ffff;
+    box-shadow: 0 0 4px rgba(0, 255, 255, 0.6);
     pointer-events: none;
-}
-.arrange-roll-cell.is-accent .arrange-roll-tie {
-    background: #b6ffb6;
 }
 .arrange-roll-ratch {
     position: absolute;
@@ -13750,10 +14734,11 @@ body.is-arrange-roll #arrangeView {
 .arrange-roll.is-drums .arrange-roll-sheet {
     height: 100%;
     min-height: 100%;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
 }
 .arrange-roll.is-drums .arrange-roll-keys,
 .arrange-roll.is-drums .arrange-roll-grid {
+    display: grid;
     height: 100%;
     grid-template-rows: repeat(4, minmax(28px, 1fr));
     align-content: stretch;
@@ -13771,7 +14756,7 @@ body.is-arrange-roll #arrangeView {
     display: none;
 }
 .arrange-roll.is-notes .arrange-roll-sheet {
-    grid-template-columns: 46px minmax(0, 1fr);
+    grid-template-columns: var(--keys-w) minmax(0, 1fr);
     width: 100%;
 }
 .arrange-roll.is-notes .arrange-roll-grid {
@@ -13780,6 +14765,19 @@ body.is-arrange-roll #arrangeView {
     min-width: 0;
     min-height: calc(88 * var(--row, 16px));
     height: calc(88 * var(--row, 16px));
+}
+/* Row of the held piano key, lit across the grid. */
+.arrange-roll-keyrow {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: var(--row, 16px);
+    box-sizing: border-box;
+    z-index: 2;
+    pointer-events: none;
+    background: rgba(0, 255, 0, 0.12);
+    border-top: 1px solid rgba(0, 255, 0, 0.45);
+    border-bottom: 1px solid rgba(0, 255, 0, 0.45);
 }
 .arrange-roll-notes {
     position: absolute;
@@ -13795,17 +14793,22 @@ body.is-arrange-roll #arrangeView {
     pointer-events: none;
 }
 @media (max-width: 420px) {
+    /* The key column narrows to 52px: Acc / Sld / Rat instead of the full names. */
+    .arrange-roll-plabel .is-full {
+        display: none;
+    }
+    .arrange-roll-plabel .is-short {
+        display: inline;
+    }
     .arrange-roll-sheet {
-        grid-template-columns: 40px minmax(0, 1fr);
-        width: max(100%, calc(40px + var(--cols, 8) * 32px));
+        --keys-w: 52px;
+        width: max(100%, calc(var(--keys-w) + var(--cols, 8) * 32px));
     }
     .arrange-roll-heads,
-    .arrange-roll-grid {
+    .arrange-roll-grid,
+    .arrange-roll-props {
         min-width: calc(var(--cols, 8) * 32px);
         grid-template-columns: repeat(var(--cols, 8), minmax(32px, 1fr));
-    }
-    .arrange-roll-title {
-        font-size: 10px;
     }
     .arrange-roll-bar .arrange-btn,
     .arrange-roll-tab {
@@ -13857,4 +14860,162 @@ body.is-arrange-roll #arrangeView {
 }
 .mi-link.is-inactive {
     opacity: 0.3;
+}
+
+/* The phone rule sets .synth-knob to 60px; Berlin step knobs must stay inside
+ * their step column or their hit box covers the neighbouring step. */
+@media (max-width: 768px) {
+    .berlin-step .berlin-step-knob { width: 100%; }
+}
+/* Narrow phones: Play, Rev, Tempo, Div, Steps, Swing, Disp need ~360px at full
+ * size, so scale the row down to stay inside the Sequencer fieldset. */
+@media (max-width: 440px) {
+    .keyboard-tempo-div-row { zoom: 0.92; }
+}
+@media (max-width: 400px) {
+    .keyboard-tempo-div-row { zoom: 0.86; }
+}
+@media (max-width: 370px) {
+    .keyboard-tempo-div-row { zoom: 0.8; }
+}
+@media (max-width: 335px) {
+    .keyboard-tempo-div-row { zoom: 0.72; }
+    .keyboard-arp-panel-body { flex-wrap: wrap; }
+    .osc4-engine-switch .osc4-engine-btn,
+    .osc-slot-engine-switch .osc-slot-engine-btn {
+        padding: 3px 4px;
+        letter-spacing: 0.02em;
+    }
+    .plaits-grid .synth-knob-label { font-size: 5px; letter-spacing: 0; }
+}
+
+/*
+ * Share button under the oscilloscope (share-button.js; same block in the web app and Bare Metal). The house hex in a green outline
+ * on a plain dark pad. Press flashes the pad solid green with a black icon; landing flashes it cyan.
+ * Hex rings in the same outline ripple out from it, then rewind in cyan when the share lands.
+ */
+.share-dock {
+    position: relative;
+    /* Above the scope and the panels below, so the rings draw over them (pointer-events stay off). */
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin: 10px auto 0;
+}
+/* WebKit clips an HTML-embedded svg to its box, so the ring layer is a fixed canvas centred on the
+   button (top = half the button height) with room for the largest ring (2.8x: 180 x 140) and its
+   glow, but narrow enough not to widen a phone page. */
+.share-waves {
+    position: absolute;
+    left: 50%;
+    top: 25px;
+    width: 240px;
+    height: 200px;
+    transform: translate(-50%, -50%);
+    overflow: visible;
+    pointer-events: none;
+}
+.share-ring {
+    fill: none;
+    stroke: #00ff00;
+    stroke-width: 2;
+    stroke-linejoin: miter;
+    filter: url(#shareGlow);
+}
+.share-ring.is-trail {
+    stroke-width: 1.6;
+}
+.share-ring.is-back {
+    stroke: #00ffff;
+    filter: url(#shareGlowCyan);
+}
+.share-btn {
+    --cut: 15px;
+    --share-hex: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% 50%, calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 50%);
+    position: relative;
+    z-index: 1;
+    width: 64px;
+    height: 50px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: #00aa00;
+    color: #00ff00;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    clip-path: var(--share-hex);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
+}
+.share-btn::before,
+.share-btn::after {
+    content: "";
+    position: absolute;
+    inset: 1.5px;
+    clip-path: polygon(calc(var(--cut) - 1px) 0, calc(100% - var(--cut) + 1px) 0, 100% 50%, calc(100% - var(--cut) + 1px) 100%, calc(var(--cut) - 1px) 100%, 0 50%);
+}
+.share-btn::before {
+    background: #050805;
+}
+.share-btn::after {
+    background: var(--share-flash, #00ee00);
+    opacity: 0;
+}
+.share-btn:hover {
+    background: #00ff00;
+    transform: translateY(-1px);
+}
+.share-btn:active {
+    transform: scale(0.92);
+}
+/* clip-path hides an outline, so keyboard focus lights the hex border cyan instead. */
+.share-btn:focus-visible {
+    outline: none;
+    background: #00ffff;
+}
+.share-btn.is-flash {
+    animation: share-ink var(--share-flash-ms, 0.24s) ease-out;
+}
+.share-btn.is-flash::after {
+    animation: share-flash var(--share-flash-ms, 0.24s) ease-out;
+}
+@keyframes share-flash {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+@keyframes share-ink {
+    0%, 30% { color: #000; }
+    100% { color: #00ff00; }
+}
+.share-icon {
+    position: relative;
+    z-index: 1;
+    width: 26px;
+    height: 26px;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.share-icon g {
+    transform-box: view-box;
+}
+.share-status {
+    min-height: 1.2em;
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    color: #00aa00;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+.share-status.is-on {
+    opacity: 1;
+}
+.share-status.is-ok {
+    color: #00ffff;
 }

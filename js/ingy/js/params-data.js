@@ -4,7 +4,7 @@ export const PARAMS = {
   "tempo": {
     "type": "range",
     "section": "pattern",
-    "min": 60,
+    "min": 20,
     "max": 240,
     "step": 1,
     "default": 120,
@@ -15,9 +15,14 @@ export const PARAMS = {
     "section": "slotView",
     "options": [
       "2",
+      "3",
       "4",
+      "6",
       "8",
-      "16"
+      "12",
+      "16",
+      "24",
+      "48"
     ],
     "default": "8"
   },
@@ -54,6 +59,15 @@ export const PARAMS = {
     "max": 100,
     "step": 1,
     "default": 90,
+    "group": "Sequencer"
+  },
+  "swing": {
+    "type": "range",
+    "section": "pattern",
+    "min": 50,
+    "max": 75,
+    "step": 1,
+    "default": 50,
     "group": "Sequencer"
   },
   "scaleToggle": {
@@ -1581,6 +1595,264 @@ export const BAREMETAL_PARAMS = {
     ],
     "default": "-1",
     "group": "Oscillator 4"
+  },
+  "ng101Range": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "16",
+      "8",
+      "4",
+      "2"
+    ],
+    "default": "8",
+    "group": "NG-101"
+  },
+  "ng101VcoMod": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101PwmSource": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "lfo",
+      "manual",
+      "env"
+    ],
+    "default": "manual",
+    "group": "NG-101"
+  },
+  "ng101Pw": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101Pulse": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101Saw": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 1,
+    "group": "NG-101"
+  },
+  "ng101Sub": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101SubMode": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "1oct",
+      "2oct",
+      "2oct-pulse"
+    ],
+    "default": "1oct",
+    "group": "NG-101"
+  },
+  "ng101Noise": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101Freq": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0.6,
+    "group": "NG-101"
+  },
+  "ng101Res": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.001,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101VcfEnv": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.4,
+    "group": "NG-101"
+  },
+  "ng101VcfMod": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101Kybd": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101Vca": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "env",
+      "gate"
+    ],
+    "default": "env",
+    "group": "NG-101"
+  },
+  "ng101EnvTrig": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "gate+trig",
+      "gate",
+      "lfo"
+    ],
+    "default": "gate+trig",
+    "group": "NG-101"
+  },
+  "ng101Attack": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101Decay": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.4,
+    "group": "NG-101"
+  },
+  "ng101Sustain": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.6,
+    "group": "NG-101"
+  },
+  "ng101Release": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.3,
+    "group": "NG-101"
+  },
+  "ng101LfoRate": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.5,
+    "group": "NG-101"
+  },
+  "ng101LfoWave": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "triangle",
+      "square",
+      "random",
+      "noise"
+    ],
+    "default": "triangle",
+    "group": "NG-101"
+  },
+  "ng101PortaMode": {
+    "type": "select",
+    "section": "voice",
+    "options": [
+      "off",
+      "on",
+      "auto"
+    ],
+    "default": "auto",
+    "group": "NG-101"
+  },
+  "ng101PortaTime": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.3,
+    "group": "NG-101"
+  },
+  "ng101BendVcf": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101LeverMod": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0,
+    "group": "NG-101"
+  },
+  "ng101Volume": {
+    "type": "range",
+    "section": "voice",
+    "min": 0,
+    "max": 1,
+    "step": 0.01,
+    "default": 0.8,
+    "group": "NG-101"
   },
   "filterModel": {
     "type": "select",

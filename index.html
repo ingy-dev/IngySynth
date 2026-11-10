@@ -7,7 +7,7 @@
     <title>INGYSYNTH</title>
     <!-- Bump ?v= on css/js imports below when deploying updates -->
     <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=518">
+    <link rel="stylesheet" href="styles.css?v=560">
     <script>
         // Phone loads this over a LAN IP. That is not a secure page, so Chrome
         // hides AudioWorklet and the digital engine never arms. localhost is exempt.
@@ -228,6 +228,22 @@
                 </div>
                                         <div class="oscilloscope-border"></div>
                     </div>
+                    <!-- Share: shares the project (share-button.js). Same markup in the web app and Bare Metal. -->
+                    <div class="share-dock" id="shareDock">
+                        <svg class="share-waves" id="shareWaves" aria-hidden="true">
+                            <defs>
+                                <filter id="shareGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.4" result="b"/><feFlood flood-color="#00ff00" flood-opacity="0.85"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                                <filter id="shareGlowCyan" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.4" result="b"/><feFlood flood-color="#00ffff" flood-opacity="0.85"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                            </defs>
+                        </svg>
+                        <button id="shareBtn" class="share-btn" type="button" aria-label="Share project" title="Share project: save it and copy its link">
+                            <svg class="share-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <g class="share-box"><path d="M8.5 9.5H6.5A1.5 1.5 0 0 0 5 11v8.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V11a1.5 1.5 0 0 0-1.5-1.5h-2"/></g>
+                                <g class="share-arrow"><path d="M12 15V3"/><path d="M7.5 7.5L12 3l4.5 4.5"/></g>
+                            </svg>
+                        </button>
+                        <span class="share-status" id="shareStatus" role="status" aria-live="polite"></span>
+                    </div>
                     <div class="keyboard-view-switch" role="group" aria-label="Layout view">
                         <button id="viewModeFull" class="kb-step-btn" type="button" aria-pressed="true">Full Screen</button>
                         <button id="viewModeTabbed" class="kb-step-btn off" type="button" aria-pressed="false">Tabbed</button>
@@ -254,22 +270,28 @@
                                 <span class="synth-knob-label">TEMPO</span>
                                 <span class="synth-knob-value" id="kbTempoValue">120</span>
                                 <div class="synth-knob-dial-wrap">
-                                    <div class="synth-knob-dial" id="kbTempoKnob" role="slider" aria-label="Tempo" aria-valuemin="60" aria-valuemax="240" tabindex="0">
+                                    <div class="synth-knob-dial" id="kbTempoKnob" role="slider" aria-label="Tempo" aria-valuemin="20" aria-valuemax="240" tabindex="0">
                                         <span class="synth-knob-indicator"></span>
                                     </div>
                                 </div>
                             </div>
                             <div class="synth-knob synth-knob--stepped" data-param="division">
                                 <span class="synth-knob-label">DIV</span>
-                                <span class="synth-knob-value synth-knob-value--spacer" aria-hidden="true">&nbsp;</span>
+                                <span class="synth-knob-value" id="kbDivisionValue">1/8</span>
                                 <div class="synth-knob-dial-wrap">
+                                    <!-- One dot per DIVISION_STEPS entry (knobs.js), spread over the 270° sweep -->
                                     <div class="synth-knob-ticks" aria-hidden="true">
-                                        <span class="synth-knob-tick" style="--tick-angle: -135deg">1/2</span>
-                                        <span class="synth-knob-tick" style="--tick-angle: -45deg">1/4</span>
-                                        <span class="synth-knob-tick" style="--tick-angle: 45deg">1/8</span>
-                                        <span class="synth-knob-tick" style="--tick-angle: 135deg">1/16</span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: -135deg"></span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: -101.25deg"></span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: -67.5deg"></span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: -33.75deg"></span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: 0deg"></span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: 33.75deg"></span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: 67.5deg"></span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: 101.25deg"></span>
+                                        <span class="synth-knob-tick synth-knob-tick--dot" style="--tick-angle: 135deg"></span>
                                     </div>
-                                    <div class="synth-knob-dial" id="kbDivisionKnob" role="slider" aria-label="Division" aria-valuemin="0" aria-valuemax="3" tabindex="0">
+                                    <div class="synth-knob-dial" id="kbDivisionKnob" role="slider" aria-label="Division" aria-valuemin="0" aria-valuemax="8" tabindex="0">
                                         <span class="synth-knob-indicator"></span>
                                     </div>
                                 </div>
@@ -279,6 +301,15 @@
                                 <span class="synth-knob-value" id="kbStepsValue">8</span>
                                 <div class="synth-knob-dial-wrap">
                                     <div class="synth-knob-dial" id="kbStepsKnob" role="slider" aria-label="Steps" aria-valuemin="1" aria-valuemax="32" tabindex="0">
+                                        <span class="synth-knob-indicator"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="synth-knob" data-param="swing">
+                                <span class="synth-knob-label">SWING</span>
+                                <span class="synth-knob-value" id="kbSwingKnobValue">50</span>
+                                <div class="synth-knob-dial-wrap">
+                                    <div class="synth-knob-dial" id="kbSwingKnob" role="slider" aria-label="Swing" aria-valuemin="50" aria-valuemax="75" tabindex="0">
                                         <span class="synth-knob-indicator"></span>
                                     </div>
                                 </div>
@@ -656,6 +687,12 @@
                                             <input type="range" id="kbGateLength" class="keyboard-master-tune-slider"
                                                    min="5" max="100" value="90" step="1" aria-label="Gate length">
                                             <span id="kbGateLengthValue" class="berlin-ctl-value">90</span>
+                                        </label>
+                                        <label class="berlin-ctl keyboard-pattern-ctl" data-param="swing">
+                                            <span class="berlin-ctl-label">SWING</span>
+                                            <input type="range" id="kbSwing" class="keyboard-master-tune-slider"
+                                                   min="50" max="75" value="50" step="1" aria-label="Swing">
+                                            <span id="kbSwingValue" class="berlin-ctl-value">50</span>
                                         </label>
                                     </div>
                                     <div class="keyboard-pattern-clipboard" role="group" aria-label="Pattern clipboard">
@@ -2948,6 +2985,6 @@
         }
     </style>
 
-    <script type="module" src="js/main.js?v=438"></script>
+    <script type="module" src="js/main.js?v=463"></script>
 </body>
 </html>

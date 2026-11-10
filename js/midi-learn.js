@@ -3,7 +3,7 @@
 
 import { state } from './state.js?v=120';
 import { keyFromElement } from './params.js?v=44';
-import { getParam, isCatalogKey } from './param-catalog.js?v=12';
+import { getParam, isCatalogKey } from './param-catalog.js?v=13';
 
 const IGNORE_IDS = new Set([
     'midiMapping',

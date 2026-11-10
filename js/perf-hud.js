@@ -1,4 +1,4 @@
-// Live CPU / audio-thread overlay. On by default; hide with ?perf=0.
+// Live CPU / audio-thread overlay. Off and hidden for now; opt in with ?perf=1.
 // The overlay's hide/show button collapses the readout; the choice is remembered.
 // "keep" / "hw" are audio-seconds / wall-seconds over the last 1s (~1.00 = keeping up).
 
@@ -28,7 +28,7 @@ export function initPerfHud() {
         pOff.scopeVisible = false;
         pOff.scopeGlow = false;
     }
-    if (q.get('perf') === '0') return;
+    if (q.get('perf') !== '1') return;
 
     const box = el('div', [
         'position:fixed',

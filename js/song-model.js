@@ -10,10 +10,10 @@
 
 export const PPQ = 960;
 export const BAR_TICKS = 3840;
-const HALF_BAR = 1920;
 const MIN_NOTE_GRID = 240;
 
-const DIVISIONS = new Set([2, 4, 8, 16]);
+// Steps per bar. Triplets: 3 = 1/2T, 6 = 1/4T, 12 = 1/8T, 24 = 1/16T, 48 = 1/32T. All divide BAR_TICKS.
+const DIVISIONS = new Set([2, 3, 4, 6, 8, 12, 16, 24, 48]);
 const UNDO_CAP = 100;
 
 /** @type {WeakMap<object, { undo: object[], redo: object[] }>} */
@@ -50,12 +50,12 @@ function clampInt(n, min, max, fallback) {
 }
 
 function divisionTicks(division) {
-    const d = clampInt(division, 2, 16, 8);
+    const d = clampInt(division, 2, 48, 8);
     return DIVISIONS.has(d) ? BAR_TICKS / d : BAR_TICKS / 8;
 }
 
 function normalizeDivision(division) {
-    const d = clampInt(division, 2, 16, 8);
+    const d = clampInt(division, 2, 48, 8);
     return DIVISIONS.has(d) ? d : 8;
 }
 
@@ -220,6 +220,293 @@ export function clipStepTicks(clip) {
     return MIN_NOTE_GRID;
 }
 
+/**
+ * Ticks trimmed off the front of a clip's pattern. Positive: the clip starts that far
+ * into its pattern. Negative: the clip starts with that much silence before the pattern.
+ */
+export function clipStartOffset(clip) {
+    const v = Math.round(Number(clip?.startOffset));
+    return Number.isFinite(v) ? v : 0;
+}
+
+/** How long one play-through of the clip's content is: its cycle, or a take's last note end. */
+export function clipPatternTicks(clip) {
+    if (clip?.kind !== 'notes') return clipCycleTicks(clip);
+    let end = 0;
+    for (const n of clip.notes || []) {
+        end = Math.max(end, (Number(n.startTick) || 0) + (Number(n.durTick) || 0));
+    }
+    return Math.max(MIN_NOTE_GRID, end);
+}
+
+/**
+ * Where a clip sounds. Clips play their pattern once from `origin` (the clip start
+ * minus any start trim); the edges crop it, and space past the pattern is silent.
+ * `from`..`to` is the audible part (empty when to <= from).
+ */
+export function clipPlaySpan(clip) {
+    const start = Number(clip?.startTick) || 0;
+    const end = start + (Number(clip?.lengthTick) || 0);
+    const origin = start - clipStartOffset(clip);
+    return {
+        origin,
+        from: Math.max(start, origin),
+        to: Math.min(end, origin + clipPatternTicks(clip)),
+    };
+}
+
+/** True when the clip's edges no longer match its pattern (start or end trimmed, or space added). */
+export function clipIsTrimmed(clip) {
+    if (!clip || clip.kind === 'notes') return false;
+    return clipStartOffset(clip) !== 0 || (Number(clip.lengthTick) || 0) !== clipCycleTicks(clip);
+}
+
+const STEP_SLOTS = 32;
+const REPEAT_MAX = 8;
+
+function restStep() {
+    return { tune: 0, fine: 0, on: false, accent: false, slide: false, ratch: 1, chord: [] };
+}
+
+/**
+ * The steps a lane plays over the clip, in time order: one per lane step line inside
+ * [offset, offset + length). `loopTicks` is where the lane starts over (null: it only
+ * loops on itself); past `totalTicks`, or before the pattern starts, the clip is silent.
+ */
+function laneStepsOver(lane, offset, length, loopTicks, totalTicks) {
+    const step = laneStepTicks(lane);
+    const count = clampInt(lane?.stepCount, 1, STEP_SLOTS, 8);
+    const first = Math.ceil(offset / step) * step;
+    const n = Math.max(1, Math.ceil((offset + length - first) / step));
+    const seq = [];
+    for (let i = 0; i < n; i += 1) {
+        const t = first + i * step;
+        if (t < 0 || t >= totalTicks) {
+            seq.push(restStep());
+            continue;
+        }
+        const k = Math.floor((loopTicks ? t % loopTicks : t) / step) % count;
+        const src = lane?.steps?.[lane?.reverse ? count - 1 - k : k];
+        seq.push(src ? deepClone(src) : restStep());
+    }
+    return seq;
+}
+
+/** Lay time-ordered steps into a lane's 32 slots (a reversed lane plays them back to front). */
+function laneFromSteps(lane, seq) {
+    const n = Math.min(STEP_SLOTS, seq.length);
+    const steps = Array.from({ length: STEP_SLOTS }, restStep);
+    for (let i = 0; i < n; i += 1) steps[lane?.reverse ? n - 1 - i : i] = seq[i];
+    return { ...deepClone(lane), steps, stepCount: n };
+}
+
+/** A lane with its steps in the order they play; a reversed lane comes back unreversed. */
+function forwardLane(lane) {
+    if (!lane) return lane;
+    const out = deepClone(lane);
+    if (!lane.reverse) return out;
+    const count = clampInt(lane.stepCount, 1, STEP_SLOTS, 8);
+    for (let i = 0; i < count; i += 1) {
+        const src = lane.steps?.[count - 1 - i];
+        out.steps[i] = src ? deepClone(src) : restStep();
+    }
+    out.reverse = false;
+    return out;
+}
+
+/**
+ * Pattern data as a timeline clip holds it: the notes in the order they sound. A
+ * reversed pattern (or lane) is flipped and its Reverse turned off, so the clip
+ * draws, edits and plays left to right. It sounds the same.
+ */
+export function playOrderData(kind, data) {
+    if (!data) return data;
+    if (kind === 'n') return forwardLane(data);
+    if (kind === 'b' || kind === 'd') {
+        const lanes = (kind === 'b' ? berlinLanes(data) : drumLanes(data)).map(forwardLane);
+        return Array.isArray(data) ? lanes : { ...deepClone(data), lanes };
+    }
+    return data;
+}
+
+/** Shortest phrase that repeats to make `seq` (up to 8 times), so long clips still fit 32 steps. */
+function foldSteps(seq) {
+    const keys = seq.map((step) => JSON.stringify(step));
+    for (let period = 1; period <= Math.min(STEP_SLOTS, seq.length); period += 1) {
+        const repeat = seq.length / period;
+        if (!Number.isInteger(repeat) || repeat > REPEAT_MAX) continue;
+        if (keys.every((key, i) => key === keys[i % period])) return { count: period, repeat };
+    }
+    return { count: Math.min(STEP_SLOTS, seq.length), repeat: 1 };
+}
+
+/**
+ * The pattern a trimmed clip actually plays: only the steps inside its edges, with rests
+ * where the clip runs past (or starts before) its pattern. Automation is not cropped.
+ * `truncated` is true when the clip is longer than 32 steps and its tail did not fit.
+ * @returns {{ data: object, truncated: boolean } | null}
+ */
+export function trimmedClipData(clip) {
+    if (!clip || clip.kind === 'notes' || !clip.data) return null;
+    const offset = clipStartOffset(clip);
+    const length = Math.max(0, Number(clip.lengthTick) || 0);
+    const total = clipCycleTicks(clip);
+    if (clip.kind === 'n') {
+        const pass = clampInt(clip.data.stepCount, 1, STEP_SLOTS, 8) * laneStepTicks(clip.data);
+        const seq = laneStepsOver(clip.data, offset, length, pass, total);
+        const { count, repeat } = foldSteps(seq);
+        const data = laneFromSteps(clip.data, seq.slice(0, count));
+        data.repeat = repeat;
+        return { data, truncated: count * repeat < seq.length };
+    }
+    let truncated = false;
+    const crop = (lane, loopTicks) => {
+        if (!lane) return lane;
+        const seq = laneStepsOver(lane, offset, length, loopTicks, total);
+        if (seq.length > STEP_SLOTS) truncated = true;
+        return laneFromSteps(lane, seq);
+    };
+    if (clip.kind === 'b') {
+        // Berlin lanes all start over at the longest lane's loop point.
+        const repeat = clampInt(clip.data.repeat, 1, REPEAT_MAX, 1);
+        const lanes = berlinLanes(clip.data).map((lane) => crop(lane, total / repeat));
+        return { data: { ...deepClone(clip.data), lanes, repeat: 1 }, truncated };
+    }
+    if (clip.kind === 'd') {
+        const lanes = drumLanes(clip.data).map((lane) => crop(lane, null));
+        return { data: { ...deepClone(clip.data), lanes }, truncated };
+    }
+    return null;
+}
+
+/**
+ * A lane's steps mirrored in time. Slide moves with the join it belongs to: it goes on
+ * the step that now leads into the same pair of notes, so a tied note stays one note.
+ */
+function mirrorLane(lane) {
+    if (!lane) return lane;
+    const out = forwardLane(lane);
+    const count = clampInt(out.stepCount, 1, STEP_SLOTS, 8);
+    const src = Array.from({ length: count }, (_, i) => out.steps?.[i] || restStep());
+    for (let i = 0; i < count; i += 1) {
+        const k = count - 1 - i;
+        const before = src[(k - 1 + count) % count];
+        out.steps[i] = { ...src[k], slide: src[k].on !== false && !!before.slide };
+    }
+    return out;
+}
+
+function mirrorData(kind, data) {
+    if (kind === 'n') return mirrorLane(data);
+    const lanes = (kind === 'b' ? berlinLanes(data) : drumLanes(data)).map(mirrorLane);
+    return Array.isArray(data) ? lanes : { ...deepClone(data), lanes };
+}
+
+/**
+ * Play a clip backwards: its notes are mirrored inside its edges, so what was last is
+ * first. A trimmed pattern clip takes what it plays as its own pattern first (and loses
+ * the trim); one too long for that (over 32 steps) has its whole pattern mirrored instead.
+ * Pattern clips are marked edited.
+ */
+export function reverseClip(song, id) {
+    const clip = findClipById(song, id);
+    if (!clip) return null;
+    if (clip.kind === 'notes') {
+        const notes = clip.notes || [];
+        if (!notes.length) return null;
+        pushUndo(song);
+        const edge = 2 * clipStartOffset(clip) + (Number(clip.lengthTick) || 0);
+        const order = notes.slice().sort((a, b) => a.startTick - b.startTick);
+        // Legato marks the note a held key moved to: mirrored, that is the earlier one.
+        const legato = order.map((note) => !!note.legato);
+        order.forEach((note, i) => {
+            note.startTick = Math.round(edge - (Number(note.startTick) || 0) - (Number(note.durTick) || 0));
+            note.legato = !!legato[i + 1];
+        });
+        notes.sort((a, b) => a.startTick - b.startTick);
+        return clip;
+    }
+    if (!clip.data) return null;
+    // An untrimmed single-row clip mirrors as it is; lanes of different lengths, and
+    // trimmed clips, are first laid out over the whole clip.
+    const cut = clip.kind === 'n' && !clipIsTrimmed(clip) ? null : trimmedClipData(clip);
+    const whole = !!cut && !cut.truncated;
+    pushUndo(song);
+    clip.data = mirrorData(clip.kind, playOrderData(clip.kind, whole ? cut.data : clip.data));
+    if (whole) delete clip.startOffset;
+    clip.edited = true;
+    return clip;
+}
+
+function stepPitches(step) {
+    const root = Math.round(Number(step?.tune) || 0);
+    const chord = Array.isArray(step?.chord) ? step.chord : [];
+    return [root, ...chord.map((iv) => root + (Math.round(Number(iv)) || 0))];
+}
+
+/** The lanes of a pattern clip that hold pitches: the one row, or Berlin's oscillator lanes. */
+function pitchLanes(clip) {
+    if (clip.kind === 'n') return [clip.data];
+    if (clip.kind !== 'b') return [];
+    const oscCount = clampInt(clip.data?.oscCount, 1, 4, 3);
+    return berlinLanes(clip.data).slice(0, oscCount).filter(Boolean);
+}
+
+/**
+ * Turn a clip's melody upside down: every pitch is mirrored about the middle of the
+ * clip's range, so its highest note becomes its lowest and the range stays the same.
+ * Fine tune flips sign. Chords are mirrored note by note. Drum clips and Berlin mod
+ * lanes have no melody and are left alone. Pattern clips are marked edited.
+ * Returns null when there is nothing to invert (no notes, or one pitch only).
+ */
+export function invertClip(song, id) {
+    const clip = findClipById(song, id);
+    if (!clip) return null;
+    let lo = Infinity;
+    let hi = -Infinity;
+    const span = (pitch) => {
+        lo = Math.min(lo, pitch);
+        hi = Math.max(hi, pitch);
+    };
+    const flipFine = (fine) => (Number(fine) ? -Number(fine) : 0);
+    if (clip.kind === 'notes') {
+        const notes = clip.notes || [];
+        // The range is what the clip plays; notes trimmed off still turn with it.
+        const from = clipStartOffset(clip);
+        const to = from + (Number(clip.lengthTick) || 0);
+        const heard = notes.filter((n) => n.startTick < to && n.startTick + (Number(n.durTick) || 0) > from);
+        for (const note of heard.length ? heard : notes) span(Math.round(Number(note.semi) || 0));
+        if (!(hi > lo)) return null;
+        pushUndo(song);
+        for (const note of notes) {
+            note.semi = lo + hi - Math.round(Number(note.semi) || 0);
+            note.fine = flipFine(note.fine);
+        }
+        return clip;
+    }
+    if (!clip.data) return null;
+    const sounding = (lane) => {
+        const count = clampInt(lane.stepCount, 1, STEP_SLOTS, 8);
+        return (lane.steps || []).slice(0, count).filter((step) => step && step.on !== false);
+    };
+    const lanes = pitchLanes(clip);
+    for (const lane of lanes) {
+        for (const step of sounding(lane)) stepPitches(step).forEach(span);
+    }
+    if (!(hi > lo)) return null;
+    pushUndo(song);
+    for (const lane of pitchLanes(clip)) {
+        for (const step of sounding(lane)) {
+            const turned = stepPitches(step).map((pitch) => lo + hi - pitch).sort((a, b) => a - b);
+            step.tune = turned[0];
+            step.chord = turned.slice(1).map((pitch) => pitch - turned[0]);
+            step.fine = flipFine(step.fine);
+        }
+    }
+    clip.edited = true;
+    return clip;
+}
+
 function snapLengthTicks(clip, lengthTick) {
     const grid = clipStepTicks(clip);
     const raw = Math.max(grid, Number(lengthTick) || grid);
@@ -227,17 +514,22 @@ function snapLengthTicks(clip, lengthTick) {
     return steps * grid;
 }
 
-function snapStartTick(song, track, excludeId, pointerStart) {
+// `grid` is the start snap (a bar, or a beat when the view shows beats). A
+// neighbouring clip's end wins within half a grid step, so clips butt up even
+// when that end is off the grid.
+function snapStartTick(song, track, excludeId, pointerStart, grid = BAR_TICKS) {
     const start = Math.max(0, Number(pointerStart) || 0);
-    const barCandidate = Math.round(start / BAR_TICKS) * BAR_TICKS;
+    const unit = grid > 0 ? grid : BAR_TICKS;
+    const barCandidate = Math.round(start / unit) * unit;
+    const reach = unit / 2;
     const clips = trackClips(song, track);
     let bestEnd = null;
-    let bestDist = HALF_BAR + 1;
+    let bestDist = reach + 1;
     for (const c of clips) {
         if (c.id === excludeId) continue;
         const end = c.startTick + c.lengthTick;
         const dist = Math.abs(start - end);
-        if (dist <= HALF_BAR && dist < bestDist) {
+        if (dist <= reach && dist < bestDist) {
             bestDist = dist;
             bestEnd = end;
         }
@@ -273,6 +565,8 @@ function buildClipFromSpec(spec, startTick, lengthTick) {
         startTick,
         lengthTick,
     };
+    const offset = clipStartOffset(spec);
+    if (offset) base.startOffset = offset;
     if (spec.kind === 'notes') {
         return {
             ...base,
@@ -291,7 +585,7 @@ function buildClipFromSpec(spec, startTick, lengthTick) {
     };
 }
 
-export function placeClip(song, spec) {
+export function placeClip(song, spec, grid = BAR_TICKS) {
     if (!validatePlaceSpec(spec)) return false;
     const draft = buildClipFromSpec(
         spec,
@@ -308,7 +602,7 @@ export function placeClip(song, spec) {
         draft.keptHash = spec.keptHash ?? null;
     }
 
-    const snappedStart = snapStartTick(song, spec.track, null, spec.startTick);
+    const snappedStart = snapStartTick(song, spec.track, null, spec.startTick, grid);
     if (wouldOverlap(song, spec.track, null, snappedStart, draft.lengthTick)) {
         return false;
     }
@@ -319,10 +613,10 @@ export function placeClip(song, spec) {
     return draft;
 }
 
-export function moveClip(song, id, startTick) {
+export function moveClip(song, id, startTick, grid = BAR_TICKS) {
     const clip = findClipById(song, id);
     if (!clip) return false;
-    const snapped = snapStartTick(song, clip.track, id, startTick);
+    const snapped = snapStartTick(song, clip.track, id, startTick, grid);
     if (wouldOverlap(song, clip.track, id, snapped, clip.lengthTick)) {
         return false;
     }
@@ -332,16 +626,90 @@ export function moveClip(song, id, startTick) {
     return true;
 }
 
+/**
+ * Make room for [start, end) on a track by cutting into other clips: a clip that
+ * starts inside loses its covered start (it keeps its place in time, like a left-edge
+ * trim), one that ends inside loses its covered end, and one fully covered is removed.
+ * Does not push undo. Returns true when anything changed.
+ */
+function overwriteRange(song, track, excludeId, start, end) {
+    const list = trackClips(song, track);
+    let changed = false;
+    for (let i = list.length - 1; i >= 0; i -= 1) {
+        const c = list[i];
+        if (c.id === excludeId) continue;
+        const cEnd = c.startTick + c.lengthTick;
+        if (cEnd <= start || c.startTick >= end) continue;
+        changed = true;
+        if (c.startTick >= start && cEnd <= end) {
+            list.splice(i, 1);
+        } else if (c.startTick >= start) {
+            const cut = end - c.startTick;
+            const offset = clipStartOffset(c) + cut;
+            if (offset) c.startOffset = offset;
+            else delete c.startOffset;
+            c.startTick = end;
+            c.lengthTick = cEnd - end;
+        } else {
+            c.lengthTick = start - c.startTick;
+        }
+    }
+    return changed;
+}
+
+/** What an edge drag to [start, end) would cut: ids of clips removed and clips cut. */
+export function overwritePreview(song, track, excludeId, start, end) {
+    const removed = [];
+    const cut = [];
+    for (const c of trackClips(song, track)) {
+        if (c.id === excludeId) continue;
+        const cEnd = c.startTick + c.lengthTick;
+        if (cEnd <= start || c.startTick >= end) continue;
+        if (c.startTick >= start && cEnd <= end) removed.push(c.id);
+        else cut.push(c.id);
+    }
+    return { removed, cut };
+}
+
+/** Right edge. Lengthening over the next clip writes over it (see overwriteRange). */
 export function resizeClip(song, id, lengthTick) {
     const clip = findClipById(song, id);
     if (!clip) return false;
     const snappedLen = snapLengthTicks(clip, lengthTick);
-    if (wouldOverlap(song, clip.track, id, clip.startTick, snappedLen)) {
-        return false;
-    }
     if (snappedLen === clip.lengthTick) return true;
     pushUndo(song);
+    if (snappedLen > clip.lengthTick) {
+        overwriteRange(song, clip.track, id, clip.startTick + clip.lengthTick, clip.startTick + snappedLen);
+    }
     clip.lengthTick = snappedLen;
+    return true;
+}
+
+/**
+ * Move a clip's left edge, keeping its right edge. The pattern stays where it is in
+ * time: dragging in cuts the start off, dragging out past the pattern start adds
+ * silence before it, and dragging over the previous clip writes over it. Snaps to the
+ * clip's step grid.
+ */
+export function trimClipStart(song, id, startTick) {
+    const clip = findClipById(song, id);
+    if (!clip) return false;
+    const grid = clipStepTicks(clip);
+    const start0 = clip.startTick;
+    const end = start0 + clip.lengthTick;
+    let steps = Math.round(((Number(startTick) || 0) - start0) / grid);
+    steps = Math.min(steps, Math.floor((end - start0) / grid) - 1);
+    steps = Math.max(steps, -Math.floor(start0 / grid));
+    const next = start0 + steps * grid;
+    if (next === start0) return true;
+    pushUndo(song);
+    // Pulling the left edge back over the previous clip writes over it.
+    if (next < start0) overwriteRange(song, clip.track, id, next, start0);
+    const offset = clipStartOffset(clip) + (next - start0);
+    if (offset) clip.startOffset = offset;
+    else delete clip.startOffset;
+    clip.startTick = next;
+    clip.lengthTick = end - next;
     return true;
 }
 
@@ -364,11 +732,8 @@ export function deleteClip(song, id) {
     return true;
 }
 
-export function duplicateClip(song, id) {
-    const clip = findClipById(song, id);
-    if (!clip) return false;
-    const start = clip.startTick + clip.lengthTick;
-    const spec = {
+function copySpec(clip, start) {
+    return {
         track: clip.track,
         kind: clip.kind,
         source: clip.source,
@@ -381,7 +746,15 @@ export function duplicateClip(song, id) {
         edited: clip.edited,
         notes: clip.kind === 'notes' ? deepClone(clip.notes) : undefined,
         lengthTick: clip.lengthTick,
+        startOffset: clipStartOffset(clip),
     };
+}
+
+export function duplicateClip(song, id) {
+    const clip = findClipById(song, id);
+    if (!clip) return false;
+    const start = clip.startTick + clip.lengthTick;
+    const spec = copySpec(clip, start);
     const snapped = snapStartTick(song, clip.track, null, start);
     const draft = buildClipFromSpec(spec, snapped, clip.lengthTick);
     if (wouldOverlap(song, clip.track, null, snapped, draft.lengthTick)) {
@@ -391,6 +764,37 @@ export function duplicateClip(song, id) {
     draft.startTick = snapped;
     trackClips(song, clip.track).push(draft);
     return draft;
+}
+
+/** How many whole copies of a clip fit back to back after it before the next clip. */
+export function repeatRoom(song, id, max = 64) {
+    const clip = findClipById(song, id);
+    if (!clip) return 0;
+    let n = 0;
+    while (n < max && !wouldOverlap(song, clip.track, null, clip.startTick + (n + 1) * clip.lengthTick, clip.lengthTick)) n += 1;
+    return n;
+}
+
+/**
+ * Drop `count` copies of a clip back to back after it (as many as fit), as one undo
+ * step. Each copy is its own clip with the same pattern, trims and lane mutes.
+ * Returns the new clips.
+ */
+export function repeatClip(song, id, count) {
+    const clip = findClipById(song, id);
+    if (!clip) return [];
+    const n = Math.min(Math.max(0, count | 0), repeatRoom(song, id));
+    if (n === 0) return [];
+    pushUndo(song);
+    const made = [];
+    for (let k = 1; k <= n; k += 1) {
+        const start = clip.startTick + k * clip.lengthTick;
+        const draft = buildClipFromSpec(copySpec(clip, start), start, clip.lengthTick);
+        draft.edited = clip.edited === true;
+        trackClips(song, clip.track).push(draft);
+        made.push(draft);
+    }
+    return made;
 }
 
 export function markEdited(song, id) {
@@ -431,12 +835,17 @@ export function keepClip(song, id, hash) {
     return clip;
 }
 
-export function retargetClip(song, id, slot, hash, extra) {
+/** `baked`: the clip's trimmed pattern, now its own pattern, so the trim is dropped. */
+export function retargetClip(song, id, slot, hash, extra, baked = null) {
     const clip = findClipById(song, id);
     if (!clip || clip.kind === 'notes') return null;
     const s = slot | 0;
     if (s < 0 || s > 7) return null;
     pushUndo(song, extra ?? null);
+    if (baked) {
+        clip.data = deepClone(baked);
+        delete clip.startOffset;
+    }
     clip.source = s;
     clip.edited = false;
     clip.copiedHash = hash;
@@ -468,18 +877,25 @@ export function buildCues(song, mode) {
         /** @type {{ tick: number, kind: 'start'|'end'|'lead', clip: object|null }[]} */
         const events = [];
 
-        if (clips.length === 0 || clips[0].startTick > 0) {
+        const first = clips.map((c) => clipPlaySpan(c)).filter((sp) => sp.to > sp.from)
+            .reduce((m, sp) => Math.min(m, sp.from), Infinity);
+        if (!(first <= 0)) {
             events.push({ tick: 0, kind: 'lead', clip: null });
         }
 
         for (const clip of clips) {
+            const span = clipPlaySpan(clip);
+            if (!(span.to > span.from)) continue;
+            const cued = cueClipForMode(clip, mode);
             events.push({
-                tick: clip.startTick,
+                tick: span.from,
                 kind: 'start',
-                clip: cueClipForMode(clip, mode),
+                // Players read startTick as where the pattern begins and startTick + lengthTick
+                // as where sound stops, so hand them the span rather than the clip edges.
+                clip: cued && { ...cued, startTick: span.origin, lengthTick: span.to - span.origin },
             });
             events.push({
-                tick: clip.startTick + clip.lengthTick,
+                tick: span.to,
                 kind: 'end',
                 clip: null,
             });

@@ -30,7 +30,7 @@
     "slots": [
       {
         "stepCount": 64,
-        "division": 3,
+        "division": 5,
         "gate": 0,
         "repeat": 0,
         "reverse": "true",

@@ -1,4 +1,4 @@
-import { captureProject, applyDoc } from './save-capture.js?v=21';
+import { captureProject, applyDoc } from './save-capture.js?v=22';
 import {
     LIBRARY_CAPS,
     SESSION_KEY,
@@ -221,68 +221,77 @@ async function deliverLinkAndFile(doc, link) {
     };
 }
 
+/**
+ * Runs one share and reports what happened: { kind: 'sheet' } (system share sheet used),
+ * { kind: 'cancelled' } (sheet dismissed) or { kind: 'delivered', message, url, offerCopy, copied }
+ * (link copied and / or .ingy downloaded). Used by the site bar and the share button.
+ */
+async function performShare() {
+    const doc = captureProject();
+    const base = `${location.origin}${location.pathname}`;
+    const link = await encodeLink(doc, base);
+    const canShareFiles = await probeCanShareFiles();
+    const hasWebShare = typeof navigator.share === 'function';
+    const plan = resolveShareDelivery({ doc, link, canShareFiles, hasWebShare });
+    const wantsSheet = plan.mode === 'share-url' || plan.mode === 'share-both' || plan.mode === 'share-file';
+
+    if (wantsSheet) {
+        try {
+            await runShareProject({
+                doc,
+                link,
+                canShareFiles,
+                hasWebShare,
+                copyTextFn: copyText,
+                downloadFn: triggerIngyDownload,
+                shareFn: async ({ doc: shareDoc, link: shareLink, plan: sharePlan, fileName }) => {
+                    const payload = { title: shareDoc.name || 'INGYSYNTH', text: shareDoc.by || 'INGYSYNTH project' };
+                    if (sharePlan.mode === 'share-url') payload.url = shareLink.url;
+                    if (sharePlan.mode === 'share-both' || sharePlan.mode === 'share-file') {
+                        payload.files = [new File([ingyFileBlob(shareDoc)], fileName, { type: 'application/json' })];
+                    }
+                    // With url and files together, macOS / iOS share targets (Messages, AirDrop) tend to
+                    // send only the link. Share the file and carry the link in the text instead.
+                    if (sharePlan.mode === 'share-both' && shareLink?.url) payload.text = `${payload.text}\n${shareLink.url}`;
+                    await navigator.share(payload);
+                },
+            });
+            return { kind: 'sheet', url: link?.url || '' };
+        } catch (err) {
+            if (err?.name === 'AbortError') return { kind: 'cancelled' };
+            const result = await deliverLinkAndFile(doc, link);
+            return { kind: 'delivered', ...result, copied: Boolean(result.url) && !result.offerCopy };
+        }
+    }
+
+    const copied = link?.url ? await copyText(link.url) : false;
+    await runShareProject({
+        doc,
+        link,
+        canShareFiles: false,
+        hasWebShare: false,
+        copyTextFn: async () => copied,
+        downloadFn: triggerIngyDownload,
+        shareFn: async () => {},
+    });
+    return {
+        kind: 'delivered',
+        message: copied ? 'Link copied and file downloaded.' : 'File downloaded.',
+        url: link?.url || '',
+        offerCopy: Boolean(link?.url) && !copied,
+        copied,
+    };
+}
+
 export async function handleSiteShare() {
     if (shareBusy) return;
     shareBusy = true;
     const status = document.getElementById('siteShareStatus');
     try {
-        const doc = captureProject();
-        const base = `${location.origin}${location.pathname}`;
-        const link = await encodeLink(doc, base);
-        const canShareFiles = await probeCanShareFiles();
-        const hasWebShare = typeof navigator.share === 'function';
-        const plan = resolveShareDelivery({ doc, link, canShareFiles, hasWebShare });
-        const wantsSheet = plan.mode === 'share-url' || plan.mode === 'share-both' || plan.mode === 'share-file';
-
-        if (wantsSheet) {
-            try {
-                await runShareProject({
-                    doc,
-                    link,
-                    canShareFiles,
-                    hasWebShare,
-                    copyTextFn: copyText,
-                    downloadFn: triggerIngyDownload,
-                    shareFn: async ({ doc: shareDoc, link: shareLink, plan: sharePlan, fileName }) => {
-                        const payload = { title: shareDoc.name || 'INGYSYNTH', text: shareDoc.by || 'INGYSYNTH project' };
-                        if (sharePlan.mode === 'share-url' || sharePlan.mode === 'share-both') {
-                            payload.url = shareLink.url;
-                        }
-                        if (sharePlan.mode === 'share-both' || sharePlan.mode === 'share-file') {
-                            payload.files = [new File([ingyFileBlob(shareDoc)], fileName, { type: 'application/json' })];
-                        }
-                        await navigator.share(payload);
-                    },
-                });
-                setText(status, 'Share ready.');
-                return;
-            } catch (err) {
-                if (err?.name === 'AbortError') {
-                    setText(status, '');
-                    return;
-                }
-                const result = await deliverLinkAndFile(doc, link);
-                showShareStatus(status, result.message, result.url, result.offerCopy);
-                return;
-            }
-        }
-
-        const copied = link?.url ? await copyText(link.url) : false;
-        await runShareProject({
-            doc,
-            link,
-            canShareFiles: false,
-            hasWebShare: false,
-            copyTextFn: async () => copied,
-            downloadFn: triggerIngyDownload,
-            shareFn: async () => {},
-        });
-        showShareStatus(
-            status,
-            copied ? 'Link copied and file downloaded.' : 'File downloaded.',
-            link?.url || '',
-            Boolean(link?.url) && !copied,
-        );
+        const result = await performShare();
+        if (result.kind === 'sheet') setText(status, 'Share ready.');
+        else if (result.kind === 'cancelled') setText(status, '');
+        else showShareStatus(status, result.message, result.url, result.offerCopy);
     } catch (err) {
         setText(status, 'Share failed. Use Save, then share the file.');
     } finally {
@@ -290,11 +299,39 @@ export async function handleSiteShare() {
     }
 }
 
+/** iOS / macOS share sheets take about half a second to close after share() resolves. */
+const SHEET_SETTLE_MS = 700;
+
+/** Answers the hex share button under the oscilloscope (share-button.js). */
+function answerShareButton(event) {
+    const { detail } = event;
+    detail.accepted = true;
+    if (shareBusy) {
+        detail.reply({ error: 'share already running' });
+        return;
+    }
+    shareBusy = true;
+    performShare()
+        .then((result) => {
+            if (result.kind === 'cancelled') return { cancelled: true };
+            // The sheet is still animating away when share() resolves; land after it clears so the
+            // cyan flash is seen.
+            if (result.kind === 'sheet') return { message: 'SHARED', link: result.url, settleMs: SHEET_SETTLE_MS };
+            return { message: result.copied ? 'LINK COPIED · FILE DOWNLOADED' : 'FILE DOWNLOADED', link: result.url };
+        })
+        .catch(() => ({ error: 'share failed' }))
+        .then((answer) => detail.reply(answer))
+        .finally(() => {
+            shareBusy = false;
+        });
+}
+
 export function initSiteShare() {
     const btn = document.getElementById('siteShare');
     btn?.addEventListener('click', () => {
         handleSiteShare();
     });
+    document.addEventListener('ingysynth:share-request', answerShareButton);
 }
 
 const LOAD_ERRORS = {

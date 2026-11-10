@@ -6,14 +6,14 @@
 import { state } from './state.js?v=120';
 import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=141';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=106';
-import { ensureDisplayStep } from './knobs.js?v=189';
+import { ensureDisplayStep } from './knobs.js?v=191';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=33';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=122';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=123';
 import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=44';
-import { PARAMS, clampToCatalog, getParam } from './param-catalog.js?v=12';
+import { PARAMS, clampToCatalog, getParam } from './param-catalog.js?v=13';
 import { midiControlId } from './midi-learn.js?v=35';
 import {
     flashCopiedToast,
@@ -32,8 +32,8 @@ const RESOLUTION = 128;
 
 /** Transport / pattern / write µTUNE — never automate. */
 const EXCLUDE_IDS = new Set([
-    'tempo', 'stepCount', 'division', 'slideTime', 'accentAmount', 'gateLength',
-    'kbSlideTime', 'kbAccentAmount', 'kbGateLength',
+    'tempo', 'stepCount', 'division', 'slideTime', 'accentAmount', 'gateLength', 'swing',
+    'kbSlideTime', 'kbAccentAmount', 'kbGateLength', 'kbSwing',
     'keyboardMasterTune', 'kbTuningMasterTune', 'kbXyTuningMasterTune', 'kbWriteFineProxy',
 ]);
 

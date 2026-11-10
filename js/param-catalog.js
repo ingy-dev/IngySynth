@@ -4,6 +4,8 @@
 
 const OSC_WAVES = ['sawtooth', 'square', 'sine', 'triangle'];
 const NOTE_DIVISIONS = ['2', '4', '8', '16'];
+// Step divisions are steps per bar. Triplets: 3 = 1/2T, 6 = 1/4T, 12 = 1/8T, 24 = 1/16T, 48 = 1/32T.
+const STEP_DIVISIONS = ['2', '3', '4', '6', '8', '12', '16', '24', '48'];
 const OSC4_MODELS = [
     'va', 'va_vcf', 'waveshaper', 'pd', 'fm', 'fm6',
     'wavetable', 'terrain', 'additive', 'grain',
@@ -32,12 +34,13 @@ function button(def = false) {
 
 /** @type {Record<string, object>} */
 export const PARAMS = {
-    tempo: range(60, 240, 120, 1, { name: 'Tempo', group: 'Sequencer' }),
-    division: select(NOTE_DIVISIONS, '8'),
+    tempo: range(20, 240, 120, 1, { name: 'Tempo', group: 'Sequencer' }),
+    division: select(STEP_DIVISIONS, '8'),
     stepCount: range(1, 32, 8, 1),
     slideTime: range(10, 500, 60, 1, { name: 'Slide Time', group: 'Sequencer' }),
     accentAmount: range(0, 100, 100, 1, { name: 'Accent Amount', group: 'Sequencer' }),
     gateLength: range(5, 100, 90, 1, { name: 'Gate Length', group: 'Sequencer' }),
+    swing: range(50, 75, 50, 1, { name: 'Swing', group: 'Sequencer' }),
     scaleToggle: button(false),
     scaleSelect: select([], ''),
 

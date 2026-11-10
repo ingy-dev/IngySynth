@@ -8,11 +8,11 @@
 
 import { state } from './state.js?v=120';
 import { getNumber } from './params.js?v=44';
-import { setSongConductor, uiOutputLatency } from './sequencer.js?v=455';
+import { setSongConductor, uiOutputLatency } from './sequencer.js?v=456';
 import { semitonesToNoteName } from './tuning.js?v=108';
 import { scheduleMonoNote } from './voice.js?v=191';
 import { schedulePolySeqVoicing } from './poly-voice.js?v=200';
-import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=101';
+import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=102';
 import {
     DRUM_LANE_COUNT,
     PATTERN_COUNT,
@@ -32,10 +32,10 @@ import {
     clipAt,
     setPlayhead,
     wrapTick,
-} from './song-model.js?v=4';
+} from './song-model.js?v=9';
 
 const SIXTEENTH = 240;
-const DIVS = new Set([2, 4, 8, 16]);
+const DIVS = new Set([2, 3, 4, 6, 8, 12, 16, 24, 48]);
 
 /** @type {{ tick: number, audioTime: number, tps: number, loop?: boolean }[]} */
 let anchors = [];
@@ -83,6 +83,36 @@ export function songTickAt(audioTime) {
     const t = Number(audioTime);
     if (!Number.isFinite(t)) return null;
     return tickAt(t);
+}
+
+/**
+ * Beats of the playing arrangement whose audio time falls in [from, to), for the
+ * metronome. `until` is how far the answer is final: it stops at the loop end
+ * until the sequencer has pushed the loop anchor, so the wrap beat isn't lost.
+ */
+export function songBeatsBetween(from, to) {
+    const beats = [];
+    if (!state.songPlaying || !anchors.length || !(to > from)) return { beats, until: null };
+    let until = to;
+    const last = anchors[anchors.length - 1];
+    const end = loopEndTick();
+    if (end != null && last.tick < end && last.tps > 0) {
+        until = Math.min(until, last.audioTime + (end - last.tick) / last.tps);
+    }
+    for (let i = 0; i < anchors.length; i++) {
+        const a = anchors[i];
+        if (!(a.tps > 0)) continue;
+        const segEnd = i + 1 < anchors.length ? anchors[i + 1].audioTime : Infinity;
+        const s = Math.max(from, a.audioTime);
+        const e = Math.min(until, segEnd);
+        if (!(e > s)) continue;
+        const k0 = a.tick + (s - a.audioTime) * a.tps;
+        const k1 = a.tick + (e - a.audioTime) * a.tps;
+        for (let b = Math.ceil(k0 / PPQ - 1e-9) * PPQ; b < k1 - 1e-6; b += PPQ) {
+            beats.push({ time: a.audioTime + (b - a.tick) / a.tps, bar: b % BAR_TICKS === 0 });
+        }
+    }
+    return { beats, until: Math.max(from, until) };
 }
 
 function clampInt(n, min, max, fallback) {
@@ -257,16 +287,17 @@ function scheduleNotesWindow(clip, audioTime) {
                 engineGen: state.seqEngineGeneration,
             });
         } else {
-            for (const item of group) {
-                scheduleMonoNote({
-                    semi: Number(item.note.semi) || 0,
-                    fine: Number(item.note.fine) || 0,
-                    at,
-                    dur: gateSec(tps, durTicks(item.note)),
-                    vel: Number(item.note.vel) || 0.8,
-                    legato: !!item.note.legato,
-                });
-            }
+            // Mono: notes that start together play the first one in clip order only,
+            // as Bare Metal does (VoicePool drops chord tones above index 0).
+            const item = group[0];
+            scheduleMonoNote({
+                semi: Number(item.note.semi) || 0,
+                fine: Number(item.note.fine) || 0,
+                at,
+                dur: gateSec(tps, durTicks(item.note)),
+                vel: Number(item.note.vel) || 0.8,
+                legato: !!item.note.legato,
+            });
         }
         document.dispatchEvent(new CustomEvent('ingysynth:song-note', {
             detail: { at, poly: poly && group.length > 1, n: group.length },

@@ -8,7 +8,7 @@ import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
 import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=200';
 import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=89';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=189';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=191';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=33';
 import { get, getNumber, set } from './params.js?v=44';
 import {
@@ -47,6 +47,7 @@ import {
 import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=157';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { berlinHooks } from './berlin-hooks.js?v=1';
+import { berlinLaneMidiChannels, setBerlinLaneMidiChannel } from './berlin-lane-midi.js?v=1';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
 export const BERLIN_COLORS = [
@@ -64,9 +65,14 @@ export { isOscLane, isModLane, isDrumLane, patternGate };
 
 const DIVISIONS = [
     { value: 2, label: '1/2' },
+    { value: 3, label: '1/2T' },
     { value: 4, label: '1/4' },
+    { value: 6, label: '1/4T' },
     { value: 8, label: '1/8' },
+    { value: 12, label: '1/8T' },
     { value: 16, label: '1/16' },
+    { value: 24, label: '1/16T' },
+    { value: 48, label: '1/32T' },
 ];
 
 const DRUM_TONE_LABELS = {
@@ -586,6 +592,15 @@ function buildRow(row) {
         .map((d) => `<option value="${d.value}">${d.label}</option>`)
         .join('');
     const legend = rowLegend(row);
+    // Each O lane can send its notes on its own MIDI channel (berlin-lane-midi.js).
+    const midiOptions = ['<option value="0">Main</option>']
+        .concat(Array.from({ length: 16 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`))
+        .join('');
+    const midiCtl = osc ? `
+                <label class="berlin-ctl berlin-ctl-midi">
+                    <span class="berlin-ctl-label">MIDI CH</span>
+                    <select class="berlin-row-midi" aria-label="${legend} MIDI out channel">${midiOptions}</select>
+                </label>` : '';
 
     fieldset.innerHTML = `
         <legend>
@@ -619,7 +634,7 @@ function buildRow(row) {
                     <span class="berlin-ctl-label">GATE</span>
                     <input type="range" class="berlin-row-gate keyboard-master-tune-slider" min="5" max="100" value="90" step="1">
                     <span class="berlin-ctl-value berlin-row-gate-value">90</span>
-                </label>
+                </label>${midiCtl}
                 <div class="berlin-row-clipboard" role="group" aria-label="${legend} clipboard">
                     <button type="button" class="berlin-row-copy berlin-step-btn pattern-copy-btn"
                             aria-label="Copy ${legend}">Copy</button>
@@ -836,6 +851,9 @@ export function syncBerlinRowUi(row) {
     const div = fieldset.querySelector('.berlin-row-division');
     if (div) div.value = String(pattern.division);
 
+    const midi = fieldset.querySelector('.berlin-row-midi');
+    if (midi) midi.value = String(berlinLaneMidiChannels()[row] || 0);
+
     const rev = fieldset.querySelector('.berlin-row-rev');
     if (rev) {
         rev.classList.toggle('off', !pattern.reverse);
@@ -1029,6 +1047,10 @@ function wireRow(row) {
 
     fieldset.querySelector('.berlin-row-division')?.addEventListener('change', (e) => {
         pattern.division = parseInt(e.target.value, 10) || 8;
+    });
+
+    fieldset.querySelector('.berlin-row-midi')?.addEventListener('change', (e) => {
+        setBerlinLaneMidiChannel(row, parseInt(e.target.value, 10) || 0);
     });
 
     fieldset.querySelector('.berlin-row-rev')?.addEventListener('click', (e) => {

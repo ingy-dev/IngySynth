@@ -4,8 +4,8 @@
 
 import { state } from './state.js?v=120';
 import { getNumber, getString, set, subscribe, toggle } from './params.js?v=44';
-import { getParam } from './param-catalog.js?v=12';
-import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=189';
+import { getParam } from './param-catalog.js?v=13';
+import { ensureDisplayStep, resetInputToDefault } from './knobs.js?v=191';
 import { beginMidiLearn } from './midi-learn.js?v=35';
 
 /** Optional hook so applyLfoRate can refresh smoothing without a circular import. */

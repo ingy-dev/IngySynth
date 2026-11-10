@@ -1,6 +1,6 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
 import { state } from './state.js?v=120';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp, flashWriteLaneOnVfd } from './sequencer.js?v=455';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp, flashWriteLaneOnVfd } from './sequencer.js?v=456';
 import { berlinHooks } from './berlin-hooks.js?v=1';
 
 // Late-bound: see berlin-hooks.js for why this does not import berlin.js.
@@ -11,7 +11,7 @@ const berlinLaneVfdLabel = (row) => berlinHooks.berlinLaneVfdLabel?.(row) ?? '';
 const refreshBerlinSounding = () => berlinHooks.refreshBerlinSounding?.();
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import { isTabbedView, selectKeyboardTab } from './view-mode.js?v=14';
-import { bindKnob } from './knobs.js?v=189';
+import { bindKnob } from './knobs.js?v=191';
 import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=52';
 import { forceNoteOff } from './voice.js?v=191';
 import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=200';

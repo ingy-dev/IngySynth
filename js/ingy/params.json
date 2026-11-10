@@ -3,13 +3,13 @@
   "source": {
     "repo": "web",
     "file": "js/param-catalog.js",
-    "commit": "dd556a2"
+    "commit": "5e28aa7"
   },
   "params": {
     "tempo": {
       "type": "range",
       "section": "pattern",
-      "min": 60,
+      "min": 20,
       "max": 240,
       "step": 1,
       "default": 120,
@@ -20,9 +20,14 @@
       "section": "slotView",
       "options": [
         "2",
+        "3",
         "4",
+        "6",
         "8",
-        "16"
+        "12",
+        "16",
+        "24",
+        "48"
       ],
       "default": "8"
     },
@@ -59,6 +64,15 @@
       "max": 100,
       "step": 1,
       "default": 90,
+      "group": "Sequencer"
+    },
+    "swing": {
+      "type": "range",
+      "section": "pattern",
+      "min": 50,
+      "max": 75,
+      "step": 1,
+      "default": 50,
       "group": "Sequencer"
     },
     "scaleToggle": {

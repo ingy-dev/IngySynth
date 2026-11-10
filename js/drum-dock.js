@@ -2,7 +2,7 @@
 // which is the current P1–P8 drum slot (state.drumBank[state.drumSlot].lanes).
 
 import { state } from './state.js?v=120';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=189';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=191';
 import { get, set, subscribe, wireToggle } from './params.js?v=44';
 import {
     STEP_SLOTS,
@@ -31,15 +31,20 @@ import {
     setDrumMode,
     setBerlinDrumFilt,
     setDrumLanesHidden,
-} from './berlin.js?v=122';
+} from './berlin.js?v=123';
 import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=64';
 
 const DIVISIONS = [
     { value: 2, label: '1/2' },
+    { value: 3, label: '1/2T' },
     { value: 4, label: '1/4' },
+    { value: 6, label: '1/4T' },
     { value: 8, label: '1/8' },
+    { value: 12, label: '1/8T' },
     { value: 16, label: '1/16' },
+    { value: 24, label: '1/16T' },
+    { value: 48, label: '1/32T' },
 ];
 
 const DRUM_COLORS = [BERLIN_COLORS[4], BERLIN_COLORS[5], BERLIN_COLORS[6], BERLIN_COLORS[7]];

@@ -2,7 +2,7 @@
 
 import { state } from './state.js?v=120';
 import { get, getNumber, getString, set } from './params.js?v=44';
-import { isCatalogKey, isStepKey } from './param-catalog.js?v=12';
+import { isCatalogKey, isStepKey } from './param-catalog.js?v=13';
 import { PARAMS, BAREMETAL_PARAMS } from './ingy/js/params-data.js';
 import { decodeLink, normalize, parse, serialize, sectionsFor } from './ingy/js/ingy-codec.js';
 import {
@@ -22,13 +22,14 @@ import {
     writeDrumSlot,
     writeSynthSlot,
 } from './pattern-bank.js?v=50';
-import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=101';
+import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=102';
 import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=46';
 import { setPolyMode } from './poly-voice.js?v=200';
 import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=89';
 import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=157';
-import { setBerlinMode } from './berlin.js?v=122';
+import { setBerlinMode } from './berlin.js?v=123';
 import { applyChordMemoryIntervals } from './chord-memory.js?v=46';
+import { arrangementToSong, songToArrangement } from './song-save.js?v=1';
 const ALL_PARAMS = { ...PARAMS, ...BAREMETAL_PARAMS };
 const TOP_DOC_KEYS = new Set([
     'format', 'version', 'kind', 'name', 'by',
@@ -384,6 +385,10 @@ export function captureProject() {
         pattern: capturePatternSection(),
         session: captureSession(),
     });
+    // The arrange song (song-save.js; same shape as Bare Metal). Left out when empty.
+    const arrangement = songToArrangement(state.song);
+    if (arrangement) raw.arrangement = arrangement;
+    else delete raw.arrangement;
     const warnings = [];
     return normalize(raw, warnings);
 }
@@ -433,6 +438,13 @@ export function applyDoc(doc, kind) {
     }
 
     if (sections.session) applySession(canonical.session);
+
+    // Projects replace the arrangement (an empty one when the file has none); patches and
+    // patterns leave it alone. arrange-view.js redraws on ingysynth:song-loaded.
+    if (k === 'project') {
+        state.song = arrangementToSong(canonical.arrangement);
+        document.dispatchEvent(new CustomEvent('ingysynth:song-loaded'));
+    }
 
     return true;
 }

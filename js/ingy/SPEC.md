@@ -21,7 +21,7 @@ Adding a key never changes `version`. Only a breaking change bumps `version`, wi
 |---|---|---|---|
 | `patch` | `voice` | the instrument (oscillators, filter, envelopes, effects, LFO, drum kit sound) | the sequence |
 | `pattern` | `pattern` | P1-P8, drum patterns, Berlin bank, clock params, automation | the instrument |
-| `project` | `voice`, `pattern`, `session`, optional `mix`, reserved `arrangement` | everything musical | nothing |
+| `project` | `voice`, `pattern`, `session`, optional `mix`, optional `arrangement` | everything musical | nothing |
 
 Share always sends a `project` of what is playing right now, including unsaved edits.
 A section that doesn't belong to the kind is ignored on load (warning `ignored:<section>`) and not written back.
@@ -119,7 +119,7 @@ OSC 2-4 are `osc-engine-N`, `osc-model-N`, `osc-harmonics-N`, `osc-timbre-N`, `o
 |---|---|---|
 | `steps` | 32 steps | 32 default steps |
 | `stepCount` | 1..32 | 8 |
-| `division` | **number** 2 / 4 / 8 / 16 (strings accepted) | 8 |
+| `division` | **number** steps per bar: 2 / 4 / 8 / 16, or triplets 3 = 1/2T, 6 = 1/4T, 12 = 1/8T, 24 = 1/16T, 48 = 1/32T (strings accepted) | 8 |
 | `reverse` | bool | false |
 | `enabled` | bool | true |
 | `gate` | 0.05..1 | 0.9 |
@@ -142,7 +142,8 @@ Drums use `on`, `accent` and `ratch`.
 
 **Berlin pattern:** `{ "lanes": [8 lanes], "oscCount": 1..4 (3), "modCount": 1..4 (1), "repeat": 1..8 (1) }`.
 **Berlin lane:** the clock fields plus `destination` and `amount`. Lanes 0-3 (O1-O4) are always
-`osc1Pitch`..`osc4Pitch` with amount 1. Lanes 4-7 (M1-M4): `destination` one of `cutoff`, `resonance`, `highpass`, `off`
+`osc1Pitch`..`osc4Pitch` with amount 1. Lanes 4-7 (M1-M4): `destination` one of `cutoff`, `resonance`, `highpass`, `off`, `noise` (`noise` is Bare Metal only; the web
+resets it to the lane default)
 (defaults `cutoff`, `resonance`, `highpass`, `off`), `amount` 0..1 (1).
 `seeded` is the web's `berlinO1Seeded`: false means the first time Berlin opens, O1 of each slot is copied from P1-P8.
 
@@ -249,9 +250,38 @@ router prepends `false` and then maps the flags onto `d1`..`d4`. The web compres
 the master path plus a sidechain source, not an aux bus. `compressor` may sit in any insert list. The
 sidechain source is not part of `mix`.
 
-### `arrangement` (reserved, project only)
+### `arrangement` (optional, project only)
 
-Reserved for the song/arrange mode. Kept verbatim; nobody writes it in v1.
+The arrange-mode song. Both apps write it on save (`song-save.js`, the same file in each repo) and leave it
+out when the song is empty. Loading a `project` replaces the song with this section, or with an empty song when
+the section is absent; a `patch` or `pattern` never touches it. Adding this shape does not bump `version`.
+
+Like `mix`, v1 codecs keep the `arrangement` **object verbatim**: no defaults, clamping or key dropping.
+`song-save.js` checks it when it builds the song.
+
+```json
+"arrangement": {
+  "v": 1,
+  "synth": { "clips": [ ... ] },
+  "drums": { "clips": [ ... ] },
+  "transpose": [ { "tick": 0, "semi": 0 } ],
+  "loop": { "on": false, "startTick": 0, "endTick": 0 }
+}
+```
+
+Ticks are 960 per quarter note; a bar is 3840. Each track's `clips` is a stack, bottom first: clips may
+overlap and a later clip covers an earlier one where they overlap. Every clip has `id`, `kind`, `startTick`,
+`lengthTick` and an optional `startOffset` (ticks trimmed off the front of its pattern; negative = silence before it).
+
+| `kind` | Track | Extra keys |
+|---|---|---|
+| `n` | `synth` | `source` (P slot 0-7), `data` (a pattern, same shape as a `pattern.slots` entry), `automation`, `edited`, `copiedHash`, `keptHash` |
+| `b` | `synth` | as `n`, with `data` a Berlin pattern and `laneMask` (8 booleans, `false` = lane muted) |
+| `d` | `drums` | as `n`, with `data.lanes` the 4 drum lanes and `laneMask` (4 booleans) |
+| `notes` | `synth` | `notes`: `{ startTick, durTick, semi, fine, velocity, legato }`, `startTick` relative to the clip's pattern start, `semi` from C4, `fine` in cents, `velocity` 0-1; optional `name` (an imported MIDI file's name) |
+
+Unknown keys on a clip are kept. A clip with an unknown `kind`, on the wrong track, or (`n`/`b`/`d`) without
+`data` is dropped on load; a missing or duplicate `id` gets a new one. Undo history and the playhead are not saved.
 
 ## Normalizing on load
 

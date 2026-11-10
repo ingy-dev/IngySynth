@@ -38,9 +38,11 @@ const AUTOMATION_RESOLUTION = 128;
 const RATCH_MAX = 4;
 const REPEAT_MAX = 8;
 const CHORD_MAX_EXTRAS = 5;
-const DIVISIONS = [2, 4, 8, 16];
+// Steps per bar. Triplets: 3 = 1/2T, 6 = 1/4T, 12 = 1/8T, 24 = 1/16T, 48 = 1/32T.
+const DIVISIONS = [2, 3, 4, 6, 8, 12, 16, 24, 48];
 const OSC_DESTINATIONS = ['osc1Pitch', 'osc2Pitch', 'osc3Pitch', 'osc4Pitch'];
-const MOD_DESTINATIONS = ['cutoff', 'resonance', 'highpass', 'off'];
+const MOD_DESTINATIONS = ['cutoff', 'resonance', 'highpass', 'off'];   // M1-M4 defaults
+const MOD_DESTINATION_OPTIONS = [...MOD_DESTINATIONS, 'noise'];        // noise: Bare Metal only
 const FACTORY_DRUM_ONS = [[7], [2, 4, 6, 8], [3, 7], [1, 3, 5, 7]];
 const AUTOMATION_BANK_RE = /^[nb][0-7]$/;
 
@@ -255,7 +257,7 @@ function normalizeBerlinLane(c, src, path, row) {
         destination = OSC_DESTINATIONS[row];
         amount = 1;
     } else {
-        destination = c.oneOf(src, 'destination', `${path}.destination`, MOD_DESTINATIONS[row - OSC_LANES], MOD_DESTINATIONS);
+        destination = c.oneOf(src, 'destination', `${path}.destination`, MOD_DESTINATIONS[row - OSC_LANES], MOD_DESTINATION_OPTIONS);
         amount = c.num(src, 'amount', `${path}.amount`, 1, 0, 1);
     }
     return {

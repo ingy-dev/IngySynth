@@ -39,7 +39,7 @@
       "properties": {
         "steps": { "$ref": "#/$defs/steps" },
         "stepCount": { "type": "integer", "minimum": 1, "maximum": 32 },
-        "division": { "enum": [2, 4, 8, 16, "2", "4", "8", "16"] },
+        "division": { "enum": [2, 3, 4, 6, 8, 12, 16, 24, 48, "2", "3", "4", "6", "8", "12", "16", "24", "48"] },
         "reverse": { "type": "boolean" },
         "enabled": { "type": "boolean" },
         "gate": { "type": "number", "minimum": 0.05, "maximum": 1 }
@@ -59,7 +59,7 @@
       "type": ["object", "null"],
       "allOf": [{ "$ref": "#/$defs/clock" }],
       "properties": {
-        "destination": { "enum": ["osc1Pitch", "osc2Pitch", "osc3Pitch", "osc4Pitch", "cutoff", "resonance", "highpass", "off"] },
+        "destination": { "enum": ["osc1Pitch", "osc2Pitch", "osc3Pitch", "osc4Pitch", "cutoff", "resonance", "highpass", "off", "noise"] },
         "amount": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },

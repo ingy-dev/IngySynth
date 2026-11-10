@@ -1,7 +1,7 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
 import { state } from './state.js?v=120';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=189';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=191';
 import { ensurePlaitsWorklet } from './osc-source.js?v=157';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
 import {
@@ -12,7 +12,7 @@ import {
     forceDrumFiltOffForPoly,
 } from './poly-voice.js?v=200';
 import { syncChordMemUI } from './chord-memory.js?v=52';
-import { getParam } from './param-catalog.js?v=12';
+import { getParam } from './param-catalog.js?v=13';
 import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=44';
 
 /** Stacked Multitudes chords run hot at mono osc levels — match Ingy-6 poly default. */

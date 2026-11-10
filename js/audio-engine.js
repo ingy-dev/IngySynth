@@ -1,6 +1,6 @@
 import { state, OSC_COUNT } from './state.js?v=120';
 import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=44';
-import { wireControls } from './controls.js?v=374';
+import { wireControls } from './controls.js?v=375';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=111';
 import { updateLfoSmoothing } from './lfo-strip.js?v=71';
 import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=68';

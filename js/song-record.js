@@ -3,9 +3,9 @@
 
 import { state } from './state.js?v=120';
 import { getNumber } from './params.js?v=44';
-import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=455';
-import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=23';
-import { applyTake } from './song-model.js?v=4';
+import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=456';
+import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=29';
+import { BAR_TICKS, applyTake } from './song-model.js?v=9';
 import { setLiveNoteHooks } from './voice.js?v=191';
 import { setPolyLiveHook } from './poly-voice.js?v=200';
 
@@ -21,6 +21,7 @@ let armTake = false;
  *   lastSemi: number,
  *   opens: { cell: number|null, absStart: number, bucket: object, note: object }[],
  *   buckets: Map<number, { start: number, end: number|null, notes: object[] }>,
+ *   anchor: number,
  * }} */
 let take = null;
 
@@ -62,7 +63,10 @@ function bucketFor(stretch) {
     if (!take) return null;
     let bucket = take.buckets.get(stretch.start);
     if (!bucket) {
-        bucket = { start: stretch.start, end: stretch.end, notes: [] };
+        // A take in empty space starts at the bar recording began, not at the stretch start.
+        const start = Math.max(stretch.start, take.anchor);
+        if (stretch.end != null && start >= stretch.end) return null;
+        bucket = { start, end: stretch.end, notes: [] };
         take.buckets.set(stretch.start, bucket);
     }
     if (stretch.end != null) bucket.end = stretch.end;
@@ -107,7 +111,7 @@ function openNote(semi, cell, forceLegato) {
     const stretch = stretchAt(state.song, abs);
     if (!stretch) return;
     const bucket = bucketFor(stretch);
-    if (!bucket) return;
+    if (!bucket || abs < bucket.start) return;
     const legato = !!forceLegato || take.opens.length > 0;
     const note = {
         semi: Math.round(Number(semi) || 0),
@@ -145,6 +149,10 @@ function onVoiceRetune(semi) {
     openNote(semi, null, had);
 }
 
+function barFloor(tick) {
+    return Math.floor(Math.max(0, Number(tick) || 0) / BAR_TICKS) * BAR_TICKS;
+}
+
 function startTake() {
     const existing = (state.song?.transpose || []).map((event) => ({
         tick: event.tick | 0,
@@ -156,7 +164,44 @@ function startTake() {
         lastSemi: state.keyboardTranspose || 0,
         opens: [],
         buckets: new Map(),
+        anchor: 0,
     };
+    // Recording begins on the bar under the playhead; a loop that starts earlier pulls it back.
+    let from = Number(state.song?.playheadTick) || 0;
+    const loop = state.song?.loop;
+    if (loop?.on && (loop.endTick | 0) > (loop.startTick | 0)) from = Math.min(from, loop.startTick | 0);
+    take.anchor = barFloor(from);
+    // Show the take from its first moment when it starts in empty space.
+    const stretch = state.song && !state.berlinMode ? stretchAt(state.song, take.anchor) : null;
+    if (stretch) bucketFor(stretch);
+}
+
+/**
+ * The take as it grows, for the arrange view to draw live. Absolute ticks.
+ * Open notes run to the heard tick. Empty when nothing is recording.
+ * @returns {{ startTick: number, endTick: number, notes: { semi: number, startTick: number, durTick: number }[] }[]}
+ */
+export function liveTakeRegions() {
+    if (!recording()) return [];
+    const now = heardTick();
+    if (now == null) return [];
+    const open = new Map(take.opens.map((o) => [o.note, o.absStart]));
+    const out = [];
+    for (const bucket of take.buckets.values()) {
+        let end = now;
+        for (const note of bucket.notes) {
+            end = Math.max(end, bucket.start + note.startTick + (open.has(note) ? 0 : note.durTick));
+        }
+        if (bucket.end != null) end = Math.min(end, bucket.end);
+        if (!(end > bucket.start)) continue;
+        const notes = bucket.notes.map((note) => ({
+            semi: note.semi,
+            startTick: note.startTick,
+            durTick: open.has(note) ? Math.max(1, now - open.get(note)) : note.durTick,
+        }));
+        out.push({ startTick: bucket.start, endTick: end, notes });
+    }
+    return out;
 }
 
 function commitTake(endTick) {
@@ -176,6 +221,8 @@ function commitTake(endTick) {
                 maxAbs = Math.max(maxAbs, bucket.start + note.startTick + note.durTick);
             }
             stop = Math.max(bucket.start + 1, Math.round(maxAbs));
+            // Close a free take on a bar line so it loops and lines up cleanly.
+            stop = Math.ceil(stop / BAR_TICKS) * BAR_TICKS;
         }
         const length = stop - bucket.start;
         if (!(length > 0)) continue;

@@ -14,12 +14,12 @@ import {
 } from './params.js?v=44';
 import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=58';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { previewStepsOnVfd } from './sequencer.js?v=455';
+import { previewStepsOnVfd } from './sequencer.js?v=456';
 import { resetSidechainDucker } from './sc-time.js?v=49';
 import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=150';
 import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=108';
 import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=177';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=189';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=191';
 import {
     setLfoEnabled,
     getLfoAmountAudio,

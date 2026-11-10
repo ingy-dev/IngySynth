@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Quantize notes onto a 1/16 synth pattern.
+ * Quantize notes onto a synth pattern: snapping, ties, slides, ratchets, grids.
  * Run: node scripts/smoke-quantize.mjs
  */
 
@@ -13,7 +13,7 @@ globalThis.document ??= {
     getElementById() { return null; },
 };
 
-const { quantizeToPattern } = await import('../js/song-quantize.js?v=15');
+const { quantizeToPattern } = await import('../js/song-quantize.js?v=19');
 
 const SIXTEENTH = 240;
 let passed = 0;
@@ -96,22 +96,96 @@ console.log('smoke-quantize.mjs');
     ok('chord pads the rest', data.steps[1].on === false && data.steps[1].ratch === 1);
 }
 
-// Legato → slide. A tie into the next onset does too. vel 1 accents; 0.8 does not.
+// Slide into a new note: the note before overlaps it, or the new note is legato and
+// starts where the old one ends. Notes that only touch do not slide. vel 1 accents; 0.8 does not.
 {
     const { data } = quantizeToPattern([
-        note(0, 0, { durTick: 50, vel: 1, legato: true }),
-        note(2, SIXTEENTH, { durTick: SIXTEENTH, vel: 0.8, legato: false }),
-        note(5, SIXTEENTH * 2, { durTick: 80, vel: 0.8, legato: false }),
-    ], { startTick: 0, endTick: SIXTEENTH * 3 });
-    expectSig('legato slide and vel 1 accent', data.steps[0], {
+        note(0, 0, { durTick: SIXTEENTH + 20, vel: 1 }),
+        note(2, SIXTEENTH, { durTick: SIXTEENTH, vel: 0.8 }),
+        note(5, SIXTEENTH * 2, { durTick: SIXTEENTH, vel: 0.8 }),
+        note(7, SIXTEENTH * 3, { durTick: 80, vel: 0.8, legato: true }),
+    ], { startTick: 0, endTick: SIXTEENTH * 4 });
+    expectSig('overlap slides, vel 1 accents', data.steps[0], {
         on: true, tune: 0, accent: true, slide: true,
     });
-    expectSig('vel 0.8 is not accent, tie sets slide', data.steps[1], {
-        on: true, tune: 2, accent: false, slide: true,
+    expectSig('touching notes do not slide, vel 0.8 is not accent', data.steps[1], {
+        on: true, tune: 2, accent: false, slide: false,
     });
-    expectSig('following step is not slid', data.steps[2], {
-        on: true, tune: 5, accent: false, slide: false,
+    expectSig('a legato note slides the step before it', data.steps[2], {
+        on: true, tune: 5, slide: true,
     });
+    expectSig('the legato note itself is not slid', data.steps[3], {
+        on: true, tune: 7, slide: false,
+    });
+}
+
+// A long note fills its steps, tied by Slide on all but the last. 1.4 steps is one step.
+{
+    const { data } = quantizeToPattern([
+        note(0, 0, { durTick: SIXTEENTH * 3 }),
+        note(5, SIXTEENTH * 4, { durTick: 336 }),
+        note(5, SIXTEENTH * 6, { durTick: SIXTEENTH * 2 }),
+    ], { startTick: 0, endTick: SIXTEENTH * 8 });
+    expectSig('tie step 1', data.steps[0], { on: true, tune: 0, slide: true });
+    expectSig('tie step 2', data.steps[1], { on: true, tune: 0, slide: true });
+    expectSig('tie last step', data.steps[2], { on: true, tune: 0, slide: false });
+    ok('rest after the tie', data.steps[3].on === false);
+    expectSig('1.4 steps is one step', data.steps[4], { on: true, tune: 5, slide: false });
+    ok('rest after the short note', data.steps[5].on === false);
+    expectSig('tie to the range end', data.steps[6], { on: true, tune: 5, slide: true });
+    expectSig('last step does not slide round the loop', data.steps[7], { on: true, tune: 5, slide: false });
+}
+
+// A same-pitch note struck again ends the tie before it.
+{
+    const { data } = quantizeToPattern([
+        note(3, 0, { durTick: SIXTEENTH * 2 }),
+        note(3, SIXTEENTH * 2, { durTick: SIXTEENTH * 2 }),
+    ], { startTick: 0, endTick: SIXTEENTH * 4 });
+    expectSig('tie into the second step', data.steps[0], { on: true, tune: 3, slide: true });
+    expectSig('no slide into the re-strike', data.steps[1], { on: true, tune: 3, slide: false });
+    ok('the two notes fold to a 2-step phrase twice', data.stepCount === 2 && data.repeat === 2);
+}
+
+// Onsets snap to the nearest step: early and late notes keep their beat.
+{
+    const { data } = quantizeToPattern([
+        note(0, -20),
+        note(2, SIXTEENTH - 25),
+        note(4, SIXTEENTH * 2 + 30),
+        note(9, SIXTEENTH * 4 - 15),
+    ], { startTick: 0, endTick: SIXTEENTH * 4 });
+    ok('early and late notes snap', [0, 2, 4].every((semi, i) => data.steps[i].on && data.steps[i].tune === semi));
+    ok('a note early for the next range is left out', data.steps[3].on === false);
+}
+
+// A note held over the range start (clip trimmed through it) plays from step 1.
+{
+    const { data } = quantizeToPattern([
+        note(12, -SIXTEENTH * 4, { durTick: SIXTEENTH * 7 }),
+        note(0, SIXTEENTH * 4),
+    ], { startTick: 0, endTick: SIXTEENTH * 8 });
+    expectSig('held note starts the range', data.steps[0], { on: true, tune: 12, slide: true });
+    expectSig('held note keeps its length', data.steps[2], { on: true, tune: 12, slide: false });
+    ok('then a rest', data.steps[3].on === false);
+    expectSig('later note kept', data.steps[4], { on: true, tune: 0 });
+}
+{
+    const { data } = quantizeToPattern([
+        note(12, -SIXTEENTH * 4, { durTick: SIXTEENTH * 4 + 60 }),
+        note(0, SIXTEENTH),
+    ], { startTick: 0, endTick: SIXTEENTH * 2 });
+    ok('a sliver held over the start is dropped', data.steps[0].on === false && data.steps[1].tune === 0);
+}
+
+// A held note under a new note: cut unless it lasts through the new note's whole step.
+{
+    const { data } = quantizeToPattern([
+        note(-12, 0, { durTick: SIXTEENTH * 4 }),
+        note(7, SIXTEENTH * 2, { durTick: 100 }),
+    ], { startTick: 0, endTick: SIXTEENTH * 4 });
+    expectSig('pedal joins the new note as a chord', data.steps[2], { on: true, tune: -12, chord: [19], slide: true });
+    expectSig('pedal carries on alone', data.steps[3], { on: true, tune: -12 });
 }
 
 // Same pitch twice in one step → ratch 2. Mixed repeats use the highest count.
@@ -154,15 +228,35 @@ console.log('smoke-quantize.mjs');
     ok('mixed fine is 0', data.steps[1].fine === 0);
 }
 
-// Notes outside the range are ignored. The range start snaps down to a 16th.
+// A range drawn by hand: notes before it are ignored and both edges snap to the nearest step.
 {
     const { data } = quantizeToPattern([
         note(1, 50),
-        note(9, 120),
-    ], { startTick: 100, endTick: 300 });
-    expectSig('onset in the snapped step', data.steps[0], { on: true, tune: 9 });
-    ok('partial next step is a rest', data.steps[1].on === false);
-    ok('snap span is two steps', data.stepCount === 2 && data.repeat === 1);
+        note(9, 250),
+        note(4, 250 + SIXTEENTH * 3),
+    ], { startTick: 200, endTick: SIXTEENTH * 5 + 30 });
+    expectSig('first note in the range is step 1', data.steps[0], { on: true, tune: 9 });
+    expectSig('last note kept', data.steps[3], { on: true, tune: 4 });
+    ok('drawn a little over a beat is still 4 steps', data.stepCount === 4 && data.repeat === 1, `got ${data.stepCount} x${data.repeat}`);
+}
+
+// Triplet onsets pick a triplet grid.
+{
+    const notes = [0, 1, 2, 3, 4, 5].map((semi, i) => note(semi, i * 320 + (i % 2 ? 6 : -6)));
+    const { data } = quantizeToPattern(notes, { startTick: 0, endTick: 1920 });
+    ok('1/8T grid', data.division === 12 && data.stepCount === 6, `got ${data.division} / ${data.stepCount}`);
+    ok('one note per triplet step', [0, 1, 2, 3, 4, 5].every((semi, i) => data.steps[i].tune === semi));
+}
+
+// A range longer than 32 sixteenths uses 1/8 steps when every note starts on one.
+{
+    const notes = [];
+    for (let i = 0; i < 32; i += 1) notes.push(note(i, i * SIXTEENTH * 2));
+    const fits = quantizeToPattern(notes, { startTick: 0, endTick: 64 * SIXTEENTH });
+    ok('1/8 grid keeps all four bars', fits.data.division === 8 && fits.data.stepCount === 32 && fits.truncated === false);
+    notes.push(note(40, SIXTEENTH));
+    const cut = quantizeToPattern(notes, { startTick: 0, endTick: 64 * SIXTEENTH });
+    ok('an off-16th note keeps 1/16 and truncates', cut.data.division === 16 && cut.truncated === true);
 }
 
 // 16 sixteenths that are an 8-step phrase twice.

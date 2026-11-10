@@ -21,8 +21,9 @@ import { setKeyboardStepActive } from './keyboard-steps.js?v=177';
 import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=214';
 import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=157';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=21';
-import { notifyAutomationLoopAnchor } from './automation.js?v=101';
+import { notifyAutomationLoopAnchor } from './automation.js?v=102';
 import { nextCyclePass } from './pattern-repeat.js?v=3';
+import { createSwingClock } from './swing.js?v=2';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=13';
 import {
     scheduleAcidAmpEnvelope,
@@ -45,6 +46,7 @@ import {
     keyboardHighlightRow,
     rowStepValue,
     berlinFrequency,
+    berlinPitchSemitones,
     scheduleBerlinCv,
     setBerlinStepActive,
     clearBerlinStepActive,
@@ -53,7 +55,8 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=122';
+} from './berlin.js?v=123';
+import { berlinLaneMidiChannels } from './berlin-lane-midi.js?v=1';
 import {
     getPattern,
     getBerlinLane,
@@ -71,7 +74,7 @@ import {
 } from './pattern-bank.js?v=50';
 import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=200';
 import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=52';
-import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=52';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=53';
 import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=49';
 import { rampFromHere } from './audio-param-hold.js?v=1';
 import {
@@ -1214,6 +1217,7 @@ function togglePlay() {
         
         state.currentStep = state.isReverse ? getNumber('stepCount') - 1 : 0;
         state.nextStepTime = now + 0.1;
+        swingClock.reset(state.nextStepTime, 0, currentTempo());
         state.lastStepSounded = false;
         state.envelopeHeld = false;
         state.filterEnvelopeHeld = false;
@@ -1351,6 +1355,7 @@ function hardRelocateArrangement(tick) {
     clearAccentSweep(now);
     state.song.playheadTick = tick;
     state.nextStepTime = when;
+    swingClock.reset(when, Math.max(0, Number(tick) || 0) / 960, currentTempo());
     state.lastStepSounded = false;
     state.envelopeHeld = false;
     state.filterEnvelopeHeld = false;
@@ -1401,6 +1406,22 @@ function relocateArrangement(tick) {
     if (!state.songPlaying) return false;
     hardRelocateArrangement(t);
     return true;
+}
+
+// Swing: lane heads stay on the straight grid (nextStepTime); each step is warped as it fires.
+const swingClock = createSwingClock();
+
+function currentTempo() {
+    const tempoN = getNumber('tempo', 120);
+    return Number.isFinite(tempoN) && tempoN > 0 ? tempoN : 120;
+}
+
+function swingSpan(startTime, stepDuration, division) {
+    return swingClock.span(startTime, stepDuration, {
+        swing: getNumber('swing', 50),
+        tempo: currentTempo(),
+        division,
+    });
 }
 
 function currentStepDuration() {
@@ -1506,7 +1527,8 @@ function scheduleNextStep() {
         if (!state.songPlaying && upcomingNormalCycleStart(state.currentStep)) {
             scheduleDrumLanesUntil(startTime);
         }
-        playStep(state.currentStep, startTime, currentStepDuration(), null);
+        const sw = swingSpan(startTime, currentStepDuration(), getNumber('division', 8));
+        playStep(state.currentStep, sw.start, sw.dur, null);
 
         if (state.songPlaying && songSilenceAdvance != null) {
             const adv = songSilenceAdvance;
@@ -1589,9 +1611,70 @@ function midiChannelNibble() {
 function midiAllNotesOff() {
     const out = state.selectedMidiOutput;
     if (!state.sendMidiEnabled || !out) return;
+    // The main channel, plus every channel a Berlin lane has to itself.
+    const channels = new Set([midiChannelNibble()]);
+    for (let row = 0; row < 4; row++) channels.add(berlinLaneMidiNibble(row));
     try {
-        out.send([0xB0 | midiChannelNibble(), 123, 0]);
+        for (const ch of channels) out.send([0xB0 | ch, 123, 0]);
     } catch (_) { /* ignore */ }
+}
+
+/** Status nibble a Berlin O lane sends on: its own channel, or the main one. */
+function berlinLaneMidiNibble(row) {
+    const own = berlinLaneMidiChannels()[row] | 0;
+    return own >= 1 && own <= 16 ? own - 1 : midiChannelNibble();
+}
+
+// Pitch bend is per channel. The main channel keeps state.lastSentBendCents (shared
+// with the main sequencer and the bend wheel); a lane on its own channel tracks its own.
+const berlinLaneBendCents = new Array(16).fill(0);
+
+/**
+ * MIDI for one Berlin O lane step, on the lane's channel. Follows the main sequencer's
+ * rules: one gate per ratchet hit, cents on pitch bend, accent = velocity 127, and a
+ * slid step overlaps the next note so the receiver plays it legato.
+ */
+function sendBerlinLaneMidi({
+    row, data, nextPitch, startTime, stepDuration, hits, gateLen, slideOut, accentThisStep,
+}) {
+    if (!state.sendMidiEnabled || !state.selectedMidiOutput || !state.audioContext) return;
+    const noteFor = (semi) => {
+        const total = berlinPitchSemitones(semi) + getGlobalTune() + (state.keyboardTranspose || 0);
+        return Math.min(127, Math.max(0, Math.round(state.midiBaseNote + total)));
+    };
+    const note = noteFor(data.semi);
+    const fineCents = Math.round(Number(data.fine) || 0);
+    const ch = berlinLaneMidiNibble(row);
+    const bendRangeEl = document.getElementById('bendRange');
+    const bendRange = bendRangeEl ? parseInt(bendRangeEl.value, 10) : 2;
+    const overlapForSlide = hits === 1 && slideOut && !!nextPitch && noteFor(nextPitch.semi) !== note;
+    const subDur = stepDuration / hits;
+    const playGen = state.playGeneration;
+    const engineGen = state.seqEngineGeneration;
+    const now = state.audioContext.currentTime;
+
+    for (let k = 0; k < hits; k++) {
+        const hitStart = startTime + k * subDur;
+        const hitDur = hits === 1
+            ? stepDuration * (overlapForSlide ? 1.1 : gateLen)
+            : subDur * gateLen;
+        setTimeout(() => {
+            if (!seqMidiStillValid(playGen, engineGen) || !state.selectedMidiOutput) return;
+            const onMain = ch === midiChannelNibble();
+            const lastCents = onMain ? state.lastSentBendCents : berlinLaneBendCents[ch];
+            if (k === 0 && fineCents !== lastCents) {
+                const bend = midiPitchBendValue(fineCents, bendRange);
+                state.selectedMidiOutput.send([0xE0 | ch, bend & 0x7F, bend >> 7]);
+                if (onMain) state.lastSentBendCents = fineCents;
+                else berlinLaneBendCents[ch] = fineCents;
+            }
+            state.selectedMidiOutput.send([0x90 | ch, note, accentThisStep ? 127 : 100]);
+        }, Math.max(0, (hitStart - now) * 1000));
+        setTimeout(() => {
+            if (!seqMidiStillValid(playGen, engineGen) || !state.selectedMidiOutput) return;
+            state.selectedMidiOutput.send([0x80 | ch, note, 0]);
+        }, Math.max(0, (hitStart + hitDur - now) * 1000));
+    }
 }
 
 function seqMidiStillValid(playGen, engineGen) {
@@ -2443,6 +2526,10 @@ function triggerBerlinOscLane(row, pattern, startTime, stepDuration, data, playh
         && !!state.osc4Wavetable
         && DRUM_ENGINES.has(state.osc4Model);
 
+    sendBerlinLaneMidi({
+        row, data, nextPitch, startTime, stepDuration, hits, gateLen, slideOut, accentThisStep,
+    });
+
     armBerlinSharedAmpPath(startTime);
     silenceMainPhaseResetOscs(startTime);
 
@@ -3172,6 +3259,11 @@ function upcomingNormalCycleStart(stepIndex) {
     ).isCycleStart;
 }
 
+function swingArgs(startTime, stepDuration, pattern) {
+    const sw = swingSpan(startTime, stepDuration, parseInt(pattern?.division, 10) || 8);
+    return [sw.start, sw.dur];
+}
+
 function scheduleDrumLanesUntil(until) {
     const ctx = state.audioContext;
     if (!ctx) return;
@@ -3201,7 +3293,7 @@ function scheduleDrumLanesUntil(until) {
                 }
                 let spins = 0;
                 while (playhead.nextStepTime < limit && spins++ < 64) {
-                    fireDrumLane(lane, pattern, playhead, playhead.nextStepTime, stepDuration);
+                    fireDrumLane(lane, pattern, playhead, ...swingArgs(playhead.nextStepTime, stepDuration, pattern));
                     advanceDrumPlayhead(lane);
                     playhead.nextStepTime += stepDuration;
                 }
@@ -3229,7 +3321,7 @@ function scheduleDrumLanesUntil(until) {
         if (playhead.nextStepTime < ctx.currentTime - 1) playhead.nextStepTime = ctx.currentTime;
         let guard = 0;
         while (playhead.nextStepTime < limit && guard++ < 64) {
-            fireDrumLane(lane, pattern, playhead, playhead.nextStepTime, stepDuration);
+            fireDrumLane(lane, pattern, playhead, ...swingArgs(playhead.nextStepTime, stepDuration, pattern));
             advanceDrumPlayhead(lane);
             playhead.nextStepTime += stepDuration;
         }
@@ -3276,7 +3368,7 @@ function scheduleBerlinSteps() {
                         if (state.songPlaying && songConductor?.preparePitch) {
                             songConductor.preparePitch(playhead.nextStepTime);
                         }
-                        fireBerlinRow(row, pattern, playhead, playhead.nextStepTime, stepDuration, row === kbRow);
+                        fireBerlinRow(row, pattern, playhead, ...swingArgs(playhead.nextStepTime, stepDuration, pattern), row === kbRow);
                     } catch (_) { /* keep Berlin clock alive */ }
                 } else {
                     scheduleBerlinHighlight(row, playhead.currentStep, playhead.nextStepTime, false);
@@ -3968,6 +4060,13 @@ function playStep(step, startTime, stepDuration, scheduled) {
 
     let playIndex = step;
     let refreshSnap = !scheduled;
+    // stepDuration arrives swung. A cycle start re-reads it in case a queued pattern
+    // changed the division; keep the swung length unless the grid length really changed.
+    const gridDuration = currentStepDuration();
+    const reread = () => {
+        const d = currentStepDuration();
+        return Math.abs(d - gridDuration) < 1e-9 ? stepDuration : d;
+    };
     if (state.isPlaying && state.songPlaying && songConductor) {
         songSilenceAdvance = null;
         const cue = songConductor.onSynthStep(startTime);
@@ -3982,7 +4081,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
             state.currentStep = cue.stepIndex;
             state.cyclePass = cue.cyclePass;
             state.cycleFirstPass = cue.cycleFirstPass;
-            stepDuration = currentStepDuration();
+            stepDuration = reread();
             refreshSnap = true;
         }
     }
@@ -4007,7 +4106,7 @@ function playStep(step, startTime, stepDuration, scheduled) {
                 const n = patternStepCount(pattern);
                 playIndex = pattern.reverse ? n - 1 : 0;
                 state.currentStep = playIndex;
-                stepDuration = currentStepDuration();
+                stepDuration = reread();
                 refreshSnap = true;
             }
             const shown = patternRepeat(getPattern(state.editSlot));

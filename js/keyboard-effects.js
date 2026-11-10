@@ -3,7 +3,7 @@
 // (same keys as acid / Multitudes). Compressor / sidechain live on the mixer strip.
 
 import { state } from './state.js?v=120';
-import { bindKnob, formatRangeValue } from './knobs.js?v=189';
+import { bindKnob, formatRangeValue } from './knobs.js?v=191';
 import {
     elementFor,
     get,

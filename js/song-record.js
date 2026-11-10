@@ -4,8 +4,8 @@
 import { state } from './state.js?v=120';
 import { getNumber } from './params.js?v=44';
 import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=456';
-import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=30';
-import { BAR_TICKS, applyTake, visibleClips } from './song-model.js?v=10';
+import { setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=32';
+import { BAR_TICKS, applyTake, visibleClips } from './song-model.js?v=12';
 import { setLiveNoteHooks } from './voice.js?v=191';
 import { setPolyLiveHook } from './poly-voice.js?v=200';
 

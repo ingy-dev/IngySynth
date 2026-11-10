@@ -11,7 +11,7 @@
 // Notes that only touch (end = next start) do not slide.
 // A note held over the range start plays from the first step.
 
-import { chordFromCellNotes } from './pattern-bank.js?v=50';
+import { chordFromCellNotes } from './pattern-bank.js?v=51';
 
 const BAR_TICKS = 3840;
 const STEP_SLOTS = 32;

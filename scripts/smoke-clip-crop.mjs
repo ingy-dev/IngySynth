@@ -3,7 +3,7 @@
  * A trimmed pattern clip dropped on a square lands as only the steps it plays.
  * Run: node scripts/smoke-clip-crop.mjs
  */
-import { invertClip, reverseClip, applyTake, playOrderData, createSong, placeClip, trimClipStart, resizeClip, trimmedClipData, clipIsTrimmed, retargetClip, clipCycleTicks, undo } from '../js/song-model.js';
+import { transposeClip, clipTransposeRoom, invertClip, reverseClip, applyTake, playOrderData, createSong, placeClip, trimClipStart, resizeClip, trimmedClipData, clipIsTrimmed, retargetClip, clipCycleTicks, undo } from '../js/song-model.js';
 const st=(tune,on=true,slide=false)=>({tune,fine:0,on,accent:false,slide,ratch:1,chord:[]});
 const pad=(a)=>a.concat(Array.from({length:32-a.length},()=>st(0,false)));
 const show=(l)=>l.steps.slice(0,l.stepCount).map(s=>s.on?`${s.tune}${s.slide?'~':''}`:'.').join(' ');
@@ -157,6 +157,51 @@ const mk=(spec)=>{const song=createSong(); const r=placeClip(song,spec); const c
   invertClip(song,song.synth.clips[0].id);
   eq('notes: mirrored about the range, time unchanged',
      song.synth.clips[0].notes.map(x=>`${x.semi}@${x.startTick}${x.fine?`f${x.fine}`:''}`).join(' '), '2@0 -5@480f-25 7@960');
+}
+// transpose
+{
+  const steps=[st(0,true,true),st(7),{...st(3),chord:[4,7]},st(5,false),st(0,false)];
+  const data={steps:pad(steps),stepCount:5,division:16,reverse:false,gate:.9,repeat:1,enabled:true};
+  const {song,clip}=mk({track:'synth',kind:'n',source:0,startTick:0,data,copiedHash:'h'});
+  eq('n: room is counted from the chord top and the lowest note', JSON.stringify(clipTransposeRoom(song,clip.id)), '{"down":39,"up":38}');
+  transposeClip(song,clip.id,12);
+  let now=song.synth.clips[0];
+  eq('n: every note up an octave, slides and chord shape stay', `${show(now.data)} ${now.data.steps[2].chord.join(',')}`, '12~ 19 15 . . 4,7');
+  eq('n: an off step holding a note moves, an empty rest stays, edited', `${now.data.steps[3].tune} ${now.data.steps[4].tune} ${now.edited}`, '17 0 true');
+  eq('n: a move off the top of the keyboard does nothing', transposeClip(song,now.id,27), null);
+  eq('n: the last move that fits still goes', !!transposeClip(song,now.id,26), true);
+  eq('n: chord top sits on the highest key', song.synth.clips[0].data.steps[2].tune+7, 48);
+  undo(song); undo(song);
+  eq('n: undo puts it back', show(song.synth.clips[0].data), '0~ 7 3 . .');
+  eq('n: zero is no move', transposeClip(song,song.synth.clips[0].id,0), null);
+}
+{
+  const lane=(tunes)=>({steps:pad(tunes.map(t=>st(t))),stepCount:tunes.length,division:16,reverse:false,gate:.9,enabled:true});
+  const d=mk({track:'drums',kind:'d',source:0,startTick:0,data:{lanes:[lane([0,5]),lane([0]),lane([0]),lane([0])]},copiedHash:'h'});
+  eq('drums have no pitch to transpose', transposeClip(d.song,d.clip.id,1), null);
+  const lanes=[lane([0,4]),lane([7,12]),lane([0]),lane([0]),lane([3,9]),lane([0]),lane([0]),lane([0])];
+  const {song,clip}=mk({track:'synth',kind:'b',source:0,startTick:0,data:{lanes,oscCount:2,modCount:1,repeat:1},copiedHash:'h'});
+  transposeClip(song,clip.id,-1,{lane:1});
+  let now=song.synth.clips[0].data.lanes;
+  eq('b: one lane moves alone', `${show(now[0])} | ${show(now[1])} | ${show(now[4])}`, '0 4 | 6 11 | 3 9');
+  transposeClip(song,clip.id,2,{lane:4});
+  eq('b: a mod lane moves when it is the lane picked', show(song.synth.clips[0].data.lanes[4]), '5 11');
+  transposeClip(song,clip.id,12);
+  now=song.synth.clips[0].data.lanes;
+  eq('b: no lane picked moves the oscillator lanes only', `${show(now[0])} | ${show(now[1])} | ${show(now[4])}`, '12 16 | 18 23 | 5 11');
+}
+{
+  const song=createSong();
+  const n=(semi,startTick,durTick,fine=0)=>({semi,fine,startTick,durTick,vel:.8,legato:false});
+  applyTake(song,{transpose:[],regions:[{startTick:0,lengthTick:1920,notes:[n(0,0,480),n(7,480,240,25),n(-5,960,240)]}]});
+  const clip=song.synth.clips[0];
+  const line=()=>song.synth.clips[0].notes.map(x=>`${x.semi}@${x.startTick}${x.fine?`f${x.fine}`:''}`).join(' ');
+  transposeClip(song,clip.id,-12);
+  eq('notes: all down an octave, time and fine unchanged', line(), '-12@0 -5@480f25 -17@960');
+  transposeClip(song,clip.id,5,{notes:new Set([song.synth.clips[0].notes[1]])});
+  eq('notes: only the picked note moves', line(), '-12@0 0@480f25 -17@960');
+  eq('notes: room follows the picked notes', JSON.stringify(clipTransposeRoom(song,clip.id,{notes:[song.synth.clips[0].notes[2]]})), '{"down":22,"up":65}');
+  eq('notes: too far down does nothing', transposeClip(song,clip.id,-23), null);
 }
 console.log(fails ? `${fails} FAILED` : 'all passed');
 process.exit(fails ? 1 : 0);

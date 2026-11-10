@@ -24,15 +24,17 @@ import {
     selectBerlinSlot,
     selectSlot,
     setDrumSlot,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 import {
     BAR_TICKS,
+    LANE_TRACKS,
     PPQ,
     buildCues,
     clipAt,
+    splitBerlinClips,
     setPlayhead,
     wrapTick,
-} from './song-model.js?v=10';
+} from './song-model.js?v=12';
 
 const SIXTEENTH = 240;
 const DIVS = new Set([2, 3, 4, 6, 8, 12, 16, 24, 48]);
@@ -45,8 +47,12 @@ let saved = null;
 let activeSynthId = null;
 /** Clip id currently loaded in the drum scratch, or 'silence'. */
 let activeDrumKey = null;
-/** Clip id currently loaded in the Berlin scratch, or 'silence'. */
-let activeBerlinKey = null;
+/**
+ * Berlin oscillator rows (song-model.js LANE_TRACKS): the clip id each row O1..O4 is
+ * playing, or 'silence', and the clip the mod lanes come from. Null = not set yet.
+ */
+let berlinRowKeys = [null, null, null, null];
+let berlinModKey = null;
 let berlinSilent = false;
 let rearmSynth = false;
 let lastDrumArrived = null;
@@ -457,7 +463,8 @@ function finishSong() {
     }
     activeSynthId = null;
     activeDrumKey = null;
-    activeBerlinKey = null;
+    berlinRowKeys = [null, null, null, null];
+    berlinModKey = null;
     berlinSilent = false;
     rearmSynth = false;
     lastDrumArrived = null;
@@ -467,19 +474,6 @@ function finishSong() {
     if (hasReturn && state.song) {
         setPlayhead(state.song, Math.max(0, returnTick || 0));
         publishPlayhead();
-    }
-}
-
-function muteBerlinScratch() {
-    for (let i = 0; i < PATTERN_COUNT; i++) {
-        getBerlinLane(i, SONG_SLOT).enabled = false;
-    }
-}
-
-function applyBerlinMask(mask) {
-    if (!mask) return;
-    for (let i = 0; i < PATTERN_COUNT; i++) {
-        if (mask[i] === false) getBerlinLane(i, SONG_SLOT).enabled = false;
     }
 }
 
@@ -493,9 +487,10 @@ function applyDrumMask(mask) {
     }
 }
 
-function positionBerlin(clip, tick) {
+// Where a Berlin clip's lanes stand at `tick`: how far into the pattern's current pass
+// (its longest lane, times repeat), and which pass that is.
+function berlinClipPhase(clip, tick) {
     const lanes = Array.isArray(clip.data?.lanes) ? clip.data.lanes : [];
-    const mask = clip.laneMask;
     const oscCount = clampInt(clip.data?.oscCount, 1, 4, 3);
     const modCount = clampInt(clip.data?.modCount, 1, 4, 1);
     const rows = [];
@@ -504,7 +499,7 @@ function positionBerlin(clip, tick) {
     let master = 0;
     for (const i of rows) {
         const lane = lanes[i];
-        if (!lane) continue;
+        if (!lane || lane.enabled === false) continue;
         const n = clampInt(lane.stepCount, 1, 32, 8);
         master = Math.max(master, n * (BAR_TICKS / normDiv(lane.division)));
     }
@@ -514,23 +509,27 @@ function positionBerlin(clip, tick) {
     const cycle = master * repeat;
     const intoCycle = cycle > 0 ? into % cycle : 0;
     const pass = Math.min(repeat - 1, Math.floor(intoCycle / master));
-    const intoMaster = intoCycle - pass * master;
-    state.berlinCyclePass = pass;
-    state.berlinCycleFirstPass = false;
-    for (let i = 0; i < PATTERN_COUNT; i++) {
-        const lane = lanes[i];
-        const ph = state.berlinPlayheads?.[i];
-        if (!lane || !ph) continue;
-        if (mask && mask[i] === false) continue;
-        const n = clampInt(lane.stepCount, 1, 32, 8);
-        const stepTicks = BAR_TICKS / normDiv(lane.division);
-        const passTicks = Math.max(1, n * stepTicks);
-        const laneInto = intoMaster % passTicks;
-        let forward = Math.floor(laneInto / stepTicks);
-        if (forward >= n) forward = n - 1;
-        if (forward < 0) forward = 0;
-        ph.currentStep = lane.reverse ? (n - 1 - forward) : forward;
-    }
+    return { intoMaster: intoCycle - pass * master, pass };
+}
+
+// One lane's playhead set where it would be had its clip played from its start, due at
+// `audioTime`. Only this lane: the other rows keep running where they are.
+function placeBerlinLane(row, clip, tick, audioTime) {
+    const lane = clip.data?.lanes?.[row];
+    const ph = state.berlinPlayheads?.[row];
+    if (!lane || !ph) return;
+    const n = clampInt(lane.stepCount, 1, 32, 8);
+    const stepTicks = BAR_TICKS / normDiv(lane.division);
+    const passTicks = Math.max(1, n * stepTicks);
+    const laneInto = berlinClipPhase(clip, tick).intoMaster % passTicks;
+    let forward = Math.floor(laneInto / stepTicks);
+    if (forward >= n) forward = n - 1;
+    if (forward < 0) forward = 0;
+    ph.currentStep = lane.reverse ? (n - 1 - forward) : forward;
+    ph.nextStepTime = audioTime;
+    ph.sounded = false;
+    ph.prevSlide = false;
+    ph.prevGliss = false;
 }
 
 function positionDrum(clip, tick) {
@@ -576,35 +575,67 @@ function armDrumsAt(audioTime) {
     applyDrumCue(clip, audioTime, true);
 }
 
-function applyBerlinClip(clip, audioTime, force) {
-    if (!clip) {
-        if (berlinSilent && activeBerlinKey === 'silence' && !force) {
-            return { silent: true, armed: false };
-        }
-        muteBerlinScratch();
-        berlinSilent = true;
-        activeBerlinKey = 'silence';
-        selectBerlinSlot(SONG_SLOT, { followDrums: false, startTime: audioTime });
-        applySongAutomation(null);
-        return { silent: true, armed: true };
+/**
+ * Berlin oscillator rows. Each row O1..O4 plays its own lane of the clip under the
+ * playhead in that row, from that clip's own start, so rows begin, end and move apart
+ * freely. The mod lanes (M1-M4) stay with their pattern: they come from the first row,
+ * O1 down, that has a clip here, and so does the automation. The song scratch holds the
+ * result: lane r from row r's clip, switched off where a row has none.
+ * Only a row whose clip changed has its playhead moved; `force` (a start, or the song
+ * loop wrapping) sets them all.
+ */
+function applyBerlinRows(audioTime, force) {
+    const tick = tickAt(audioTime);
+    const clips = LANE_TRACKS.map((track) => {
+        const cue = cueAtTick(track, tick);
+        return cue?.clip?.kind === 'b' ? cue.clip : null;
+    });
+    const keys = clips.map((clip) => (clip ? clip.id : 'silence'));
+    const owner = clips.findIndex(Boolean);
+    const modKey = owner >= 0 ? clips[owner].id : 'silence';
+    const rowChanged = keys.map((key, row) => force || key !== berlinRowKeys[row]);
+    const modChanged = force || modKey !== berlinModKey;
+    const silent = owner < 0;
+    if (!modChanged && !rowChanged.some(Boolean)) {
+        return { silent, armed: false, same: true };
     }
-    if (!force && clip.id === activeBerlinKey) {
-        return { silent: false, armed: false, same: true };
-    }
-    loadSongSlot('b', clip.data);
-    applyBerlinMask(clip.laneMask);
-    berlinSilent = false;
-    activeBerlinKey = clip.id;
-    selectBerlinSlot(SONG_SLOT, { followDrums: false, startTime: audioTime });
-    positionBerlin(clip, tickAt(audioTime));
-    applySongAutomation(clip.automation);
-    notifyAutomationLoopAnchor(audioTime);
-    return { silent: false, armed: true };
-}
 
-function berlinClipAt(audioTime) {
-    const cue = cueAtTick('synth', tickAt(audioTime));
-    return cue?.clip?.kind === 'b' ? cue.clip : null;
+    const off = (row) => ({ ...getBerlinLane(row, SONG_SLOT), enabled: false });
+    const lanes = [];
+    for (let row = 0; row < 4; row++) {
+        const lane = clips[row]?.data?.lanes?.[row];
+        lanes.push(lane ? { ...lane, enabled: lane.enabled !== false } : off(row));
+    }
+    const modClip = owner >= 0 ? clips[owner] : null;
+    const modCount = clampInt(modClip?.data?.modCount, 1, 4, 1);
+    for (let m = 0; m < 4; m++) {
+        const row = 4 + m;
+        const lane = modClip?.data?.lanes?.[row];
+        const on = !!lane && m < modCount && lane.enabled !== false && modClip.laneMask?.[row] !== false;
+        lanes.push(lane ? { ...lane, enabled: on } : off(row));
+    }
+    loadSongSlot('b', { lanes, oscCount: 4, modCount: 4, repeat: 1 });
+
+    if (force || state.berlinSlot !== SONG_SLOT) {
+        // Selecting the scratch puts every lane back on `audioTime`; rows are then placed below.
+        selectBerlinSlot(SONG_SLOT, { followDrums: false, startTime: audioTime });
+    }
+    for (let row = 0; row < 4; row++) {
+        if (rowChanged[row] && clips[row]) placeBerlinLane(row, clips[row], tick, audioTime);
+    }
+    if (modChanged && modClip) {
+        for (let row = 4; row < PATTERN_COUNT; row++) placeBerlinLane(row, modClip, tick, audioTime);
+        state.berlinCyclePass = berlinClipPhase(modClip, tick).pass;
+        state.berlinCycleFirstPass = false;
+    }
+    if (modChanged) {
+        applySongAutomation(modClip ? modClip.automation : null);
+        if (modClip) notifyAutomationLoopAnchor(audioTime);
+    }
+    berlinRowKeys = keys;
+    berlinModKey = modKey;
+    berlinSilent = silent;
+    return { silent, armed: true };
 }
 
 function startRaf() {
@@ -640,6 +671,8 @@ function begin(audioTime, opts = {}) {
         hasSavedTranspose = true;
     }
     scheduledNotes.clear();
+    // A song from before the oscillator rows keeps its Berlin clips on the synth track.
+    splitBerlinClips(state.song);
     const tps = ticksPerSecondNow();
     const insert = Math.max(0, Math.round(Number(state.song.playheadTick) || 0));
     let tick = useContinue ? Math.max(0, Math.round(continueTick)) : insert;
@@ -649,7 +682,8 @@ function begin(audioTime, opts = {}) {
     anchors = [{ tick, audioTime, tps }];
     activeSynthId = null;
     activeDrumKey = null;
-    activeBerlinKey = null;
+    berlinRowKeys = [null, null, null, null];
+    berlinModKey = null;
     berlinSilent = false;
     rearmSynth = false;
     lastDrumArrived = null;
@@ -774,13 +808,16 @@ function nextNormalAdvanceCap(audioTime) {
     return Math.min(cueCap, stepCap);
 }
 
+// The next time the synth has to change clip. In Berlin that is the next clip edge in any
+// oscillator row.
 function nextSynthCapFrom(audioTime) {
-    return nextCueCap('synth', audioTime);
+    if (!state.berlinMode) return nextCueCap('synth', audioTime);
+    return Math.min(...LANE_TRACKS.map((track) => nextCueCap(track, audioTime)));
 }
 
 function armBerlin(audioTime) {
     if (!anchors.length) return { silent: true, armed: false };
-    return applyBerlinClip(berlinClipAt(audioTime), audioTime, true);
+    return applyBerlinRows(audioTime, true);
 }
 
 function onBerlinBoundary(audioTime) {
@@ -798,7 +835,7 @@ function onBerlinBoundary(audioTime) {
     } else if (isLoopAnchorTime(audioTime)) {
         force = true;
     }
-    return applyBerlinClip(berlinClipAt(time), time, force);
+    return applyBerlinRows(time, force);
 }
 
 function nextDrumCapFrom(audioTime) {

@@ -264,10 +264,14 @@ Like `mix`, v1 codecs keep the `arrangement` **object verbatim**: no defaults, c
   "v": 1,
   "synth": { "clips": [ ... ] },
   "drums": { "clips": [ ... ] },
+  "lanes": [ { "clips": [ ... ] }, { "clips": [ ... ] }, { "clips": [ ... ] }, { "clips": [ ... ] } ],
   "transpose": [ { "tick": 0, "semi": 0 } ],
   "loop": { "on": false, "startTick": 0, "endTick": 0 }
 }
 ```
+
+`lanes` is optional and written only when it holds a clip: the four Berlin oscillator rows, O1 first, each a
+track of its own (`o1`..`o4`).
 
 Ticks are 960 per quarter note; a bar is 3840. Each track's `clips` is a stack, bottom first: clips may
 overlap and a later clip covers an earlier one where they overlap. Every clip has `id`, `kind`, `startTick`,
@@ -276,7 +280,8 @@ overlap and a later clip covers an earlier one where they overlap. Every clip ha
 | `kind` | Track | Extra keys |
 |---|---|---|
 | `n` | `synth` | `source` (P slot 0-7), `data` (a pattern, same shape as a `pattern.slots` entry), `automation`, `edited`, `copiedHash`, `keptHash` |
-| `b` | `synth` | as `n`, with `data` a Berlin pattern and `laneMask` (8 booleans, `false` = lane muted) |
+| `b` | `synth` | as `n`, with `data` a Berlin pattern and `laneMask` (8 booleans, `false` = lane muted). Files from before the oscillator rows only: on load each becomes one row clip per oscillator the pattern uses |
+| `b` | `lanes[row]` | an oscillator row clip: as above, plus `row` (0-3, the same as its place in `lanes`) and optional `mute`. It plays only lane `row` of `data`; the pattern's mod lanes play from the first row, O1 down, that has a clip at that moment. `laneMask` only matters for the mod lanes (indexes 4-7) |
 | `d` | `drums` | as `n`, with `data.lanes` the 4 drum lanes and `laneMask` (4 booleans) |
 | `notes` | `synth` | `notes`: `{ startTick, durTick, semi, fine, velocity, legato }`, `startTick` relative to the clip's pattern start, `semi` from C4, `fine` in cents, `velocity` 0-1; optional `name` (an imported MIDI file's name) |
 

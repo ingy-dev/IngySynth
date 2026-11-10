@@ -23,7 +23,7 @@ import {
     syncPatternClipboardUi,
     ensureBerlinDrumKit,
     SONG_SLOT,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 import {
     BERLIN_COLORS,
     berlinStepDisplayValue,
@@ -31,7 +31,7 @@ import {
     setDrumMode,
     setBerlinDrumFilt,
     setDrumLanesHidden,
-} from './berlin.js?v=123';
+} from './berlin.js?v=124';
 import { nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { toggleDrumMute, toggleDrumSolo } from './mixer.js?v=64';
 

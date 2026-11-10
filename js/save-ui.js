@@ -1,4 +1,4 @@
-import { captureProject, applyDoc } from './save-capture.js?v=22';
+import { captureProject, applyDoc } from './save-capture.js?v=23';
 import {
     LIBRARY_CAPS,
     SESSION_KEY,

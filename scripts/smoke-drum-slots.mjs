@@ -331,7 +331,7 @@ console.log('song scratch');
     const berlinScratch = getBerlinPattern(SONG_SLOT);
     ok('song Berlin scratch is not P8', berlinScratch !== state.berlinBank[7]
         && berlinScratch.lanes.length === 8
-        && berlinScratch.oscCount === 3
+        && berlinScratch.oscCount === 4
         && berlinScratch.modCount === 1
         && berlinScratch.repeat === 1);
     ok('getBerlinLane reads the song scratch', getBerlinLane(3, SONG_SLOT) === berlinScratch.lanes[3]);

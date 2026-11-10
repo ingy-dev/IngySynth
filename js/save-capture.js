@@ -21,15 +21,15 @@ import {
     snapshotSynthSlot,
     writeDrumSlot,
     writeSynthSlot,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=102';
 import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=46';
 import { setPolyMode } from './poly-voice.js?v=200';
 import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=89';
 import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=157';
-import { setBerlinMode } from './berlin.js?v=123';
+import { setBerlinMode } from './berlin.js?v=124';
 import { applyChordMemoryIntervals } from './chord-memory.js?v=46';
-import { arrangementToSong, songToArrangement } from './song-save.js?v=1';
+import { arrangementToSong, songToArrangement } from './song-save.js?v=2';
 const ALL_PARAMS = { ...PARAMS, ...BAREMETAL_PARAMS };
 const TOP_DOC_KEYS = new Set([
     'format', 'version', 'kind', 'name', 'by',
@@ -323,7 +323,7 @@ function applyPatternSection(pattern, { whilePlaying = false } = {}) {
     const berlin = pattern.berlin || {};
     // Before setBerlinMode: its first open would copy P1-P8 over the loaded O1 lanes.
     if (berlin.seeded) markBerlinO1Seeded(true);
-    if (berlin.enabled !== undefined) setBerlinMode(!!berlin.enabled);
+    if (berlin.enabled !== undefined) setBerlinMode(!!berlin.enabled, { fromDocument: true });
     for (let i = 0; i < BANK_COUNT; i++) {
         const bSlot = berlin.slots?.[i];
         if (bSlot) writeSynthSlot('b', i, bSlot, pattern.automation?.[`b${i}`]);

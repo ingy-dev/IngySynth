@@ -38,7 +38,7 @@ import {
     freezeArpChordSession,
     getChordArpSourceNotes,
 } from './held-notes.js?v=13';
-import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=50';
+import { getLiveStep, stepCellNotes } from './pattern-bank.js?v=51';
 import { get, getNumber, getString, set as setParam, subscribe } from './params.js?v=44';
 import {
     toggleChordMemoryLearn,

@@ -11,7 +11,7 @@ import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=33';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=123';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=124';
 import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=44';
 import { PARAMS, clampToCatalog, getParam } from './param-catalog.js?v=13';
 import { midiControlId } from './midi-learn.js?v=35';
@@ -21,7 +21,7 @@ import {
     getBerlinPattern,
     patternRepeat,
     setPatternAutomationBridge,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 
 const PITCH_BEND_KEY = 'pitchBend';
 /** Samples per loop — continuous enough for filter rides, cheap to store. */

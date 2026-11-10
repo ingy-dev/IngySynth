@@ -2,20 +2,20 @@
 // markEdited runs once per gesture, before the mutation.
 
 import { state } from './state.js?v=120';
-import { markEdited, reverseClip, invertClip, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks } from './song-model.js?v=10';
+import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks } from './song-model.js?v=12';
 import {
     POLY_CHORD_MAX,
     chordFromCellNotes,
     clampChord,
     cloneStep,
     stepCellNotes,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 import { nextRatch } from './step-ratch.js?v=1';
 import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './tuning.js?v=108';
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
-import { placeArrangementInsert } from './song-conductor.js?v=30';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=50';
+import { placeArrangementInsert } from './song-conductor.js?v=32';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=52';
 import { createIngyWindow } from './ingy-window.js?v=3';
 import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=276';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
@@ -53,6 +53,9 @@ let foldBtn;
 let scaleBtn;
 let monoBtn;
 let polyBtn;
+let transposeEl;
+// Up / Down transpose only while the roll was the last thing pressed.
+let rollActive = false;
 // Note entry: Mono writes one note per step, Poly stacks a chord. It arms to the
 // loaded synth (Ingy 6 / Multitudes are poly) and the user can flip it; either way
 // existing chords (recorded MIDI dropped on a P square) stay as they are.
@@ -117,6 +120,13 @@ export function initArrangeRoll() {
                 <button type="button" id="arrangeRollFold" class="arrange-btn" aria-pressed="false" title="Show only rows that have notes">Fold</button>
                 <button type="button" id="arrangeRollReverse" class="arrange-btn" title="Play this clip's notes backwards">Reverse</button>
                 <button type="button" id="arrangeRollInvert" class="arrange-btn" title="Turn the melody upside down: high notes become low">Invert</button>
+                <div id="arrangeRollTranspose" class="arrange-roll-transpose" role="group" aria-label="Transpose">
+                    <span class="arrange-roll-transpose-label" aria-hidden="true">Transpose</span>
+                    <button type="button" class="arrange-btn" data-transpose="-12" aria-label="Transpose down an octave" title="Down an octave (Shift + Down arrow)">-12</button>
+                    <button type="button" class="arrange-btn" data-transpose="-1" aria-label="Transpose down a semitone" title="Down a semitone (Down arrow)">-1</button>
+                    <button type="button" class="arrange-btn" data-transpose="1" aria-label="Transpose up a semitone" title="Up a semitone (Up arrow)">+1</button>
+                    <button type="button" class="arrange-btn" data-transpose="12" aria-label="Transpose up an octave" title="Up an octave (Shift + Up arrow)">+12</button>
+                </div>
                 <button type="button" id="arrangeRollScale" class="arrange-btn" aria-pressed="false" title="Show only the project scale's notes" hidden>Scale</button>
                 <button type="button" id="arrangeRollMono" class="arrange-btn" aria-pressed="false" title="Mono: one note per step. A click writes or deletes one note" hidden>Mono</button>
                 <button type="button" id="arrangeRollPoly" class="arrange-btn" aria-pressed="false" title="Poly: stack up to six notes per step" hidden>Poly</button>
@@ -164,6 +174,7 @@ export function initArrangeRoll() {
     scaleBtn = roll.querySelector('#arrangeRollScale');
     monoBtn = roll.querySelector('#arrangeRollMono');
     polyBtn = roll.querySelector('#arrangeRollPoly');
+    transposeEl = roll.querySelector('#arrangeRollTranspose');
 
     // Same buttons as the arrange transport. Play first moves the insert marker to
     // the open clip's start (opening the clip by double-tap leaves it where you
@@ -189,6 +200,13 @@ export function initArrangeRoll() {
     roll.querySelector('#arrangeRollInvert').addEventListener('click', () => {
         if (openId != null && invertClip(state.song, openId)) refreshArrange();
     });
+    transposeEl.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-transpose]');
+        if (button) transposeOpenClip(Number(button.dataset.transpose));
+    });
+    document.addEventListener('pointerdown', (event) => {
+        rollActive = event.target instanceof Node && win.el.contains(event.target);
+    }, true);
     scaleBtn.addEventListener('click', () => {
         scaleView = !scaleView;
         if (openId != null) render({ jump: true });
@@ -244,9 +262,19 @@ export function initArrangeRoll() {
 
 function onRollKey(event) {
     if (openId == null) return;
-    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
     const el = event.target instanceof Element ? event.target : null;
     if (el?.closest('input, textarea, [contenteditable="true"]')) return;
+    const clip = findClip(openId);
+    if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        // Write mode and focused knobs, sliders and tabs keep their arrows.
+        if (!rollActive || state.keyboardWrite || clip?.kind === 'd') return;
+        if (el?.closest('select, [role="slider"], [role="spinbutton"], [role="tab"], [role="radio"], [role="listbox"], [role="menu"]')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        transposeOpenClip((event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 12 : 1));
+        return;
+    }
+    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
     event.preventDefault();
     event.stopPropagation();
 }
@@ -255,7 +283,8 @@ function openArrangeRoll(id) {
     const clip = findClip(id);
     if (!clip || !roll) return;
     if (openId !== id) {
-        laneIndex = 0;
+        // An oscillator row clip opens on the lane it plays.
+        laneIndex = clip.kind === 'b' && Number.isInteger(clip.row) ? clip.row : 0;
         selectedCol = 0;
     }
     const wasOpen = openId != null;
@@ -268,6 +297,7 @@ function openArrangeRoll(id) {
     if (!wasOpen && !loopClipId) engageLoopClip(clip);
     else if (loopClipId && loopClipId !== id) applyLoopClip(clip);
     win.open();
+    rollActive = true;
     syncTransport();
     render({ jump: true });
     // A freshly shown window can settle its height a frame later; centre on the notes again then.
@@ -279,9 +309,7 @@ function openArrangeRoll(id) {
 function findClip(id) {
     const song = state.song;
     if (!song || !id) return null;
-    return song.synth.clips.find((clip) => clip.id === id)
-        || song.drums.clips.find((clip) => clip.id === id)
-        || null;
+    return findClipById(song, id);
 }
 
 function clampCount(n) {
@@ -361,7 +389,10 @@ function paintLanes(clip) {
     lanesEl.hidden = !show;
     lanesEl.replaceChildren();
     if (!show) return;
+    // A row clip plays one oscillator: its other oscillators are not offered, its mod lanes are.
+    const own = Number.isInteger(clip.row) ? clip.row : null;
     LANE_NAMES.forEach((name, index) => {
+        if (own != null && index < 4 && index !== own) return;
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'arrange-roll-tab';
@@ -545,11 +576,50 @@ function syncFoldBtn(clip) {
     const scaleOn = pitched && !!scaleDegrees();
     foldBtn.hidden = !pitched;
     roll.querySelector('#arrangeRollInvert').hidden = clip?.kind === 'd';
+    syncTransposeBtns(clip);
     foldBtn.classList.toggle('is-on', foldNotes);
     foldBtn.setAttribute('aria-pressed', foldNotes ? 'true' : 'false');
     scaleBtn.hidden = !scaleOn;
     scaleBtn.classList.toggle('is-on', scaleOn && scaleView);
     scaleBtn.setAttribute('aria-pressed', scaleOn && scaleView ? 'true' : 'false');
+}
+
+// What the transpose buttons move: the lane shown for Berlin, the whole clip otherwise.
+function transposeOptions(clip) {
+    return clip?.kind === 'b' ? { lane: laneIndex } : {};
+}
+
+// A button is off when its move would push a note off the keyboard.
+function syncTransposeBtns(clip) {
+    if (!transposeEl) return;
+    transposeEl.hidden = !clip || clip.kind === 'd';
+    if (transposeEl.hidden) return;
+    const room = clipTransposeRoom(state.song, clip.id, transposeOptions(clip));
+    for (const button of transposeEl.querySelectorAll('[data-transpose]')) {
+        const by = Number(button.dataset.transpose);
+        button.disabled = by > 0 ? by > room.up : -by > room.down;
+    }
+}
+
+function transposeOpenClip(semis) {
+    const clip = findClip(openId);
+    if (!clip || session || propPaint) return false;
+    if (!transposeClip(state.song, openId, semis, transposeOptions(clip))) return false;
+    refreshArrange();
+    const now = findClip(openId);
+    if (now) revealPitches(clipPitches(now));
+    return true;
+}
+
+// Scrolls only when the notes have left the view, so a small move reads as the notes moving.
+function revealPitches(pitches) {
+    if (!pitches.length || !scroller) return;
+    const fold = keysEl.classList.contains('is-fold');
+    const rowOf = (tune) => (fold ? Math.max(0, rowTunes.indexOf(tune)) : TUNE_HI - tune);
+    const top = rowOf(Math.max(...pitches)) * rowPx;
+    const bottom = (rowOf(Math.min(...pitches)) + 1) * rowPx;
+    const room = scroller.clientHeight - (headsEl.offsetHeight || 0) - (propsEl.hidden ? 0 : propsEl.offsetHeight);
+    if (top < scroller.scrollTop || bottom > scroller.scrollTop + room) scrollToPitches(pitches);
 }
 
 function synthIsPoly() {

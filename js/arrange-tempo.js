@@ -4,7 +4,7 @@
 
 import { state } from './state.js?v=120';
 import { getNumber, set, subscribe } from './params.js?v=44';
-import { songBeatsBetween } from './song-conductor.js?v=30';
+import { songBeatsBetween } from './song-conductor.js?v=32';
 
 const TEMPO_MIN = 20;
 const TEMPO_MAX = 240;

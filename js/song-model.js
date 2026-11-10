@@ -12,6 +12,12 @@
  * cutting it. Move it away (or delete it) and the clip underneath shows and plays
  * again. `visibleClips` gives the pieces that are actually heard and drawn; playback,
  * cues and the native player only ever see those.
+ *
+ * Berlin oscillator rows. Each oscillator lane (O1..O4) has its own track, `o1`..`o4`
+ * (`song.lanes[row].clips`). A Berlin pattern dropped on the timeline becomes one clip
+ * per oscillator it uses, each free to move, trim, mute or go on its own. A row clip is
+ * an ordinary Berlin clip (`kind: 'b'`, the whole pattern in `data`) with `row` saying
+ * which oscillator it plays, so it keeps its pattern's length and its mod lanes.
  */
 
 export const PPQ = 960;
@@ -65,16 +71,35 @@ function normalizeDivision(division) {
     return DIVISIONS.has(d) ? d : 8;
 }
 
-function trackClips(song, track) {
+/** Tracks of the Berlin oscillator rows, O1 first. */
+export const LANE_TRACKS = ['o1', 'o2', 'o3', 'o4'];
+const ALL_TRACKS = ['synth', ...LANE_TRACKS, 'drums'];
+
+/** 0..3 for an oscillator row track, -1 for any other track. */
+export function laneTrackRow(track) {
+    return LANE_TRACKS.indexOf(track);
+}
+
+// Songs made before the rows existed have no `lanes`: give them empty ones on first use.
+function laneClips(song, row) {
+    if (!Array.isArray(song.lanes)) song.lanes = [];
+    while (song.lanes.length < LANE_TRACKS.length) song.lanes.push({ clips: [] });
+    if (!Array.isArray(song.lanes[row].clips)) song.lanes[row].clips = [];
+    return song.lanes[row].clips;
+}
+
+/** A track's clip stack, bottom first (the live array). */
+export function trackClips(song, track) {
+    const row = laneTrackRow(track);
+    if (row >= 0) return laneClips(song, row);
     return track === 'synth' ? song.synth.clips : song.drums.clips;
 }
 
-function findClipById(song, id) {
-    for (const clip of song.synth.clips) {
-        if (clip.id === id) return clip;
-    }
-    for (const clip of song.drums.clips) {
-        if (clip.id === id) return clip;
+export function findClipById(song, id) {
+    for (const track of ALL_TRACKS) {
+        for (const clip of trackClips(song, track)) {
+            if (clip.id === id) return clip;
+        }
     }
     return null;
 }
@@ -156,6 +181,7 @@ function snapshotSong(song) {
     return {
         synth: { clips: deepClone(song.synth.clips) },
         drums: { clips: deepClone(song.drums.clips) },
+        lanes: LANE_TRACKS.map((track) => ({ clips: deepClone(trackClips(song, track)) })),
         transpose: deepClone(song.transpose),
         loop: deepClone(song.loop),
         playheadTick: song.playheadTick,
@@ -165,6 +191,7 @@ function snapshotSong(song) {
 function applySnapshot(song, snap) {
     song.synth.clips = deepClone(snap.synth.clips);
     song.drums.clips = deepClone(snap.drums.clips);
+    song.lanes = LANE_TRACKS.map((_, row) => ({ clips: deepClone(snap.lanes?.[row]?.clips || []) }));
     song.transpose = deepClone(snap.transpose);
     song.loop = deepClone(snap.loop);
     song.playheadTick = snap.playheadTick;
@@ -228,6 +255,7 @@ export function createSong() {
     return {
         synth: { clips: [] },
         drums: { clips: [] },
+        lanes: LANE_TRACKS.map(() => ({ clips: [] })),
         transpose: [],
         loop: { on: false, startTick: 0, endTick: 0 },
         playheadTick: 0,
@@ -580,6 +608,83 @@ export function invertClip(song, id) {
     return clip;
 }
 
+// The lowest and highest pitch a step or note can hold: the keyboard's span, which is
+// also the piano roll's rows.
+const PITCH_MIN = -39;
+const PITCH_MAX = 48;
+
+/** An off step still at the default rest is empty; any other step holds notes. */
+function holdsNotes(step) {
+    if (!step) return false;
+    if (step.on !== false) return true;
+    return Math.round(Number(step.tune) || 0) !== 0
+        || (Array.isArray(step.chord) && step.chord.length > 0)
+        || !!step.accent || !!step.slide
+        || Math.round(Number(step.ratch) || 1) > 1;
+}
+
+/**
+ * What a transpose moves, and the range those pitches span. `lane` picks one Berlin lane
+ * (default: every oscillator lane); `notes` picks notes of a notes clip (default: all).
+ * A step switched off but still holding notes moves with the rest.
+ */
+function transposeTargets(clip, { lane = null, notes = null } = {}) {
+    if (!clip || clip.kind === 'd') return null;
+    const out = { notes: [], steps: [], lo: Infinity, hi: -Infinity };
+    const span = (pitch) => {
+        out.lo = Math.min(out.lo, pitch);
+        out.hi = Math.max(out.hi, pitch);
+    };
+    if (clip.kind === 'notes') {
+        const picked = notes ? new Set(notes) : null;
+        for (const note of clip.notes || []) {
+            if (picked && !picked.has(note)) continue;
+            out.notes.push(note);
+            span(Math.round(Number(note.semi) || 0));
+        }
+        return out;
+    }
+    if (!clip.data) return null;
+    const lanes = clip.kind === 'b' && Number.isInteger(lane)
+        ? [berlinLanes(clip.data)[lane]].filter(Boolean)
+        : pitchLanes(clip);
+    for (const one of lanes) {
+        const count = clampInt(one.stepCount, 1, STEP_SLOTS, 8);
+        for (const step of (one.steps || []).slice(0, count)) {
+            if (!holdsNotes(step)) continue;
+            out.steps.push(step);
+            stepPitches(step).forEach(span);
+        }
+    }
+    return out;
+}
+
+/** Semitones a clip can still be transposed down and up before a note leaves the keyboard. */
+export function clipTransposeRoom(song, id, options) {
+    const targets = transposeTargets(findClipById(song, id), options);
+    if (!targets || !(targets.hi >= targets.lo)) return { down: 0, up: 0 };
+    return { down: Math.max(0, targets.lo - PITCH_MIN), up: Math.max(0, PITCH_MAX - targets.hi) };
+}
+
+/**
+ * Move a clip's notes up or down by `semis` semitones. Chords and fine tune move with
+ * their note. Nothing moves when any note would leave the keyboard, so a melody never
+ * flattens against the top or bottom. Drum clips have no pitch. Pattern clips are marked
+ * edited. Options as transposeTargets. Returns null when nothing moved.
+ */
+export function transposeClip(song, id, semis, options) {
+    const clip = findClipById(song, id);
+    const by = Math.round(Number(semis) || 0);
+    const targets = transposeTargets(clip, options);
+    if (!by || !targets || !(targets.hi >= targets.lo)) return null;
+    if (by > 0 ? targets.hi + by > PITCH_MAX : targets.lo + by < PITCH_MIN) return null;
+    pushUndo(song);
+    for (const note of targets.notes) note.semi = Math.round(Number(note.semi) || 0) + by;
+    for (const step of targets.steps) step.tune = Math.round(Number(step.tune) || 0) + by;
+    if (clip.kind !== 'notes') clip.edited = true;
+    return clip;
+}
+
 function snapLengthTicks(clip, lengthTick) {
     const grid = clipStepTicks(clip);
     const raw = Math.max(grid, Number(lengthTick) || grid);
@@ -626,6 +731,8 @@ function validatePlaceSpec(spec) {
     const { track, kind } = spec;
     if (track === 'drums' && kind !== 'd') return false;
     if (track === 'synth' && kind !== 'n' && kind !== 'b' && kind !== 'notes') return false;
+    if (laneTrackRow(track) >= 0 && kind !== 'b') return false;
+    if (!ALL_TRACKS.includes(track)) return false;
     if (kind !== 'notes' && (spec.source == null || spec.source < 0 || spec.source > 7)) return false;
     return true;
 }
@@ -646,6 +753,10 @@ function buildClipFromSpec(spec, startTick, lengthTick) {
         if (typeof spec.name === 'string' && spec.name) clip.name = spec.name;
         return clip;
     }
+    // An oscillator row clip plays the one lane its track stands for.
+    const row = laneTrackRow(spec.track);
+    if (row >= 0) base.row = row;
+    if (spec.mute === true) base.mute = true;
     return {
         ...base,
         source: spec.source | 0,
@@ -681,6 +792,206 @@ export function placeClip(song, spec, grid = BAR_TICKS) {
     draft.startTick = snappedStart;
     trackClips(song, spec.track).push(draft);
     return draft;
+}
+
+/**
+ * Drop a Berlin pattern on the timeline: one clip per oscillator it uses (and has
+ * switched on), each in its own row, all at the same start, as one undo step.
+ * `spec.track` is the row the drop is over; the start snaps against that row.
+ * Returns the clips placed, or false.
+ */
+export function placeBerlinRows(song, spec, grid = BAR_TICKS) {
+    const base = { ...spec, kind: 'b' };
+    const anchor = laneTrackRow(spec?.track) >= 0 ? spec.track : LANE_TRACKS[0];
+    if (!validatePlaceSpec({ ...base, track: anchor })) return false;
+    const oscCount = clampInt(spec.data?.oscCount, 1, 4, 3);
+    const lanes = berlinLanes(spec.data);
+    const rows = [];
+    for (let row = 0; row < oscCount; row += 1) {
+        if (lanes[row] && lanes[row].enabled === false) continue;
+        rows.push(row);
+    }
+    if (!rows.length) return false;
+    const start = snapStartTick(song, anchor, null, spec.startTick, grid);
+    pushUndo(song);
+    return rows.map((row) => {
+        const draft = buildClipFromSpec({ ...base, track: LANE_TRACKS[row] }, start, 0);
+        draft.lengthTick = spec.lengthTick != null
+            ? snapLengthTicks(draft, spec.lengthTick)
+            : clipCycleTicks(draft);
+        draft.edited = spec.edited === true;
+        draft.keptHash = spec.keptHash ?? null;
+        trackClips(song, draft.track).push(draft);
+        return draft;
+    });
+}
+
+/**
+ * Songs made before the oscillator rows kept a Berlin pattern as one clip on the synth
+ * track. Move each to its rows: one clip per oscillator in use, a lane that was muted in
+ * the clip arriving muted. No undo step. Returns true when anything moved.
+ */
+export function splitBerlinClips(song) {
+    const stay = [];
+    let moved = false;
+    for (const clip of song.synth.clips) {
+        if (clip.kind !== 'b') {
+            stay.push(clip);
+            continue;
+        }
+        moved = true;
+        const oscCount = clampInt(clip.data?.oscCount, 1, 4, 3);
+        const lanes = berlinLanes(clip.data);
+        for (let row = 0; row < oscCount; row += 1) {
+            if (lanes[row] && lanes[row].enabled === false) continue;
+            const piece = { ...deepClone(clip), id: newId(), track: LANE_TRACKS[row], row, laneMask: null };
+            if (clip.laneMask && clip.laneMask[row] === false) piece.mute = true;
+            trackClips(song, piece.track).push(piece);
+        }
+    }
+    if (moved) song.synth.clips = stay;
+    return moved;
+}
+
+/**
+ * Move several clips together by the same amount, each staying on its own track.
+ * `leadId` is the one being dragged: it snaps as a single move would and the rest follow.
+ * `rowDelta` also moves the oscillator row clips among them that many rows down (or up,
+ * when negative), as far as all of them fit. One undo step. Returns true when the clips
+ * are where they should be.
+ */
+export function moveClips(song, ids, leadId, startTick, grid = BAR_TICKS, rowDelta = 0) {
+    const lead = findClipById(song, leadId);
+    if (!lead) return false;
+    const clips = [...new Set(ids)].map((id) => findClipById(song, id)).filter(Boolean);
+    if (!clips.includes(lead)) clips.push(lead);
+    const shift = rowShiftFor(clips, rowDelta);
+    const leadTrack = isRowClip(lead) ? LANE_TRACKS[lead.row + shift] : lead.track;
+    let delta = snapStartTick(song, leadTrack, leadId, startTick, grid) - lead.startTick;
+    // Nothing may start before the song does.
+    const first = clips.reduce((m, c) => Math.min(m, c.startTick), Infinity);
+    if (first + delta < 0) delta = -first;
+    if (delta === 0 && shift === 0) return true;
+    pushUndo(song);
+    for (const clip of clips) {
+        if (shift && isRowClip(clip)) {
+            const list = trackClips(song, clip.track);
+            const idx = list.indexOf(clip);
+            if (idx >= 0) list.splice(idx, 1);
+            setClipRow(clip, clip.row + shift);
+            trackClips(song, clip.track).push(clip);
+        } else {
+            raiseClip(song, clip);
+        }
+        clip.startTick += delta;
+    }
+    return true;
+}
+
+function isRowClip(clip) {
+    return !!clip && clip.kind === 'b' && Number.isInteger(clip.row);
+}
+
+// How many rows a group of clips can move up or down together: every oscillator row clip
+// has to stay within O1..O4. Other clips do not change track.
+function rowShiftFor(clips, rowDelta) {
+    let shift = Math.trunc(Number(rowDelta) || 0);
+    for (const clip of clips) {
+        if (isRowClip(clip)) shift = Math.max(-clip.row, Math.min(LANE_TRACKS.length - 1 - clip.row, shift));
+    }
+    return shift;
+}
+
+/**
+ * Put an oscillator row clip on another oscillator: the same notes, played by that one.
+ * Inside the clip's own copy of its pattern the part changes lanes with whatever was in
+ * the new lane. A lane the pattern was not using stays out of the clip's length, so the
+ * clip plays for as long as it did. The caller moves it between the track lists.
+ */
+function setClipRow(clip, row) {
+    const from = clip.row;
+    if (from === row) return;
+    const lanes = berlinLanes(clip.data);
+    const used = clampInt(clip.data?.oscCount, 1, 4, 3);
+    const part = lanes[from];
+    const other = lanes[row];
+    lanes[row] = part ? { ...part, destination: `osc${row + 1}Pitch` } : part;
+    lanes[from] = other ? { ...other, destination: `osc${from + 1}Pitch` } : other;
+    if (row >= used) {
+        if (lanes[from]) lanes[from].enabled = false;
+        for (let r = used; r < row; r += 1) {
+            if (lanes[r]) lanes[r].enabled = false;
+        }
+        if (clip.data && !Array.isArray(clip.data)) clip.data.oscCount = row + 1;
+    }
+    clip.row = row;
+    clip.track = LANE_TRACKS[row];
+}
+
+/**
+ * Copies of several clips, dropped where moveClips would have moved the originals, which
+ * stay where they are (a drag with the copy key held). `leadId` is the clip being dragged.
+ * One undo step. Returns the copies, in the order of `ids` with the lead's copy first,
+ * or an empty list when the drop is where the clips already are.
+ */
+export function copyClipsTo(song, ids, leadId, startTick, grid = BAR_TICKS, rowDelta = 0) {
+    const lead = findClipById(song, leadId);
+    if (!lead) return [];
+    const rest = [...new Set(ids)].map((id) => findClipById(song, id)).filter((clip) => clip && clip !== lead);
+    const clips = [lead, ...rest];
+    const shift = rowShiftFor(clips, rowDelta);
+    const leadTrack = isRowClip(lead) ? LANE_TRACKS[lead.row + shift] : lead.track;
+    // The originals stay, so a copy may butt up against the clip it came from.
+    let delta = snapStartTick(song, leadTrack, null, startTick, grid) - lead.startTick;
+    const first = clips.reduce((m, c) => Math.min(m, c.startTick), Infinity);
+    if (first + delta < 0) delta = -first;
+    if (delta === 0 && shift === 0) return [];
+    pushUndo(song);
+    return clips.map((clip) => {
+        const start = clip.startTick + delta;
+        const draft = buildClipFromSpec(copySpec(clip, start), start, clip.lengthTick);
+        draft.edited = clip.edited === true;
+        if (shift && isRowClip(draft)) setClipRow(draft, draft.row + shift);
+        trackClips(song, draft.track).push(draft);
+        return draft;
+    });
+}
+
+/** Delete several clips as one undo step. Returns how many went. */
+export function deleteClips(song, ids) {
+    const clips = [...new Set(ids)].map((id) => findClipById(song, id)).filter(Boolean);
+    if (!clips.length) return 0;
+    pushUndo(song);
+    for (const clip of clips) {
+        const list = trackClips(song, clip.track);
+        const idx = list.indexOf(clip);
+        if (idx >= 0) list.splice(idx, 1);
+    }
+    return clips.length;
+}
+
+/** Mute or unmute several oscillator row clips as one undo step. */
+export function setClipsMute(song, ids, mute) {
+    const clips = [...new Set(ids)].map((id) => findClipById(song, id))
+        .filter((clip) => clip && Number.isInteger(clip.row) && !!clip.mute !== !!mute);
+    if (!clips.length) return false;
+    pushUndo(song);
+    for (const clip of clips) {
+        if (mute) clip.mute = true;
+        else delete clip.mute;
+    }
+    return true;
+}
+
+/** Mute or unmute one clip (an oscillator row clip). Does not mark the clip edited. */
+export function setClipMute(song, id, mute) {
+    const clip = findClipById(song, id);
+    if (!clip) return false;
+    if (!!clip.mute === !!mute) return true;
+    pushUndo(song);
+    if (mute) clip.mute = true;
+    else delete clip.mute;
+    return true;
 }
 
 export function moveClip(song, id, startTick, grid = BAR_TICKS) {
@@ -739,21 +1050,70 @@ export function resizeClip(song, id, lengthTick) {
 export function trimClipStart(song, id, startTick) {
     const clip = findClipById(song, id);
     if (!clip) return false;
+    const next = trimmedStart(clip, startTick);
+    if (next === clip.startTick) return true;
+    pushUndo(song);
+    applyTrimStart(song, clip, next);
+    return true;
+}
+
+// Where a left-edge trim to `startTick` lands: whole steps, at least one step left, never before 0.
+function trimmedStart(clip, startTick) {
     const grid = clipStepTicks(clip);
     const start0 = clip.startTick;
     const end = start0 + clip.lengthTick;
     let steps = Math.round(((Number(startTick) || 0) - start0) / grid);
     steps = Math.min(steps, Math.floor((end - start0) / grid) - 1);
     steps = Math.max(steps, -Math.floor(start0 / grid));
-    const next = start0 + steps * grid;
-    if (next === start0) return true;
-    pushUndo(song);
+    return start0 + steps * grid;
+}
+
+function applyTrimStart(song, clip, next) {
+    const end = clip.startTick + clip.lengthTick;
     raiseClip(song, clip);
-    const offset = clipStartOffset(clip) + (next - start0);
+    const offset = clipStartOffset(clip) + (next - clip.startTick);
     if (offset) clip.startOffset = offset;
     else delete clip.startOffset;
     clip.startTick = next;
     clip.lengthTick = end - next;
+}
+
+function clipsById(song, ids, lead) {
+    const clips = [...new Set(ids)].map((id) => findClipById(song, id)).filter(Boolean);
+    if (!clips.includes(lead)) clips.push(lead);
+    return clips;
+}
+
+/**
+ * Drag the right edge of several clips as one. `leadId` is the one being dragged: the
+ * others change by the same amount, each snapping to its own steps. One undo step.
+ */
+export function resizeClips(song, ids, leadId, lengthTick) {
+    const lead = findClipById(song, leadId);
+    if (!lead) return false;
+    const delta = snapLengthTicks(lead, lengthTick) - lead.lengthTick;
+    if (delta === 0) return true;
+    pushUndo(song);
+    for (const clip of clipsById(song, ids, lead)) {
+        const next = snapLengthTicks(clip, clip.lengthTick + delta);
+        if (next === clip.lengthTick) continue;
+        raiseClip(song, clip);
+        clip.lengthTick = next;
+    }
+    return true;
+}
+
+/** Drag the left edge of several clips as one (see resizeClips and trimClipStart). */
+export function trimClipsStart(song, ids, leadId, startTick) {
+    const lead = findClipById(song, leadId);
+    if (!lead) return false;
+    const delta = trimmedStart(lead, startTick) - lead.startTick;
+    if (delta === 0) return true;
+    pushUndo(song);
+    for (const clip of clipsById(song, ids, lead)) {
+        const next = trimmedStart(clip, clip.startTick + delta);
+        if (next !== clip.startTick) applyTrimStart(song, clip, next);
+    }
     return true;
 }
 
@@ -790,6 +1150,7 @@ function copySpec(clip, start) {
         edited: clip.edited,
         notes: clip.kind === 'notes' ? deepClone(clip.notes) : undefined,
         name: clip.kind === 'notes' ? clip.name : undefined,
+        mute: clip.mute === true,
         lengthTick: clip.lengthTick,
         startOffset: clipStartOffset(clip),
     };
@@ -840,6 +1201,58 @@ export function repeatClip(song, id, count) {
         made.push(draft);
     }
     return made;
+}
+
+/** The stretch of time several clips cover between them: first start to last end. */
+export function clipsSpan(clips) {
+    let start = Infinity;
+    let end = 0;
+    for (const clip of clips) {
+        start = Math.min(start, clip.startTick);
+        end = Math.max(end, clip.startTick + clip.lengthTick);
+    }
+    if (!Number.isFinite(start)) return { start: 0, end: 0, length: 0 };
+    return { start, end, length: end - start };
+}
+
+/**
+ * How many copies of a group of clips fit after it. The group repeats as one block: each
+ * copy sits one block length (first start to last end) further on, every clip keeping
+ * its own track and its place in the block. A copy fits when none of its clips would land
+ * on another clip.
+ */
+export function repeatRoomFor(song, ids, max = 64) {
+    const clips = [...new Set(ids)].map((id) => findClipById(song, id)).filter(Boolean);
+    const span = clipsSpan(clips).length;
+    if (!clips.length || !(span > 0)) return 0;
+    let n = 0;
+    while (n < max && clips.every((clip) => !wouldOverlap(
+        song, clip.track, null, clip.startTick + (n + 1) * span, clip.lengthTick,
+    ))) n += 1;
+    return n;
+}
+
+/**
+ * Drop `count` copies of a group of clips after it, block by block (see repeatRoomFor),
+ * as one undo step. Returns the copies, one array of new clips per block.
+ */
+export function repeatClips(song, ids, count) {
+    const clips = [...new Set(ids)].map((id) => findClipById(song, id)).filter(Boolean);
+    const n = Math.min(Math.max(0, count | 0), repeatRoomFor(song, ids));
+    if (n === 0) return [];
+    const span = clipsSpan(clips).length;
+    pushUndo(song);
+    const blocks = [];
+    for (let k = 1; k <= n; k += 1) {
+        blocks.push(clips.map((clip) => {
+            const start = clip.startTick + k * span;
+            const draft = buildClipFromSpec(copySpec(clip, start), start, clip.lengthTick);
+            draft.edited = clip.edited === true;
+            trackClips(song, clip.track).push(draft);
+            return draft;
+        }));
+    }
+    return blocks;
 }
 
 export function markEdited(song, id) {
@@ -898,6 +1311,32 @@ export function retargetClip(song, id, slot, hash, extra, baked = null) {
     return clip;
 }
 
+/**
+ * Oscillator row clips dropped on a pad, as one undo step that carries the pad's old
+ * contents (`extra`, see retargetClip). Each item `{ id, bake }` takes the pad as its
+ * source; with `bake` it also takes `data` (the pad's pattern as it now is) as its own,
+ * with any start trim folded in. An empty list still records the step, so the pad write
+ * can be undone.
+ */
+export function retargetClips(song, items, slot, hash, extra, data = null) {
+    const s = slot | 0;
+    if (s < 0 || s > 7) return false;
+    pushUndo(song, extra ?? null);
+    for (const item of items || []) {
+        const clip = findClipById(song, item.id);
+        if (!clip || clip.kind === 'notes') continue;
+        if (item.bake && data) {
+            clip.data = deepClone(data);
+            delete clip.startOffset;
+        }
+        clip.source = s;
+        clip.edited = false;
+        clip.copiedHash = hash;
+        clip.keptHash = null;
+    }
+    return true;
+}
+
 function cueClipForMode(clip, mode) {
     if (!clip) return null;
     if (clip.track === 'drums') {
@@ -908,7 +1347,7 @@ function cueClipForMode(clip, mode) {
         return null;
     }
     if (mode === 'b') {
-        return clip.kind === 'b' ? clip : null;
+        return clip.kind === 'b' && !clip.mute ? clip : null;
     }
     return null;
 }
@@ -917,7 +1356,7 @@ export function buildCues(song, mode) {
     /** @type {{ tick: number, track: string, clip: object|null }[]} */
     const out = [];
 
-    for (const track of ['synth', 'drums']) {
+    for (const track of ALL_TRACKS) {
         const clips = visibleClips(song, track);
         /** @type {{ tick: number, kind: 'start'|'end'|'lead', clip: object|null }[]} */
         const events = [];
@@ -965,8 +1404,7 @@ export function buildCues(song, mode) {
 
     out.sort((a, b) => {
         if (a.tick !== b.tick) return a.tick - b.tick;
-        if (a.track === b.track) return 0;
-        return a.track === 'synth' ? -1 : 1;
+        return ALL_TRACKS.indexOf(a.track) - ALL_TRACKS.indexOf(b.track);
     });
 
     return out;

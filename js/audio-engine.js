@@ -7,7 +7,7 @@ import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=68';
 import { buildIngy6Lfo } from './ingy6-lfo.js?v=1';
 import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=58';
 import { ensurePlaitsWorklet, createOscSource, applyAnalogOscShape, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=157';
-import { DRUM_LANE_COUNT } from './pattern-bank.js?v=50';
+import { DRUM_LANE_COUNT } from './pattern-bank.js?v=51';
 
 function makeDistortionCurve(amount) {
     const k = typeof amount === 'number' ? amount : 0;

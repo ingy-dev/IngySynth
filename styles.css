@@ -13087,6 +13087,33 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     font-size: 8px;
     letter-spacing: 0.06em;
 }
+/* Berlin lanes view: each oscillator lane has its own timeline row (o1..o4), two rows
+   to a track's height, in place of the single Synth track. */
+#arrangeView.is-berlin-lanes .arrange-gutter-lane[data-track="synth"],
+#arrangeView.is-berlin-lanes .arrange-lane[data-track="synth"],
+#arrangeView:not(.is-berlin-lanes) .arrange-gutter-lane[data-track^="o"],
+#arrangeView:not(.is-berlin-lanes) .arrange-lane[data-track^="o"] {
+    display: none;
+}
+.arrange-gutter-lane[data-track^="o"] {
+    align-items: center;
+    padding: 0 4px;
+}
+.arrange-gutter-lane[data-track="o1"] { color: var(--berlin-p1); }
+.arrange-gutter-lane[data-track="o2"] { color: var(--berlin-p2); }
+.arrange-gutter-lane[data-track="o3"] { color: var(--berlin-p3); }
+.arrange-gutter-lane[data-track="o4"] { color: var(--berlin-p4); }
+.arrange-gutter-lane[data-track^="o"],
+.arrange-lane[data-track^="o"] {
+    flex: 0 1 36px;
+}
+/* O2 and O4 share a track with the row above: a fainter line between the pair. */
+.arrange-gutter-lane[data-track="o2"],
+.arrange-gutter-lane[data-track="o4"],
+.arrange-lane[data-track="o2"],
+.arrange-lane[data-track="o4"] {
+    border-top-color: rgba(0, 170, 0, 0.2);
+}
 /* Tracks keep fixed heights like Ableton's arrangement. */
 .arrange-gutter-lane[data-track="synth"] { flex: 0 1 72px; }
 .arrange-gutter-lane[data-track="drums"] { flex: 0 1 64px; }
@@ -13197,6 +13224,15 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     box-shadow: 0 0 4px #00ffff;
     z-index: 5;
 }
+/* The box dragged over empty timeline to select clips. */
+.arrange-marquee {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid #00e5ff;
+    background: rgba(0, 229, 255, 0.1);
+    pointer-events: none;
+    z-index: 6;
+}
 .arrange-insert {
     background: rgba(0, 255, 0, 0.55);
     z-index: 4;
@@ -13257,6 +13293,44 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 }
 .arrange-clip.is-overwritten {
     opacity: 0.2;
+}
+/* An oscillator row clip: framed and labelled in its lane colour. */
+.arrange-clip.is-lane {
+    top: 2px;
+    bottom: 2px;
+}
+.arrange-clip.is-lane[data-row="0"] { --lane: var(--berlin-p1); }
+.arrange-clip.is-lane[data-row="1"] { --lane: var(--berlin-p2); }
+.arrange-clip.is-lane[data-row="2"] { --lane: var(--berlin-p3); }
+.arrange-clip.is-lane[data-row="3"] { --lane: var(--berlin-p4); }
+.arrange-clip.is-lane:not(.is-selected) {
+    border-color: var(--lane);
+}
+.arrange-clip.is-lane.is-muted:not(.is-selected) {
+    border-color: color-mix(in srgb, var(--lane) 35%, #050805);
+}
+.arrange-clip.is-lane .arrange-clip-label {
+    top: 1px;
+    left: 3px;
+    color: var(--lane);
+    font-size: 7px;
+}
+.arrange-clip.is-lane.is-muted .arrange-clip-label {
+    opacity: 0.45;
+}
+.arrange-clip.is-lane canvas {
+    top: 10px;
+    bottom: 1px;
+    height: calc(100% - 11px);
+}
+/* Copy-drag: the original stays put while its copy is dragged, and the pointer says so. */
+.arrange-clip.is-stay {
+    pointer-events: none;
+    z-index: 1;
+}
+#arrangeView.is-copy-drag,
+#arrangeView.is-copy-drag .arrange-clip {
+    cursor: copy;
 }
 /* Clips stack: one picked up to drag or trim comes out whole, above everything. */
 .arrange-clip.is-lifted {
@@ -13869,6 +13943,48 @@ html.arrange-trimming * {
     background: #050805;
     border-color: #00aa00;
 }
+/* The band (oscillator lane) a clip dropped on this pad would write. */
+.arrange-square-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 25%;
+    box-sizing: border-box;
+    border: 2px solid #00e5ff;
+    box-shadow: inset 0 0 6px rgba(0, 229, 255, 0.6);
+    pointer-events: none;
+    z-index: 3;
+}
+/* Berlin pads: four bands edge to edge, one per oscillator lane in its lane colour
+   (arrange-view.js drawBerlinBands). The pad itself goes dark so unused lanes read as off. */
+.arrange-square[data-kind="b"]:not(.is-empty),
+.arrange-ghost.is-pad[data-kind="b"]:not(.is-empty):not(.is-carry) {
+    background: #050805;
+    border-color: #050805;
+}
+.arrange-square[data-kind="b"]:not(.is-empty) canvas,
+.arrange-ghost.is-pad[data-kind="b"]:not(.is-empty):not(.is-carry) canvas {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+.arrange-square[data-kind="b"]:not(.is-empty).is-armed,
+.arrange-square[data-kind="b"]:not(.is-empty).is-drop {
+    border-color: #00ff00;
+}
+.arrange-square[data-kind="b"]:not(.is-empty) .arrange-square-name {
+    top: 4px;
+    left: 6px;
+}
+.arrange-square[data-kind="b"]:not(.is-empty) .arrange-square-rev {
+    top: 4px;
+    right: 6px;
+}
+.arrange-ghost.is-pad[data-kind="b"]:not(.is-empty):not(.is-carry) .arrange-clip-label {
+    top: 3px;
+    left: 4px;
+}
 .arrange-square-rev {
     position: absolute;
     top: 7px;
@@ -14268,6 +14384,29 @@ html.arrange-trimming * {
     flex-wrap: wrap;
     gap: 3px;
     min-width: 0;
+}
+.arrange-roll-transpose {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 2px;
+    padding-left: 6px;
+    border-left: 1px solid rgba(0, 170, 0, 0.45);
+}
+.arrange-roll-transpose[hidden] {
+    display: none !important;
+}
+.arrange-roll-transpose-label {
+    color: #00aa00;
+    font-family: Michroma, sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    white-space: nowrap;
+}
+.arrange-roll-bar .arrange-roll-transpose .arrange-btn {
+    min-width: 30px;
+    padding: 0 4px;
 }
 .arrange-roll-lanes[hidden],
 .arrange-roll-pcorner[hidden],

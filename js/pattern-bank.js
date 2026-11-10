@@ -502,9 +502,12 @@ function createBerlinPattern(source = null, restSteps = false) {
         if (source?.lanes?.[row]) copyLaneClock(lane, source.lanes[row]);
         lanes.push(lane);
     }
+    // A fresh pattern starts with all four oscillator lanes on and one mod lane. That is
+    // the app's starting state only: a saved pattern that leaves the counts out still
+    // loads as 3 and 1 (normalizeBerlinPattern, the .ingy defaults).
     return {
         lanes,
-        oscCount: clampLaneCount(source?.oscCount, 3),
+        oscCount: clampLaneCount(source?.oscCount, OSC_LANE_COUNT),
         modCount: clampLaneCount(source?.modCount, 1),
         repeat: 1,
     };

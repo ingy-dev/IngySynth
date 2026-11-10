@@ -5,7 +5,7 @@
 import { state, OSC_COUNT } from './state.js?v=120';
 import { rampFromHere, isLiveTime } from './audio-param-hold.js?v=1';
 import { getNumber, getOscType, getString } from './params.js?v=44';
-import { isAnalogDrumEngine } from './pattern-bank.js?v=50';
+import { isAnalogDrumEngine } from './pattern-bank.js?v=51';
 import { applyAnalog808KitToLive, digitalDrumTuneHz } from './analog-808.js?v=21';
 
 /** Slot index for the Analog/Digital engine (OSC 1). */

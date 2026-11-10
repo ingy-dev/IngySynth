@@ -55,7 +55,7 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=123';
+} from './berlin.js?v=124';
 import { berlinLaneMidiChannels } from './berlin-lane-midi.js?v=1';
 import {
     getPattern,
@@ -71,7 +71,7 @@ import {
     stepChordCount,
     patternRepeat,
     patternStepCount,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=200';
 import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=52';
 import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=53';

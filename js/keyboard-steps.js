@@ -20,7 +20,7 @@ import {
     setWriteCursor,
     syncWriteToolbarFromStep,
 } from './pattern-write.js?v=160';
-import { paintAllStepChordMarkers } from './pattern-bank.js?v=50';
+import { paintAllStepChordMarkers } from './pattern-bank.js?v=51';
 import { syncRatchButton } from './step-ratch.js?v=1';
 
 const STEP_COUNT = 32;

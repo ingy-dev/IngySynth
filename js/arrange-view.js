@@ -9,15 +9,15 @@ import { state } from './state.js?v=120';
 import { getNumber, subscribe } from './params.js?v=44';
 import { initAudio } from './audio-engine.js?v=247';
 import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=456';
-import { arrangeStop, cancelArrangeCountIn, liveTakeRegions } from './song-record.js?v=27';
-import { arrangeTempoMarkup, initArrangeTempo } from './arrange-tempo.js?v=3';
+import { arrangeStop, cancelArrangeCountIn, liveTakeRegions } from './song-record.js?v=28';
+import { arrangeTempoMarkup, initArrangeTempo } from './arrange-tempo.js?v=4';
 import {
     armArrangementContinue,
     arrangementInsertTick,
     cancelArrangementContinue,
     homeArrangement,
     placeArrangementInsert,
-} from './song-conductor.js?v=30';
+} from './song-conductor.js?v=32';
 import {
     SONG_SLOT,
     patternHash,
@@ -25,7 +25,7 @@ import {
     snapshotSynthSlot,
     writeDrumSlot,
     writeSynthSlot,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 import { snapshotBankAutomation } from './automation.js?v=102';
 import {
     BAR_TICKS,
@@ -43,7 +43,18 @@ import {
     clipShowsUpdate,
     clipStartOffset,
     clipStepTicks,
+    LANE_TRACKS,
+    copyClipsTo,
     coversClip,
+    deleteClips,
+    moveClips,
+    clipsSpan,
+    repeatClips,
+    repeatRoomFor,
+    resizeClips,
+    retargetClips,
+    setClipsMute,
+    trimClipsStart,
     createSong,
     cropClip,
     deleteClip,
@@ -54,8 +65,6 @@ import {
     checkpointUndo,
     placeClip,
     redo,
-    repeatClip,
-    repeatRoom,
     resizeClip,
     retargetClip,
     setLaneMask,
@@ -63,10 +72,16 @@ import {
     trimClipStart,
     undo,
     updateFromSource,
+    findClipById,
+    laneTrackRow,
+    placeBerlinRows,
+    setClipMute,
+    splitBerlinClips,
+    trackClips,
     visibleClips,
-} from './song-model.js?v=10';
+} from './song-model.js?v=12';
 import { quantizeToPattern } from './song-quantize.js?v=19';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=47';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=49';
 
 const MIN_PX = 24;
 const MAX_PX = 1280;
@@ -86,6 +101,10 @@ const SIXTEENTH = PPQ / 4;
 const SLOP = 8;
 /** While a grip is dragged: the clip as it will be, for drawing and the label. */
 let drawOverride = null;
+// The same for the other clips of a selection being trimmed together: id -> patch.
+const mateOverrides = new Map();
+// Oscillator row clips being dragged to another row: id -> the row they are over.
+const rowPreview = new Map();
 /** Copy knob on the lane past the selected (or mouse-hovered) clip's right edge. */
 let knobEl = null;
 let hoverClipId = null;
@@ -109,6 +128,11 @@ let pxPerBar = 80;
 let bankTab = 'synth';
 let armed = null;
 let selectedId = null;
+// Several clips can be selected at once (a box dragged over them, or Shift-click).
+// `selectedId` is the one last clicked: the menu, the copy knob and the roll act on it.
+// `groupIds` is the whole selection, and only counts while `selectedId` is one of them,
+// so anything that selects a single clip the old way drops the group without knowing of it.
+let groupIds = new Set();
 let recordArmed = false;
 let rollOpener = null;
 /** @type {null | { id: string, at: number }} */
@@ -128,6 +152,11 @@ const touchPointers = new Set();
 /** @type {null | { dist: number, bar: number, px: number }} */
 let pinch = null;
 let didPinch = false;
+// A trackpad pinch in WebKit (Safari, the app's WKWebView) arrives as gesture
+// events carrying a scale, not as the ctrl+wheel that Chrome sends.
+/** @type {null | { px: number }} */
+let trackpadPinch = null;
+let lastMouseX = null;
 
 let root;
 let scroller;
@@ -224,6 +253,10 @@ function markup() {
                     <div class="arrange-gutter-scrub">Scrub</div>
                     <div class="arrange-gutter-ruler"></div>
                     <div class="arrange-gutter-lane" data-track="synth">Synth</div>
+                    <div class="arrange-gutter-lane" data-track="o1">O1</div>
+                    <div class="arrange-gutter-lane" data-track="o2">O2</div>
+                    <div class="arrange-gutter-lane" data-track="o3">O3</div>
+                    <div class="arrange-gutter-lane" data-track="o4">O4</div>
                     <div class="arrange-gutter-lane" data-track="drums">Drums</div>
                 </div>
                 <div class="arrange-scroll" id="arrangeScroll">
@@ -232,6 +265,10 @@ function markup() {
                         <div id="arrangeScrub" class="arrange-scrub" aria-label="Scrub arrangement"></div>
                         <div id="arrangeRuler" class="arrange-ruler" aria-label="Timeline ruler"></div>
                         <div id="arrangeSynthLane" class="arrange-lane" data-track="synth" aria-label="Synth timeline"></div>
+                        <div class="arrange-lane" data-track="o1" aria-label="Oscillator 1 timeline"></div>
+                        <div class="arrange-lane" data-track="o2" aria-label="Oscillator 2 timeline"></div>
+                        <div class="arrange-lane" data-track="o3" aria-label="Oscillator 3 timeline"></div>
+                        <div class="arrange-lane" data-track="o4" aria-label="Oscillator 4 timeline"></div>
                         <div id="arrangeDrumLane" class="arrange-lane" data-track="drums" aria-label="Drums timeline"></div>
                         <div id="arrangeLoopShade" class="arrange-loop-shade" hidden></div>
                         <div id="arrangeInsert" class="arrange-insert" hidden></div>
@@ -332,6 +369,8 @@ function bind() {
         if (gestureDepth > 0) return;
         const clipEl = event.target.closest('.arrange-clip');
         if (!clipEl) return;
+        // A right-click on one of several selected clips keeps them all selected.
+        if (!isSelected(clipEl.dataset.id)) groupIds = new Set();
         selectedId = clipEl.dataset.id;
         paintSelection();
         openMenu(selectedId, event.clientX, event.clientY);
@@ -352,10 +391,14 @@ function bind() {
     timelines.addEventListener('touchmove', onPinchMove, { passive: false });
     timelines.addEventListener('touchend', onPinchEnd);
     timelines.addEventListener('touchcancel', onPinchEnd);
-    // iOS Safari zooms the page on pinch even with user-scalable=no.
-    for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
-        timelines.addEventListener(type, (event) => event.preventDefault(), { passive: false });
-    }
+    // Gesture events: a trackpad pinch on macOS WebKit. iOS sends them too,
+    // alongside the touch events above, and zooms the page unless prevented.
+    timelines.addEventListener('mousemove', (event) => {
+        lastMouseX = event.clientX;
+    }, { passive: true });
+    timelines.addEventListener('gesturestart', onGestureStart, { passive: false });
+    timelines.addEventListener('gesturechange', onGestureChange, { passive: false });
+    timelines.addEventListener('gestureend', onGestureEnd, { passive: false });
 
     document.addEventListener('pointerdown', (event) => {
         if (!menuEl || menuEl.contains(event.target)) return;
@@ -434,6 +477,7 @@ export function refreshArrange() {
 
 function renderAll({ scrollLeft, bank = true } = {}) {
     if (!state.song || !sheet) return;
+    splitBerlinClips(state.song);
     dirty = false;
     const keep = scrollLeft != null ? scrollLeft : scroller.scrollLeft;
     layoutTimeline();
@@ -452,8 +496,10 @@ function layoutTimeline() {
     sheet.style.width = `${bars * pxPerBar}px`;
     sheet.style.setProperty('--arrange-px', `${pxPerBar}px`);
     paintRuler(bars);
-    paintLane(synthLane, visibleClips(state.song, 'synth'));
-    paintLane(drumLane, visibleClips(state.song, 'drums'));
+    root.classList.toggle('is-berlin-lanes', berlinLanesView());
+    for (const track of ['synth', ...LANE_TRACKS, 'drums']) {
+        paintLane(laneFor(track), visibleClips(state.song, track));
+    }
     paintKnob();
     syncPlayhead();
     syncLoop();
@@ -538,8 +584,9 @@ function drawGrid() {
 
 function sheetBars() {
     let end = 0;
-    for (const clip of state.song.synth.clips) end = Math.max(end, clip.startTick + clip.lengthTick);
-    for (const clip of state.song.drums.clips) end = Math.max(end, clip.startTick + clip.lengthTick);
+    for (const track of ['synth', ...LANE_TRACKS, 'drums']) {
+        for (const clip of trackClips(state.song, track)) end = Math.max(end, clip.startTick + clip.lengthTick);
+    }
     return Math.max(16, Math.ceil(end / BAR_TICKS) + 4);
 }
 
@@ -561,11 +608,35 @@ function paintLane(lane, clips) {
     for (const clip of clips) lane.appendChild(clipElement(clip));
 }
 
+// Berlin mode: every oscillator lane has its own timeline row (tracks o1..o4), drawn two
+// to a track's height. The single Synth track shows instead when Berlin is off.
+function berlinLanesView() {
+    return !!state.berlinMode;
+}
+
+function laneFor(track) {
+    if (track === 'synth') return synthLane;
+    if (track === 'drums') return drumLane;
+    return root.querySelector(`.arrange-lane[data-track="${track}"]`);
+}
+
+// The bank tab a timeline track takes its pads from: the oscillator rows all take Synth pads.
+function bankTrackOf(track) {
+    return laneTrackRow(track) >= 0 ? 'synth' : track;
+}
+
 function clipElement(clip) {
+    // An oscillator row clip plays one lane of its Berlin pattern (song-model.js).
+    const row = clip.kind === 'b' && Number.isInteger(clip.row) ? clip.row : null;
     const el = document.createElement('div');
     el.className = 'arrange-clip';
     el.dataset.id = clip.id;
-    if (clip.id === selectedId) el.classList.add('is-selected');
+    if (row != null) {
+        el.classList.add('is-lane');
+        el.dataset.row = String(row);
+        if (clip.mute) el.classList.add('is-muted');
+    }
+    if (isSelected(clip.id)) el.classList.add('is-selected');
     if (isForeign(clip)) el.classList.add('is-foreign');
     if (coversClip(state.song, clip.id)) el.classList.add('is-covering');
     el.style.left = `${(clip.startTick / BAR_TICKS) * pxPerBar}px`;
@@ -573,6 +644,7 @@ function clipElement(clip) {
     const canvas = document.createElement('canvas');
     canvas.dataset.role = 'clip';
     canvas.dataset.id = clip.id;
+    if (row != null) canvas.dataset.row = String(row);
     if (clip.cropL || clip.cropR) {
         canvas.dataset.from = String(clip.startTick);
         canvas.dataset.to = String(clip.startTick + clip.lengthTick);
@@ -800,9 +872,7 @@ function currentKind() {
 
 function findClip(id) {
     if (!state.song || !id) return null;
-    return state.song.synth.clips.find((clip) => clip.id === id)
-        || state.song.drums.clips.find((clip) => clip.id === id)
-        || null;
+    return findClipById(state.song, id);
 }
 
 function isForeign(clip) {
@@ -899,6 +969,12 @@ function bypassesSnap(ev) {
     return IS_MAC ? !!ev?.metaKey : !!ev?.altKey;
 }
 
+// Held while dragging a clip, the drop leaves a copy and the original stays: Option on a
+// Mac, Ctrl elsewhere, as in other apps.
+function copyKey(ev) {
+    return IS_MAC ? !!ev?.altKey : !!ev?.ctrlKey;
+}
+
 function startGrid() {
     return snapBypass ? 1 : gridTicks();
 }
@@ -925,7 +1001,7 @@ function previewSnapStart(track, excludeId, pointerStart) {
 }
 
 function overlaps(track, excludeId, start, length) {
-    const clips = track === 'drums' ? state.song.drums.clips : state.song.synth.clips;
+    const clips = trackClips(state.song, track);
     const end = start + length;
     for (const clip of clips) {
         if (clip.id === excludeId) continue;
@@ -963,6 +1039,28 @@ function setZoom(clientX, nextPx) {
     const ratio = clamped / pxPerBar;
     pxPerBar = clamped;
     renderAll({ scrollLeft: content * ratio - anchor, bank: false });
+}
+
+function onGestureStart(event) {
+    event.preventDefault();
+    // Fingers on a touch screen are handled by the touch pinch.
+    trackpadPinch = pinch || gestureDepth > 0 ? null : { px: pxPerBar };
+}
+
+function onGestureChange(event) {
+    event.preventDefault();
+    if (pinch) trackpadPinch = null;
+    const scale = Number(event.scale);
+    if (!trackpadPinch || !(scale > 0)) return;
+    // Zoom about the cursor; the event's own position is not always filled in.
+    const rect = scroller.getBoundingClientRect();
+    const x = event.clientX > 0 ? event.clientX : lastMouseX ?? rect.left + rect.width / 2;
+    setZoom(x, trackpadPinch.px * scale);
+}
+
+function onGestureEnd(event) {
+    event.preventDefault();
+    trackpadPinch = null;
 }
 
 function pinchMetrics(touches) {
@@ -1066,7 +1164,8 @@ function onRulerPointerDown(event) {
 }
 
 function onSheetPointerDown(event) {
-    if (event.button !== 0 || event.ctrlKey) return;
+    // Ctrl-click is the context menu on a Mac; elsewhere Ctrl is the copy key (copyKey).
+    if (event.button !== 0 || (IS_MAC && event.ctrlKey)) return;
     if (event.target.closest('#arrangeRuler, #arrangeScrub')) return;
     const clipEl = event.target.closest('.arrange-clip');
     if (clipEl) {
@@ -1082,12 +1181,53 @@ function beginLaneTap(event, lane) {
     const x = event.clientX;
     const y = event.clientY;
     const track = lane.dataset.track;
+    // With a mouse, dragging over empty timeline draws a box that selects the clips it
+    // touches. Shift adds to what is already selected. Touch drags scroll, as before.
+    let box = null;
+    const held = event.shiftKey ? selectionIds() : [];
+    const move = (ev) => {
+        if (ev.pointerId !== event.pointerId || event.pointerType !== 'mouse' || didPinch || pinch) return;
+        if (!box) {
+            if (Math.hypot(ev.clientX - x, ev.clientY - y) <= SLOP) return;
+            box = document.createElement('div');
+            box.className = 'arrange-marquee';
+            sheet.appendChild(box);
+            gestureDepth += 1;
+            closeMenu();
+        }
+        const rect = sheet.getBoundingClientRect();
+        const left = Math.min(x, ev.clientX);
+        const top = Math.max(rect.top, Math.min(y, ev.clientY));
+        const right = Math.max(x, ev.clientX);
+        const bottom = Math.min(rect.bottom, Math.max(y, ev.clientY));
+        box.style.left = `${left - rect.left}px`;
+        box.style.top = `${top - rect.top}px`;
+        box.style.width = `${right - left}px`;
+        box.style.height = `${Math.max(0, bottom - top)}px`;
+        const hit = [];
+        root.querySelectorAll('.arrange-lane .arrange-clip').forEach((el) => {
+            if (el.hidden) return;
+            const r = el.getBoundingClientRect();
+            if (r.right > left && r.left < right && r.bottom > top && r.top < bottom) hit.push(el.dataset.id);
+        });
+        setSelection([...held, ...hit], hit[0] || held[0]);
+        paintSelection();
+    };
     const up = (ev) => {
         if (ev.pointerId !== event.pointerId) return;
+        window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+        if (box) {
+            box.remove();
+            gestureDepth = Math.max(0, gestureDepth - 1);
+            if (dirty) renderAll();
+            else paintSelection();
+            return;
+        }
         if (didPinch || pinch) return;
         if (Math.hypot(ev.clientX - x, ev.clientY - y) > SLOP) return;
-        if (armed && armed.track === track) {
+        if (armed && armed.track === bankTrackOf(track)) {
             commitPlace(track, track === 'drums' ? 'd' : currentKind(), armed.slot, tickFromClientX(ev.clientX));
             return;
         }
@@ -1095,14 +1235,91 @@ function beginLaneTap(event, lane) {
         paintSelection();
         placeArrangementInsert(snapBeat(tickFromClientX(ev.clientX)));
     };
+    window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
 }
 
 function beginClipGesture(event, clipEl) {
     if (gestureDepth > 0) return;
     const clip = findClip(clipEl.dataset.id);
     if (!clip) return;
+    if (event.shiftKey && !event.target.closest('.arrange-clip-handle')) {
+        const ids = selectionIds();
+        if (ids.includes(clip.id)) setSelection(ids.filter((id) => id !== clip.id));
+        else setSelection([...ids, clip.id], clip.id);
+        paintSelection();
+        return;
+    }
     gestureDepth += 1;
+    // The other selected clips, which move along with this one. A press on a clip outside
+    // the selection selects just it.
+    const group = isSelected(clip.id) ? selectionIds().filter((id) => id !== clip.id) : [];
+    if (!group.length) groupIds = new Set();
+    // element -> { clip, left } for each of them, lifted whole like the dragged clip.
+    const mates = new Map();
+    const liftMates = () => {
+        if (!group.length || mates.size) return;
+        const els = [...root.querySelectorAll('.arrange-lane .arrange-clip')];
+        for (const id of group) {
+            const mate = findClip(id);
+            const el = els.find((one) => one.dataset.id === id && !one.hidden);
+            if (!mate || !el) continue;
+            liftClip(el, mate);
+            mates.set(el, { clip: mate, left: (mate.startTick / BAR_TICKS) * pxPerBar });
+        }
+    };
+    const barPx = (ticks) => `${(ticks / BAR_TICKS) * pxPerBar}px`;
+    const originLeft = (clip.startTick / BAR_TICKS) * pxPerBar;
+    // With the copy key down the originals stay: a still twin of each dragged clip marks
+    // where, while the clips under the pointer show where the copies will land.
+    let stays = [];
+    const showStays = (on) => {
+        if (on === stays.length > 0) return;
+        root.classList.toggle('is-copy-drag', on);
+        if (!on) {
+            stays.forEach((twin) => twin.remove());
+            stays = [];
+            return;
+        }
+        const moving = [[clipEl, originLeft, clip], ...[...mates].map(([el, mate]) => [el, mate.left, mate.clip])];
+        for (const [el, left, one] of moving) {
+            const twin = el.cloneNode(true);
+            twin.classList.remove('is-lifted', 'is-selected', 'is-carried', 'is-blocked');
+            twin.classList.add('is-stay');
+            delete twin.dataset.id;
+            twin.style.left = `${left}px`;
+            // The original keeps its own row and colour, wherever its copy is being dragged.
+            if (isRowClip(one)) twin.dataset.row = String(one.row);
+            const canvas = twin.querySelector('canvas[data-role="clip"]');
+            if (canvas) canvas.dataset.stay = '1';
+            laneFor(one.track).appendChild(twin);
+            drawCanvas(canvas);
+            stays.push(twin);
+        }
+    };
+    // An oscillator clip dragged up or down follows the pointer to another oscillator's
+    // row, and takes that row's colour. A selection moves together, as far as it all fits.
+    let rowShift = 0;
+    const followRows = (ev) => {
+        if (!isRowClip(clip)) return;
+        const moving = [[clipEl, clip], ...[...mates].map(([el, mate]) => [el, mate.clip])].filter(([, one]) => isRowClip(one));
+        const lane = clipEl.classList.contains('is-carried') ? null : laneAt(ev.clientX, ev.clientY);
+        const over = lane ? laneTrackRow(lane.dataset.track) : -1;
+        let shift = over >= 0 ? over - clip.row : 0;
+        for (const [, one] of moving) shift = Math.max(-one.row, Math.min(LANE_TRACKS.length - 1 - one.row, shift));
+        if (shift === rowShift) return;
+        rowShift = shift;
+        for (const [el, one] of moving) {
+            const row = one.row + shift;
+            const home = laneFor(LANE_TRACKS[row]);
+            if (el.parentElement !== home) home.appendChild(el);
+            el.dataset.row = String(row);
+            if (shift) rowPreview.set(one.id, row);
+            else rowPreview.delete(one.id);
+            drawCanvas(el.querySelector('canvas[data-role="clip"]'));
+        }
+    };
     selectedId = clip.id;
     paintSelection();
     const pointerId = event.pointerId;
@@ -1127,7 +1344,7 @@ function beginClipGesture(event, clipEl) {
     let carry = null;
     const carryTo = (x, y) => {
         const lane = laneAt(x, y);
-        const off = !lane || lane.dataset.track !== clip.track;
+        const off = !lane || bankTrackOf(lane.dataset.track) !== bankTrackOf(clip.track);
         clipEl.classList.toggle('is-carried', off);
         if (!off) {
             if (carry) carry.hidden = true;
@@ -1168,12 +1385,45 @@ function beginClipGesture(event, clipEl) {
         } else if (mode === 'range-arm' && dist > SLOP) {
             mode = handle ? 'resize' : 'range';
         }
-        if (mode !== 'pending' && mode !== 'range-arm') liftClip(clipEl, clip);
+        if (mode !== 'pending' && mode !== 'range-arm') {
+            liftClip(clipEl, clip);
+            liftMates();
+        }
         if (mode === 'move') previewMove(clipEl, clip, originStart, ev.clientX - startX, ev.clientX, ev.clientY);
+        if (mode === 'move' && mates.size) {
+            // The rest of the selection follows by the same distance, never past the song start.
+            let dx = (parseFloat(clipEl.style.left) || 0) - originLeft;
+            for (const { left } of mates.values()) dx = Math.max(dx, -left);
+            clipEl.style.left = `${originLeft + dx}px`;
+            for (const [el, { left }] of mates) el.style.left = `${left + dx}px`;
+        }
         if (mode === 'resize') {
             document.documentElement.classList.add('arrange-trimming');
             if (leftEdge) previewTrimStart(clipEl, clip, originStart, ev.clientX - startX);
             else previewResize(clipEl, clip, originLen, ev.clientX - startX);
+            // Several clips selected: their edges move as one, by the same amount.
+            const dTicks = ((ev.clientX - startX) / pxPerBar) * BAR_TICKS;
+            const delta = leftEdge
+                ? trimStartTick(clip, originStart + dTicks) - clip.startTick
+                : previewLength(clip, originLen + dTicks) - clip.lengthTick;
+            for (const [el, { clip: mate }] of mates) {
+                const end = mate.startTick + mate.lengthTick;
+                if (leftEdge) {
+                    const next = trimStartTick(mate, mate.startTick + delta);
+                    el.style.left = barPx(next);
+                    el.style.width = barPx(end - next);
+                    mateOverrides.set(mate.id, {
+                        startTick: next,
+                        lengthTick: end - next,
+                        startOffset: clipStartOffset(mate) + (next - mate.startTick),
+                    });
+                } else {
+                    const len = previewLength(mate, mate.lengthTick + delta);
+                    el.style.width = barPx(len);
+                    mateOverrides.set(mate.id, { lengthTick: len });
+                }
+                drawCanvas(el.querySelector('canvas[data-role="clip"]'));
+            }
         }
         if (mode === 'range') {
             setNoteRange(clip, tickFromClientX(startX), tickFromClientX(ev.clientX));
@@ -1181,8 +1431,21 @@ function beginClipGesture(event, clipEl) {
             previewSquare(clip, ev.clientX, ev.clientY);
         }
         if (mode === 'range-drag') previewSquare(clip, ev.clientX, ev.clientY);
-        if (mode === 'move' || mode === 'range-drag') carryTo(ev.clientX, ev.clientY);
-        if (mode === 'move' && trashable) {
+        // A group moves along the timeline. Selected oscillator clips can also be carried
+        // to a pad together; other groups, and the bin, are for one clip at a time.
+        const carries = !group.length || carriedRowClips(clip).length > 1;
+        if ((mode === 'move' && carries) || mode === 'range-drag') carryTo(ev.clientX, ev.clientY);
+        if (mode === 'move') followRows(ev);
+        showStays(mode === 'move' && copyKey(ev) && !clipEl.classList.contains('is-carried'));
+        if (mode === 'move' && mates.size) {
+            // Off the timeline the whole selection waits where it was.
+            const off = clipEl.classList.contains('is-carried');
+            for (const [el, { left }] of mates) {
+                el.classList.toggle('is-carried', off);
+                if (off) el.style.left = `${left}px`;
+            }
+        }
+        if (mode === 'move' && trashable && !group.length) {
             if (!trash) trash = showTrash();
             overTrash = trashHit(trash, ev.clientX, ev.clientY);
             trash.classList.toggle('is-hot', overTrash);
@@ -1209,6 +1472,9 @@ function beginClipGesture(event, clipEl) {
         document.documentElement.classList.remove('arrange-trimming');
         handleEl?.classList.remove('is-active');
         drawOverride = null;
+        mateOverrides.clear();
+        rowPreview.clear();
+        showStays(false);
         clearTargets();
         const trashing = overTrash && mode === 'move' && ev.type !== 'pointercancel';
         if (trash) hideTrash(trash, trashing);
@@ -1228,11 +1494,30 @@ function beginClipGesture(event, clipEl) {
             land?.();
             return;
         }
-        if (mode === 'move') {
+        if (mode === 'move' && group.length) {
             lastClipTap = null;
-            commitMove(clip, originStart, startX, ev.clientX, ev.clientY);
+            commitGroupMove(clip, group, originStart, startX, ev.clientX, ev.clientY, copyKey(ev), rowShift);
             land?.();
             if (replacing >= 0) showReplaceToast(replacing, !!carry, clip.id);
+            return;
+        }
+        if (mode === 'move') {
+            lastClipTap = null;
+            commitMove(clip, originStart, startX, ev.clientX, ev.clientY, copyKey(ev), rowShift);
+            land?.();
+            if (replacing >= 0) showReplaceToast(replacing, !!carry, clip.id);
+            return;
+        }
+        if (mode === 'resize' && group.length) {
+            lastClipTap = null;
+            const ids = [clip.id, ...group];
+            const dTicks = ((ev.clientX - startX) / pxPerBar) * BAR_TICKS;
+            const before = `${clip.startTick}/${clip.lengthTick}`;
+            if (leftEdge) trimClipsStart(state.song, ids, clip.id, originStart + dTicks);
+            else resizeClips(state.song, ids, clip.id, originLen + dTicks);
+            const now = findClip(clip.id);
+            if (now && `${now.startTick}/${now.lengthTick}` !== before) noteEdit();
+            renderAll();
             return;
         }
         if (mode === 'resize') {
@@ -1262,6 +1547,10 @@ function beginClipGesture(event, clipEl) {
             return;
         }
         placeArrangementInsert(snapBeat(tickFromClientX(ev.clientX)));
+        if (group.length) {
+            groupIds = new Set();
+            paintSelection();
+        }
         const now = performance.now();
         if (lastClipTap && lastClipTap.id === clip.id && now - lastClipTap.at <= DBL_TAP_MS) {
             lastClipTap = null;
@@ -1370,6 +1659,9 @@ function previewMove(el, clip, origin, dx, clientX, clientY) {
     const square = squareAt(clientX, clientY);
     if (square && canDropOnSquare(clip, square.dataset.slot | 0)) {
         markDrop(square);
+        if (isRowClip(clip)) {
+            markDropBands(square, rowDropPlan(carriedRowClips(clip), square, clientY).map(([lane]) => lane));
+        }
         el.style.left = `${(origin / BAR_TICKS) * pxPerBar}px`;
         el.classList.remove('is-blocked');
         return;
@@ -1449,25 +1741,72 @@ function commitTrimStart(clip, originStart, startX, clientX) {
     renderAll();
 }
 
-function commitMove(clip, origin, startX, clientX, clientY) {
+// Drops copies of the dragged clips where they were let go; the copies take the selection.
+function commitCopy(ids, leadId, raw, rowShift = 0) {
+    const made = copyClipsTo(state.song, ids, leadId, raw, startGrid(), rowShift);
+    if (made.length) {
+        setSelection(made.map((one) => one.id), made[0].id);
+        noteEdit();
+    }
+    renderAll();
+}
+
+function commitMove(clip, origin, startX, clientX, clientY, copy = false, rowShift = 0) {
     const square = squareAt(clientX, clientY);
     if (square) {
-        if (canDropOnSquare(clip, square.dataset.slot | 0)) dropOnSquare(clip, square.dataset.slot | 0);
-        else renderAll();
+        if (!canDropOnSquare(clip, square.dataset.slot | 0)) renderAll();
+        else if (isRowClip(clip)) dropRowsOnSquare([clip], square, clientY);
+        else dropOnSquare(clip, square.dataset.slot | 0);
         return;
     }
     const lane = laneAt(clientX, clientY);
-    if (!lane || lane.dataset.track !== clip.track) {
+    if (!lane || bankTrackOf(lane.dataset.track) !== bankTrackOf(clip.track)) {
         renderAll();
         return;
     }
     const raw = Math.max(0, origin + ((clientX - startX) / pxPerBar) * BAR_TICKS);
+    if (copy) {
+        commitCopy([clip.id], clip.id, raw, rowShift);
+        return;
+    }
+    if (isRowClip(clip)) {
+        // An oscillator clip can also change row: the same notes on another oscillator.
+        const ok = moveClips(state.song, [clip.id], clip.id, raw, startGrid(), rowShift);
+        const now = findClip(clip.id);
+        if (ok && now && (now.startTick !== origin || now.track !== clip.track || rowShift)) noteEdit();
+        renderAll();
+        return;
+    }
     const before = origin;
     const ok = moveClip(state.song, clip.id, raw, startGrid());
     const now = findClip(clip.id);
     if (ok && now && now.startTick !== before) {
         shiftNoteRange(clip.id, now.startTick - before);
         noteEdit();
+    }
+    renderAll();
+}
+
+function commitGroupMove(clip, group, origin, startX, clientX, clientY, copy = false, rowShift = 0) {
+    const square = squareAt(clientX, clientY);
+    if (square) {
+        const rows = carriedRowClips(clip);
+        if (rows.length > 1 && canDropOnSquare(clip, square.dataset.slot | 0)) {
+            dropRowsOnSquare(rows, square, clientY);
+        } else renderAll();
+        return;
+    }
+    const lane = laneAt(clientX, clientY);
+    if (lane && copy) {
+        commitCopy([clip.id, ...group], clip.id, Math.max(0, origin + ((clientX - startX) / pxPerBar) * BAR_TICKS), rowShift);
+        return;
+    }
+    if (lane) {
+        const raw = Math.max(0, origin + ((clientX - startX) / pxPerBar) * BAR_TICKS);
+        const track = clip.track;
+        const ok = moveClips(state.song, [clip.id, ...group], clip.id, raw, startGrid(), rowShift);
+        const now = findClip(clip.id);
+        if (ok && now && (now.startTick !== origin || now.track !== track)) noteEdit();
     }
     renderAll();
 }
@@ -1503,11 +1842,12 @@ function onSquarePointerDown(event) {
         if (!dragging) return;
         clearTargets();
         const lane = laneAt(ev.clientX, ev.clientY);
-        if (lane && lane.dataset.track === track) {
+        if (lane && bankTrackOf(lane.dataset.track) === track) {
             lane.classList.add('is-target');
-            const snapped = previewSnapStart(track, null, tickFromClientX(ev.clientX));
-            ghost.classList.toggle('is-blocked', overlaps(track, null, snapped, dragLen));
-            markOverwriteRange(track, null, snapped, snapped + dragLen);
+            const over = lane.dataset.track;
+            const snapped = previewSnapStart(over, null, tickFromClientX(ev.clientX));
+            ghost.classList.toggle('is-blocked', overlaps(over, null, snapped, dragLen));
+            markOverwriteRange(over, null, snapped, snapped + dragLen);
             ghostToLane(ghost, lane, snapped, dragLen);
         } else {
             ghost.classList.remove('is-blocked');
@@ -1533,11 +1873,11 @@ function onSquarePointerDown(event) {
             return;
         }
         const lane = laneAt(ev.clientX, ev.clientY);
-        if (!lane || lane.dataset.track !== track) {
+        if (!lane || bankTrackOf(lane.dataset.track) !== track) {
             if (dirty) renderAll();
             return;
         }
-        commitPlace(track, kind, slot, tickFromClientX(ev.clientX));
+        commitPlace(lane.dataset.track, kind, slot, tickFromClientX(ev.clientX));
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -1567,7 +1907,7 @@ function placeFromBank(track, kind, slot, startTick) {
         : snapshotSynthSlot(kind, slot));
     if (!data) return false;
     const automation = kind === 'd' ? null : snapshotBankAutomation(`${kind}${slot}`);
-    return placeClip(state.song, {
+    const spec = {
         track,
         kind,
         source: slot,
@@ -1575,7 +1915,13 @@ function placeFromBank(track, kind, slot, startTick) {
         data,
         automation,
         copiedHash: patternHash(kind, slot),
-    }, startGrid());
+    };
+    if (kind === 'b') {
+        // One clip per oscillator row; the one in the row it was dropped on ends up selected.
+        const placed = placeBerlinRows(state.song, spec, startGrid());
+        return placed ? (placed.find((clip) => clip.track === track) || placed[0]) : false;
+    }
+    return placeClip(state.song, spec, startGrid());
 }
 
 function cycleTicks(kind, slot) {
@@ -1648,6 +1994,43 @@ function previewSquare(clip, clientX, clientY) {
 function markDrop(square) {
     square.classList.add('is-drop');
     square.classList.toggle('is-replace', !square.classList.contains('is-empty'));
+}
+
+// A Berlin pad is four bands, one per oscillator lane (drawBerlinBands): the one under y.
+function bandAt(square, clientY) {
+    const rect = square.getBoundingClientRect();
+    return Math.max(0, Math.min(3, Math.floor(((clientY - rect.top) / Math.max(1, rect.height)) * 4)));
+}
+
+function isRowClip(clip) {
+    return !!clip && clip.kind === 'b' && Number.isInteger(clip.row);
+}
+
+/**
+ * The pad lanes a drop of oscillator row clips writes, as [lane, clip] pairs. One clip
+ * goes to the band it is dropped on, so a part can move to another oscillator. Several
+ * selected clips each go to their own oscillator's lane; when two share a row, the
+ * earlier one is used.
+ */
+function rowDropPlan(clips, square, clientY) {
+    const rows = clips.filter(isRowClip);
+    if (rows.length === 1) return [[bandAt(square, clientY), rows[0]]];
+    const plan = new Map();
+    for (const clip of rows.slice().sort((a, b) => a.startTick - b.startTick)) {
+        if (!plan.has(clip.row)) plan.set(clip.row, clip);
+    }
+    return [...plan.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+// Outline the pad bands a drop would write.
+function markDropBands(square, lanes) {
+    square.querySelectorAll('.arrange-square-band').forEach((el) => el.remove());
+    for (const lane of lanes) {
+        const band = document.createElement('span');
+        band.className = 'arrange-square-band';
+        band.style.top = `${lane * 25}%`;
+        square.appendChild(band);
+    }
 }
 
 function absoluteNotes(clip) {
@@ -1753,6 +2136,51 @@ function dropOnSquare(clip, slot) {
     renderAll();
 }
 
+/**
+ * Oscillator row clips dropped on a Berlin pad. Each writes only its own notes, into the
+ * lane rowDropPlan gives it; the pad's other oscillators, its mod lanes, repeat and
+ * automation stay as they are, and its oscillator count grows to take the lane in.
+ * A trimmed clip lands as what it plays. A clip that went to its own oscillator's lane
+ * then belongs to the pad; one moved to another oscillator's lane is left as it was.
+ * One undo step puts the pad and the clips back.
+ */
+function dropRowsOnSquare(clips, square, clientY) {
+    const slot = square.dataset.slot | 0;
+    const plan = rowDropPlan(clips, square, clientY);
+    if (!plan.length) {
+        renderAll();
+        return;
+    }
+    const prev = captureSlot('b', slot);
+    const merged = JSON.parse(JSON.stringify(prev.data || {}));
+    if (!Array.isArray(merged.lanes)) merged.lanes = [];
+    const items = [];
+    let truncated = false;
+    for (const [lane, clip] of plan) {
+        const cut = clipIsTrimmed(clip) ? trimmedClipData(clip) : null;
+        if (cut?.truncated) truncated = true;
+        const source = (cut ? cut.data : clip.data)?.lanes?.[clip.row];
+        if (!source) continue;
+        merged.lanes[lane] = { ...JSON.parse(JSON.stringify(source)), enabled: true, destination: `osc${lane + 1}Pitch` };
+        merged.oscCount = Math.max(Math.round(merged.oscCount) || 3, lane + 1);
+        if (lane === clip.row) items.push({ id: clip.id, bake: !cut?.truncated });
+    }
+    let ok = false;
+    suspend += 1;
+    try {
+        writeSynthSlot('b', slot, merged, prev.automation);
+        // The clips take the pad as it now is, in the order it plays (as placeFromBank does).
+        const data = playOrderData('b', snapshotSynthSlot('b', slot));
+        ok = retargetClips(state.song, items, slot, patternHash('b', slot), prev, data);
+        if (!ok) writePayload(prev);
+    } finally {
+        suspend -= 1;
+    }
+    if (ok) noteEdit();
+    showArrangeNotice(truncated ? 'Truncated to 32 steps' : '');
+    renderAll();
+}
+
 function captureSlot(kind, slot) {
     if (kind === 'd') {
         return { kind, slot, data: snapshotDrumSlot(slot), automation: null };
@@ -1813,6 +2241,7 @@ function showGhost(kind, slot, square, x, y) {
     const rect = square.getBoundingClientRect();
     const ghost = document.createElement('div');
     ghost.className = 'arrange-ghost is-pad';
+    ghost.dataset.kind = kind;
     if (square.classList.contains('is-empty')) ghost.classList.add('is-empty');
     const size = Math.max(24, rect.width * GHOST_PAD_SCALE);
     ghost.dataset.size = String(size);
@@ -1852,10 +2281,17 @@ function ghostToLane(ghost, lane, startTick, lengthTick) {
     const laneRect = lane.getBoundingClientRect();
     const inner = laneRect.top + lane.clientTop;
     setGhostMode(ghost, 'clip');
+    let top = inner;
+    let bottom = laneRect.bottom;
+    if (laneTrackRow(lane.dataset.track) >= 0) {
+        const first = laneFor(LANE_TRACKS[0]);
+        top = first.getBoundingClientRect().top + first.clientTop;
+        bottom = laneFor(LANE_TRACKS[LANE_TRACKS.length - 1]).getBoundingClientRect().bottom;
+    }
     ghost.style.width = `${Math.max(16, (lengthTick / BAR_TICKS) * pxPerBar)}px`;
-    ghost.style.height = `${Math.max(12, laneRect.bottom - inner - 6)}px`;
+    ghost.style.height = `${Math.max(12, bottom - top - 6)}px`;
     ghost.style.left = `${sheetRect.left + (startTick / BAR_TICKS) * pxPerBar}px`;
-    ghost.style.top = `${inner + 3}px`;
+    ghost.style.top = `${top + 3}px`;
 }
 
 function setGhostMode(ghost, mode) {
@@ -2113,11 +2549,31 @@ function clearTargets() {
     root.querySelectorAll('.is-target, .arrange-square.is-drop, .arrange-clip.is-overwritten').forEach((el) => {
         el.classList.remove('is-target', 'is-drop', 'is-replace', 'is-overwritten');
     });
+    root.querySelectorAll('.arrange-square-band').forEach((el) => el.remove());
+}
+
+function isSelected(id) {
+    return !!id && (id === selectedId || (groupIds.has(selectedId) && groupIds.has(id)));
+}
+
+/** Ids of every selected clip that still exists; the last-clicked one first. */
+function selectionIds() {
+    if (!selectedId || !findClip(selectedId)) return [];
+    const rest = groupIds.has(selectedId)
+        ? [...groupIds].filter((id) => id !== selectedId && findClip(id))
+        : [];
+    return [selectedId, ...rest];
+}
+
+function setSelection(ids, lead = null) {
+    const list = [...new Set(ids)].filter((id) => findClip(id));
+    selectedId = lead && list.includes(lead) ? lead : (list[0] || null);
+    groupIds = new Set(list.length > 1 ? list : []);
 }
 
 function paintSelection() {
     root.querySelectorAll('.arrange-clip').forEach((el) => {
-        const on = el.dataset.id === selectedId;
+        const on = isSelected(el.dataset.id);
         if (el.classList.contains('is-selected') === on) return;
         el.classList.toggle('is-selected', on);
         drawCanvas(el.querySelector('canvas[data-role="clip"]'));
@@ -2127,52 +2583,70 @@ function paintSelection() {
 
 // The copy knob sits just past a clip's right edge, half way down. It shows for the
 // selected clip (and, with a mouse, the hovered one) only when a whole copy fits there.
+// The clips the copy knob stands for: the hovered clip, or what is selected. Several
+// selected clips share one knob, which copies them all as a block.
+function knobClips() {
+    const ids = selectionIds();
+    if (ids.length > 1 && (!hoverClipId || ids.includes(hoverClipId))) {
+        return ids.map((id) => findClip(id)).filter(Boolean);
+    }
+    const clip = findClip(hoverClipId || selectedId);
+    return clip ? [clip] : [];
+}
+
 function paintKnob() {
     if (copyDrag) return;
     knobEl?.remove();
     knobEl = null;
     if (!shown() || gestureDepth > 0 || !state.song) return;
-    const clip = findClip(hoverClipId || selectedId);
-    if (!clip || repeatRoom(state.song, clip.id, 1) < 1) return;
-    const lane = clip.track === 'drums' ? drumLane : synthLane;
+    const clips = knobClips();
+    const ids = clips.map((clip) => clip.id);
+    if (!clips.length || repeatRoomFor(state.song, ids, 1) < 1) return;
     const el = document.createElement('div');
     el.className = 'arrange-knob';
-    el.dataset.id = clip.id;
-    el.setAttribute('aria-label', 'Drag to drop copies');
+    el.dataset.ids = ids.join(',');
+    el.setAttribute('aria-label', clips.length > 1 ? 'Drag to drop copies of the selection' : 'Drag to drop copies');
     el.innerHTML = `<span class="arrange-knob-hex">${COPY_ICON}</span>`;
-    el.style.left = `${((clip.startTick + clip.lengthTick) / BAR_TICKS) * pxPerBar + KNOB_GAP}px`;
+    el.style.left = `${(clipsSpan(clips).end / BAR_TICKS) * pxPerBar + KNOB_GAP}px`;
     el.addEventListener('pointerdown', onKnobDown);
     el.addEventListener('pointerenter', (event) => {
-        if (event.pointerType === 'mouse' && !event.buttons) showCopyGhosts(clip, 1);
+        if (event.pointerType === 'mouse' && !event.buttons) showCopyGhosts(clips, 1);
     });
     el.addEventListener('pointerleave', (event) => {
         if (event.pointerType === 'mouse' && !copyDrag) clearCopyGhosts();
     });
-    lane.appendChild(el);
+    if (clips.length === 1) {
+        laneFor(clips[0].track).appendChild(el);
+    } else {
+        // One knob for the lot: half way down the rows the selection covers.
+        const lanes = clips.map((clip) => laneFor(clip.track)).filter(Boolean);
+        const top = Math.min(...lanes.map((lane) => lane.offsetTop));
+        const bottom = Math.max(...lanes.map((lane) => lane.offsetTop + lane.offsetHeight));
+        el.style.top = `${(top + bottom) / 2}px`;
+        sheet.appendChild(el);
+    }
     knobEl = el;
 }
 
 // Dotted, see-through boxes where copies will land. Numbers count the original as 1,
-// so the last box reads how many times the pattern plays in a row.
-function showCopyGhosts(clip, count) {
+// so the last box reads how many times the pattern plays in a row. Several clips copy
+// as one block: each clip gets its boxes in its own row, one block length apart.
+function showCopyGhosts(clips, count) {
     clearCopyGhosts();
-    const lane = clip.track === 'drums' ? drumLane : synthLane;
-    const origin = document.createElement('div');
-    origin.className = 'arrange-copy-ghost is-origin';
-    origin.style.left = `${(clip.startTick / BAR_TICKS) * pxPerBar}px`;
-    origin.style.width = `${(clip.lengthTick / BAR_TICKS) * pxPerBar}px`;
-    origin.textContent = '1';
-    lane.appendChild(origin);
-    for (let k = 1; k <= count; k += 1) {
-        const start = clip.startTick + k * clip.lengthTick;
-        const ghost = document.createElement('div');
-        ghost.className = 'arrange-copy-ghost';
-        ghost.style.left = `${(start / BAR_TICKS) * pxPerBar}px`;
-        ghost.style.width = `${(clip.lengthTick / BAR_TICKS) * pxPerBar}px`;
-        ghost.textContent = String(k + 1);
-        // The knob sits over the first box's left end, so centre its number in the rest.
-        if (k === 1) ghost.style.paddingLeft = `${KNOB_GAP + 32}px`;
-        lane.appendChild(ghost);
+    const span = clipsSpan(clips).length;
+    for (const clip of clips) {
+        const lane = laneFor(clip.track);
+        if (!lane) continue;
+        for (let k = 0; k <= count; k += 1) {
+            const ghost = document.createElement('div');
+            ghost.className = k === 0 ? 'arrange-copy-ghost is-origin' : 'arrange-copy-ghost';
+            ghost.style.left = `${((clip.startTick + k * span) / BAR_TICKS) * pxPerBar}px`;
+            ghost.style.width = `${(clip.lengthTick / BAR_TICKS) * pxPerBar}px`;
+            ghost.textContent = String(k + 1);
+            // The knob sits over the first box's left end, so centre its number in the rest.
+            if (k === 1) ghost.style.paddingLeft = `${KNOB_GAP + 32}px`;
+            lane.appendChild(ghost);
+        }
     }
 }
 
@@ -2180,30 +2654,32 @@ function clearCopyGhosts() {
     root.querySelectorAll('.arrange-copy-ghost').forEach((el) => el.remove());
 }
 
-// Press shows the first copy; drag right adds one per clip length; let go drops them.
-// A tap without a drag drops one.
+// Press shows the first copy; drag right adds one per clip length (or per block, for
+// several selected clips); let go drops them. A tap without a drag drops one.
 function onKnobDown(event) {
     if (event.button !== 0) return;
     event.stopPropagation();
     event.preventDefault();
-    const clip = findClip(event.currentTarget.dataset.id);
-    if (!clip) return;
-    const room = repeatRoom(state.song, clip.id);
+    const clips = String(event.currentTarget.dataset.ids || '').split(',').map((id) => findClip(id)).filter(Boolean);
+    if (!clips.length) return;
+    const ids = clips.map((clip) => clip.id);
+    const room = repeatRoomFor(state.song, ids);
     if (room < 1) return;
     copyDrag = true;
-    selectedId = clip.id;
+    if (clips.length === 1) selectedId = clips[0].id;
     const pointerId = event.pointerId;
     const startX = event.clientX;
-    const unit = Math.max(1, (clip.lengthTick / BAR_TICKS) * pxPerBar);
+    // One more copy for every block length dragged.
+    const unit = Math.max(1, (clipsSpan(clips).length / BAR_TICKS) * pxPerBar);
     let count = 1;
-    showCopyGhosts(clip, count);
+    showCopyGhosts(clips, count);
     say(copyNotice(count));
     const move = (ev) => {
         if (ev.pointerId !== pointerId) return;
         const next = Math.max(1, Math.min(room, 1 + Math.round((ev.clientX - startX) / unit)));
         if (next === count) return;
         count = next;
-        showCopyGhosts(clip, count);
+        showCopyGhosts(clips, count);
         say(copyNotice(count));
     };
     const up = (ev) => {
@@ -2218,10 +2694,11 @@ function onKnobDown(event) {
             paintKnob();
             return;
         }
-        const made = repeatClip(state.song, clip.id, count);
-        if (made.length) {
+        const blocks = repeatClips(state.song, ids, count);
+        if (blocks.length) {
             // The last copy takes the selection, so its knob carries on the row.
-            selectedId = made[made.length - 1].id;
+            const last = blocks[blocks.length - 1];
+            setSelection(last.map((clip) => clip.id), last[0].id);
             noteEdit();
         }
         renderAll();
@@ -2276,15 +2753,17 @@ function openMenu(id, x, y) {
     if (clip.kind !== 'd') addMenuItem(menu, 'invert', 'Invert');
     addMenuItem(menu, 'duplicate', 'Duplicate');
     addMenuItem(menu, 'delete', 'Delete');
+    const rowClip = clip.kind === 'b' && Number.isInteger(clip.row);
+    if (rowClip) addMenuItem(menu, 'mute', clip.mute ? 'Unmute' : 'Mute');
     if (clip.kind === 'b' || clip.kind === 'd') {
         const block = document.createElement('div');
         block.className = 'arrange-menu-lanes';
         const caption = document.createElement('span');
         caption.className = 'arrange-menu-lanes-label';
-        caption.textContent = 'Lanes';
+        caption.textContent = rowClip ? 'Mod lanes' : 'Lanes';
         block.appendChild(caption);
         const count = clip.kind === 'd' ? 4 : 8;
-        for (let i = 0; i < count; i += 1) {
+        for (let i = rowClip ? 4 : 0; i < count; i += 1) {
             const button = document.createElement('button');
             button.type = 'button';
             button.dataset.lane = String(i);
@@ -2341,6 +2820,13 @@ function onMenuClick(event) {
     else if (action === 'invert') invertSelected(id);
     else if (action === 'duplicate') duplicateSelected(id);
     else if (action === 'delete') deleteSelected(id);
+    else if (action === 'mute') {
+        const clip = findClip(id);
+        const ids = isSelected(id) ? selectionIds() : [id];
+        if (clip && ids.length > 1) {
+            if (setClipsMute(state.song, ids, !clip.mute)) noteEdit();
+        } else if (clip && setClipMute(state.song, id, !clip.mute)) noteEdit();
+    }
     closeMenu();
     renderAll();
 }
@@ -2407,11 +2893,25 @@ function duplicateSelected(id) {
     selectedId = dup.id;
 }
 
+// The oscillator row clips that go to a pad with `clip`: it alone, or with it the other
+// selected row clips.
+function carriedRowClips(clip) {
+    if (!isRowClip(clip)) return [];
+    const ids = isSelected(clip.id) ? selectionIds() : [clip.id];
+    const clips = ids.map((id) => findClip(id)).filter(isRowClip);
+    return clips.includes(clip) ? clips : [clip];
+}
+
+// Deletes the clip, or every selected clip when it is one of several selected.
 function deleteSelected(id) {
-    if (!deleteClip(state.song, id)) return;
+    const ids = isSelected(id) ? selectionIds() : [id];
+    if (ids.length > 1) {
+        if (!deleteClips(state.song, ids)) return;
+    } else if (!deleteClip(state.song, id)) return;
     noteEdit();
-    if (selectedId === id) selectedId = null;
-    if (noteRange && noteRange.id === id) noteRange = null;
+    if (ids.includes(selectedId)) selectedId = null;
+    groupIds = new Set();
+    if (noteRange && ids.includes(noteRange.id)) noteRange = null;
 }
 
 function typingTarget(target) {
@@ -2549,6 +3049,7 @@ function drawCanvas(canvas) {
         let clip = findClip(canvas.dataset.id);
         if (!clip) return;
         if (drawOverride?.id === clip.id) clip = { ...clip, ...drawOverride };
+        else if (mateOverrides.has(clip.id)) clip = { ...clip, ...mateOverrides.get(clip.id) };
         else if (canvas.dataset.from) clip = cropClip(clip, Number(canvas.dataset.from), Number(canvas.dataset.to));
         // Clips draw at the timeline's tick scale and play their pattern once: the
         // edges crop it, and space past the pattern (or before it) stays empty.
@@ -2561,7 +3062,12 @@ function drawCanvas(canvas) {
         // a copy carried to the bank stays green on black.
         const ink = canvas.closest('.arrange-clip.is-selected') ? '#00e5ff' : '#00ff00';
         if (clip.kind === 'notes') drawNotes(ctx, w, h, clip, geom, ink);
-        else if (clip.kind === 'b') drawRows(ctx, w, h, clip.data?.lanes, 8, ink, geom);
+        else if (clip.kind === 'b') {
+            // An oscillator row clip draws its one lane wherever it shows, the carried copy included.
+            const only = Number.isInteger(clip.row) ? clip.row : null;
+            const colorRow = rowPreview.has(clip.id) && !canvas.dataset.stay ? rowPreview.get(clip.id) : null;
+            drawBerlinBands(ctx, w, h, clip.data, { geom, mask: clip.laneMask, only, colorRow, dim: !!clip.mute });
+        }
         else if (clip.kind === 'd') drawRows(ctx, w, h, clip.data?.lanes, 4, ink, geom);
         else drawNormal(ctx, w, h, clip.data, ink, geom);
         return;
@@ -2571,8 +3077,12 @@ function drawCanvas(canvas) {
     // Bank pads are lit green, so their note preview is black.
     const color = canvas.dataset.role === 'bank' ? '#000' : '#00ff00';
     if (kind === 'd') drawRows(ctx, w, h, snapshotDrumSlot(slot), 4, color);
-    else if (kind === 'b') drawRows(ctx, w, h, snapshotSynthSlot('b', slot)?.lanes, 8, color);
-    else drawNormal(ctx, w, h, snapshotSynthSlot('n', slot), color);
+    else if (kind === 'b') {
+        // A lit pad reserves its top strip for the P label; an empty pad shows nothing.
+        const empty = !!canvas.closest('.is-empty');
+        const lit = canvas.dataset.role === 'bank' && !empty;
+        if (!(empty && canvas.dataset.role === 'bank')) drawBerlinBands(ctx, w, h, snapshotSynthSlot('b', slot), { lit, headroom: lit ? 12 : 0 });
+    } else drawNormal(ctx, w, h, snapshotSynthSlot('n', slot), color);
 }
 
 function canvasBox(canvas) {
@@ -2647,6 +3157,95 @@ function drawRows(ctx, w, h, lanes, rowCount, color = '#00ff00', geom = null) {
             if (!steps[i] || steps[i].on === false) continue;
             ctx.fillRect(x + 0.4, row * rowH + 1, Math.max(1, cell - 1), Math.max(1, rowH - 2));
         }
+    }
+}
+
+// Lane colours for O1..O4, from the stylesheet (--berlin-p1..4, the same as berlin.js BERLIN_COLORS).
+let berlinBandColors = null;
+function berlinBandColor(row) {
+    if (!berlinBandColors) {
+        const css = getComputedStyle(document.documentElement);
+        berlinBandColors = ['#ff2a2a', '#ff7a18', '#ffc107', '#c8f000']
+            .map((fallback, i) => css.getPropertyValue(`--berlin-p${i + 1}`).trim() || fallback);
+    }
+    return berlinBandColors[row];
+}
+
+/**
+ * A Berlin pattern as four bands, O1 on top: one per oscillator lane, in its lane colour,
+ * with that lane's notes drawn by pitch. Mod lanes are not notes and are left out.
+ * `lit` is the pad look: all four bands lit, with black notes. Otherwise the notes are the
+ * lane colour on a dark clip. A lane the pattern does not use has no notes (and no band on
+ * a clip). A lane switched off, or muted in this clip (`mask`), has its notes dimmed.
+ * `headroom` keeps the top band's notes clear of the pad label. `only` draws a single lane
+ * filling the box (an oscillator row clip); `dim` draws it as muted; `colorRow` draws it in
+ * another lane's colour (a clip being dragged to that row).
+ */
+function drawBerlinBands(ctx, w, h, data, {
+    lit = false, geom = null, mask = null, headroom = 0, only = null, dim = false, colorRow = null,
+} = {}) {
+    const lanes = data?.lanes || [];
+    const oscCount = Math.max(1, Math.min(4, Math.round(data?.oscCount) || 3));
+    // Bands butt up against each other. Edges sit on whole device pixels, or the seam
+    // between two bands blends with the dark behind and shows as a thin line.
+    const dpr = window.devicePixelRatio || 1;
+    const edge = (row) => Math.round((row * h / 4) * dpr) / dpr;
+    for (let row = 0; row < 4; row += 1) {
+        if (only != null && row !== only) continue;
+        const lane = lanes[row];
+        // One lane on its own (a lane row on the timeline) takes the whole box.
+        const top = only != null ? 0 : edge(row);
+        const bandH = only != null ? h : edge(row + 1) - top;
+        const color = berlinBandColor(colorRow != null ? colorRow : row);
+        ctx.fillStyle = color;
+        const used = row < oscCount && !!lane;
+        // A pad always shows all four lanes lit, whether or not they hold notes.
+        if (lit) ctx.fillRect(0, top, w, bandH);
+        if (!used) continue;
+        const live = !dim && lane.enabled !== false && !(mask && mask[row] === false);
+        if (lit) {
+            ctx.fillStyle = '#000';
+            ctx.globalAlpha = live ? 1 : 0.3;
+        } else {
+            ctx.globalAlpha = live ? 0.13 : 0.05;
+            ctx.fillRect(0, top, w, bandH);
+            ctx.globalAlpha = live ? 1 : 0.3;
+        }
+
+        const count = Math.max(1, Math.min(32, lane.stepCount || 8));
+        const steps = lane.steps || [];
+        // Each band fits its own pitch range, like a recorded clip: the shape matters here.
+        let lo = Infinity;
+        let hi = -Infinity;
+        for (let i = 0; i < count; i += 1) {
+            if (!steps[i] || steps[i].on === false) continue;
+            const tune = Number(steps[i].tune) || 0;
+            lo = Math.min(lo, tune);
+            hi = Math.max(hi, tune);
+        }
+        if (Number.isFinite(lo)) {
+            if (hi - lo < 4) {
+                const mid = (lo + hi) / 2;
+                lo = mid - 2;
+                hi = mid + 2;
+            }
+            // The label strip only matters on the top band, and only when the band can spare it.
+            const head = row === 0 && bandH - headroom >= 6 ? headroom : 0;
+            const noteH = Math.max(2, Math.min(4, bandH / 5));
+            const room = Math.max(0, bandH - head - noteH - 2);
+            const { cell, total, x0 } = stepCells(w, count, lane.division, geom);
+            for (let k = 0; k < total; k += 1) {
+                const x = x0 + k * cell;
+                if (x + cell <= 0) continue;
+                if (x >= w) break;
+                const i = geom && lane.reverse ? count - 1 - (k % count) : k % count;
+                if (!steps[i] || steps[i].on === false) continue;
+                const tune = Math.max(lo, Math.min(hi, Number(steps[i].tune) || 0));
+                const y = top + head + 1 + (1 - (tune - lo) / (hi - lo)) * room;
+                ctx.fillRect(x + 0.5, y, Math.max(1, cell - 1.5), noteH);
+            }
+        }
+        ctx.globalAlpha = 1;
     }
 }
 

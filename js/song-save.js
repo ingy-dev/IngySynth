@@ -10,6 +10,7 @@ export const ARRANGEMENT_VERSION = 1;
 
 const SYNTH_KINDS = new Set(['n', 'b', 'notes']);
 const DRUM_KINDS = new Set(['d']);
+const LANE_KINDS = new Set(['b']);
 
 function clone(value) {
     return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -24,6 +25,7 @@ function emptySong() {
     return {
         synth: { clips: [] },
         drums: { clips: [] },
+        lanes: [0, 1, 2, 3].map(() => ({ clips: [] })),
         transpose: [],
         loop: { on: false, startTick: 0, endTick: 0 },
         playheadTick: 0,
@@ -35,6 +37,7 @@ export function songIsEmpty(song) {
     return !song
         || ((song.synth?.clips?.length || 0) === 0
             && (song.drums?.clips?.length || 0) === 0
+            && !(song.lanes || []).some((lane) => (lane?.clips?.length || 0) > 0)
             && (song.transpose?.length || 0) === 0);
 }
 
@@ -42,7 +45,7 @@ export function songIsEmpty(song) {
 export function songToArrangement(song) {
     if (songIsEmpty(song)) return null;
     const loop = song.loop || {};
-    return {
+    const out = {
         v: ARRANGEMENT_VERSION,
         synth: { clips: clone(song.synth?.clips || []) },
         drums: { clips: clone(song.drums?.clips || []) },
@@ -53,6 +56,10 @@ export function songToArrangement(song) {
             endTick: int(loop.endTick, 0, 0),
         },
     };
+    // Berlin oscillator rows O1..O4 (song-model.js). Left out when none hold a clip.
+    const lanes = [0, 1, 2, 3].map((row) => ({ clips: clone(song.lanes?.[row]?.clips || []) }));
+    if (lanes.some((lane) => lane.clips.length)) out.lanes = lanes;
+    return out;
 }
 
 function cleanNotes(list) {
@@ -109,6 +116,12 @@ export function arrangementToSong(arrangement) {
     const ids = new Set();
     song.synth.clips = cleanClips(arrangement.synth?.clips, 'synth', SYNTH_KINDS, ids);
     song.drums.clips = cleanClips(arrangement.drums?.clips, 'drums', DRUM_KINDS, ids);
+    // An older file has no `lanes`: its Berlin clips sit on the synth track and the arrange
+    // view moves them to their rows (song-model.js splitBerlinClips).
+    song.lanes = [0, 1, 2, 3].map((row) => ({
+        clips: cleanClips(arrangement.lanes?.[row]?.clips, `o${row + 1}`, LANE_KINDS, ids)
+            .map((clip) => ({ ...clip, row })),
+    }));
     if (Array.isArray(arrangement.transpose)) {
         song.transpose = arrangement.transpose
             .filter((e) => e && typeof e === 'object')

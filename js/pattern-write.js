@@ -26,7 +26,7 @@ import {
     getBerlinLane,
     patternStepCount,
     isOscLane,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 
 const WRITE_TUNE_MIN = -39; // A0 — match full keyboard / computer-keys range
 const WRITE_TUNE_MAX = 48;  // C8

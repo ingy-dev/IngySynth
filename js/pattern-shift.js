@@ -15,7 +15,7 @@ import {
     getPattern,
     hydratePatternToDom,
     STEP_SLOTS,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 
 function stepCount() {
     const n = Math.round(getNumber('stepCount', 8));

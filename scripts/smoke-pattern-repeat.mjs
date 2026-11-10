@@ -112,7 +112,8 @@ ok('normal P2 was not overwritten', getPattern(1).steps[0].tune !== 9);
 state.berlinSlot = 0;
 ok('normal repeat stays on the normal pattern', patternRepeat(getPattern(0)) === 3);
 ok('Berlin repeat is per Berlin pattern', patternRepeat(getBerlinPattern(2)) === 4 && patternRepeat(getBerlinPattern(0)) === 1);
-ok('Berlin P1 has 8 lanes and 3 osc', getBerlinPattern(0).lanes.length === 8 && getBerlinPattern(0).oscCount === 3);
+ok('Berlin P1 has 8 lanes, 4 osc and 1 mod', getBerlinPattern(0).lanes.length === 8
+    && getBerlinPattern(0).oscCount === 4 && getBerlinPattern(0).modCount === 1);
 ok('Berlin P1 lane 0 is on (factory)', getBerlinLane(0, 0).steps[0].on !== false);
 ok('Berlin P2 lane 0 is on (factory)', getBerlinLane(0, 1).steps[0].on !== false);
 {

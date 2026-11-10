@@ -43,7 +43,7 @@ import {
     syncPatternClipboardUi,
     ensureBerlinDrumKit,
     ensureDrumPatterns,
-} from './pattern-bank.js?v=50';
+} from './pattern-bank.js?v=51';
 import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=157';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { berlinHooks } from './berlin-hooks.js?v=1';
@@ -1524,6 +1524,22 @@ function applyBerlinMasterGateExit() {
     stashedMasterGatePct = null;
 }
 
+// Each O lane plays its own oscillator, so going into Berlin switches all four on.
+// Leaving puts the switches back as they were before. A loaded project sets the mode
+// with its own switches, so neither step runs for it (`fromDocument`).
+let stashedOscToggles = null;
+
+function applyBerlinOscsEnter() {
+    stashedOscToggles = [0, 1, 2, 3].map((i) => !!get(`osc-toggle-${i}`));
+    for (let i = 0; i < 4; i++) set(`osc-toggle-${i}`, true);
+}
+
+function applyBerlinOscsExit() {
+    if (!stashedOscToggles) return;
+    stashedOscToggles.forEach((on, i) => set(`osc-toggle-${i}`, on));
+    stashedOscToggles = null;
+}
+
 /** Controls that make no sense while Berlin lanes drive the voice in parallel.
  *  Acid stays clickable so it can take the voice back (same mutex as Berlin-from-Acid).
  *  Main Rev / DIV are per-lane in Berlin — grey them out on the transport. */
@@ -1559,7 +1575,7 @@ function setBerlinLockedUi(on) {
     });
 }
 
-export function setBerlinMode(on) {
+export function setBerlinMode(on, { fromDocument = false } = {}) {
     const next = !!on;
     if (state.berlinMode === next) {
         syncBerlinUi();
@@ -1598,6 +1614,8 @@ export function setBerlinMode(on) {
         setBerlinLockedUi(true);
         // Master GATE at 100% = unity over per-lane gates (stash for exit)
         applyBerlinMasterGateEnter();
+        if (fromDocument) stashedOscToggles = null;
+        else applyBerlinOscsEnter();
     } else {
         bumpSeqEngine();
         state.berlinMode = false;
@@ -1608,6 +1626,8 @@ export function setBerlinMode(on) {
         setBerlinLockedUi(false);
         clearBerlinStepActive();
         applyBerlinMasterGateExit();
+        if (fromDocument) stashedOscToggles = null;
+        else applyBerlinOscsExit();
         // Normal bank is P1–P8
         if (state.editSlot >= BANK_COUNT) state.editSlot = 0;
         hydratePatternToDom(state.editSlot);

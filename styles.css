@@ -14931,9 +14931,24 @@ html.arrange-trimming * {
 .arrange-roll.is-drums .arrange-roll-cell.is-on::before {
     bottom: 1px;
 }
-.arrange-roll.is-notes .arrange-roll-corner,
 .arrange-roll.is-notes .arrange-roll-heads {
-    display: none;
+    display: block;
+    position: sticky;
+    min-width: 0;
+    height: 18px;
+    border-bottom: 1px solid rgba(0, 170, 0, 0.45);
+    overflow: hidden;
+}
+.arrange-roll-barnum {
+    position: absolute;
+    top: 0;
+    height: 18px;
+    padding-left: 3px;
+    border-left: 1px solid rgba(0, 255, 0, 0.45);
+    font-size: 9px;
+    line-height: 18px;
+    color: #00aa00;
+    pointer-events: none;
 }
 .arrange-roll.is-notes .arrange-roll-sheet {
     grid-template-columns: var(--keys-w) minmax(0, 1fr);
@@ -14971,6 +14986,43 @@ html.arrange-trimming * {
     background: #00aa00;
     box-shadow: 0 0 4px rgba(0, 170, 0, 0.55);
     pointer-events: none;
+}
+/* Notes clips are editable (arrange-roll.js paintNotes). */
+.arrange-roll.is-notes .arrange-roll-note {
+    pointer-events: auto;
+    cursor: grab;
+    border: 1px solid #00ff00;
+}
+.arrange-roll.is-notes .arrange-roll-note.is-sel {
+    background: #00ffff;
+    border-color: #00ffff;
+    box-shadow: 0 0 6px rgba(0, 255, 255, 0.6);
+}
+.arrange-roll-note-end {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 6px;
+    max-width: 45%;
+    cursor: ew-resize;
+}
+.arrange-roll.is-notes .arrange-roll-grid {
+    cursor: crosshair;
+}
+.arrange-roll-beats {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        repeating-linear-gradient(90deg, rgba(0, 255, 0, 0.35) 0 1px, transparent 1px var(--bar-px)),
+        repeating-linear-gradient(90deg, rgba(0, 170, 0, 0.2) 0 1px, transparent 1px var(--beat-px));
+}
+.arrange-roll-beats.is-fine {
+    background-image:
+        repeating-linear-gradient(90deg, rgba(0, 255, 0, 0.35) 0 1px, transparent 1px var(--bar-px)),
+        repeating-linear-gradient(90deg, rgba(0, 170, 0, 0.2) 0 1px, transparent 1px var(--beat-px)),
+        repeating-linear-gradient(90deg, rgba(0, 170, 0, 0.08) 0 1px, transparent 1px var(--grid-px));
 }
 @media (max-width: 420px) {
     /* The key column narrows to 52px: Acc / Sld / Rat instead of the full names. */

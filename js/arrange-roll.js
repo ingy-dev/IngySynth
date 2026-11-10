@@ -2,7 +2,7 @@
 // markEdited runs once per gesture, before the mutation.
 
 import { state } from './state.js?v=120';
-import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks, findClipById } from './song-model.js?v=12';
+import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, checkpointUndo, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks, findClipById, BAR_TICKS } from './song-model.js?v=12';
 import {
     POLY_CHORD_MAX,
     chordFromCellNotes,
@@ -15,7 +15,7 @@ import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
 import { placeArrangementInsert } from './song-conductor.js?v=32';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=54';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=56';
 import { createIngyWindow } from './ingy-window.js?v=3';
 import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=276';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
@@ -83,6 +83,15 @@ let session = null;
 let dragY = 0;
 let dragRAF = 0;
 let audition = null;
+// Notes-clip editing (paintNotes): selected note objects, view geometry, the length a
+// new note gets (the last one resized), and the last note pressed (double-click delete).
+const NOTE_GRID = 240;
+const NOTE_BAR_PX = 160;
+const NOTES_HINT = 'Click to add a note · drag empty space to select · drag a note to move · drag its end to resize · double-click or Delete removes · Alt: no snap';
+let noteSel = new Set();
+let notesGeom = null;
+let lastNoteLen = NOTE_GRID;
+let lastNoteClick = null;
 // Box selection in the step grid: cellKey() of each selected note of the open clip
 // (and Berlin lane). A key whose note is gone drops out when the grid repaints.
 let stepSel = new Set();
@@ -273,10 +282,15 @@ function onRollKey(event) {
     const el = event.target instanceof Element ? event.target : null;
     if (el?.closest('input, textarea, [contenteditable="true"]')) return;
     const clip = findClip(openId);
-    if (clip && clip.kind !== 'notes' && (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'a') {
+    if (clip && (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'a') {
         event.preventDefault();
         event.stopPropagation();
-        selectAllSteps();
+        if (clip.kind === 'notes') {
+            noteSel = new Set(clip.notes || []);
+            render({ jump: false });
+        } else {
+            selectAllSteps();
+        }
         return;
     }
     if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && !event.metaKey && !event.ctrlKey && !event.altKey) {
@@ -291,7 +305,8 @@ function onRollKey(event) {
     if (event.key !== 'Delete' && event.key !== 'Backspace') return;
     event.preventDefault();
     event.stopPropagation();
-    deleteSelectedSteps();
+    if (clip?.kind === 'notes') deleteSelectedNotes();
+    else deleteSelectedSteps();
 }
 
 function openArrangeRoll(id) {
@@ -301,6 +316,7 @@ function openArrangeRoll(id) {
         // An oscillator row clip opens on the lane it plays.
         laneIndex = clip.kind === 'b' && Number.isInteger(clip.row) ? clip.row : 0;
         selectedCol = 0;
+        noteSel = new Set();
         stepSel.clear();
     }
     const wasOpen = openId != null;
@@ -360,10 +376,13 @@ function render({ jump }) {
         roll.dataset.kind = clip.kind;
         roll.classList.toggle('is-drums', clip.kind === 'd');
         roll.classList.toggle('is-notes', clip.kind === 'notes');
-        roll.classList.toggle('is-readonly', clip.kind === 'notes');
         win.setTitle(`Piano Roll · ${clipTitle(clip)}`);
         hintEl.hidden = clip.kind !== 'notes';
-        if (clip.kind === 'notes') hintEl.textContent = 'Drag onto a P square to edit as a pattern';
+        if (clip.kind === 'notes') hintEl.textContent = NOTES_HINT;
+        if (clip.kind !== 'notes') {
+            sheet.style.width = '';
+            notesGeom = null;
+        }
         paintLanes(clip);
         const measured = measureRow(clip);
         if (measured) rowPx = measured;
@@ -394,7 +413,7 @@ function render({ jump }) {
 }
 
 function clipTitle(clip) {
-    if (clip.kind === 'notes') return 'Rec';
+    if (clip.kind === 'notes') return clip.name || 'Rec';
     const star = clip.edited ? '*' : '';
     const name = `P${(clip.source | 0) + 1}${star}`;
     if (clip.kind === 'b') return `${name} ${LANE_NAMES[laneIndex] || 'O1'}`;
@@ -602,8 +621,10 @@ function syncFoldBtn(clip) {
     scaleBtn.setAttribute('aria-pressed', scaleOn && scaleView ? 'true' : 'false');
 }
 
-// What the transpose buttons move: the lane shown for Berlin, the whole clip otherwise.
+// What the transpose buttons move: the selected notes of a recorded clip (all of them
+// when none is selected), the lane shown for Berlin, the whole pattern otherwise.
 function transposeOptions(clip) {
+    if (clip?.kind === 'notes') return noteSel.size ? { notes: noteSel } : {};
     return clip?.kind === 'b' ? { lane: laneIndex } : {};
 }
 
@@ -727,35 +748,284 @@ function paintDrums(clip) {
     }
 }
 
+// Notes clips (recorded takes, imported MIDI) are edited as free notes, not steps:
+// click empty space to add a note, drag empty space to box-select, drag a note to move
+// it, drag its right end to resize, double-click or Delete to remove. Shift adds to the
+// selection, Alt/Option turns the 1/16 snap off. Positions are relative to the clip's
+// origin (its start minus any start trim), like playback.
+function notesSpan(clip) {
+    let end = (Number(clip.lengthTick) || 0) + clipStartOffset(clip);
+    for (const n of clip.notes || []) end = Math.max(end, (Number(n.startTick) || 0) + (Number(n.durTick) || 0));
+    return Math.max(BAR_TICKS, Math.ceil(end / BAR_TICKS) * BAR_TICKS);
+}
+
 function paintNotes(clip) {
     sheet.style.setProperty('--cols', '1');
     headsEl.replaceChildren();
     keysEl.replaceChildren();
     gridEl.replaceChildren();
     paintKeyboard();
+    const len = notesSpan(clip);
+    const keysW = keysEl.offsetWidth || 64;
+    const avail = Math.max(120, (scroller.clientWidth || 600) - keysW);
+    const ppt = Math.max(avail / len, NOTE_BAR_PX / BAR_TICKS);
+    notesGeom = { len, ppt };
+    sheet.style.width = `calc(var(--keys-w) + ${Math.ceil(len * ppt)}px)`;
+    const beats = document.createElement('div');
+    beats.className = 'arrange-roll-beats';
+    beats.setAttribute('aria-hidden', 'true');
+    beats.style.setProperty('--bar-px', `${BAR_TICKS * ppt}px`);
+    beats.style.setProperty('--beat-px', `${960 * ppt}px`);
+    beats.style.setProperty('--grid-px', `${NOTE_GRID * ppt}px`);
+    beats.classList.toggle('is-fine', NOTE_GRID * ppt >= 8);
+    // Bar numbers ride in the sticky header row, so they stay in view while scrolling pitches.
+    const step = Math.max(1, Math.ceil(28 / (BAR_TICKS * ppt)));
+    for (let bar = 0; bar * BAR_TICKS < len; bar += step) {
+        const label = document.createElement('span');
+        label.className = 'arrange-roll-barnum';
+        label.style.left = `${bar * BAR_TICKS * ppt}px`;
+        label.textContent = String(bar + 1);
+        headsEl.appendChild(label);
+    }
+    gridEl.appendChild(beats);
     const layer = document.createElement('div');
     layer.className = 'arrange-roll-notes';
-    const length = Math.max(1, Number(clip.lengthTick) || 1);
-    for (const note of clip.notes || []) {
+    const notes = clip.notes || [];
+    for (const sel of [...noteSel]) if (!notes.includes(sel)) noteSel.delete(sel);
+    notes.forEach((note, index) => {
         const semi = Math.round(Number(note.semi));
-        if (!Number.isFinite(semi)) continue;
-        const tune = Math.max(TUNE_LO, Math.min(TUNE_HI, semi));
-        const start = Math.max(0, Number(note.startTick) || 0);
-        const dur = Math.max(1, Number(note.durTick) || 1);
+        if (!Number.isFinite(semi)) return;
         const bar = document.createElement('div');
         bar.className = 'arrange-roll-note';
-        bar.style.top = `${(TUNE_HI - tune) * rowPx + 1}px`;
-        bar.style.height = `${Math.max(4, rowPx - 2)}px`;
-        bar.style.left = `${(start / length) * 100}%`;
-        bar.style.width = `${Math.max(0.8, (dur / length) * 100)}%`;
-        bar.title = semitonesToNoteName(tune);
+        bar.dataset.i = String(index);
+        if (noteSel.has(note)) bar.classList.add('is-sel');
+        placeNoteEl(bar, note.startTick, note.durTick, semi, note.velocity);
+        bar.title = semitonesToNoteName(semi);
+        const end = document.createElement('div');
+        end.className = 'arrange-roll-note-end';
+        bar.appendChild(end);
         layer.appendChild(bar);
-    }
+    });
     gridEl.appendChild(layer);
 }
 
-// Rubber-band selection over the step grid (mouse and pen; a touch drag scrolls the
-// grid instead). The box is anchored in grid coordinates, so it
+function placeNoteEl(el, startTick, durTick, semi, velocity) {
+    const g = notesGeom;
+    if (!g) return;
+    const tune = Math.max(TUNE_LO, Math.min(TUNE_HI, Math.round(semi)));
+    el.style.top = `${(TUNE_HI - tune) * rowPx + 1}px`;
+    el.style.height = `${Math.max(4, rowPx - 2)}px`;
+    el.style.left = `${Math.max(0, Number(startTick) || 0) * g.ppt}px`;
+    el.style.width = `${Math.max(3, Math.max(1, Number(durTick) || 1) * g.ppt)}px`;
+    const vel = Number(velocity);
+    el.style.opacity = String(0.45 + 0.55 * (Number.isFinite(vel) ? Math.max(0, Math.min(1, vel)) : 0.8));
+}
+
+function noteTickAt(clientX) {
+    const rect = gridEl.getBoundingClientRect();
+    return (clientX - rect.left) / (notesGeom?.ppt || 1);
+}
+
+function noteTuneAt(clientY) {
+    const rect = gridEl.getBoundingClientRect();
+    return Math.max(TUNE_LO, Math.min(TUNE_HI, TUNE_HI - Math.floor((clientY - rect.top) / rowPx)));
+}
+
+function snapNoteTick(tick, free, mode = Math.round) {
+    return free ? Math.round(tick) : mode(tick / NOTE_GRID) * NOTE_GRID;
+}
+
+function auditionNote(pointerId, tune) {
+    if (!canAudition()) return;
+    if (!audition) audition = { pointer: pointerId, tune: null, held: needsHeldNoteSet() };
+    soundKey(tune);
+}
+
+// Clip grows to hold notes moved or stretched past its end.
+function fitClipToNotes(clip) {
+    let end = 0;
+    for (const n of clip.notes) end = Math.max(end, n.startTick + n.durTick);
+    const reach = end - clipStartOffset(clip);
+    if (reach > (Number(clip.lengthTick) || 0)) clip.lengthTick = Math.ceil(reach / NOTE_GRID) * NOTE_GRID;
+}
+
+function commitNotes(clip) {
+    clip.notes.sort((a, b) => a.startTick - b.startTick || a.semi - b.semi);
+    fitClipToNotes(clip);
+    refreshArrange();
+}
+
+function deleteSelectedNotes() {
+    const clip = findClip(openId);
+    if (!clip || clip.kind !== 'notes' || !noteSel.size) return false;
+    checkpointUndo(state.song);
+    clip.notes = clip.notes.filter((n) => !noteSel.has(n));
+    noteSel.clear();
+    commitNotes(clip);
+    return true;
+}
+
+function onNotesPointerDown(event, clip) {
+    if (!notesGeom || !Array.isArray(clip.notes)) return;
+    const noteEl = event.target.closest('.arrange-roll-note');
+    if (!noteEl) {
+        if (event.target.closest('.arrange-roll-grid')) onNotesEmptyDown(event, clip);
+        return;
+    }
+    const x0 = event.clientX;
+    const y0 = event.clientY;
+    const note = clip.notes[noteEl.dataset.i | 0];
+    if (!note) return;
+    const now = performance.now();
+    if (lastNoteClick && lastNoteClick.note === note && now - lastNoteClick.at < 350 && !event.shiftKey) {
+        lastNoteClick = null;
+        noteSel = new Set([note]);
+        deleteSelectedNotes();
+        return;
+    }
+    lastNoteClick = { note, at: now };
+    if (event.shiftKey) {
+        if (noteSel.has(note)) noteSel.delete(note);
+        else noteSel.add(note);
+    } else if (!noteSel.has(note)) {
+        noteSel = new Set([note]);
+    }
+    const mode = event.target.closest('.arrange-roll-note-end') ? 'resize' : 'move';
+    event.preventDefault();
+    gridEl.querySelectorAll('.arrange-roll-note').forEach((el) => {
+        el.classList.toggle('is-sel', noteSel.has(clip.notes[el.dataset.i | 0]));
+    });
+    const picked = [...noteSel].map((n) => ({
+        n,
+        el: gridEl.querySelector(`.arrange-roll-note[data-i="${clip.notes.indexOf(n)}"]`),
+        start: n.startTick,
+        dur: n.durTick,
+        semi: Math.round(Number(n.semi)) || 0,
+    }));
+    const t0 = noteTickAt(x0);
+    const tune0 = noteTuneAt(y0);
+    let dTick = 0;
+    let dSemi = 0;
+    let dragged = false;
+    auditionNote(event.pointerId, Math.round(Number(note.semi)) || 0);
+    const move = (ev) => {
+        if (ev.pointerId !== event.pointerId) return;
+        if (!dragged && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return;
+        dragged = true;
+        const freeNow = ev.altKey;
+        if (mode === 'move') {
+            const minStart = Math.min(...picked.map((p) => p.start));
+            dTick = Math.max(-minStart, snapNoteTick(noteTickAt(ev.clientX) - t0, freeNow));
+            const lo = Math.min(...picked.map((p) => p.semi));
+            const hi = Math.max(...picked.map((p) => p.semi));
+            dSemi = Math.max(TUNE_LO - lo, Math.min(TUNE_HI - hi, noteTuneAt(ev.clientY) - tune0));
+        } else {
+            dTick = snapNoteTick(noteTickAt(ev.clientX) - t0, freeNow);
+        }
+        for (const p of picked) {
+            if (!p.el) continue;
+            if (mode === 'move') placeNoteEl(p.el, p.start + dTick, p.dur, p.semi + dSemi, p.n.velocity);
+            else placeNoteEl(p.el, p.start, resized(p.dur, dTick, freeNow), p.semi, p.n.velocity);
+        }
+        if (mode === 'move') auditionNote(ev.pointerId, (Math.round(Number(note.semi)) || 0) + dSemi);
+    };
+    const resized = (dur, d, freeNow) => Math.max(freeNow ? 30 : NOTE_GRID, dur + d);
+    const up = (ev) => {
+        if (ev.pointerId !== event.pointerId) return;
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+        stopAudition();
+        const cancelled = ev.type === 'pointercancel';
+        const changed = dragged && !cancelled && (dTick !== 0 || dSemi !== 0);
+        if (changed) {
+            checkpointUndo(state.song);
+            for (const p of picked) {
+                if (mode === 'move') {
+                    p.n.startTick = p.start + dTick;
+                    p.n.semi = p.semi + dSemi + ((Number(p.n.semi) || 0) - Math.round(Number(p.n.semi) || 0));
+                } else {
+                    p.n.durTick = resized(p.dur, dTick, ev.altKey);
+                    if (picked.length === 1) lastNoteLen = p.n.durTick;
+                }
+            }
+        }
+        if (changed) commitNotes(clip);
+        else render({ jump: false });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+}
+
+// Empty space: a drag draws a selection box (Shift adds to the selection). A click drops
+// the selection if there is one, otherwise adds a note the length of the last one resized;
+// it stays unselected, so the next click adds another.
+function onNotesEmptyDown(event, clip) {
+    const x0 = event.clientX;
+    const y0 = event.clientY;
+    const shift = event.shiftKey;
+    const adds = shift || !noteSel.size;
+    const tick = snapNoteTick(noteTickAt(x0), event.altKey, Math.floor);
+    const semi = noteTuneAt(y0);
+    event.preventDefault();
+    if (adds) auditionNote(event.pointerId, semi);
+    const stop = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', up);
+        stopAudition();
+    };
+    const move = (ev) => {
+        if (ev.pointerId !== event.pointerId || ev.pointerType === 'touch') return;
+        if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return;
+        stop();
+        const base = shift ? new Set(noteSel) : new Set();
+        startMarquee(event.pointerId, x0, y0, {
+            selector: '.arrange-roll-note',
+            keep: (el) => base.has(clip.notes[el.dataset.i | 0]),
+            done: (hits) => {
+                if (hits) {
+                    noteSel = base;
+                    for (const el of hits) {
+                        const hit = clip.notes[el.dataset.i | 0];
+                        if (hit) noteSel.add(hit);
+                    }
+                }
+                render({ jump: false });
+            },
+        });
+        onMarqueeMove(ev);
+    };
+    const up = (ev) => {
+        if (ev.pointerId !== event.pointerId) return;
+        stop();
+        if (ev.type === 'pointercancel') return;
+        if (!adds) {
+            noteSel.clear();
+            gridEl.querySelectorAll('.arrange-roll-note.is-sel').forEach((el) => el.classList.remove('is-sel'));
+            syncTransposeBtns(clip);
+            return;
+        }
+        if (tick < 0 || tick >= notesGeom.len) return;
+        checkpointUndo(state.song);
+        clip.notes.push({
+            startTick: tick,
+            durTick: lastNoteLen,
+            semi,
+            fine: 0,
+            velocity: 0.8,
+            legato: false,
+        });
+        commitNotes(clip);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+}
+
+// Rubber-band selection, shared by the step grid and the notes view (mouse and pen; a
+// touch drag scrolls the grid instead). The box is anchored in grid coordinates, so it
 // keeps its corner while a drag near an edge scrolls the view. `keep` says which elements
 // stay selected whatever the box covers; `done` gets the covered elements, or null if
 // the drag was cancelled.
@@ -1342,7 +1612,10 @@ function playState(clip, tick) {
     const start = Number(clip.startTick) || 0;
     const len = Number(clip.lengthTick) || 0;
     if (tick < start || tick >= start + len) return null;
-    if (clip.kind === 'notes') return { pct: ((tick - start) / Math.max(1, len)) * 100 };
+    if (clip.kind === 'notes') {
+        const rel = tick - (start - clipStartOffset(clip));
+        return { pct: (rel / Math.max(1, notesGeom?.len || len)) * 100 };
+    }
     // Clips play their pattern once from its origin; trimmed edges and empty space show no step.
     const span = clipPlaySpan(clip);
     if (tick < span.from || tick >= span.to) return null;
@@ -1492,6 +1765,11 @@ function onPointerDown(event) {
         selectedCol = head.dataset.col | 0;
         syncTools();
         previewStep(selectedStep(findClip(openId)));
+        return;
+    }
+    const notesClip = findClip(openId);
+    if (notesClip?.kind === 'notes') {
+        if (gridEl.contains(event.target)) onNotesPointerDown(event, notesClip);
         return;
     }
     const cell = event.target.closest('.arrange-roll-cell');

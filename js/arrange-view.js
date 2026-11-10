@@ -81,7 +81,8 @@ import {
     visibleClips,
 } from './song-model.js?v=12';
 import { quantizeToPattern } from './song-quantize.js?v=19';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=50';
+import { isMidiFileName, parseMidiFile } from './midi-file.js?v=1';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=51';
 
 const MIN_PX = 24;
 const MAX_PX = 1280;
@@ -302,8 +303,96 @@ function onSongLoaded() {
     else dirty = true;
 }
 
+// MIDI import. A .mid dropped on the synth lane becomes a notes clip where it lands;
+// dropped anywhere else it goes after the last synth clip, and the arrange view opens
+// on it. save-ui.js hands the file over (ingysynth:midi-file-drop).
+let fileDropLane = null;
+
+function setFileDropLane(lane) {
+    if (lane === fileDropLane) return;
+    fileDropLane?.classList.remove('is-target');
+    fileDropLane = lane;
+    lane?.classList.add('is-target');
+}
+
+function bindMidiFileDrop() {
+    window.addEventListener('dragover', (event) => {
+        if (!shown() || !Array.from(event.dataTransfer?.types || []).includes('Files')) return;
+        const lane = laneAt(event.clientX, event.clientY);
+        setFileDropLane(lane?.dataset.track === 'synth' ? lane : null);
+    });
+    window.addEventListener('dragleave', (event) => {
+        if (!event.relatedTarget) setFileDropLane(null);
+    });
+    window.addEventListener('drop', () => setFileDropLane(null));
+    document.addEventListener('ingysynth:midi-file-drop', (event) => {
+        importMidiFile(event.detail || {});
+    });
+}
+
+function synthEndTick() {
+    let end = 0;
+    for (const clip of state.song?.synth?.clips || []) {
+        end = Math.max(end, (Number(clip.startTick) || 0) + (Number(clip.lengthTick) || 0));
+    }
+    return Math.ceil(end / BAR_TICKS) * BAR_TICKS;
+}
+
+async function importMidiFile({ file, clientX, clientY }) {
+    if (!file || !isMidiFileName(file.name)) return;
+    if (!state.song) state.song = createSong();
+    const name = file.name.replace(/\.(mid|midi|smf)$/i, '');
+    let parsed;
+    try {
+        parsed = parseMidiFile(await file.arrayBuffer());
+    } catch (e) {
+        window.ingyToast?.(`Could not import ${file.name}: ${e?.message || e}`, true);
+        return;
+    }
+    if (!parsed.notes.length) {
+        window.ingyToast?.(`${file.name} has no notes.`, true);
+        return;
+    }
+    const lane = shown() && Number.isFinite(clientX) ? laneAt(clientX, clientY) : null;
+    const onLane = lane?.dataset.track === 'synth';
+    const start = onLane ? Math.max(0, tickFromClientX(clientX)) : synthEndTick();
+    const clip = placeClip(state.song, {
+        track: 'synth',
+        kind: 'notes',
+        startTick: start,
+        lengthTick: parsed.lengthTick,
+        notes: parsed.notes,
+        name,
+    }, onLane ? startGrid() : BAR_TICKS);
+    if (!clip) {
+        window.ingyToast?.(`Could not import ${file.name}.`, true);
+        return;
+    }
+    noteEdit();
+    selectedId = clip.id;
+    armed = null;
+    if (!shown()) setArrangeView(true);
+    renderAll();
+    if (!onLane) revealTick(clip.startTick);
+    const extra = [];
+    if (parsed.droppedDrums) extra.push(`${parsed.droppedDrums} drum notes (channel 10) left out`);
+    if (parsed.truncated) extra.push(`only the first ${parsed.notes.length} notes kept`);
+    showToast(`Imported ${name}`, -1, 0, null);
+    if (extra.length) window.ingyToast?.(`${name}: ${extra.join(', ')}.`, false);
+}
+
+// Scrolls the timeline so `tick` sits near its left edge, if it's off screen.
+function revealTick(tick) {
+    if (!scroller) return;
+    const x = (tick / BAR_TICKS) * pxPerBar;
+    if (x < scroller.scrollLeft || x > scroller.scrollLeft + scroller.clientWidth - 40) {
+        scroller.scrollLeft = Math.max(0, x - 40);
+    }
+}
+
 function bind() {
     document.addEventListener('ingysynth:song-loaded', onSongLoaded);
+    bindMidiFileDrop();
     document.getElementById('arrangeRecord').addEventListener('click', () => {
         state.songRecordArmed = !state.songRecordArmed;
         recordArmed = !!state.songRecordArmed;

@@ -356,6 +356,9 @@ function dropToast(message, isError) {
     setTimeout(() => el.remove(), 3500);
 }
 
+// arrange-view.js reports MIDI import results through this, as in Bare Metal.
+window.ingyToast = dropToast;
+
 function dragHasFiles(event) {
     return Array.from(event.dataTransfer?.types || []).includes('Files');
 }
@@ -371,9 +374,18 @@ export function initFileDrop() {
     window.addEventListener('drop', async (event) => {
         if (!dragHasFiles(event)) return;
         event.preventDefault();
-        const file = Array.from(event.dataTransfer.files || []).find((f) => /\.ingy$/i.test(f.name));
+        const files = Array.from(event.dataTransfer.files || []);
+        const mid = files.find((f) => /\.(mid|midi|smf)$/i.test(f.name));
+        if (mid) {
+            // MIDI import: arrange-view.js places it as a notes clip.
+            document.dispatchEvent(new CustomEvent('ingysynth:midi-file-drop', {
+                detail: { file: mid, clientX: event.clientX, clientY: event.clientY },
+            }));
+            return;
+        }
+        const file = files.find((f) => /\.ingy$/i.test(f.name));
         if (!file) {
-            dropToast('Drop an .ingy file to load it.', true);
+            dropToast('Drop an .ingy or a MIDI file to load it.', true);
             return;
         }
         let result;

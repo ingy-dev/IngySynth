@@ -2,7 +2,7 @@
 // markEdited runs once per gesture, before the mutation.
 
 import { state } from './state.js?v=120';
-import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks } from './song-model.js?v=12';
+import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks, findClipById } from './song-model.js?v=12';
 import {
     POLY_CHORD_MAX,
     chordFromCellNotes,
@@ -15,7 +15,7 @@ import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
 import { placeArrangementInsert } from './song-conductor.js?v=32';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=52';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=54';
 import { createIngyWindow } from './ingy-window.js?v=3';
 import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=276';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
@@ -83,6 +83,10 @@ let session = null;
 let dragY = 0;
 let dragRAF = 0;
 let audition = null;
+// Box selection in the step grid: cellKey() of each selected note of the open clip
+// (and Berlin lane). A key whose note is gone drops out when the grid repaints.
+let stepSel = new Set();
+let marquee = null;
 
 export function arrangeRollIsOpen() {
     return openId != null;
@@ -91,6 +95,7 @@ export function arrangeRollIsOpen() {
 export function closeArrangeRoll() {
     if (openId == null) return;
     cancelSession();
+    cancelMarquee();
     cancelPropPaint();
     stopAudition();
     releaseLoopClip();
@@ -194,11 +199,14 @@ export function initArrangeRoll() {
     roll.querySelector('#arrangeRollReverse').addEventListener('click', () => {
         if (openId == null || !reverseClip(state.song, openId)) return;
         selectedCol = 0;
+        stepSel.clear();
         refreshArrange();
     });
     // Same as Invert on the clip's timeline menu.
     roll.querySelector('#arrangeRollInvert').addEventListener('click', () => {
-        if (openId != null && invertClip(state.song, openId)) refreshArrange();
+        if (openId == null || !invertClip(state.song, openId)) return;
+        stepSel.clear();
+        refreshArrange();
     });
     transposeEl.addEventListener('click', (event) => {
         const button = event.target.closest('[data-transpose]');
@@ -265,6 +273,12 @@ function onRollKey(event) {
     const el = event.target instanceof Element ? event.target : null;
     if (el?.closest('input, textarea, [contenteditable="true"]')) return;
     const clip = findClip(openId);
+    if (clip && clip.kind !== 'notes' && (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        event.stopPropagation();
+        selectAllSteps();
+        return;
+    }
     if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && !event.metaKey && !event.ctrlKey && !event.altKey) {
         // Write mode and focused knobs, sliders and tabs keep their arrows.
         if (!rollActive || state.keyboardWrite || clip?.kind === 'd') return;
@@ -277,6 +291,7 @@ function onRollKey(event) {
     if (event.key !== 'Delete' && event.key !== 'Backspace') return;
     event.preventDefault();
     event.stopPropagation();
+    deleteSelectedSteps();
 }
 
 function openArrangeRoll(id) {
@@ -286,6 +301,7 @@ function openArrangeRoll(id) {
         // An oscillator row clip opens on the lane it plays.
         laneIndex = clip.kind === 'b' && Number.isInteger(clip.row) ? clip.row : 0;
         selectedCol = 0;
+        stepSel.clear();
     }
     const wasOpen = openId != null;
     openId = id;
@@ -355,6 +371,7 @@ function render({ jump }) {
         if (clip.kind === 'd') paintDrums(clip);
         else if (clip.kind === 'notes') paintNotes(clip);
         else paintPitch(clip);
+        paintStepSel();
         paintProps(clip);
         syncFoldBtn(clip);
         syncVoiceBtns(clip);
@@ -412,6 +429,7 @@ function onLaneClick(event) {
     if (next === laneIndex) return;
     laneIndex = next;
     selectedCol = 0;
+    stepSel.clear();
     render({ jump: true });
 }
 
@@ -605,6 +623,8 @@ function transposeOpenClip(semis) {
     const clip = findClip(openId);
     if (!clip || session || propPaint) return false;
     if (!transposeClip(state.song, openId, semis, transposeOptions(clip))) return false;
+    // The whole pattern moved: a box selection goes with its notes.
+    if (clip.kind !== 'notes') shiftStepSel(semis);
     refreshArrange();
     const now = findClip(openId);
     if (now) revealPitches(clipPitches(now));
@@ -732,6 +752,192 @@ function paintNotes(clip) {
         layer.appendChild(bar);
     }
     gridEl.appendChild(layer);
+}
+
+// Rubber-band selection over the step grid (mouse and pen; a touch drag scrolls the
+// grid instead). The box is anchored in grid coordinates, so it
+// keeps its corner while a drag near an edge scrolls the view. `keep` says which elements
+// stay selected whatever the box covers; `done` gets the covered elements, or null if
+// the drag was cancelled.
+function startMarquee(pointerId, x0, y0, { selector, keep, done }) {
+    cancelMarquee();
+    const rect = gridEl.getBoundingClientRect();
+    const box = document.createElement('div');
+    box.className = 'arrange-roll-marquee';
+    box.setAttribute('aria-hidden', 'true');
+    marquee = {
+        id: pointerId,
+        ax: x0 - rect.left,
+        ay: y0 - rect.top,
+        x: x0,
+        y: y0,
+        box,
+        selector,
+        keep,
+        done,
+        hits: [],
+        raf: 0,
+    };
+    window.addEventListener('pointermove', onMarqueeMove);
+    window.addEventListener('pointerup', onMarqueeUp);
+    window.addEventListener('pointercancel', onMarqueeUp);
+}
+
+function paintMarquee() {
+    const m = marquee;
+    if (!m) return;
+    const rect = gridEl.getBoundingClientRect();
+    const px = Math.max(0, Math.min(rect.width, m.x - rect.left));
+    const py = Math.max(0, Math.min(rect.height, m.y - rect.top));
+    const left = Math.min(m.ax, px);
+    const top = Math.min(m.ay, py);
+    const right = Math.max(m.ax, px);
+    const bottom = Math.max(m.ay, py);
+    m.box.style.left = `${left}px`;
+    m.box.style.top = `${top}px`;
+    m.box.style.width = `${right - left}px`;
+    m.box.style.height = `${bottom - top}px`;
+    // A repaint under the drag (the song edited elsewhere) empties the grid: put the box back.
+    if (!m.box.isConnected) gridEl.appendChild(m.box);
+    m.hits = [];
+    gridEl.querySelectorAll(m.selector).forEach((el) => {
+        const r = el.getBoundingClientRect();
+        const hit = r.right > rect.left + left && r.left < rect.left + right
+            && r.bottom > rect.top + top && r.top < rect.top + bottom;
+        if (hit) m.hits.push(el);
+        el.classList.toggle('is-sel', hit || m.keep(el));
+    });
+}
+
+function onMarqueeMove(event) {
+    if (!marquee || event.pointerId !== marquee.id) return;
+    marquee.x = event.clientX;
+    marquee.y = event.clientY;
+    paintMarquee();
+    if (!marquee.raf) marquee.raf = requestAnimationFrame(marqueeFrame);
+}
+
+// Holding the drag near an edge scrolls the view; the sticky header, keys and
+// Accent / Slide rows cover part of the scroller, so the edges sit inside them.
+function marqueeFrame() {
+    const m = marquee;
+    if (!m) return;
+    m.raf = 0;
+    const rect = scroller.getBoundingClientRect();
+    const top = rect.top + (headsEl.offsetHeight || 0);
+    const left = rect.left + (keysEl.offsetWidth || 0);
+    const bottom = rect.bottom - (propsEl.hidden ? 0 : propsEl.offsetHeight || 0);
+    const speed = Math.max(8, Math.round(rowPx * 0.85));
+    let dx = 0;
+    let dy = 0;
+    if (m.y < top + 24) dy = -speed;
+    else if (m.y > bottom - 24) dy = speed;
+    if (m.x < left + 24) dx = -speed;
+    else if (m.x > rect.right - 24) dx = speed;
+    if (!dx && !dy) return;
+    const fromTop = scroller.scrollTop;
+    const fromLeft = scroller.scrollLeft;
+    scroller.scrollTop = fromTop + dy;
+    scroller.scrollLeft = fromLeft + dx;
+    if (scroller.scrollTop === fromTop && scroller.scrollLeft === fromLeft) return;
+    paintMarquee();
+    m.raf = requestAnimationFrame(marqueeFrame);
+}
+
+function onMarqueeUp(event) {
+    const m = marquee;
+    if (!m || event.pointerId !== m.id) return;
+    cancelMarquee();
+    m.done(event.type === 'pointercancel' ? null : m.hits);
+}
+
+function cancelMarquee() {
+    const m = marquee;
+    if (!m) return;
+    window.removeEventListener('pointermove', onMarqueeMove);
+    window.removeEventListener('pointerup', onMarqueeUp);
+    window.removeEventListener('pointercancel', onMarqueeUp);
+    if (m.raf) cancelAnimationFrame(m.raf);
+    m.box.remove();
+    marquee = null;
+}
+
+// Step grid selection. Pitched notes key by column and tune, drum hits by row and column.
+function cellKey(cell) {
+    return cell.dataset.tune != null
+        ? `${cell.dataset.col}:${cell.dataset.tune}`
+        : `d${cell.dataset.row}:${cell.dataset.col}`;
+}
+
+function paintStepSel() {
+    const live = new Set();
+    gridEl.querySelectorAll('.arrange-roll-cell').forEach((cell) => {
+        const key = cellKey(cell);
+        const on = cell.classList.contains('is-on') && stepSel.has(key);
+        cell.classList.toggle('is-sel', on);
+        if (on) live.add(key);
+    });
+    stepSel = live;
+}
+
+function shiftStepSel(semis) {
+    stepSel = new Set([...stepSel].map((key) => {
+        const [col, tune] = key.split(':').map(Number);
+        return `${col}:${tune + semis}`;
+    }));
+}
+
+function selectAllSteps() {
+    stepSel = new Set();
+    gridEl.querySelectorAll('.arrange-roll-cell.is-on').forEach((cell) => stepSel.add(cellKey(cell)));
+    paintStepSel();
+}
+
+function stepMarquee(s, event) {
+    const base = s.shift ? new Set(stepSel) : new Set();
+    startMarquee(s.id, s.x, s.y, {
+        selector: '.arrange-roll-cell.is-on',
+        keep: (el) => base.has(cellKey(el)),
+        done: (hits) => {
+            if (hits) {
+                stepSel = base;
+                for (const el of hits) stepSel.add(cellKey(el));
+            }
+            paintStepSel();
+        },
+    });
+    onMarqueeMove(event);
+}
+
+// Delete on a selection: the picked notes leave their steps (one undo step); a step
+// left with no notes becomes a rest, as when its last note is clicked away.
+function deleteSelectedSteps() {
+    const clip = findClip(openId);
+    if (!clip || clip.kind === 'notes' || !stepSel.size) return;
+    const live = markEdited(state.song, clip.id);
+    if (!live) return;
+    if (live.kind === 'd') {
+        for (const key of stepSel) {
+            const at = /^d(\d+):(\d+)$/.exec(key);
+            const step = at ? live.data?.lanes?.[at[1] | 0]?.steps?.[at[2] | 0] : null;
+            if (step) step.on = false;
+        }
+    } else {
+        const steps = patternOf(live)?.steps || [];
+        const gone = new Map();
+        for (const key of stepSel) {
+            const [col, tune] = key.split(':').map(Number);
+            if (!gone.has(col)) gone.set(col, new Set());
+            gone.get(col).add(tune);
+        }
+        for (const [col, tunes] of gone) {
+            const step = steps[col];
+            if (!step) continue;
+            applyPitches(step, stepPitches(step).filter((p) => !tunes.has(p)), step.on === false);
+        }
+    }
+    stepSel.clear();
+    refreshArrange();
 }
 
 // Columns past the pattern (space the clip was lengthened by) look empty until written.
@@ -1289,24 +1495,49 @@ function onPointerDown(event) {
         return;
     }
     const cell = event.target.closest('.arrange-roll-cell');
-    if (!cell || !roll.contains(cell) || cell.classList.contains('is-dim')) return;
+    if (!cell || !roll.contains(cell)) return;
     const clip = findClip(openId);
     if (!clip || clip.kind === 'notes') return;
     const col = cell.dataset.col | 0;
-    selectedCol = col;
-    syncTools();
+    const dim = cell.classList.contains('is-dim');
+    if (!dim) {
+        selectedCol = col;
+        syncTools();
+    }
     const tune = cell.dataset.tune != null ? Number(cell.dataset.tune) : null;
+    const on = cell.classList.contains('is-on');
+    const key = cellKey(cell);
+    // Shift-click a note to add it to the selection or take it out. Pressing a note
+    // outside the selection drops the selection; pressing one inside it drags them all.
+    let pick = false;
+    if (on && event.shiftKey) {
+        pick = true;
+        if (!stepSel.delete(key)) stepSel.add(key);
+        cell.classList.toggle('is-sel', stepSel.has(key));
+    } else if (on && !stepSel.has(key)) {
+        clearStepSel();
+    }
+    const from = on && tune != null ? tune : null;
+    const group = from != null && stepSel.has(key);
     session = {
         id: event.pointerId,
         kind: clip.kind,
         col,
         row: cell.dataset.row != null ? (cell.dataset.row | 0) : 0,
         tune,
-        from: cell.classList.contains('is-on') && tune != null ? tune : null,
+        from,
         to: tune,
         x: event.clientX,
         y: event.clientY,
         drag: false,
+        dim,
+        on,
+        pick,
+        group,
+        shift: event.shiftKey,
+        touch: event.pointerType === 'touch',
+        moves: from == null ? [] : group ? selectedMoves() : [{ col, from, to: from }],
+        dRow: 0,
     };
     if (session.from != null) {
         event.preventDefault();
@@ -1321,14 +1552,19 @@ function onPointerDown(event) {
 
 function onPointerMove(event) {
     if (!session || event.pointerId !== session.id) return;
-    if (session.kind === 'd' || session.from == null) return;
+    if (session.kind === 'd' || session.from == null) {
+        // A drag that starts off a note draws a selection box. Touch drags scroll instead.
+        if (session.touch || Math.hypot(event.clientX - session.x, event.clientY - session.y) < 5) return;
+        const s = session;
+        cancelSession();
+        stepMarquee(s, event);
+        return;
+    }
     dragY = event.clientY;
     if (!session.drag && Math.abs(event.clientY - session.y) < 5) return;
     session.drag = true;
-    const next = tuneFromClientY(event.clientY);
-    if (next != null && next !== session.to) {
-        session.to = next;
-        paintDrag(session.col, session.from, session.to);
+    if (shiftMoves(tuneFromClientY(event.clientY))) {
+        paintDrag(session.moves);
         previewDrag();
     }
     kickEdgeScroll();
@@ -1343,17 +1579,27 @@ function onPointerUp(event) {
         render({ jump: false });
         return;
     }
-    if (s.kind === 'd') {
-        if (Math.hypot(event.clientX - s.x, event.clientY - s.y) > 6) return;
-        toggleDrum(s.row, s.col);
-        return;
-    }
     if (s.drag) {
-        if (s.from != null && s.to != null && s.to !== s.from) commitDrag(s.col, s.from, s.to);
+        if (s.dRow) commitDrag(s);
         else render({ jump: false });
         return;
     }
-    if (s.from == null && Math.hypot(event.clientX - s.x, event.clientY - s.y) > 6) return;
+    if ((s.kind === 'd' || s.from == null) && Math.hypot(event.clientX - s.x, event.clientY - s.y) > 6) return;
+    // A Shift-click only changed the selection. A click off the notes drops a
+    // selection first; the next one writes.
+    if (s.pick) {
+        render({ jump: false });
+        return;
+    }
+    if (!s.on && stepSel.size) {
+        if (!s.shift) clearStepSel();
+        return;
+    }
+    if (s.dim) return;
+    if (s.kind === 'd') {
+        toggleDrum(s.row, s.col);
+        return;
+    }
     if (s.tune == null) return;
     togglePitch(s.col, s.tune);
 }
@@ -1384,15 +1630,60 @@ function tuneFromClientY(clientY) {
     return best ? Number(best.dataset.tune) : null;
 }
 
-function paintDrag(col, from, to) {
-    gridEl.querySelectorAll(`.arrange-roll-cell[data-col="${col}"]`).forEach((cell) => {
-        const tune = Number(cell.dataset.tune);
-        const base = cell.dataset.on === '1';
-        const on = tune === from ? false : tune === to ? true : base;
-        cell.classList.toggle('is-on', on);
-        cell.classList.toggle('is-drag', on && tune === to);
-        cell.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
+function clearStepSel() {
+    if (!stepSel.size) return;
+    stepSel.clear();
+    gridEl.querySelectorAll('.arrange-roll-cell.is-sel').forEach((el) => el.classList.remove('is-sel'));
+}
+
+// The selected notes as drag moves. Only pitched notes on a visible row can be selected.
+function selectedMoves() {
+    const moves = [];
+    for (const key of stepSel) {
+        const [col, from] = key.split(':').map(Number);
+        if (Number.isFinite(col) && rowTunes.includes(from)) moves.push({ col, from, to: from });
+    }
+    return moves;
+}
+
+// Dragged notes move by rows, all by the same count, stopping when one reaches the top
+// or bottom row. With Fold or Scale on a row is not a semitone, so a group keeps to the
+// rows shown (a scale-wise transpose in Scale view). True when the move changed.
+function shiftMoves(next) {
+    if (!session || next == null) return false;
+    const at = (tune) => rowTunes.indexOf(tune);
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const m of session.moves) {
+        lo = Math.min(lo, at(m.from));
+        hi = Math.max(hi, at(m.from));
+    }
+    if (at(next) < 0 || lo < 0) return false;
+    const d = Math.max(-lo, Math.min(rowTunes.length - 1 - hi, at(next) - at(session.from)));
+    if (d === session.dRow) return false;
+    session.dRow = d;
+    for (const m of session.moves) m.to = rowTunes[at(m.from) + d];
+    session.to = rowTunes[at(session.from) + d];
+    return true;
+}
+
+function paintDrag(moves) {
+    const cols = new Map();
+    for (const m of moves) {
+        if (!cols.has(m.col)) cols.set(m.col, { from: new Set(), to: new Set() });
+        cols.get(m.col).from.add(m.from);
+        cols.get(m.col).to.add(m.to);
+    }
+    for (const [col, moved] of cols) {
+        gridEl.querySelectorAll(`.arrange-roll-cell[data-col="${col}"]`).forEach((cell) => {
+            const tune = Number(cell.dataset.tune);
+            const lands = moved.to.has(tune);
+            const on = lands || (cell.dataset.on === '1' && !moved.from.has(tune));
+            cell.classList.toggle('is-on', on);
+            cell.classList.toggle('is-drag', lands);
+            cell.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+    }
 }
 
 function kickEdgeScroll() {
@@ -1409,10 +1700,8 @@ function edgeFrame() {
     else if (dragY > rect.bottom - 24) delta = Math.max(8, Math.round(rowPx * 0.85));
     if (!delta) return;
     scroller.scrollTop += delta;
-    const next = tuneFromClientY(dragY);
-    if (next != null && next !== session.to) {
-        session.to = next;
-        paintDrag(session.col, session.from, session.to);
+    if (shiftMoves(tuneFromClientY(dragY))) {
+        paintDrag(session.moves);
         previewDrag();
     }
     dragRAF = requestAnimationFrame(edgeFrame);
@@ -1448,22 +1737,31 @@ function togglePitch(col, tune) {
     previewStep(target);
 }
 
-function commitDrag(col, from, to) {
+// One note, or every selected note, lands on its new row (one undo step). Notes that
+// land on a pitch their step already holds merge with it.
+function commitDrag(s) {
     const clip = findClip(openId);
     if (!clip || (clip.kind !== 'n' && clip.kind !== 'b')) return;
-    const step = patternOf(clip)?.steps?.[col];
-    if (!step) return;
-    const next = stepPitches(step).filter((p) => p !== from);
-    if (to >= TUNE_LO && to <= TUNE_HI) next.push(to);
-    const keepOff = step.on === false;
+    if (!patternOf(clip)?.steps?.[s.col]) return;
     const live = markEdited(state.song, clip.id);
     if (!live) return;
-    const target = patternOf(live)?.steps?.[col];
-    if (!target) return;
-    applyPitches(target, next, keepOff);
-    selectedCol = col;
+    const steps = patternOf(live)?.steps || [];
+    const cols = new Map();
+    for (const m of s.moves) {
+        if (!cols.has(m.col)) cols.set(m.col, []);
+        cols.get(m.col).push(m);
+    }
+    for (const [col, moved] of cols) {
+        const target = steps[col];
+        if (!target) continue;
+        const next = stepPitches(target).filter((p) => !moved.some((m) => m.from === p));
+        for (const m of moved) if (m.to >= TUNE_LO && m.to <= TUNE_HI) next.push(m.to);
+        applyPitches(target, next, target.on === false);
+    }
+    if (s.group) stepSel = new Set(s.moves.map((m) => `${m.col}:${m.to}`));
+    selectedCol = s.col;
     refreshArrange();
-    previewStep(target);
+    previewStep(steps[s.col]);
 }
 
 // The note VFD shows what the edited step will sound like, in its cyan preview
@@ -1488,8 +1786,9 @@ function previewDrag() {
     const step = patternOf(findClip(openId))?.steps?.[session.col];
     if (!step) return;
     if (step.on === false) return;
-    const pitches = columnPitches(step).filter((p) => p !== session.from);
-    if (!pitches.includes(session.to)) pitches.push(session.to);
+    const moved = session.moves.filter((m) => m.col === session.col);
+    const pitches = columnPitches(step).filter((p) => !moved.some((m) => m.from === p));
+    for (const m of moved) if (!pitches.includes(m.to)) pitches.push(m.to);
     previewPitches(pitches, step.fine);
 }
 

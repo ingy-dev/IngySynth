@@ -4,7 +4,7 @@
 import { state } from './state.js?v=120';
 import { togglePlay } from './sequencer.js?v=456';
 import { getNumber, subscribe } from './params.js?v=44';
-import { setArrangeView } from './arrange-view.js?v=52';
+import { setArrangeView } from './arrange-view.js?v=54';
 import { initFileDrop, initSaveLibraryUi, initSiteShare } from './save-ui.js?v=14';
 
 function writeMasterGain(level, ramp) {

@@ -81,7 +81,7 @@ import {
     visibleClips,
 } from './song-model.js?v=12';
 import { quantizeToPattern } from './song-quantize.js?v=19';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=49';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=50';
 
 const MIN_PX = 24;
 const MAX_PX = 1280;
@@ -1362,6 +1362,17 @@ function beginClipGesture(event, clipEl) {
         hint.hidden = !target;
         if (target) hint.textContent = `Replace P${(target.dataset.slot | 0) + 1}`;
         ghostToPad(carry, x, y);
+        // Over a pad the carried copy shows where each lane will land.
+        const planCanvas = carry.querySelector('canvas[data-role="carry"]');
+        if (planCanvas) {
+            const square = squareAt(x, y);
+            const onPad = square && canDropOnSquare(clip, square.dataset.slot | 0) ? square : null;
+            const plan = carryPlan(clip, onPad, y);
+            if (planCanvas.dataset.plan !== plan) {
+                planCanvas.dataset.plan = plan;
+                drawCanvas(planCanvas);
+            }
+        }
     };
     const settleCarry = (ev) => {
         if (!carry) return;
@@ -2010,16 +2021,21 @@ function isRowClip(clip) {
  * The pad lanes a drop of oscillator row clips writes, as [lane, clip] pairs. One clip
  * goes to the band it is dropped on, so a part can move to another oscillator. Several
  * selected clips each go to their own oscillator's lane; when two share a row, the
- * earlier one is used.
+ * earlier one is used. With no pad (`square` null) every clip is in its own lane.
  */
 function rowDropPlan(clips, square, clientY) {
     const rows = clips.filter(isRowClip);
-    if (rows.length === 1) return [[bandAt(square, clientY), rows[0]]];
+    if (rows.length === 1) return [[square ? bandAt(square, clientY) : rows[0].row, rows[0]]];
     const plan = new Map();
     for (const clip of rows.slice().sort((a, b) => a.startTick - b.startTick)) {
         if (!plan.has(clip.row)) plan.set(clip.row, clip);
     }
     return [...plan.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+// The same plan as the carried copy's canvas keeps it: [[lane, clip id], ...].
+function carryPlan(clip, square, clientY) {
+    return JSON.stringify(rowDropPlan(carriedRowClips(clip), square, clientY).map(([lane, one]) => [lane, one.id]));
 }
 
 // Outline the pad bands a drop would write.
@@ -2322,6 +2338,15 @@ function showCarryGhost(clip, clipEl, x, y) {
     const label = document.createElement('span');
     label.className = 'arrange-clip-label';
     label.textContent = clipEl.querySelector('.arrange-clip-label')?.textContent || '';
+    if (isRowClip(clip)) {
+        // Oscillator clips show as the lanes they will fill, however many are carried.
+        canvas.dataset.role = 'carry';
+        canvas.dataset.plan = carryPlan(clip, null, y);
+        const rows = carriedRowClips(clip);
+        if (rows.length > 1) {
+            label.textContent = [...new Set(rows.map((one) => one.row))].sort().map((row) => `O${row + 1}`).join(' ');
+        }
+    }
     const hint = document.createElement('span');
     hint.className = 'arrange-ghost-hint';
     hint.hidden = true;
@@ -2400,6 +2425,11 @@ function liftGhost(slot, clipId) {
     const canvas = document.createElement('canvas');
     canvas.dataset.role = 'clip';
     canvas.dataset.id = clipId;
+    const lifted = findClip(clipId);
+    if (isRowClip(lifted)) {
+        canvas.dataset.role = 'carry';
+        canvas.dataset.plan = carryPlan(lifted, null, 0);
+    }
     const label = document.createElement('span');
     label.className = 'arrange-clip-label';
     label.textContent = clipEl?.querySelector('.arrange-clip-label')?.textContent || '';
@@ -3045,6 +3075,18 @@ function drawCanvas(canvas) {
     const box = canvasBox(canvas);
     if (!box) return;
     const { ctx, w, h } = box;
+    if (canvas.dataset.role === 'carry') {
+        // Oscillator clips carried to a pad: a small four-band pad, each clip's notes in the
+        // band it will land in (its own, or for one clip the band under the pointer).
+        let plan = [];
+        try { plan = JSON.parse(canvas.dataset.plan || '[]'); } catch (_) { plan = []; }
+        for (const [band, id] of plan) {
+            const clip = findClip(id);
+            if (!isRowClip(clip)) continue;
+            drawBerlinBands(ctx, w, h, clip.data, { only: clip.row, place: band, colorRow: band, dim: !!clip.mute });
+        }
+        return;
+    }
     if (canvas.dataset.role === 'clip') {
         let clip = findClip(canvas.dataset.id);
         if (!clip) return;
@@ -3179,10 +3221,11 @@ function berlinBandColor(row) {
  * a clip). A lane switched off, or muted in this clip (`mask`), has its notes dimmed.
  * `headroom` keeps the top band's notes clear of the pad label. `only` draws a single lane
  * filling the box (an oscillator row clip); `dim` draws it as muted; `colorRow` draws it in
- * another lane's colour (a clip being dragged to that row).
+ * another lane's colour (a clip being dragged to that row); `place` puts that single lane in
+ * one band of a four-band box.
  */
 function drawBerlinBands(ctx, w, h, data, {
-    lit = false, geom = null, mask = null, headroom = 0, only = null, dim = false, colorRow = null,
+    lit = false, geom = null, mask = null, headroom = 0, only = null, dim = false, colorRow = null, place = null,
 } = {}) {
     const lanes = data?.lanes || [];
     const oscCount = Math.max(1, Math.min(4, Math.round(data?.oscCount) || 3));
@@ -3193,9 +3236,11 @@ function drawBerlinBands(ctx, w, h, data, {
     for (let row = 0; row < 4; row += 1) {
         if (only != null && row !== only) continue;
         const lane = lanes[row];
-        // One lane on its own (a lane row on the timeline) takes the whole box.
-        const top = only != null ? 0 : edge(row);
-        const bandH = only != null ? h : edge(row + 1) - top;
+        // One lane on its own takes the whole box (a timeline row), or with `place` the band
+        // of that number in a four-band box (the copy carried to a pad).
+        const whole = only != null && place == null;
+        const top = whole ? 0 : edge(place != null ? place : row);
+        const bandH = whole ? h : edge((place != null ? place : row) + 1) - top;
         const color = berlinBandColor(colorRow != null ? colorRow : row);
         ctx.fillStyle = color;
         const used = row < oscCount && !!lane;

@@ -14785,6 +14785,28 @@ html.arrange-trimming * {
 .arrange-roll-cell.is-ghost .arrange-roll-tie {
     opacity: 0.3;
 }
+/* Box selection (arrange-roll.js startMarquee): the rubber band, and selected step
+   notes in cyan. */
+.arrange-roll-grid {
+    -webkit-user-select: none;
+    user-select: none;
+}
+.arrange-roll-marquee {
+    position: absolute;
+    z-index: 3;
+    box-sizing: border-box;
+    pointer-events: none;
+    border: 1px dashed #00ffff;
+    background: rgba(0, 255, 255, 0.08);
+}
+.arrange-roll-grid .arrange-roll-cell.is-on.is-sel::before {
+    background: #00ffff;
+    box-shadow: 0 0 6px rgba(0, 255, 255, 0.6);
+}
+.arrange-roll-grid .arrange-roll-cell.is-on.is-ghost.is-sel:not(.is-drag)::before {
+    background: #1a1f1a;
+    box-shadow: inset 0 0 0 1px #00ffff;
+}
 .arrange-roll-keys.is-fold {
     display: grid;
     grid-auto-rows: var(--row, 16px);

@@ -14427,9 +14427,9 @@ html.arrange-trimming * {
     height: 14px;
     cursor: nwse-resize;
     touch-action: none;
-    background:
-        linear-gradient(135deg, transparent 0 45%, var(--win-line) 45% 52%, transparent 52% 64%,
-            var(--win-line) 64% 71%, transparent 71% 83%, var(--win-line) 83% 90%, transparent 90%);
+    /* Three line-green strokes on a black triangle, so the grip reads over anything under it. The strokes
+       run past the box and are cut by it, so each one ends flush against the right and bottom frame. */
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M0 14L14 0V14Z' fill='%23000'/%3E%3Cpath d='M15 2L2 15M15 6L6 15M15 10L10 15' stroke='%2313bf51' stroke-width='1.5'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
     /* Above anything sticky inside the body (the piano roll's Acc/Sld/Rat rows sit at 4–5). */
     z-index: 20;
 }

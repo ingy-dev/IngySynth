@@ -11,7 +11,7 @@
 
 import { state } from './state.js?v=120';
 import { get, getNumber, subscribe } from './params.js?v=44';
-import { LFO_SYNC_DIVISIONS, getTempoBpm, syncBeatsToHz } from './lfo-rate.js?v=69';
+import { LFO_SYNC_DIVISIONS, getTempoBpm, syncBeatsToHz } from './lfo-rate.js?v=70';
 
 const DCO_FULL_CENTS = 300;
 const VCF_FULL_CENTS = 3600;

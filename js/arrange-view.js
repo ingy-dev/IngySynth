@@ -7,8 +7,8 @@
 
 import { state } from './state.js?v=120';
 import { getNumber, subscribe } from './params.js?v=44';
-import { initAudio } from './audio-engine.js?v=248';
-import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=459';
+import { initAudio } from './audio-engine.js?v=249';
+import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=460';
 import {
     arrangePadHit,
     stopPadOneShot,
@@ -20,15 +20,15 @@ import {
     setArrangePreview,
     setArrangeRecordArmed,
     setPadGrid,
-} from './song-record.js?v=32';
-import { arrangeTempoMarkup, initArrangeTempo } from './arrange-tempo.js?v=7';
+} from './song-record.js?v=33';
+import { arrangeTempoMarkup, initArrangeTempo } from './arrange-tempo.js?v=8';
 import {
     armArrangementContinue,
     arrangementInsertTick,
     cancelArrangementContinue,
     homeArrangement,
     placeArrangementInsert,
-} from './song-conductor.js?v=34';
+} from './song-conductor.js?v=35';
 import {
     SONG_SLOT,
     patternHash,
@@ -37,7 +37,7 @@ import {
     writeDrumSlot,
     writeSynthSlot,
 } from './pattern-bank.js?v=51';
-import { snapshotBankAutomation } from './automation.js?v=103';
+import { snapshotBankAutomation } from './automation.js?v=104';
 import {
     BAR_TICKS,
     PPQ,
@@ -90,10 +90,10 @@ import {
     splitBerlinClips,
     trackClips,
     visibleClips,
-} from './song-model.js?v=14';
+} from './song-model.js?v=15';
 import { quantizeToPattern } from './song-quantize.js?v=19';
 import { isMidiFileName, parseMidiFile } from './midi-file.js?v=1';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=55';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=56';
 
 const MIN_PX = 24;
 const MAX_PX = 1280;

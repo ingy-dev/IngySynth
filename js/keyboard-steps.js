@@ -4,7 +4,7 @@
 
 import { state } from './state.js?v=120';
 import { getQuantizedStepTune, getStepTotalTune, getStepFineCents } from './tuning.js?v=108';
-import { bindKnob } from './knobs.js?v=192';
+import { bindKnob } from './knobs.js?v=193';
 import { previewNoteVisualizer, soundingNotesForStep } from './visualizers.js?v=150';
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import {
@@ -19,7 +19,7 @@ import {
 import {
     setWriteCursor,
     syncWriteToolbarFromStep,
-} from './pattern-write.js?v=161';
+} from './pattern-write.js?v=162';
 import { paintAllStepChordMarkers } from './pattern-bank.js?v=51';
 import { syncRatchButton } from './step-ratch.js?v=1';
 

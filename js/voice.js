@@ -1,10 +1,10 @@
 import { state } from './state.js?v=120';
 import { getNumber } from './params.js?v=44';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=69';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=70';
 import { semitonesToFrequency } from './tuning.js?v=108';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=111';
 import { updateNoteVisualizer, clearNoteVisualizer, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=150';
-import { bentFrequency } from './pitch-bend.js?v=142';
+import { bentFrequency } from './pitch-bend.js?v=143';
 import { firePhaseResetOscStack, spawnOscStack, voiceTargetFreq, getUnisonVoices } from './unison.js?v=214';
 import { fadeStopOsc, wtAttackSecForFilter, hasDarkOscActive, OSC4_INDEX } from './osc-source.js?v=157';
 import {

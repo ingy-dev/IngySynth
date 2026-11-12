@@ -6,7 +6,7 @@
 // bit depth keep their own units.
 
 import { state } from './state.js?v=120';
-import { formatRangeValue } from './knobs.js?v=192';
+import { formatRangeValue } from './knobs.js?v=193';
 
 const LINGER_MS = 520;
 const GAP_PX = 10;

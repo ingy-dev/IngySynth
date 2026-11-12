@@ -1,6 +1,6 @@
 // TB-303-style step write mode: keyboard programs .step-tune / On / Acc / Sld.
 import { state } from './state.js?v=120';
-import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp, flashWriteLaneOnVfd } from './sequencer.js?v=459';
+import { refreshIdleVfd, beginWriteVfdPrompt, endWriteVfdPrompt, markWriteStepProgrammed, stopArp, flashWriteLaneOnVfd } from './sequencer.js?v=460';
 import { berlinHooks } from './berlin-hooks.js?v=1';
 
 // Late-bound: see berlin-hooks.js for why this does not import berlin.js.
@@ -11,10 +11,10 @@ const berlinLaneVfdLabel = (row) => berlinHooks.berlinLaneVfdLabel?.(row) ?? '';
 const refreshBerlinSounding = () => berlinHooks.refreshBerlinSounding?.();
 import { setCollapsibleExpanded } from './collapsible.js?v=75';
 import { isTabbedView, selectKeyboardTab } from './view-mode.js?v=14';
-import { bindKnob } from './knobs.js?v=192';
+import { bindKnob } from './knobs.js?v=193';
 import { cancelChordMemoryLearn, syncChordMemUI } from './chord-memory.js?v=52';
-import { forceNoteOff } from './voice.js?v=192';
-import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=202';
+import { forceNoteOff } from './voice.js?v=193';
+import { forcePolyAllOff, polyNoteOn, polyNoteOff } from './poly-voice.js?v=204';
 import { getNumber, set, subscribe } from './params.js?v=44';
 import { getGlobalTune } from './tuning.js?v=108';
 import { updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=150';

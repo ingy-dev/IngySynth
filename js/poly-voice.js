@@ -3,8 +3,8 @@
 
 import { state, OSC_COUNT } from './state.js?v=120';
 import { get, getNumber, getString, getOscType, getOscVol, getOscPan, set, subscribe } from './params.js?v=44';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=69';
-import { restartIngy6LfoDelay } from './ingy6-lfo.js?v=2';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=70';
+import { restartIngy6LfoDelay } from './ingy6-lfo.js?v=3';
 import { rampFromHere, isLiveTime } from './audio-param-hold.js?v=1';
 import { semitonesToFrequency } from './tuning.js?v=108';
 import { updateFilterCutoffRange, getFilterEnvAmount } from './filter-cutoff.js?v=111';
@@ -17,8 +17,8 @@ import {
 } from './visualizers.js?v=150';
 import { unisonCents, applyUnisonCents, syncUnisonControlsEnabled } from './unison.js?v=214';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
-import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=80';
-import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=135';
+import { syncIngy6PanelUi, initIngy6Panel } from './keyboard-ingy6-panel.js?v=81';
+import { syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=136';
 import {
     analogLogicalWave,
     createOscSource,

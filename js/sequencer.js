@@ -13,15 +13,15 @@ import {
 } from './tuning.js?v=108';
 import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=150';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { forceNoteOff } from './voice.js?v=192';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=69';
-import { bentFrequency } from './pitch-bend.js?v=142';
+import { forceNoteOff } from './voice.js?v=193';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=70';
+import { bentFrequency } from './pitch-bend.js?v=143';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { setKeyboardStepActive } from './keyboard-steps.js?v=178';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=179';
 import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=214';
 import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=157';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=21';
-import { notifyAutomationLoopAnchor } from './automation.js?v=103';
+import { notifyAutomationLoopAnchor } from './automation.js?v=104';
 import { nextCyclePass } from './pattern-repeat.js?v=3';
 import { createSwingClock } from './swing.js?v=2';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=13';
@@ -55,8 +55,8 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=125';
-import { berlinLaneMidiChannels } from './berlin-lane-midi.js?v=2';
+} from './berlin.js?v=126';
+import { berlinLaneMidiChannels } from './berlin-lane-midi.js?v=3';
 import {
     getPattern,
     getBerlinLane,
@@ -72,10 +72,10 @@ import {
     patternRepeat,
     patternStepCount,
 } from './pattern-bank.js?v=51';
-import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=202';
+import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=204';
 import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=52';
-import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=54';
-import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=50';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=55';
+import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=51';
 import { rampFromHere } from './audio-param-hold.js?v=1';
 import {
     clampRatch,

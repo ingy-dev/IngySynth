@@ -4,14 +4,14 @@
 // Rec off + existing lane → knob tweaks set a persistent offset (curve shape kept).
 
 import { state } from './state.js?v=120';
-import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=142';
+import { applyPitchBend, getBendRangeSemitones } from './pitch-bend.js?v=143';
 import { followXYPadAutomation, getXYPadAutomationKeys } from './xy-pad.js?v=106';
-import { ensureDisplayStep } from './knobs.js?v=192';
+import { ensureDisplayStep } from './knobs.js?v=193';
 import {
     bindAutomationStatusSource,
     refreshParamStatusIndicators,
 } from './param-status.js?v=33';
-import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=125';
+import { isBerlinOn, masterLoopSeconds } from './berlin.js?v=126';
 import { getNumber, getString, get, set as setParam, subscribe } from './params.js?v=44';
 import { PARAMS, clampToCatalog, getParam } from './param-catalog.js?v=13';
 import { midiControlId } from './midi-learn.js?v=35';

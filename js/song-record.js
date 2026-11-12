@@ -10,8 +10,8 @@
 
 import { state } from './state.js?v=120';
 import { getNumber } from './params.js?v=44';
-import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=459';
-import { setConductorSong, setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=34';
+import { setSongRecordGate, togglePlay, uiOutputLatency } from './sequencer.js?v=460';
+import { setConductorSong, setSongRecordBridge, songTickAt, homeArrangement } from './song-conductor.js?v=35';
 import {
     BAR_TICKS,
     applyTake,
@@ -21,9 +21,9 @@ import {
     removeLiveClips,
     visibleClips,
     wrapTick,
-} from './song-model.js?v=14';
-import { setLiveNoteHooks } from './voice.js?v=192';
-import { setPolyLiveHook } from './poly-voice.js?v=202';
+} from './song-model.js?v=15';
+import { setLiveNoteHooks } from './voice.js?v=193';
+import { setPolyLiveHook } from './poly-voice.js?v=204';
 
 let countGen = 0;
 let countTimer = 0;

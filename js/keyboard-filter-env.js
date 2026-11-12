@@ -5,7 +5,7 @@
 import { state } from './state.js?v=120';
 import { getNumber, wireToggle } from './params.js?v=44';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=72';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=73';
 import { drawFilterADSRVisualizer } from './visualizers.js?v=150';
 
 let syncToggle = () => {};

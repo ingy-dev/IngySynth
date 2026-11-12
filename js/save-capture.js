@@ -22,12 +22,12 @@ import {
     writeDrumSlot,
     writeSynthSlot,
 } from './pattern-bank.js?v=51';
-import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=103';
+import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=104';
 import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=46';
-import { setPolyMode } from './poly-voice.js?v=202';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=90';
+import { setPolyMode } from './poly-voice.js?v=204';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=91';
 import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=157';
-import { setBerlinMode } from './berlin.js?v=125';
+import { setBerlinMode } from './berlin.js?v=126';
 import { applyChordMemoryIntervals } from './chord-memory.js?v=52';
 import { arrangementToSong, songToArrangement } from './song-save.js?v=4';
 import { compactHash } from './text-digest.js';

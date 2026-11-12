@@ -2,7 +2,7 @@
 // markEdited runs once per gesture, before the mutation.
 
 import { state } from './state.js?v=120';
-import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, checkpointUndo, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks, findClipById, BAR_TICKS } from './song-model.js?v=14';
+import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, checkpointUndo, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks, findClipById, BAR_TICKS } from './song-model.js?v=15';
 import {
     POLY_CHORD_MAX,
     chordFromCellNotes,
@@ -21,12 +21,12 @@ import { nextRatch } from './step-ratch.js?v=1';
 import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './tuning.js?v=108';
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
-import { placeArrangementInsert } from './song-conductor.js?v=34';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener, toggleClipReverse, padDataFromClip, flipLaneOrder } from './arrange-view.js?v=61';
-import { createIngyWindow } from './ingy-window.js?v=3';
-import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=277';
+import { placeArrangementInsert } from './song-conductor.js?v=35';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener, toggleClipReverse, padDataFromClip, flipLaneOrder } from './arrange-view.js?v=62';
+import { createIngyWindow } from './ingy-window.js?v=4';
+import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=278';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
-import { auditionDrumHit } from './sequencer.js?v=459';
+import { auditionDrumHit } from './sequencer.js?v=460';
 
 const TUNE_LO = -39;
 const TUNE_HI = 48;

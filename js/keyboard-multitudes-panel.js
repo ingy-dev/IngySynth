@@ -1,7 +1,7 @@
 // Multitudes panel — MI chrome + mirror wiring + 6-voice Plaits poly entry.
 
 import { state } from './state.js?v=120';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=192';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=193';
 import { ensurePlaitsWorklet } from './osc-source.js?v=157';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
 import {
@@ -10,7 +10,7 @@ import {
     syncMultitudesPolyLocks,
     bumpSeqEngine,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=202';
+} from './poly-voice.js?v=204';
 import { syncChordMemUI } from './chord-memory.js?v=52';
 import { getParam } from './param-catalog.js?v=13';
 import { getNumber, getOscVol, getString, set, subscribe, toggle, wireSelect, wireToggle } from './params.js?v=44';

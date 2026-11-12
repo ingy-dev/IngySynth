@@ -3,12 +3,12 @@
 import { state } from './state.js?v=120';
 import { beginMidiLearn } from './midi-learn.js?v=35';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { updateLfoCutoffSafety } from './lfo-strip.js?v=72';
+import { updateLfoCutoffSafety } from './lfo-strip.js?v=73';
 import { refreshFilterInputDrive } from './filter-drive.js?v=58';
-import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=135';
+import { setFilterEnvInvert, syncKeyboardFilterEnvFromMain } from './keyboard-filter-env.js?v=136';
 import { get, getNumber, getOscType, getOscVol, set, subscribe } from './params.js?v=44';
-import { LFO_SYNC_DIVISIONS } from './lfo-rate.js?v=69';
-import { applyIngy6Lfo } from './ingy6-lfo.js?v=2';
+import { LFO_SYNC_DIVISIONS } from './lfo-rate.js?v=70';
+import { applyIngy6Lfo } from './ingy6-lfo.js?v=3';
 
 const HPF_HZ = [20, 250, 700, 1400];
 

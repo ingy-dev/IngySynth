@@ -7,9 +7,9 @@ import {
     releaseKey,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=277';
+} from './keyboard.js?v=278';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
-import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=161';
+import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=162';
 import {
     catalogKeyFromLearn,
     clearMappingHighlight,

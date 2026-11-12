@@ -1,10 +1,10 @@
 import { state, OSC_COUNT } from './state.js?v=120';
 import { getNumber, getString, getOscType, getOscVol, getOscPan } from './params.js?v=44';
-import { wireControls } from './controls.js?v=376';
+import { wireControls } from './controls.js?v=377';
 import { getFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { updateLfoSmoothing } from './lfo-strip.js?v=72';
-import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=69';
-import { buildIngy6Lfo } from './ingy6-lfo.js?v=2';
+import { updateLfoSmoothing } from './lfo-strip.js?v=73';
+import { getLfoRateHz, applyLfoRate, registerLfoOsc } from './lfo-rate.js?v=70';
+import { buildIngy6Lfo } from './ingy6-lfo.js?v=3';
 import { makeFilterInputCurve, refreshFilterInputDrive } from './filter-drive.js?v=58';
 import { ensurePlaitsWorklet, createOscSource, applyAnalogOscShape, OSC4_INDEX, warmAnalogShells } from './osc-source.js?v=157';
 import { DRUM_LANE_COUNT } from './pattern-bank.js?v=51';

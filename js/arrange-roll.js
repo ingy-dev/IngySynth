@@ -51,7 +51,6 @@ let loopClipId = null;
 let loopSaved = null;
 let loopApplied = null;
 let foldBtn;
-let scaleBtn;
 let monoBtn;
 let polyBtn;
 let transposeEl;
@@ -66,6 +65,7 @@ let rowTunes = [];
 // Fold: only rows that hold notes (Ableton's Fold). Scale: only the project
 // scale's rows; it turns on with the project scale and follows it.
 let foldNotes = false;
+let stepsOn = false;      // Steps view: the step strip in place of the grid
 let scaleView = false;
 let win;
 let scroller;
@@ -147,7 +147,6 @@ export function initArrangeRoll() {
                 <button type="button" id="arrangeRollStop" class="arrange-btn arrange-btn-icon" aria-label="Stop"><span class="arrange-icon-stop" aria-hidden="true"></span></button>
                 <button type="button" id="arrangeRollLoop" class="arrange-btn arrange-btn-icon" aria-pressed="false" aria-label="Loop clip" title="Loop the song around this clip"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V6.5A2.5 2.5 0 0 1 5.5 4H12"/><path d="M10 2l2 2-2 2"/><path d="M13 9v.5A2.5 2.5 0 0 1 10.5 12H4"/><path d="M6 14l-2-2 2-2"/></svg></button>
                 <button type="button" id="arrangeRollDraw" class="arrange-btn arrange-btn-icon" aria-pressed="false" aria-label="Draw" title="Draw: click or drag to paint notes. Start on a note to erase"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M1.6 14.4l0.9-3.6 8.6-8.6 2.7 2.7-8.6 8.6z"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M9.4 3.9l2.7 2.7M2.5 10.8l2.7 2.7"/></svg></button>
-                <button type="button" id="arrangeRollFold" class="arrange-btn" aria-pressed="false" title="Show only rows that have notes">Fold</button>
                 <button type="button" id="arrangeRollReverse" class="arrange-btn" title="Play this clip's notes backwards" aria-label="Reverse">Rev</button>
                 <button type="button" id="arrangeRollInvert" class="arrange-btn" title="Turn the melody upside down: high notes become low" aria-label="Invert">Inv</button>
                 <div id="arrangeRollTranspose" class="arrange-roll-transpose" role="group" aria-label="Transpose">
@@ -156,7 +155,6 @@ export function initArrangeRoll() {
                     <button type="button" class="arrange-btn" data-transpose="1" aria-label="Transpose up a semitone" title="Up a semitone (Up arrow)">+1</button>
                     <button type="button" class="arrange-btn" data-transpose="12" aria-label="Transpose up an octave" title="Up an octave (Shift + Up arrow)">+12</button>
                 </div>
-                <button type="button" id="arrangeRollScale" class="arrange-btn" aria-pressed="false" title="Show only the project scale's notes" hidden>Scale</button>
                 <button type="button" id="arrangeRollMono" class="arrange-btn" aria-pressed="false" title="Mono: one note per step. A click writes or deletes one note" hidden>Mono</button>
                 <button type="button" id="arrangeRollPoly" class="arrange-btn" aria-pressed="false" title="Poly: stack up to six notes per step" hidden>Poly</button>
             </div>
@@ -165,7 +163,7 @@ export function initArrangeRoll() {
         <p id="arrangeRollHint" class="arrange-roll-hint" hidden>Drag onto a P square to edit as a pattern</p>
         <div class="arrange-roll-scroller" id="arrangeRollScroll">
             <div class="arrange-roll-sheet" id="arrangeRollSheet">
-                <div class="arrange-roll-corner"></div>
+                <div class="arrange-roll-corner"><button type="button" id="arrangeRollFold" class="arrange-roll-rowmode" aria-label="Rows: every key" title="Rows: every key. Click for the scale's notes or only the notes in use">Keys</button></div>
                 <div class="arrange-roll-heads" id="arrangeRollHeads"></div>
                 <div class="arrange-roll-keys" id="arrangeRollKeys"></div>
                 <div class="arrange-roll-grid" id="arrangeRollGrid"></div>
@@ -215,7 +213,6 @@ export function initArrangeRoll() {
         writeFlag(DRAW_KEY, drawOn);
         syncDrawBtn();
     });
-    scaleBtn = roll.querySelector('#arrangeRollScale');
     monoBtn = roll.querySelector('#arrangeRollMono');
     polyBtn = roll.querySelector('#arrangeRollPoly');
     transposeEl = roll.querySelector('#arrangeRollTranspose');
@@ -230,8 +227,19 @@ export function initArrangeRoll() {
     });
     stopBtn.addEventListener('click', () => document.getElementById('arrangeStop')?.click());
     loopBtn.addEventListener('click', toggleLoopClip);
+    // The corner cell cycles which rows show: every key → the project scale's notes (when a scale is on)
+    // → only the notes in use (REAPER-style fold) → every key.
     foldBtn.addEventListener('click', () => {
-        foldNotes = !foldNotes;
+        const mode = rowMode(findClip(openId));
+        if (mode === 'keys') {
+            if (scaleDegrees()) scaleView = true;
+            else foldNotes = true;
+        } else if (mode === 'scale') {
+            foldNotes = true;
+        } else {
+            foldNotes = false;
+            scaleView = false;
+        }
         if (openId != null) render({ jump: true });
     });
     // Same as Reverse on the clip's timeline menu: the notes are mirrored inside the clip.
@@ -254,10 +262,6 @@ export function initArrangeRoll() {
     document.addEventListener('pointerdown', (event) => {
         rollActive = event.target instanceof Node && win.el.contains(event.target);
     }, true);
-    scaleBtn.addEventListener('click', () => {
-        scaleView = !scaleView;
-        if (openId != null) render({ jump: true });
-    });
     monoBtn.addEventListener('click', () => setPolyEdit(false));
     polyBtn.addEventListener('click', () => setPolyEdit(true));
     // Loading or leaving a poly synth re-arms the switch. Bare Metal announces it;
@@ -443,6 +447,7 @@ function render({ jump }) {
     } finally {
         rendering = false;
     }
+    requestAnimationFrame(fitWindowToRows);
     if (jump && clip.kind !== 'd') scrollToPitches(clipPitches(clip));
     else if (!jump) {
         scroller.scrollTop = keepTop;
@@ -646,17 +651,43 @@ function inScale(tune, degrees) {
     return degrees.includes(((tune % 12) + 12) % 12);
 }
 
+// Which rows the step roll shows: 'fold' (notes in use), 'scale' (the project scale) or 'keys' (all).
+function rowMode(clip) {
+    const pitched = clip?.kind === 'n' || clip?.kind === 'b';
+    if (!pitched) return 'keys';
+    if (foldNotes) return 'fold';
+    return scaleView && scaleDegrees() ? 'scale' : 'keys';
+}
+
+const ROW_MODES = {
+    keys: ['Keys', 'Rows: every key. Click for the scale\'s notes or only the notes in use'],
+    scale: ['Scale', 'Rows: the project scale. Click for only the notes in use'],
+    fold: ['Fold', 'Rows: only the notes in use. Click for every key'],
+};
+
 function syncFoldBtn(clip) {
     const pitched = clip?.kind === 'n' || clip?.kind === 'b';
-    const scaleOn = pitched && !!scaleDegrees();
+    const mode = rowMode(clip);
     foldBtn.hidden = !pitched;
     roll.querySelector('#arrangeRollInvert').hidden = clip?.kind === 'd';
     syncTransposeBtns(clip);
-    foldBtn.classList.toggle('is-on', foldNotes);
-    foldBtn.setAttribute('aria-pressed', foldNotes ? 'true' : 'false');
-    scaleBtn.hidden = !scaleOn;
-    scaleBtn.classList.toggle('is-on', scaleOn && scaleView);
-    scaleBtn.setAttribute('aria-pressed', scaleOn && scaleView ? 'true' : 'false');
+    const [label, title] = ROW_MODES[mode];
+    foldBtn.textContent = label;
+    foldBtn.title = title;
+    foldBtn.setAttribute('aria-label', title.split('.')[0]);
+    foldBtn.classList.toggle('is-on', mode !== 'keys');
+}
+
+// Folded (Fold or Scale), the window fits its height to the rows (never taller than its own size; more
+// rows than fit scroll). Back on every key, it goes back to its own height.
+function fitWindowToRows() {
+    if (!win?.fitHeight || stepsOn) return;
+    if (!keysEl.classList.contains('is-fold')) {
+        win.fitHeight(null);
+        return;
+    }
+    const h = (n) => n?.getBoundingClientRect().height || 0;
+    win.fitHeight(h(roll.querySelector('.arrange-roll-bar')) + h(headsEl) + h(keysEl) + h(propsEl) + 2, { shrink: true });
 }
 
 // What the transpose buttons move: the selected notes of a recorded clip (all of them

@@ -16048,3 +16048,130 @@ fieldset:not(fieldset fieldset):not(.osc4-voice-record-fieldset) > legend:has(> 
 .arrange-roll .arrange-roll-bar :is(#arrangeRollReverse, #arrangeRollInvert, #arrangeRollMono, #arrangeRollPoly, #arrangeRollSteps, #arrangeRollScale) {
     width: 52px;
 }
+
+/* Row mode (Keys / Scale / Fold) is the keyboard's corner cell: fills it edge to edge, unlit when every
+   key shows, lit when the rows are folded to the scale or to the notes in use. */
+.arrange-roll .arrange-roll-corner {
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    box-sizing: border-box;
+}
+.arrange-roll .arrange-roll-rowmode {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--tp-ink);
+    font-size: 7px;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.arrange-roll .arrange-roll-rowmode[hidden] {
+    display: none;
+}
+.arrange-roll .arrange-roll-rowmode:hover {
+    background: color-mix(in srgb, var(--tp-ink) 12%, transparent);
+}
+.arrange-roll .arrange-roll-rowmode.is-on {
+    background: var(--tp-lit);
+    color: #000;
+}
+/* Folded rows (REAPER style): a list of note names, rows from the top; the column (and its edge line)
+   is only as tall as its rows, and the Acc / Sld rows' track takes the slack so they stay at the bottom. */
+.arrange-roll .arrange-roll-sheet:has(.arrange-roll-keys.is-fold) {
+    align-content: start;
+    grid-template-rows: auto auto 1fr;
+}
+.arrange-roll .arrange-roll-keys.is-fold {
+    background: #040604;
+    border-right: 2px solid var(--tp-ink);
+    box-shadow: inset -14px 0 30px -18px color-mix(in srgb, var(--tp-ink) 25%, transparent);
+    align-self: start;
+    height: auto !important;
+    min-height: 0 !important;
+}
+.arrange-roll .arrange-roll-fkey {
+    background: transparent;
+    border-bottom: 0;
+    cursor: pointer;
+    transition: background 0.18s ease-out;
+}
+/* naturals: black, split by the keyboard's own line (2px, ink, soft glow, on the seam), only between two
+   naturals; sharps: the keyboard's sharp plate (plate green, black lettering), no line of their own */
+.arrange-roll .arrange-roll-fkey::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    z-index: 0;
+    pointer-events: none;
+    background: var(--tp-ink);
+    box-shadow: 0 0 2px var(--tp-ink), 0 0 6px color-mix(in srgb, var(--tp-ink) 50%, transparent);
+}
+.arrange-roll .arrange-roll-fkey.is-black::after,
+.arrange-roll .arrange-roll-fkey:not(.is-black):has(+ .arrange-roll-fkey.is-black)::after {
+    display: none;
+}
+.arrange-roll .arrange-roll-fkey.is-black,
+.arrange-roll .arrange-roll-fkey.is-black.is-lit:not(.is-down) {
+    background: var(--tp-plate);
+}
+.arrange-roll .arrange-roll-fkey.is-black:hover:not(.is-down) {
+    background: color-mix(in srgb, var(--tp-plate) 80%, var(--tp-lit));
+}
+.arrange-roll .arrange-roll-fkey-cap {
+    display: none !important;
+}
+.arrange-roll .arrange-roll-fkey .arrange-roll-klabel {
+    z-index: 2;
+    left: 6px;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    color: var(--tp-ink);
+    font-size: 8px;
+    line-height: 1;
+    letter-spacing: 0.04em;
+}
+.arrange-roll .arrange-roll-fkey.is-black .arrange-roll-klabel {
+    color: #000;
+}
+.arrange-roll .arrange-roll-fkey.is-root:not(.is-black) .arrange-roll-klabel {
+    color: #00ffff;
+}
+.arrange-roll .arrange-roll-fkey.is-lit:not(.is-down):not(.is-black) {
+    background: transparent;
+}
+.arrange-roll .arrange-roll-fkey.is-down {
+    transition: none;
+    background: var(--tp-lit);
+}
+.arrange-roll .arrange-roll-fkey.is-down .arrange-roll-klabel {
+    color: #000;
+}
+/* the selected step's pitch doesn't light its row (only a press does) */
+.arrange-roll .arrange-roll-fkey.is-lit:not(.is-down) {
+    box-shadow: none;
+    border-color: transparent;
+}
+.arrange-roll .arrange-roll-fkey.is-lit:not(.is-down):not(.is-black) .arrange-roll-klabel {
+    color: var(--tp-ink);
+}
+.arrange-roll .arrange-roll-fkey.is-root.is-lit:not(.is-down):not(.is-black) .arrange-roll-klabel {
+    color: #00ffff;
+}
+.arrange-roll .arrange-roll-fkey.is-black.is-lit:not(.is-down) .arrange-roll-klabel {
+    color: #000;
+}

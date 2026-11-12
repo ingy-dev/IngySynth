@@ -16221,3 +16221,9 @@ fieldset:not(fieldset fieldset):not(.osc4-voice-record-fieldset) > legend:has(> 
     color: var(--tp-lit);
     font-variant-numeric: tabular-nums;
 }
+/* Berlin row clip in Steps view: that oscillator's own row (in its colour), shown even if its lane is off */
+.arrange-roll .arrange-roll-steps .berlin-row.is-in-roll,
+.arrange-roll .arrange-roll-steps .berlin-row.is-in-roll.hidden {
+    display: block !important;
+    margin: 0;
+}

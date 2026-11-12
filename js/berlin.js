@@ -1691,6 +1691,13 @@ export function setBerlinModCount(count) {
 }
 
 export function initBerlin() {
+    // The piano roll's Steps view shows a Berlin row clip's own lane row in its window: build the rows
+    // on request if Berlin mode hasn't yet.
+    document.addEventListener('ingysynth:berlin-build-rows', () => {
+        ensureBank();
+        ensureBerlinBank();
+        buildUi();
+    });
     ensureBank();
     ensureBerlinBank();
     ensurePlayheads();

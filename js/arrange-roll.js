@@ -15,6 +15,7 @@ import {
     hydratePatternToDom,
     snapshotSynthSlot,
     selectSlot,
+    selectBerlinSlot,
 } from './pattern-bank.js?v=51';
 import { nextRatch } from './step-ratch.js?v=1';
 import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './tuning.js?v=108';
@@ -700,6 +701,7 @@ let stepsDirty = false;
 let stepsUndone = false;
 let stepsEditTimer = 0;
 let stepsPrevSlot = null;   // the pad the main strip showed before Steps view
+let stepsRow = null;        // Berlin row clip: its lane (the strip is that oscillator's row, in its colour)
 const STEPS_DEAD = ['#arrangeRollPreview', '#arrangeRollDraw', '#arrangeRollInvert', '#arrangeRollMono'];
 
 function initStepsView() {
@@ -711,10 +713,11 @@ function initStepsView() {
         const clip = findClip(openId);
         if (!b || !stepsOn || !clip?.data) return;
         stripToClip();
-        const n = Math.max(1, Math.min(32, (clip.data.stepCount | 0) + Number(b.dataset.steps)));
-        if (n === clip.data.stepCount) return;
+        const n = Math.max(1, Math.min(32, (stepsLaneCount(clip) | 0) + Number(b.dataset.steps)));
+        if (n === stepsLaneCount(clip)) return;
         stepsUndo();
-        clip.data.stepCount = n;
+        if (clip.kind === 'b') clip.data.lanes[stepsRow].stepCount = n;
+        else clip.data.stepCount = n;
         clip.edited = true;
         loadStrip();
         syncStepsView();
@@ -730,9 +733,22 @@ function stepsUndo() {
 
 // The step strip shows (and edits) the edit slot, so Steps view puts the clip in the song's scratch slot
 // and makes that the edit slot, as song playback does; leaving it goes back to the pad it was on.
+// A Berlin row clip does the same with the Berlin bank and shows its own lane's row.
+function stepsLaneCount(clip) {
+    return clip.kind === 'b' ? clip.data?.lanes?.[stepsRow]?.stepCount : clip.data?.stepCount;
+}
+
 function loadStrip() {
     const clip = findClip(openId);
     if (!clip?.data) return;
+    if (clip.kind === 'b') {
+        const lanes = (clip.data.lanes || []).slice();
+        const lane = lanes[stepsRow];
+        if (lane && clip.reversed) lanes[stepsRow] = { ...flipLaneOrder(lane), reverse: true };
+        loadSongSlot('b', { ...clip.data, lanes });
+        selectBerlinSlot(SONG_SLOT, { followDrums: false });
+        return;
+    }
     loadSongSlot('n', padDataFromClip(clip, clip.data));
     if (state.editSlot !== SONG_SLOT) selectSlot(SONG_SLOT, { followDrums: false });
     else hydratePatternToDom(SONG_SLOT);
@@ -741,15 +757,27 @@ function loadStrip() {
 // The strip back into the clip (only after an edit): steps in the order they sound, Reverse as `reversed`.
 function stripToClip() {
     const clip = findClip(openId);
-    if (!stepsOn || !stepsDirty || !clip || clip.kind !== 'n') return;
+    if (!stepsOn || !stepsDirty || !clip || (clip.kind !== 'n' && clip.kind !== 'b')) return;
     stepsDirty = false;
-    flushDomToPattern(SONG_SLOT);
-    const snap = snapshotSynthSlot('n', SONG_SLOT);
-    const data = snap.reverse ? { ...flipLaneOrder(snap), reverse: false } : snap;
-    if (JSON.stringify(data) === JSON.stringify(clip.data) && !!clip.reversed === !!snap.reverse) return;
+    let data;
+    let reversed;
+    if (clip.kind === 'b') {
+        const lane = snapshotSynthSlot('b', SONG_SLOT)?.lanes?.[stepsRow];
+        if (!lane) return;
+        reversed = !!lane.reverse;
+        const lanes = (clip.data.lanes || []).slice();
+        lanes[stepsRow] = reversed ? { ...flipLaneOrder(lane), reverse: false } : lane;
+        data = { ...clip.data, lanes };
+    } else {
+        flushDomToPattern(SONG_SLOT);
+        const snap = snapshotSynthSlot('n', SONG_SLOT);
+        reversed = !!snap.reverse;
+        data = reversed ? { ...flipLaneOrder(snap), reverse: false } : snap;
+    }
+    if (JSON.stringify(data) === JSON.stringify(clip.data) && !!clip.reversed === reversed) return;
     stepsUndo();
     clip.data = data;
-    if (snap.reverse) clip.reversed = true;
+    if (reversed) clip.reversed = true;
     else delete clip.reversed;
     clip.edited = true;
     refreshArrange();
@@ -776,11 +804,15 @@ const STRIP_EVENTS = ['input', 'change', 'pointerup', 'click'];
 
 function setStepsView(on) {
     const clip = findClip(openId);
-    if (on === stepsOn || (on && clip?.kind !== 'n')) return;
-    const grid = document.getElementById('keyboardStepsGrid');
+    if (on === stepsOn || (on && !stepsViewable(clip))) return;
+    if (on && clip.kind === 'b') document.dispatchEvent(new CustomEvent('ingysynth:berlin-build-rows'));
+    const grid = on
+        ? (clip.kind === 'b' ? document.querySelector(`.berlin-row[data-row="${clip.row}"]`) : document.getElementById('keyboardStepsGrid'))
+        : stepsHost?.querySelector('#keyboardStepsGrid, .berlin-row');
     if (on && !grid) return;
     if (on) {
-        stepsPrevSlot = state.editSlot;
+        stepsRow = clip.kind === 'b' ? clip.row : null;
+        stepsPrevSlot = clip.kind === 'b' ? state.berlinSlot : state.editSlot;
         stepsOn = true;
         stepsDirty = false;
         stepsUndone = false;
@@ -790,6 +822,7 @@ function setStepsView(on) {
         stepsHost.className = 'arrange-roll-steps';
         const scope = document.createElement('div');   // keyboard-section only for the strip's own styles
         scope.className = 'keyboard-section arrange-roll-steps-scope';
+        if (stepsRow != null) grid.classList.add('is-in-roll');   // shown even when the lane is off
         scope.appendChild(grid);
         stepsHost.appendChild(scope);
         roll.querySelector('.arrange-roll-bar').after(stepsHost);
@@ -804,14 +837,20 @@ function setStepsView(on) {
         stepsOn = false;
         onRevPattern = null;
         if (grid && stepsHome) stepsHome.parent.insertBefore(grid, stepsHome.next);
+        grid?.classList.remove('is-in-roll');
         stepsHost?.remove();
         stepsHost = null;
         stepsHome = null;
         // the main strip goes back to its pad (song playback keeps the scratch slot: it owns it)
-        if (stepsPrevSlot != null && stepsPrevSlot !== SONG_SLOT && !state.songPlaying && state.editSlot === SONG_SLOT) {
-            selectSlot(stepsPrevSlot, { flush: false, followDrums: false });
+        if (stepsPrevSlot != null && stepsPrevSlot !== SONG_SLOT && !state.songPlaying) {
+            if (stepsRow != null) {
+                if (state.berlinSlot === SONG_SLOT) selectBerlinSlot(stepsPrevSlot, { followDrums: false });
+            } else if (state.editSlot === SONG_SLOT) {
+                selectSlot(stepsPrevSlot, { flush: false, followDrums: false });
+            }
         }
         stepsPrevSlot = null;
+        stepsRow = null;
         win?.fitHeight?.(null);
     }
     roll.classList.toggle('is-stepsview', stepsOn);
@@ -820,14 +859,19 @@ function setStepsView(on) {
     else if (openId != null) render({ jump: true });
 }
 
+// Pattern clips: a normal clip, or a Berlin oscillator row clip (one lane).
+function stepsViewable(clip) {
+    return clip?.kind === 'n' || (clip?.kind === 'b' && Number.isInteger(clip.row) && clip.row < 4);
+}
+
 function syncStepsView() {
     if (!stepsBtn) return;
     const clip = findClip(openId);
-    stepsBtn.hidden = clip?.kind !== 'n';
+    stepsBtn.hidden = !stepsViewable(clip);
     stepsBtn.classList.toggle('is-on', stepsOn);
     stepsBtn.setAttribute('aria-pressed', stepsOn ? 'true' : 'false');
     stepCountEl.hidden = !stepsOn;
-    stepCountEl.querySelector('.arrange-roll-stepcount-val').textContent = String(clip?.data?.stepCount ?? 16).padStart(2, '0');
+    stepCountEl.querySelector('.arrange-roll-stepcount-val').textContent = String((clip && stepsOn ? stepsLaneCount(clip) : clip?.data?.stepCount) ?? 16).padStart(2, '0');
     roll.querySelectorAll([...STEPS_DEAD, '#arrangeRollTranspose button'].join(',')).forEach((b) => {
         b.disabled = stepsOn;
         b.classList.toggle('is-dead', stepsOn);

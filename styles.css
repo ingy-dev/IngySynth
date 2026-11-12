@@ -14172,9 +14172,11 @@ html.arrange-trimming * {
     .arrange-coming { min-height: 42px; }
 }
 
-/* Phosphor window: the shared floating popover (ingy-window.js). Desktop floats; phones get a bottom sheet. */
+/* Phosphor window: the shared floating popover (ingy-window.js). Desktop floats; phones get a bottom sheet.
+   Window 4c (Design Lab, 2026-11): 2px line frame, a solid lit slab offset behind it (a black gap between),
+   and a lit title band with black lettering. It opens and closes codec-style (ingy-window.js). */
 .ingy-window {
-    --win-line: #109e43;
+    --win-line: #13bf51;
     --win-lit: #18ed64;
     --win-bg: #030603;
     --win-bar: 26px;
@@ -14186,15 +14188,10 @@ html.arrange-trimming * {
     min-height: 0;
     background: var(--win-bg);
     color: var(--win-line);
-    border: 1px solid var(--win-line);
-    box-shadow:
-        0 0 0 2px #000,
-        0 0 0 3px rgba(16, 158, 67, 0.45),
-        7px 7px 0 3px rgba(0, 0, 0, 0.75),
-        0 0 24px rgba(24, 237, 100, 0.12);
+    border: 2px solid var(--win-line);
+    box-shadow: 3px 3px 0 0 #000, 9px 9px 0 0 var(--win-lit);
     box-sizing: border-box;
     transform-origin: 50% 50%;
-    animation: ingy-window-on 140ms ease-out;
 }
 .ingy-window[hidden] {
     display: none !important;
@@ -14202,14 +14199,6 @@ html.arrange-trimming * {
 .ingy-window.is-moving {
     user-select: none;
     -webkit-user-select: none;
-}
-@keyframes ingy-window-on {
-    0% { transform: scale(1, 0.02); filter: brightness(2.2); }
-    60% { transform: scale(1, 1.01); }
-    100% { transform: none; filter: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .ingy-window { animation: none; }
 }
 .ingy-window__bar {
     position: relative;
@@ -14219,8 +14208,8 @@ html.arrange-trimming * {
     gap: 6px;
     min-width: 0;
     padding: 0 6px;
-    background: #000;
-    border-bottom: 1px solid var(--win-line);
+    background: var(--win-lit);
+    border-bottom: 2px solid var(--win-lit);
     cursor: grab;
     touch-action: none;
     box-sizing: border-box;
@@ -14232,18 +14221,18 @@ html.arrange-trimming * {
     flex: 1 1 0;
     min-width: 8px;
     height: 11px;
-    background: repeating-linear-gradient(to bottom, var(--win-line) 0 1px, transparent 1px 3px);
-    opacity: 0.35;
+    background: repeating-linear-gradient(to bottom, #000 0 1px, transparent 1px 3px);
+    opacity: 0.55;
 }
 .ingy-window.is-front .ingy-window__stripes {
-    opacity: 1;
+    opacity: 0.8;
 }
 .ingy-window__title {
     flex: 0 1 auto;
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    color: var(--win-lit);
+    color: #000;
     font-family: Michroma, sans-serif;
     font-size: 10px;
     font-weight: 400;
@@ -14252,12 +14241,11 @@ html.arrange-trimming * {
     text-transform: uppercase;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-shadow: 0 0 6px rgba(24, 237, 100, 0.45);
 }
-/* Close: an X at the right end of the title bar. Lit on hover = green square, black X. */
+/* Close: a black X at the right end of the lit band. Hover = black square, lit X. */
 .ingy-window__close {
     --x-size: 10px;
-    --x-ink: var(--win-lit);
+    --x-ink: #000;
     appearance: none;
     -webkit-appearance: none;
     position: relative;
@@ -14267,7 +14255,7 @@ html.arrange-trimming * {
     margin: 0 -2px 0 0;
     padding: 0;
     border: 1px solid transparent;
-    background: #000;
+    background: transparent;
     cursor: pointer;
     box-sizing: border-box;
 }
@@ -14281,7 +14269,6 @@ html.arrange-trimming * {
     height: 2px;
     margin: -1px 0 0 calc(var(--x-size) * -0.707);
     background: var(--x-ink);
-    box-shadow: 0 0 4px rgba(24, 237, 100, 0.5);
     transform: rotate(45deg);
 }
 .ingy-window__close::after {
@@ -14289,19 +14276,137 @@ html.arrange-trimming * {
 }
 .ingy-window__close:hover,
 .ingy-window__close:active {
-    --x-ink: #000;
-    background: var(--win-lit);
-    border-color: var(--win-lit);
+    --x-ink: var(--win-lit);
+    background: #000;
+    border-color: #000;
 }
-.ingy-window__close:hover::before,
-.ingy-window__close:hover::after,
-.ingy-window__close:active::before,
-.ingy-window__close:active::after {
-    box-shadow: none;
-}
-.ingy-window__close:focus-visible {
-    outline: 1px solid var(--win-lit);
+.ingy-window__close:focus-visible,
+.ingy-window__min:focus-visible {
+    outline: 1px solid #000;
     outline-offset: 2px;
+}
+/* Minimize: a black bar on the lit band; hover = black square, lit bar. The window drops to its tab. */
+.ingy-window__min {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    margin: 0 2px 0 0;
+    padding: 0;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.ingy-window__min::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    top: 50%;
+    height: 2px;
+    margin-top: -1px;
+    background: #000;
+}
+.ingy-window__min:hover,
+.ingy-window__min:active {
+    background: #000;
+    border-color: #000;
+}
+.ingy-window__min:hover::before,
+.ingy-window__min:active::before {
+    background: var(--win-lit);
+}
+.ingy-window.is-sheet .ingy-window__min {
+    display: none;
+}
+/* A minimized window: a black tab on the bottom edge with a lit outline and lettering; hover lights it. */
+.ingy-window-tab {
+    position: fixed;
+    bottom: 0;
+    z-index: 10400;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    padding: 0 6px 0 12px;
+    box-sizing: border-box;
+    background: #000;
+    color: #18ed64;
+    border: 2px solid #13bf51;
+    border-bottom: 0;
+    font: 10px/1 Michroma, sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    animation: ingy-window-tab-in 160ms ease-out;
+}
+.ingy-window-tab[hidden] {
+    display: none;
+}
+.ingy-window-tab__title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ingy-window-tab__icon {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border: 2px solid currentColor;
+    box-sizing: border-box;
+}
+.ingy-window-tab:hover,
+.ingy-window-tab:focus-visible {
+    background: #18ed64;
+    border-color: #18ed64;
+    color: #000;
+    outline: none;
+}
+@keyframes ingy-window-tab-in {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+}
+/* The page under an open window dims to 70% (not the menu bar); it never takes clicks. */
+.ingy-window-dim {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: 0;
+    z-index: 10100;
+    background: rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+}
+.ingy-window-dim.is-on {
+    opacity: 1;
+}
+/* Open / close / minimize effects drawn over the page: the codec line and the zoom-rect outlines. */
+.ingy-window-fx {
+    position: fixed;
+    inset: 0;
+    z-index: 10450;
+    pointer-events: none;
+}
+.ingy-window-fx__line {
+    position: fixed;
+    background: #18ed64;
+    box-shadow: 0 0 12px #18ed64, 0 0 30px rgba(24, 237, 100, 0.6);
+    transform-origin: 50% 50%;
+}
+.ingy-window-fx__rect {
+    position: fixed;
+    border: 2px solid #18ed64;
+    box-shadow: 0 0 6px rgba(24, 237, 100, 0.5);
+    box-sizing: border-box;
 }
 .ingy-window__grip {
     display: none;

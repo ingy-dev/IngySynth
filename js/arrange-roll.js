@@ -143,15 +143,14 @@ export function initArrangeRoll() {
         <div class="arrange-roll-bar">
             <div class="arrange-roll-transport" role="group" aria-label="Transport">
                 <button type="button" id="arrangeRollPreview" class="arrange-btn arrange-btn-icon" aria-pressed="true" aria-label="Preview" title="Preview: hear notes as you write or drag them"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0.6 4.6h3L8.6 0v16L3.6 11.4H0.6z"/><path class="arrange-icon-waves" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M11 3.6a4.2 4.2 0 0 1 0 8.8"/><path class="arrange-icon-mute" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M1.4 1.4l13.2 13.2"/></svg></button>
-                <button type="button" id="arrangeRollDraw" class="arrange-btn arrange-btn-icon" aria-pressed="false" aria-label="Draw" title="Draw: click or drag to paint notes. Start on a note to erase"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M1.6 14.4l0.9-3.6 8.6-8.6 2.7 2.7-8.6 8.6z"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M9.4 3.9l2.7 2.7M2.5 10.8l2.7 2.7"/></svg></button>
                 <button type="button" id="arrangeRollPlay" class="arrange-btn arrange-btn-icon" aria-pressed="false" aria-label="Play"><span class="arrange-icon-play" aria-hidden="true"></span></button>
                 <button type="button" id="arrangeRollStop" class="arrange-btn arrange-btn-icon" aria-label="Stop"><span class="arrange-icon-stop" aria-hidden="true"></span></button>
-                <button type="button" id="arrangeRollLoop" class="arrange-btn" aria-pressed="false" title="Loop the song around this clip">Loop clip</button>
+                <button type="button" id="arrangeRollLoop" class="arrange-btn arrange-btn-icon" aria-pressed="false" aria-label="Loop clip" title="Loop the song around this clip"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V6.5A2.5 2.5 0 0 1 5.5 4H12"/><path d="M10 2l2 2-2 2"/><path d="M13 9v.5A2.5 2.5 0 0 1 10.5 12H4"/><path d="M6 14l-2-2 2-2"/></svg></button>
+                <button type="button" id="arrangeRollDraw" class="arrange-btn arrange-btn-icon" aria-pressed="false" aria-label="Draw" title="Draw: click or drag to paint notes. Start on a note to erase"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M1.6 14.4l0.9-3.6 8.6-8.6 2.7 2.7-8.6 8.6z"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M9.4 3.9l2.7 2.7M2.5 10.8l2.7 2.7"/></svg></button>
                 <button type="button" id="arrangeRollFold" class="arrange-btn" aria-pressed="false" title="Show only rows that have notes">Fold</button>
-                <button type="button" id="arrangeRollReverse" class="arrange-btn" title="Play this clip's notes backwards">Reverse</button>
-                <button type="button" id="arrangeRollInvert" class="arrange-btn" title="Turn the melody upside down: high notes become low">Invert</button>
+                <button type="button" id="arrangeRollReverse" class="arrange-btn" title="Play this clip's notes backwards" aria-label="Reverse">Rev</button>
+                <button type="button" id="arrangeRollInvert" class="arrange-btn" title="Turn the melody upside down: high notes become low" aria-label="Invert">Inv</button>
                 <div id="arrangeRollTranspose" class="arrange-roll-transpose" role="group" aria-label="Transpose">
-                    <span class="arrange-roll-transpose-label" aria-hidden="true">Transpose</span>
                     <button type="button" class="arrange-btn" data-transpose="-12" aria-label="Transpose down an octave" title="Down an octave (Shift + Down arrow)">-12</button>
                     <button type="button" class="arrange-btn" data-transpose="-1" aria-label="Transpose down a semitone" title="Down a semitone (Down arrow)">-1</button>
                     <button type="button" class="arrange-btn" data-transpose="1" aria-label="Transpose up a semitone" title="Up a semitone (Up arrow)">+1</button>
@@ -386,11 +385,17 @@ function measureRow(clip) {
     const height = scroller?.clientHeight || 0;
     if (height < 48) return 0;
     const header = headsEl?.offsetHeight || 18;
-    // The Acc / Sld / Rat rows stick over the bottom of the grid, so they come out of the room too.
-    // Measured before paintProps runs, so work it out: 16px per row plus the 1px rule (styles.css).
-    const props = clip && (clip.kind === 'n' || clip.kind === 'b') ? PROP_ROWS.length * 16 + 1 : 0;
+    // The step roll keeps the piano roll's row height: its Acc / Sld / Rat rows stay stuck to the
+    // bottom and the grid scrolls under them, instead of every row shrinking to make room.
+    const props = 0;
     // Fingers need taller rows than a mouse; a short phone screen scrolls instead of shrinking past that.
     const min = window.matchMedia('(pointer: coarse)').matches ? ROW_MIN_TOUCH : ROW_MIN;
+    // Folded to the pitches in use (REAPER style), a short list gets taller rows (up to ROW_MAX)
+    // instead of sitting in a band of empty space. The Acc / Sld rows come out of the room here.
+    if (foldNotes && clip && (clip.kind === 'n' || clip.kind === 'b')) {
+        const n = new Set(clipPitches(clip)).size;
+        if (n > 0) return Math.max(min, Math.min(ROW_MAX, Math.floor((height - header - (PROP_ROWS.length * 16 + 1)) / n)));
+    }
     return Math.max(min, Math.min(ROW_MAX, Math.floor((height - header - props) / WINDOW_ROWS)));
 }
 
@@ -408,9 +413,9 @@ function render({ jump }) {
         roll.dataset.kind = clip.kind;
         roll.classList.toggle('is-drums', clip.kind === 'd');
         roll.classList.toggle('is-notes', clip.kind === 'notes');
-        win.setTitle(`Piano Roll · ${clipTitle(clip)}`);
-        hintEl.hidden = clip.kind !== 'notes';
-        if (clip.kind === 'notes') hintEl.textContent = drawOn ? DRAW_HINT : NOTES_HINT;
+        // A roll locked to steps (pattern and drum clips) is the Step Roll; free notes are the Piano Roll.
+        win.setTitle(clip.kind === 'notes' ? `Piano Roll · ${clipTitle(clip)}` : `Step Roll - ${clipTitle(clip)}`);
+        hintEl.hidden = true;   // no hint line: the tools' tooltips say how they work
         if (clip.kind !== 'notes') {
             sheet.style.width = '';
             notesGeom = null;
@@ -422,6 +427,7 @@ function render({ jump }) {
         if (clip.kind === 'd') paintDrums(clip);
         else if (clip.kind === 'notes') paintNotes(clip);
         else paintPitch(clip);
+        paintRowShade();
         paintStepSel();
         paintProps(clip);
         syncFoldBtn(clip);
@@ -1295,25 +1301,37 @@ function headCell(col, step) {
     el.className = 'arrange-roll-head';
     el.dataset.col = String(col);
     el.textContent = String(col + 1);
-    const ratch = Math.round(Number(step?.ratch) || 1);
-    if (step && ratch >= 2) {
-        const mark = document.createElement('span');
-        mark.className = 'arrange-roll-ratch arrange-roll-ratch-head';
-        mark.textContent = String(ratch);
-        el.appendChild(mark);
-    }
     if (col === selectedCol) el.classList.add('is-col');
     if (col % 4 === 0) el.classList.add('is-bar');
     return el;
 }
 
-// Vertical piano, Ableton style: every key edge sits on a lane or half-lane line, so a white key
-// covers its own lane plus half of each neighbouring black lane, and black keys cover exactly one lane.
+// Vertical piano in the touch-plate keyboard's shape: the naturals split each octave the way a real
+// keyboard does (C-E share five rows, F-B seven), each sharp is a plate on its own row, and every edge
+// is snapped to a whole pixel so the key lines stay crisp at any row height.
+const NAT_SPAN = { 0: [0, 5 / 3], 2: [5 / 3, 10 / 3], 4: [10 / 3, 5], 5: [5, 6.75], 7: [6.75, 8.5], 9: [8.5, 10.25], 11: [10.25, 12] };
+function paintRowShade() {
+    if (!keysEl.classList.contains('is-piano') || roll.classList.contains('is-drums')) return;
+    const rows = TUNE_HI - TUNE_LO + 1;
+    const px = (n) => Math.round(n * (rowPx || 16));
+    const shade = document.createElement('div');
+    shade.className = 'arrange-roll-shade';
+    shade.setAttribute('aria-hidden', 'true');
+    shade.style.height = `${px(rows)}px`;
+    let html = '';
+    for (let row = 0; row < rows; row += 1) {
+        if (!isBlack(TUNE_HI - row)) html += `<i style="top:${px(row)}px;height:${px(row + 1) - px(row)}px"></i>`;
+    }
+    shade.innerHTML = html;
+    gridEl.prepend(shade);
+}
+
 function paintKeyboard() {
     const rows = TUNE_HI - TUNE_LO + 1;
+    const px = (n) => Math.round(n * (rowPx || 16));
     keysEl.classList.remove('is-fold');
     keysEl.classList.add('is-piano');
-    keysEl.style.height = `calc(var(--row, 16px) * ${rows})`;
+    keysEl.style.height = `${px(rows)}px`;
     const blacks = [];
     for (let tune = TUNE_HI; tune >= TUNE_LO; tune -= 1) {
         const row = TUNE_HI - tune;
@@ -1322,15 +1340,19 @@ function paintKeyboard() {
         el.title = semitonesToNoteName(tune);
         if (isBlack(tune)) {
             el.className = 'arrange-roll-bkey';
-            el.style.top = `calc(var(--row, 16px) * ${row})`;
+            el.style.top = `${px(row) + 1}px`;
+            el.style.height = `${px(row + 1) - px(row) - 2}px`;
             blacks.push(el);
             continue;
         }
-        const up = tune < TUNE_HI && isBlack(tune + 1) ? 0.5 : 0;
-        const down = tune > TUNE_LO && isBlack(tune - 1) ? 0.5 : 0;
+        const pc = ((tune % 12) + 12) % 12;
+        const cBottom = TUNE_HI - (tune - pc) + 1;
+        const [lo, hi] = NAT_SPAN[pc];
+        const top = Math.max(0, cBottom - hi);
+        const bottom = Math.min(rows, cBottom - lo);
         el.className = 'arrange-roll-wkey';
-        el.style.top = `calc(var(--row, 16px) * ${row - up})`;
-        el.style.height = `calc(var(--row, 16px) * ${1 + up + down})`;
+        el.style.top = `${px(top)}px`;
+        el.style.height = `${px(bottom) - px(top)}px`;
         if (((tune % 12) + 12) % 12 === 0) {
             el.classList.add('is-c');
             const label = document.createElement('span');
@@ -1474,10 +1496,9 @@ function pitchCell(col, tune, on, step) {
         if (step?.slide) el.classList.add('is-slide');
         const ratch = Math.round(Number(step?.ratch) || 1);
         if (ratch >= 2) {
-            const mark = document.createElement('span');
-            mark.className = 'arrange-roll-ratch';
-            mark.textContent = String(ratch);
-            el.appendChild(mark);
+            el.classList.add('is-ratch');
+            el.style.setProperty('--rn', String(ratch));
+            el.setAttribute('aria-label', `${el.getAttribute('aria-label')}, ratchet ${ratch}`);
         }
         if (step?.slide) {
             const tie = document.createElement('span');

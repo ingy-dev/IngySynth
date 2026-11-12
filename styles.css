@@ -15815,3 +15815,236 @@ fieldset:not(fieldset fieldset):not(.osc4-voice-record-fieldset) > legend:has(> 
         color-mix(in srgb, var(--tp-lit) 10%, transparent),
         color-mix(in srgb, var(--tp-lit) 48%, transparent));
 }
+
+/* ==========================================================================
+   Piano roll / step roll, Design Lab look (ported 2026-11-12). Touch-plate keys snapped to whole pixels
+   (arrange-roll.js paintKeyboard), Michroma only, every button lights solid when on, three fixed button
+   sizes, ratchets drawn as split blocks, Acc / Sld / Rat / On rows as plates on a black well.
+   ========================================================================== */
+#arrangeRollWindow,
+#arrangeRollWindow * {
+    font-family: Michroma, sans-serif !important;   /* piano roll and windows: Michroma only (2026-11-11) */
+}
+.arrange-roll .arrange-roll-sheet {
+    --keys-w: 40px;   /* stubby keys */
+}
+/* keys: black well, 2px glowing line on the right; naturals divided by the keyboard's glowing line,
+   sharps as plates on their own row */
+.arrange-roll .arrange-roll-keys.is-piano {
+    background: #040604;
+    border-right: 2px solid var(--tp-ink);
+    box-shadow: inset -14px 0 30px -18px color-mix(in srgb, var(--tp-ink) 25%, transparent);
+}
+.arrange-roll .arrange-roll-corner {
+    border-right: 2px solid var(--tp-ink);
+}
+.arrange-roll .arrange-roll-wkey {
+    background: transparent;
+    border-bottom: 0;
+    transition: background 0.18s ease-out;
+    cursor: pointer;
+}
+.arrange-roll .arrange-roll-wkey::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    z-index: 0;
+    pointer-events: none;
+    background: var(--tp-ink);
+    box-shadow: 0 0 2px var(--tp-ink), 0 0 6px color-mix(in srgb, var(--tp-ink) 50%, transparent);
+}
+.arrange-roll .arrange-roll-bkey {
+    width: 62%;
+    border: 0;
+    border-radius: 0 1px 1px 0;
+    background: var(--tp-plate);
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tp-lit) 18%, transparent),
+        0 0 5px color-mix(in srgb, var(--tp-ink) 45%, transparent), 0 0 14px color-mix(in srgb, var(--tp-ink) 20%, transparent);
+    z-index: 2;
+    transition: background 0.18s ease-out;
+}
+.arrange-roll .arrange-roll-wkey.is-down {
+    transition: none;
+    background: linear-gradient(to left, color-mix(in srgb, var(--tp-lit) 55%, transparent), color-mix(in srgb, var(--tp-lit) 85%, transparent));
+    box-shadow: none;
+}
+.arrange-roll .arrange-roll-bkey.is-down {
+    transition: none;
+    background: var(--tp-lit);
+    border: 0;
+    box-shadow: 0 0 8px var(--tp-lit), 0 0 22px color-mix(in srgb, var(--tp-lit) 60%, transparent);
+}
+.arrange-roll .arrange-roll-wkey.is-down .arrange-roll-klabel {
+    color: #000;
+}
+/* The selected step's pitches don't light keys (.is-lit): keys light only while pressed. */
+.arrange-roll .arrange-roll-wkey.is-lit:not(.is-down) {
+    background: transparent;
+    box-shadow: none;
+}
+.arrange-roll .arrange-roll-wkey.is-lit:not(.is-down) .arrange-roll-klabel {
+    color: var(--tp-ink);
+}
+.arrange-roll .arrange-roll-bkey.is-lit:not(.is-down) {
+    background: var(--tp-plate);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tp-lit) 18%, transparent),
+        0 0 5px color-mix(in srgb, var(--tp-ink) 45%, transparent), 0 0 14px color-mix(in srgb, var(--tp-ink) 20%, transparent);
+}
+/* C labels: centred on the C's own row, right-aligned 3px in */
+.arrange-roll .arrange-roll-wkey .arrange-roll-klabel {
+    color: var(--tp-ink);
+    z-index: 1;
+    right: 3px;
+    top: auto;
+    bottom: calc((var(--row, 16px) - 1em) / 2);
+    font-size: 7px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+}
+/* the grid: natural rows faintly tinted so sharp rows read darker (arrange-roll.js paintRowShade) */
+.arrange-roll .arrange-roll-shade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+.arrange-roll .arrange-roll-shade i {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: color-mix(in srgb, var(--tp-ink) 5%, transparent);
+}
+/* the band on a held key's row: cyan with dashed top and bottom edges */
+.arrange-roll .arrange-roll-keyrow {
+    background:
+        repeating-linear-gradient(to right, rgba(0, 255, 255, 0.7) 0 4px, transparent 4px 7px) top / 100% 1px no-repeat,
+        repeating-linear-gradient(to right, rgba(0, 255, 255, 0.7) 0 4px, transparent 4px 7px) bottom / 100% 1px no-repeat,
+        rgba(0, 255, 255, 0.08) !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+/* step grid = the piano roll's: see-through cells, column lines like beat lines (bars stronger) */
+.arrange-roll .arrange-roll-cell,
+.arrange-roll .arrange-roll-cell.is-black {
+    background: transparent;
+    border-bottom-color: transparent;
+    border-left-color: color-mix(in srgb, var(--tp-ink) 9%, transparent);
+}
+.arrange-roll .arrange-roll-cell.is-bar {
+    border-left-color: color-mix(in srgb, var(--tp-ink) 35%, transparent);
+}
+.arrange-roll .arrange-roll-cell.is-c {
+    border-bottom-color: transparent;
+}
+.arrange-roll .arrange-roll-cell.is-out {
+    background: rgba(0, 0, 0, 0.35);
+}
+.arrange-roll .arrange-roll-cell.is-play {
+    background: color-mix(in srgb, var(--tp-lit) 12%, transparent);
+}
+.arrange-roll .arrange-roll-cell.is-col {
+    box-shadow: none;
+    background: color-mix(in srgb, var(--tp-ink) 7%, transparent);
+}
+/* step blocks like the piano roll's notes: 1px above and below; the slide line runs in the 1px under it */
+.arrange-roll .arrange-roll-cell.is-on::before {
+    top: 1px;
+    bottom: 1px;
+}
+.arrange-roll .arrange-roll-tie {
+    bottom: 0;
+    height: 1px;
+}
+/* a ratchet of N: the block splits into N equal hits with a 2px gap (a mask, so it keeps its colour) */
+.arrange-roll .arrange-roll-cell.is-ratch::before {
+    -webkit-mask: repeating-linear-gradient(90deg, #000 0 calc(100% / var(--rn) - 2px), transparent calc(100% / var(--rn) - 2px) calc(100% / var(--rn)));
+    mask: repeating-linear-gradient(90deg, #000 0 calc(100% / var(--rn) - 2px), transparent calc(100% / var(--rn) - 2px) calc(100% / var(--rn)));
+}
+/* Acc / Sld / Rat / On rows: flat plate-green plates in an even black inset on a black well, no cell lines */
+.arrange-roll .arrange-roll-props {
+    background: #040604;
+    border-top: 2px solid var(--tp-ink);
+}
+.arrange-roll .arrange-roll-pcorner {
+    background: #040604;
+    border-right: 2px solid var(--tp-ink);
+    border-top: 2px solid var(--tp-ink);
+}
+.arrange-roll .arrange-roll-plabel {
+    color: var(--tp-ink);
+    font-size: 7px;
+    letter-spacing: 0.02em;
+    padding-right: 3px;
+}
+.arrange-roll .arrange-roll-plabel .is-full {
+    display: none;
+}
+.arrange-roll .arrange-roll-plabel .is-short {
+    display: inline;
+}
+.arrange-roll .arrange-roll-prop {
+    border: 0 !important;
+    transition: background-color 0.18s ease-out;
+}
+.arrange-roll .arrange-roll-prop.is-col:not(.is-on) {
+    box-shadow: none;
+    background: transparent;
+}
+.arrange-roll .arrange-roll-prop.is-on {
+    background: var(--tp-plate);
+    box-shadow: inset 0 0 0 2px #040604;
+}
+.arrange-roll .arrange-roll-prop.is-on:hover {
+    background: color-mix(in srgb, var(--tp-plate) 80%, var(--tp-lit));
+}
+.arrange-roll .arrange-roll-prop.is-rest.is-on {
+    background: color-mix(in srgb, var(--tp-plate) 45%, #000);
+}
+.arrange-roll .arrange-roll-prop.is-held {
+    box-shadow: inset 0 0 0 4px #040604, inset 0 0 0 5px color-mix(in srgb, var(--tp-ink) 35%, #000);
+}
+.arrange-roll .arrange-roll-ratch {
+    color: #000;
+}
+/* Every roll button lights solid when on: lit fill, black lettering and icons */
+.arrange-roll .arrange-btn:is(.is-on, .is-armed, [aria-pressed="true"]) {
+    background: var(--tp-lit) !important;
+    border-color: var(--tp-lit) !important;
+    color: #000 !important;
+    text-shadow: none !important;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--tp-lit) 55%, transparent) !important;
+}
+.arrange-roll .arrange-btn:is(.is-on, .is-armed, [aria-pressed="true"]) * {
+    color: #000 !important;
+    text-shadow: none !important;
+}
+.arrange-roll .arrange-btn:is(.is-on, .is-armed, [aria-pressed="true"]) .sg-svg {
+    filter: none !important;
+}
+/* Toolbar: three fixed button sizes so nothing changes width with its label. Icons 28px, transpose 36px,
+   word buttons 52px. */
+.arrange-roll .arrange-roll-bar .arrange-btn:not([hidden]) {
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+.arrange-roll .arrange-roll-bar .arrange-btn.arrange-btn-icon {
+    width: 28px;
+}
+.arrange-roll #arrangeRollTranspose .arrange-btn {
+    width: 36px;
+}
+.arrange-roll .arrange-roll-bar :is(#arrangeRollReverse, #arrangeRollInvert, #arrangeRollMono, #arrangeRollPoly, #arrangeRollSteps, #arrangeRollScale) {
+    width: 52px;
+}

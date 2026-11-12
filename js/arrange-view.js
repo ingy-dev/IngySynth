@@ -2107,9 +2107,8 @@ function commitPlace(track, kind, slot, tick) {
 // every clip placed comes back as an array.
 function placeFromBank(track, kind, slot, startTick, opts = {}) {
     // On the timeline a clip holds the notes as they sound: a reversed pattern is flipped.
-    const data = playOrderData(kind, kind === 'd'
-        ? { lanes: snapshotDrumSlot(slot) }
-        : snapshotSynthSlot(kind, slot));
+    const raw = kind === 'd' ? { lanes: snapshotDrumSlot(slot) } : snapshotSynthSlot(kind, slot);
+    const data = playOrderData(kind, raw);
     if (!data) return false;
     const automation = kind === 'd' ? null : snapshotBankAutomation(`${kind}${slot}`);
     const spec = {
@@ -2126,12 +2125,72 @@ function placeFromBank(track, kind, slot, startTick, opts = {}) {
     if (kind === 'b') {
         // One clip per oscillator row; the one in the row it was dropped on ends up selected.
         const placed = placeBerlinRows(song, spec, startGrid(), opts);
+        markReversed(placed, kind, raw);
         if (opts.live) return placed || [];
         return placed ? (placed.find((clip) => clip.track === track) || placed[0]) : false;
     }
     const clip = placeClip(song, spec, startGrid(), opts);
+    markReversed(clip, kind, raw);
     if (opts.live) return clip ? [clip] : [];
     return clip;
+}
+
+// Reverse on the timeline. A pattern clip holds its steps in the order they sound, and `reversed`
+// remembers that its pattern plays with Reverse on (a Berlin row clip: its own lane's Reverse). Back on
+// a pad the steps go the other way round again with Reverse on, so the pad gets the pattern it came
+// from. Toggling it is the hardware switch: the steps play back to front, nothing else moves, and a
+// second press undoes it exactly.
+export function flipLaneOrder(lane) {
+    if (!lane) return lane;
+    const out = JSON.parse(JSON.stringify(lane));
+    const n = Math.max(1, Math.min(32, Math.round(Number(lane.stepCount)) || 8));
+    const src = (out.steps || []).slice(0, n).reverse();
+    for (let i = 0; i < src.length; i += 1) out.steps[i] = src[i];
+    return out;
+}
+
+function sourceReversed(kind, raw, row) {
+    if (kind === 'n') return !!raw?.reverse;
+    if (kind === 'b') return !!raw?.lanes?.[row]?.reverse;
+    return false;
+}
+
+function markReversed(placed, kind, raw) {
+    for (const clip of [].concat(placed || [])) {
+        if (!clip || clip.kind !== kind || (kind !== 'n' && kind !== 'b')) continue;
+        if (sourceReversed(kind, raw, clip.row)) clip.reversed = true;
+        else delete clip.reversed;
+    }
+}
+
+/** A clip's steps (in the order they sound) as a pad holds them: Reverse back on. */
+export function padDataFromClip(clip, data) {
+    if (!clip?.reversed || !data || clip.kind !== 'n') return data;
+    return { ...flipLaneOrder(data), reverse: true };
+}
+
+function padLaneFromClip(clip, lane) {
+    if (!clip?.reversed || !lane) return lane;
+    return { ...flipLaneOrder(lane), reverse: true };
+}
+
+/** The Reverse switch for a pattern clip (normal, or a Berlin row's lane). One undo step. */
+export function toggleClipReverse(id) {
+    const clip = findClip(id);
+    if (!clip || !clip.data || (clip.kind !== 'n' && clip.kind !== 'b')) return false;
+    checkpointUndo(state.song);
+    if (clip.kind === 'n') clip.data = flipLaneOrder(clip.data);
+    else {
+        const lanes = (clip.data.lanes || []).slice();
+        const rows = Number.isInteger(clip.row) ? [clip.row] : lanes.map((_, i) => i).filter((i) => i < 4);
+        for (const r of rows) if (lanes[r]) lanes[r] = flipLaneOrder(lanes[r]);
+        clip.data = { ...clip.data, lanes };
+    }
+    if (clip.reversed) delete clip.reversed;
+    else clip.reversed = true;
+    clip.edited = true;
+    noteEdit();
+    return true;
 }
 
 function cycleTicks(kind, slot) {
@@ -2330,12 +2389,13 @@ function dropOnSquare(clip, slot) {
     const prev = captureSlot(kind, slot);
     // A trimmed clip lands as what it plays: only the steps inside its edges.
     const cut = clipIsTrimmed(clip) ? trimmedClipData(clip) : null;
-    const data = cut ? cut.data : clip.data;
+    const playData = cut ? cut.data : clip.data;
+    const data = padDataFromClip(clip, playData);
     // The clip takes the cut pattern as its own, unless that is not all of it: cut short
     // at 32 steps, or only the uncovered part of the clip was dragged.
     const stored = findClip(clip.id);
     const whole = !!stored && stored.startTick === clip.startTick && stored.lengthTick === clip.lengthTick;
-    const baked = cut && !cut.truncated && whole ? data : null;
+    const baked = cut && !cut.truncated && whole ? playData : null;
     let updated = null;
     suspend += 1;
     try {
@@ -2376,7 +2436,7 @@ function dropRowsOnSquare(clips, square, clientY) {
         if (cut?.truncated) truncated = true;
         const source = (cut ? cut.data : clip.data)?.lanes?.[clip.row];
         if (!source) continue;
-        merged.lanes[lane] = { ...JSON.parse(JSON.stringify(source)), enabled: true, destination: `osc${lane + 1}Pitch` };
+        merged.lanes[lane] = { ...JSON.parse(JSON.stringify(padLaneFromClip(clip, source))), enabled: true, destination: `osc${lane + 1}Pitch` };
         merged.oscCount = Math.max(Math.round(merged.oscCount) || 3, lane + 1);
         if (lane === clip.row) items.push({ id: clip.id, bake: !cut?.truncated });
     }
@@ -3087,14 +3147,14 @@ function laneOn(clip, index) {
 function updateClip(id) {
     const clip = findClip(id);
     if (!clip || clip.kind === 'notes') return;
-    const data = playOrderData(clip.kind, clip.kind === 'd'
-        ? { lanes: snapshotDrumSlot(clip.source) }
-        : snapshotSynthSlot(clip.kind, clip.source));
+    const raw = clip.kind === 'd' ? { lanes: snapshotDrumSlot(clip.source) } : snapshotSynthSlot(clip.kind, clip.source);
+    const data = playOrderData(clip.kind, raw);
     const automation = clip.kind === 'd' ? null : snapshotBankAutomation(`${clip.kind}${clip.source}`);
     suspend += 1;
     let updated = null;
     try {
         updated = updateFromSource(state.song, id, data, automation, patternHash(clip.kind, clip.source));
+        if (updated) markReversed(updated, updated.kind, raw);
     } finally {
         suspend -= 1;
     }
@@ -3108,6 +3168,7 @@ function keepSelected(id) {
 }
 
 function reverseSelected(id) {
+    if (toggleClipReverse(id)) return;
     if (reverseClip(state.song, id)) noteEdit();
 }
 

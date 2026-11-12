@@ -15,7 +15,7 @@ import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
 import { placeArrangementInsert } from './song-conductor.js?v=34';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=61';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener, toggleClipReverse } from './arrange-view.js?v=61';
 import { createIngyWindow } from './ingy-window.js?v=3';
 import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=277';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
@@ -52,7 +52,6 @@ let loopSaved = null;
 let loopApplied = null;
 let foldBtn;
 let monoBtn;
-let polyBtn;
 let transposeEl;
 // Up / Down transpose only while the roll was the last thing pressed.
 let rollActive = false;
@@ -65,7 +64,10 @@ let rowTunes = [];
 // Fold: only rows that hold notes (Ableton's Fold). Scale: only the project
 // scale's rows; it turns on with the project scale and follows it.
 let foldNotes = false;
-let stepsOn = false;      // Steps view: the step strip in place of the grid
+// Key-click selection (Ableton): a key press selects that pitch's notes; a 6px+ drag makes a range.
+let keySel = null;
+let stepsOn = false;
+let onRevPattern = null;  // Steps view: Rev goes through the step strip      // Steps view: the step strip in place of the grid
 let scaleView = false;
 let win;
 let scroller;
@@ -155,8 +157,7 @@ export function initArrangeRoll() {
                     <button type="button" class="arrange-btn" data-transpose="1" aria-label="Transpose up a semitone" title="Up a semitone (Up arrow)">+1</button>
                     <button type="button" class="arrange-btn" data-transpose="12" aria-label="Transpose up an octave" title="Up an octave (Shift + Up arrow)">+12</button>
                 </div>
-                <button type="button" id="arrangeRollMono" class="arrange-btn" aria-pressed="false" title="Mono: one note per step. A click writes or deletes one note" hidden>Mono</button>
-                <button type="button" id="arrangeRollPoly" class="arrange-btn" aria-pressed="false" title="Poly: stack up to six notes per step" hidden>Poly</button>
+                <button type="button" id="arrangeRollMono" class="arrange-btn" title="Mono: one note at a time. Click for Poly" hidden>Mono</button>
             </div>
             <div id="arrangeRollLanes" class="arrange-roll-lanes" role="tablist" aria-label="Berlin lanes" hidden></div>
         </div>
@@ -214,7 +215,6 @@ export function initArrangeRoll() {
         syncDrawBtn();
     });
     monoBtn = roll.querySelector('#arrangeRollMono');
-    polyBtn = roll.querySelector('#arrangeRollPoly');
     transposeEl = roll.querySelector('#arrangeRollTranspose');
 
     // Same buttons as the arrange transport. Play first moves the insert marker to
@@ -242,9 +242,16 @@ export function initArrangeRoll() {
         }
         if (openId != null) render({ jump: true });
     });
-    // Same as Reverse on the clip's timeline menu: the notes are mirrored inside the clip.
+    // Same as Reverse on the clip's timeline menu. A pattern clip has the hardware Reverse switch (its
+    // steps play back to front, and it goes back to the pad with Reverse on); a notes clip is mirrored.
+    // Either way a second press undoes it, so the button stays lit while it's on.
     roll.querySelector('#arrangeRollReverse').addEventListener('click', () => {
-        if (openId == null || !reverseClip(state.song, openId)) return;
+        if (openId == null) return;
+        const clip = findClip(openId);
+        if (clip && (clip.kind === 'n' || clip.kind === 'b')) {
+            if (onRevPattern) onRevPattern();
+            else if (!toggleClipReverse(openId)) return;
+        } else if (!reverseClip(state.song, openId)) return;
         selectedCol = 0;
         stepSel.clear();
         refreshArrange();
@@ -262,8 +269,7 @@ export function initArrangeRoll() {
     document.addEventListener('pointerdown', (event) => {
         rollActive = event.target instanceof Node && win.el.contains(event.target);
     }, true);
-    monoBtn.addEventListener('click', () => setPolyEdit(false));
-    polyBtn.addEventListener('click', () => setPolyEdit(true));
+    monoBtn.addEventListener('click', () => setPolyEdit(!polyEdit));
     // Loading or leaving a poly synth re-arms the switch. Bare Metal announces it;
     // the web doesn't, so the roll also checks before every press and render.
     document.addEventListener('ingysynth:native-flags', () => {
@@ -436,6 +442,7 @@ function render({ jump }) {
         paintProps(clip);
         syncFoldBtn(clip);
         syncVoiceBtns(clip);
+        syncRevInv(clip);
         playLine = document.createElement('div');
         playLine.className = 'arrange-roll-playcol';
         playLine.hidden = true;
@@ -665,6 +672,16 @@ const ROW_MODES = {
     fold: ['Fold', 'Rows: only the notes in use. Click for every key'],
 };
 
+// Rev and Inv light while the clip is reversed / inverted (each undoes itself on a second press).
+function syncRevInv(clip) {
+    const rev = roll.querySelector('#arrangeRollReverse');
+    const inv = roll.querySelector('#arrangeRollInvert');
+    rev.classList.toggle('is-on', !!clip?.reversed);
+    rev.setAttribute('aria-pressed', clip?.reversed ? 'true' : 'false');
+    inv.classList.toggle('is-on', !!clip?.inverted);
+    inv.setAttribute('aria-pressed', clip?.inverted ? 'true' : 'false');
+}
+
 function syncFoldBtn(clip) {
     const pitched = clip?.kind === 'n' || clip?.kind === 'b';
     const mode = rowMode(clip);
@@ -747,13 +764,25 @@ function syncVoiceBtns(clip) {
         polyArmedFor = synthIsPoly();
         polyEdit = polyArmedFor;
     }
-    const pitched = clip?.kind === 'n' || clip?.kind === 'b';
+    // One switch showing the mode (it has no "off", so it never lights); the piano roll has it too.
+    const pitched = clip?.kind === 'n' || clip?.kind === 'b' || clip?.kind === 'notes';
     monoBtn.hidden = !pitched;
-    polyBtn.hidden = !pitched;
-    monoBtn.classList.toggle('is-on', !polyEdit);
-    monoBtn.setAttribute('aria-pressed', polyEdit ? 'false' : 'true');
-    polyBtn.classList.toggle('is-on', polyEdit);
-    polyBtn.setAttribute('aria-pressed', polyEdit ? 'true' : 'false');
+    monoBtn.textContent = polyEdit ? 'Poly' : 'Mono';
+    monoBtn.title = polyEdit
+        ? 'Poly: notes stack (up to six per step). Click for Mono'
+        : 'Mono: one note at a time; a new note ends the one under it. Click for Poly';
+    monoBtn.setAttribute('aria-label', `Voice: ${polyEdit ? 'Poly' : 'Mono'}`);
+}
+
+// Mono in the piano roll plays like a mono synth: a new note ends the note sounding when it starts,
+// and notes that start inside it go. Poly leaves notes stacked.
+function monoMakeRoom(clip, start, dur) {
+    if (polyEdit || !clip?.notes) return;
+    const end = start + dur;
+    clip.notes = clip.notes.filter((n) => !(n.startTick >= start && n.startTick < end));
+    for (const n of clip.notes) {
+        if (n.startTick < start && n.startTick + n.durTick > start) n.durTick = start - n.startTick;
+    }
 }
 
 // Folded rows (Fold or Scale): one piano key per row (a black key sits over a white strip,
@@ -1119,6 +1148,7 @@ function onNotesEmptyDown(event, clip) {
         }
         if (tick < 0 || tick >= notesGeom.len) return;
         checkpointUndo(state.song);
+        monoMakeRoom(clip, tick, lastNoteLen);
         clip.notes.push({
             startTick: tick,
             durTick: lastNoteLen,
@@ -1468,12 +1498,44 @@ function onKeyDown(event) {
     keysEl.addEventListener('pointerup', onKeyUp);
     keysEl.addEventListener('pointercancel', onKeyUp);
     soundKey(tune);
+    const clip = openId != null ? findClip(openId) : null;
+    if (clip?.kind === 'notes') {
+        keySel = { base: event.shiftKey ? new Set(noteSel) : new Set(), anchor: tune, y0: event.clientY, dragging: false, toggle: event.shiftKey };
+        selectPitchRange(clip, tune, tune);
+    }
+}
+
+// Select every note whose pitch is between a and b (inclusive), on top of keySel.base. A Shift-click on
+// one key toggles that pitch's notes in and out of the selection.
+function selectPitchRange(clip, a, b) {
+    const lo = Math.min(a, b);
+    const hi = Math.max(a, b);
+    const hits = (clip.notes || []).filter((n) => {
+        const semi = Math.round(Number(n.semi)) || 0;
+        return semi >= lo && semi <= hi;
+    });
+    const next = new Set(keySel.base);
+    if (keySel.toggle && lo === hi && hits.length && hits.every((n) => keySel.base.has(n))) hits.forEach((n) => next.delete(n));
+    else hits.forEach((n) => next.add(n));
+    noteSel = next;
+    gridEl.querySelectorAll('.arrange-roll-note').forEach((el) => {
+        el.classList.toggle('is-sel', noteSel.has(clip.notes[el.dataset.i | 0]));
+    });
 }
 
 function onKeyMove(event) {
     if (!audition || event.pointerId !== audition.pointer) return;
+    // A click selects one pitch; only a real drag (6px+) becomes a range, so a wobble can't spill over.
+    if (keySel && !keySel.dragging) {
+        if (Math.abs(event.clientY - keySel.y0) < 6) return;
+        keySel.dragging = true;
+        keySel.toggle = false;
+    }
     const tune = keyTuneAt(event.clientX, event.clientY);
-    if (tune != null) soundKey(tune);
+    if (tune == null) return;
+    soundKey(tune);
+    const clip = keySel && openId != null ? findClip(openId) : null;
+    if (clip) selectPitchRange(clip, keySel.anchor, tune);
 }
 
 function onKeyUp(event) {
@@ -1482,6 +1544,7 @@ function onKeyUp(event) {
 }
 
 function stopAudition() {
+    keySel = null;
     if (!audition) return;
     soundKey(null);
     audition = null;
@@ -2431,6 +2494,7 @@ function startNotesPaint(event, clip) {
         const semi = noteTuneAt(y);
         if (clip.notes.some((n) => n.startTick === start && Math.round(Number(n.semi)) === semi)) return;
         change();
+        monoMakeRoom(clip, start, slot);
         clip.notes.push({ startTick: start, durTick: slot, semi, fine: 0, velocity: 0.8, legato: false });
         render({ jump: false });
         auditionNote(pointerId, semi);

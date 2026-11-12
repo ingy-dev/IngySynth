@@ -530,6 +530,7 @@ export function reverseClip(song, id) {
             note.legato = !!legato[i + 1];
         });
         notes.sort((a, b) => a.startTick - b.startTick);
+        clip.reversed = !clip.reversed;
         return clip;
     }
     if (!clip.data) return null;
@@ -588,6 +589,7 @@ export function invertClip(song, id) {
             note.semi = lo + hi - Math.round(Number(note.semi) || 0);
             note.fine = flipFine(note.fine);
         }
+        clip.inverted = !clip.inverted;
         return clip;
     }
     if (!clip.data) return null;
@@ -609,6 +611,7 @@ export function invertClip(song, id) {
             step.fine = flipFine(step.fine);
         }
     }
+    clip.inverted = !clip.inverted;
     clip.edited = true;
     return clip;
 }
@@ -756,6 +759,8 @@ function buildClipFromSpec(spec, startTick, lengthTick) {
         const clip = { ...base, notes: deepClone(spec.notes || []) };
         // Imported MIDI keeps its file name as the clip label.
         if (typeof spec.name === 'string' && spec.name) clip.name = spec.name;
+        if (spec.reversed === true) clip.reversed = true;
+        if (spec.inverted === true) clip.inverted = true;
         return clip;
     }
     // An oscillator row clip plays the one lane its track stands for.
@@ -769,6 +774,8 @@ function buildClipFromSpec(spec, startTick, lengthTick) {
         automation: deepClone(spec.automation ?? null),
         laneMask: spec.laneMask != null ? deepClone(spec.laneMask) : null,
         edited: spec.edited === true,
+        ...(spec.reversed === true ? { reversed: true } : {}),
+        ...(spec.inverted === true ? { inverted: true } : {}),
         copiedHash: spec.copiedHash ?? null,
         keptHash: spec.keptHash ?? null,
     };
@@ -1158,6 +1165,8 @@ function copySpec(clip, start) {
         copiedHash: clip.copiedHash,
         keptHash: clip.keptHash,
         edited: clip.edited,
+        reversed: clip.reversed === true,
+        inverted: clip.inverted === true,
         notes: clip.kind === 'notes' ? deepClone(clip.notes) : undefined,
         name: clip.kind === 'notes' ? clip.name : undefined,
         mute: clip.mute === true,

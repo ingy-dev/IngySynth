@@ -22,8 +22,8 @@ import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
 import { placeArrangementInsert } from './song-conductor.js?v=35';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener, toggleClipReverse, padDataFromClip, flipLaneOrder } from './arrange-view.js?v=62';
-import { createIngyWindow } from './ingy-window.js?v=4';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener, toggleClipReverse, padDataFromClip, flipLaneOrder } from './arrange-view.js?v=63';
+import { createIngyWindow } from './ingy-window.js?v=5';
 import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=278';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
 import { auditionDrumHit } from './sequencer.js?v=460';
@@ -322,14 +322,22 @@ export function initArrangeRoll() {
         reconcileLoopClip();
         render({ jump: false });
     });
-    const observer = new ResizeObserver(() => {
-        if (openId == null || rendering) return;
+    // Re-fit the rows when the roll's height changes. Rebuilding the grid is heavy, so while the window is
+    // being resized by hand the rows hold still (the grid just shows more or fewer of them) and re-fit
+    // once when the resize ends.
+    const refit = () => {
+        if (openId == null || rendering || stepsOn) return;
         const clip = findClip(openId);
         if (!clip || clip.kind === 'd') return;
         const next = measureRow(clip);
         if (next && next !== rowPx) render({ jump: false });
+    };
+    const observer = new ResizeObserver(() => {
+        if (win.el.classList.contains('is-resizing')) return;
+        refit();
     });
     observer.observe(roll);
+    win.el.addEventListener('ingy-window:resized', refit);
     setArrangeRollOpener(openArrangeRoll);
 }
 

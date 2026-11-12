@@ -1960,7 +1960,9 @@ export function initKeyboard() {
     document.addEventListener('ingysynth:seq-step-ui', (e) => {
         if (!state.isPlaying) return;
         const notes = e.detail?.cellNotes;
-        if (Array.isArray(notes) && notes.length) highlightNotes(notes);
+        // Light what sounds: steps are stored untransposed, the play transpose rides on top.
+        const t = state.keyboardTranspose || 0;
+        if (Array.isArray(notes) && notes.length) highlightNotes(notes.map((n) => n + t));
         else highlightFromState();
     });
     document.addEventListener('ingysynth-kb-steps-sync', () => {

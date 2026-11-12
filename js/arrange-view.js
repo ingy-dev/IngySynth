@@ -93,7 +93,7 @@ import {
 } from './song-model.js?v=15';
 import { quantizeToPattern } from './song-quantize.js?v=19';
 import { isMidiFileName, parseMidiFile } from './midi-file.js?v=1';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=56';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=57';
 
 const MIN_PX = 24;
 const MAX_PX = 1280;

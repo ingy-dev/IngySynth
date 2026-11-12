@@ -70,21 +70,28 @@ document.addEventListener('keydown', (event) => {
 // ---- The dim under open windows: covers the page below the menu bar (header.site-bar), never takes
 // clicks (windows are non-modal). On while any window is open and not minimized.
 let dimEl = null;
-function syncDim() {
+let dimTop = -1;
+function syncDim({ measure = false } = {}) {
     if (!dimEl) {
         dimEl = document.createElement('div');
         dimEl.className = 'ingy-window-dim';
         dimEl.setAttribute('aria-hidden', 'true');
         document.body.appendChild(dimEl);
+        measure = true;
     }
-    const bar = document.querySelector('header.site-bar');
-    const top = bar ? Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) : 0;
-    dimEl.style.top = `${top}px`;
+    if (measure) {
+        const bar = document.querySelector('header.site-bar');
+        const top = bar ? Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) : 0;
+        if (top !== dimTop) {
+            dimTop = top;
+            dimEl.style.top = `${top}px`;
+        }
+    }
     let on = false;
     windows.forEach((w) => { if (w.isOpen() && !w.isMinimized() && !w.el.classList.contains('is-sheet')) on = true; });
     dimEl.classList.toggle('is-on', on);
 }
-window.addEventListener('resize', () => { if (dimEl) syncDim(); });
+window.addEventListener('resize', () => { if (dimEl) syncDim({ measure: true }); });
 
 // ---- Effects drawn over the page while a window opens, closes or minimizes.
 function fxLayer() {
@@ -264,7 +271,6 @@ export function createIngyWindow(opts) {
         el.style.left = `max(${EDGE}px, min(${geom.x}px, 100% - ${w} - ${EDGE}px))`;
         el.style.top = `max(${EDGE}px, min(${geom.y}px, 100% - ${h} - ${EDGE}px))`;
         if (minimized) placeTab();
-        syncDim();
     }
     function relayout() {
         if (!open) return;
@@ -286,7 +292,10 @@ export function createIngyWindow(opts) {
         writeGeometry(id, fitSaved != null ? { ...geom, h: fitSaved } : geom);
     }
 
-    function track(event, onMove) {
+    // Dragging or resizing: pointer moves only record where the pointer is; the window lays out once per
+    // frame. While resizing, .is-resizing is on, and the window fires 'ingy-window:resized' when it ends
+    // so heavy contents (the piano roll) can re-fit once instead of on every step.
+    function track(event, onMove, { resize = false } = {}) {
         if (event.button !== 0 || el.classList.contains('is-sheet')) return;
         event.preventDefault();
         const start = { px: event.clientX, py: event.clientY, ...geom };
@@ -294,18 +303,30 @@ export function createIngyWindow(opts) {
         const target = event.currentTarget;
         target.setPointerCapture?.(pointer);
         el.classList.add('is-moving');
+        if (resize) el.classList.add('is-resizing');
+        let last = null;
+        let frame = 0;
+        const apply = () => {
+            frame = 0;
+            if (!last) return;
+            geom = clamp(onMove(start, last.x - start.px, last.y - start.py));
+            layout();
+        };
         const move = (e) => {
             if (e.pointerId !== pointer) return;
-            geom = clamp(onMove(start, e.clientX - start.px, e.clientY - start.py));
-            layout();
+            last = { x: e.clientX, y: e.clientY };
+            if (!frame) frame = requestAnimationFrame(apply);
         };
         const end = (e) => {
             if (e.pointerId !== pointer) return;
             target.removeEventListener('pointermove', move);
             target.removeEventListener('pointerup', end);
             target.removeEventListener('pointercancel', end);
-            el.classList.remove('is-moving');
+            if (frame) cancelAnimationFrame(frame);
+            apply();
+            el.classList.remove('is-moving', 'is-resizing');
             saveGeometry();
+            if (resize) el.dispatchEvent(new CustomEvent('ingy-window:resized'));
         };
         target.addEventListener('pointermove', move);
         target.addEventListener('pointerup', end);
@@ -341,6 +362,7 @@ export function createIngyWindow(opts) {
         const from = rectOf(tab);
         restoreNow();
         layout();
+        syncDim();
         raise();
         if (reducedMotion() || !from.width) return;
         const to = rectOf(el);
@@ -370,6 +392,7 @@ export function createIngyWindow(opts) {
                 geom = clamp({ ...geom, x: e.clientX - 40, y: e.clientY - 12 });
                 restoreNow();
                 layout();
+                syncDim();
                 raise();
                 saveGeometry();
                 return;
@@ -409,7 +432,7 @@ export function createIngyWindow(opts) {
     });
     grow.addEventListener('pointerdown', (event) => {
         fitSaved = null;   // resized by hand: that's the window's size now
-        track(event, (s, dx, dy) => ({ x: s.x, y: s.y, w: s.w + dx, h: s.h + dy }));
+        track(event, (s, dx, dy) => ({ x: s.x, y: s.y, w: s.w + dx, h: s.h + dy }), { resize: true });
     });
     el.addEventListener('pointerdown', raise, true);
     el.querySelector('.ingy-window__close').addEventListener('click', () => api.close());
@@ -439,6 +462,7 @@ export function createIngyWindow(opts) {
                 open = true;
                 el.hidden = false;
                 layout();
+                syncDim({ measure: true });
                 raise();
                 if (!reducedMotion()) busy = codec(el, 1).finally(() => { busy = null; });
             }
@@ -465,7 +489,7 @@ export function createIngyWindow(opts) {
         // shrink: only ever smaller than the window's own height; more rows than that scroll. null puts
         // the window's own height back.
         fitHeight(contentH, { shrink = false } = {}) {
-            if (!open || minimized || el.classList.contains('is-sheet') || !geom) return;
+            if (!open || minimized || el.classList.contains('is-sheet') || el.classList.contains('is-moving') || !geom) return;
             if (contentH == null) {
                 if (fitSaved == null) return;
                 geom = clamp({ ...geom, h: fitSaved });

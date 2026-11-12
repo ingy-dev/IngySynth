@@ -9,13 +9,19 @@ import {
     clampChord,
     cloneStep,
     stepCellNotes,
+    SONG_SLOT,
+    loadSongSlot,
+    flushDomToPattern,
+    hydratePatternToDom,
+    snapshotSynthSlot,
+    selectSlot,
 } from './pattern-bank.js?v=51';
 import { nextRatch } from './step-ratch.js?v=1';
 import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './tuning.js?v=108';
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
 import { placeArrangementInsert } from './song-conductor.js?v=34';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener, toggleClipReverse } from './arrange-view.js?v=61';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener, toggleClipReverse, padDataFromClip, flipLaneOrder } from './arrange-view.js?v=61';
 import { createIngyWindow } from './ingy-window.js?v=3';
 import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=277';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
@@ -118,6 +124,7 @@ export function arrangeRollIsOpen() {
 
 export function closeArrangeRoll() {
     if (openId == null) return;
+    setStepsView(false);
     cancelSession();
     cancelMarquee();
     cancelPropPaint();
@@ -158,6 +165,12 @@ export function initArrangeRoll() {
                     <button type="button" class="arrange-btn" data-transpose="12" aria-label="Transpose up an octave" title="Up an octave (Shift + Up arrow)">+12</button>
                 </div>
                 <button type="button" id="arrangeRollMono" class="arrange-btn" title="Mono: one note at a time. Click for Poly" hidden>Mono</button>
+                <button type="button" id="arrangeRollSteps" class="arrange-btn" aria-pressed="false" title="Show the steps instead of the note grid" hidden>Steps</button>
+                <span id="arrangeRollStepCount" class="arrange-roll-stepcount" role="group" aria-label="Number of steps" hidden>
+                    <button type="button" class="arrange-btn arrange-btn-icon" data-steps="-1" aria-label="Fewer steps">−</button>
+                    <span class="arrange-roll-stepcount-val" aria-live="polite"></span>
+                    <button type="button" class="arrange-btn arrange-btn-icon" data-steps="1" aria-label="More steps">+</button>
+                </span>
             </div>
             <div id="arrangeRollLanes" class="arrange-roll-lanes" role="tablist" aria-label="Berlin lanes" hidden></div>
         </div>
@@ -270,6 +283,7 @@ export function initArrangeRoll() {
         rollActive = event.target instanceof Node && win.el.contains(event.target);
     }, true);
     monoBtn.addEventListener('click', () => setPolyEdit(!polyEdit));
+    initStepsView();
     // Loading or leaving a poly synth re-arms the switch. Bare Metal announces it;
     // the web doesn't, so the roll also checks before every press and render.
     document.addEventListener('ingysynth:native-flags', () => {
@@ -354,6 +368,7 @@ function openArrangeRoll(id) {
     const clip = findClip(id);
     if (!clip || !roll) return;
     if (openId !== id) {
+        if (stepsOn) setStepsView(false);
         // An oscillator row clip opens on the lane it plays.
         laneIndex = clip.kind === 'b' && Number.isInteger(clip.row) ? clip.row : 0;
         selectedCol = 0;
@@ -443,6 +458,7 @@ function render({ jump }) {
         syncFoldBtn(clip);
         syncVoiceBtns(clip);
         syncRevInv(clip);
+        syncStepsView();
         playLine = document.createElement('div');
         playLine.className = 'arrange-roll-playcol';
         playLine.hidden = true;
@@ -671,6 +687,152 @@ const ROW_MODES = {
     scale: ['Scale', 'Rows: the project scale. Click for only the notes in use'],
     fold: ['Fold', 'Rows: only the notes in use. Click for every key'],
 };
+
+// ---- Steps view (step rolls of pattern clips): the note grid gives way to the sequencer's real step
+// strip, showing the clip the way a pad would hold it (Reverse switch included) through the song's
+// scratch slot, so the pad (P1...) only changes when the clip is dragged back onto it. Edits go to the
+// clip; the window fits the strip; controls that don't apply are greyed out.
+let stepsBtn = null;
+let stepCountEl = null;
+let stepsHost = null;
+let stepsHome = null;
+let stepsDirty = false;
+let stepsUndone = false;
+let stepsEditTimer = 0;
+let stepsPrevSlot = null;   // the pad the main strip showed before Steps view
+const STEPS_DEAD = ['#arrangeRollPreview', '#arrangeRollDraw', '#arrangeRollInvert', '#arrangeRollMono'];
+
+function initStepsView() {
+    stepsBtn = roll.querySelector('#arrangeRollSteps');
+    stepCountEl = roll.querySelector('#arrangeRollStepCount');
+    stepsBtn.addEventListener('click', () => setStepsView(!stepsOn));
+    stepCountEl.addEventListener('click', (event) => {
+        const b = event.target.closest('[data-steps]');
+        const clip = findClip(openId);
+        if (!b || !stepsOn || !clip?.data) return;
+        stripToClip();
+        const n = Math.max(1, Math.min(32, (clip.data.stepCount | 0) + Number(b.dataset.steps)));
+        if (n === clip.data.stepCount) return;
+        stepsUndo();
+        clip.data.stepCount = n;
+        clip.edited = true;
+        loadStrip();
+        syncStepsView();
+        refreshArrange();
+    });
+}
+
+function stepsUndo() {
+    if (stepsUndone) return;
+    checkpointUndo(state.song);   // one undo step for a Steps view session
+    stepsUndone = true;
+}
+
+// The step strip shows (and edits) the edit slot, so Steps view puts the clip in the song's scratch slot
+// and makes that the edit slot, as song playback does; leaving it goes back to the pad it was on.
+function loadStrip() {
+    const clip = findClip(openId);
+    if (!clip?.data) return;
+    loadSongSlot('n', padDataFromClip(clip, clip.data));
+    if (state.editSlot !== SONG_SLOT) selectSlot(SONG_SLOT, { followDrums: false });
+    else hydratePatternToDom(SONG_SLOT);
+}
+
+// The strip back into the clip (only after an edit): steps in the order they sound, Reverse as `reversed`.
+function stripToClip() {
+    const clip = findClip(openId);
+    if (!stepsOn || !stepsDirty || !clip || clip.kind !== 'n') return;
+    stepsDirty = false;
+    flushDomToPattern(SONG_SLOT);
+    const snap = snapshotSynthSlot('n', SONG_SLOT);
+    const data = snap.reverse ? { ...flipLaneOrder(snap), reverse: false } : snap;
+    if (JSON.stringify(data) === JSON.stringify(clip.data) && !!clip.reversed === !!snap.reverse) return;
+    stepsUndo();
+    clip.data = data;
+    if (snap.reverse) clip.reversed = true;
+    else delete clip.reversed;
+    clip.edited = true;
+    refreshArrange();
+}
+
+function onStripEdit() {
+    stepsDirty = true;
+    clearTimeout(stepsEditTimer);
+    stepsEditTimer = setTimeout(() => {
+        if (!stepsOn) return;
+        stripToClip();
+        syncStepsView();
+        fitStepsWindow();
+    }, 30);
+}
+
+function fitStepsWindow() {
+    if (!stepsOn || !win?.fitHeight) return;
+    const h = (n) => n?.getBoundingClientRect().height || 0;
+    win.fitHeight(h(roll.querySelector('.arrange-roll-bar')) + h(stepsHost) + 2);
+}
+
+const STRIP_EVENTS = ['input', 'change', 'pointerup', 'click'];
+
+function setStepsView(on) {
+    const clip = findClip(openId);
+    if (on === stepsOn || (on && clip?.kind !== 'n')) return;
+    const grid = document.getElementById('keyboardStepsGrid');
+    if (on && !grid) return;
+    if (on) {
+        stepsPrevSlot = state.editSlot;
+        stepsOn = true;
+        stepsDirty = false;
+        stepsUndone = false;
+        loadStrip();
+        stepsHome = { parent: grid.parentElement, next: grid.nextSibling };
+        stepsHost = document.createElement('div');
+        stepsHost.className = 'arrange-roll-steps';
+        const scope = document.createElement('div');   // keyboard-section only for the strip's own styles
+        scope.className = 'keyboard-section arrange-roll-steps-scope';
+        scope.appendChild(grid);
+        stepsHost.appendChild(scope);
+        roll.querySelector('.arrange-roll-bar').after(stepsHost);
+        STRIP_EVENTS.forEach((type) => grid.addEventListener(type, onStripEdit, true));
+        onRevPattern = () => {
+            stripToClip();
+            if (toggleClipReverse(openId)) loadStrip();
+        };
+    } else {
+        stripToClip();
+        STRIP_EVENTS.forEach((type) => grid?.removeEventListener(type, onStripEdit, true));
+        stepsOn = false;
+        onRevPattern = null;
+        if (grid && stepsHome) stepsHome.parent.insertBefore(grid, stepsHome.next);
+        stepsHost?.remove();
+        stepsHost = null;
+        stepsHome = null;
+        // the main strip goes back to its pad (song playback keeps the scratch slot: it owns it)
+        if (stepsPrevSlot != null && stepsPrevSlot !== SONG_SLOT && !state.songPlaying && state.editSlot === SONG_SLOT) {
+            selectSlot(stepsPrevSlot, { flush: false, followDrums: false });
+        }
+        stepsPrevSlot = null;
+        win?.fitHeight?.(null);
+    }
+    roll.classList.toggle('is-stepsview', stepsOn);
+    syncStepsView();
+    if (stepsOn) requestAnimationFrame(fitStepsWindow);
+    else if (openId != null) render({ jump: true });
+}
+
+function syncStepsView() {
+    if (!stepsBtn) return;
+    const clip = findClip(openId);
+    stepsBtn.hidden = clip?.kind !== 'n';
+    stepsBtn.classList.toggle('is-on', stepsOn);
+    stepsBtn.setAttribute('aria-pressed', stepsOn ? 'true' : 'false');
+    stepCountEl.hidden = !stepsOn;
+    stepCountEl.querySelector('.arrange-roll-stepcount-val').textContent = String(clip?.data?.stepCount ?? 16).padStart(2, '0');
+    roll.querySelectorAll([...STEPS_DEAD, '#arrangeRollTranspose button'].join(',')).forEach((b) => {
+        b.disabled = stepsOn;
+        b.classList.toggle('is-dead', stepsOn);
+    });
+}
 
 // Rev and Inv light while the clip is reversed / inverted (each undoes itself on a second press).
 function syncRevInv(clip) {

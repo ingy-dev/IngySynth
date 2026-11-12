@@ -16175,3 +16175,49 @@ fieldset:not(fieldset fieldset):not(.osc4-voice-record-fieldset) > legend:has(> 
 .arrange-roll .arrange-roll-fkey.is-black.is-lit:not(.is-down) .arrange-roll-klabel {
     color: #000;
 }
+
+/* Steps view (step roll): the note grid, keyboard and Acc / Sld rows give way to the sequencer's real step
+   strip; controls that don't apply are greyed out; Steps and the step count sit at the right end. */
+.arrange-roll .arrange-roll-bar .arrange-roll-transport {
+    flex: 1 1 auto;
+}
+.arrange-roll #arrangeRollSteps {
+    margin-left: auto;
+}
+.arrange-roll.is-stepsview #arrangeRollScroll,
+.arrange-roll.is-stepsview #arrangeRollTranspose {
+    display: none !important;
+}
+.arrange-roll .arrange-roll-steps {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 12px 10px 14px;
+    background: #040604;
+    overflow: auto;
+}
+.arrange-roll .arrange-roll-steps-scope {
+    display: contents !important;
+}
+.arrange-roll .arrange-roll-steps #keyboardStepsGrid {
+    margin: 0 auto;
+}
+.arrange-roll .arrange-btn.is-dead {
+    opacity: 0.28;
+    pointer-events: none;
+    filter: grayscale(1);
+}
+.arrange-roll .arrange-roll-stepcount {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.arrange-roll .arrange-roll-stepcount[hidden] {
+    display: none;
+}
+.arrange-roll .arrange-roll-stepcount-val {
+    min-width: 2.2em;
+    font-size: 11px;
+    text-align: center;
+    color: var(--tp-lit);
+    font-variant-numeric: tabular-nums;
+}

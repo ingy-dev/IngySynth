@@ -5,10 +5,10 @@ import { state } from './state.js?v=120';
 import { BASE_FREQ, getGlobalTune, getActiveScale, quantizeToScale, oscFineSemis } from './tuning.js?v=108';
 import { updateNoteVisualizer, clearNoteVisualizer } from './visualizers.js?v=150';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=200';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=89';
+import { setPolyMode, bumpSeqEngine } from './poly-voice.js?v=202';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=90';
 import { forceAcidOffForPoly } from './keyboard-acid-strip.js?v=46';
-import { bindKnob, refreshKnobDial } from './knobs.js?v=191';
+import { bindKnob, refreshKnobDial } from './knobs.js?v=192';
 import { setBerlinDots, refreshParamStatusIndicators } from './param-status.js?v=33';
 import { get, getNumber, set } from './params.js?v=44';
 import {
@@ -47,7 +47,7 @@ import {
 import { ensurePlaitsWorklet, applyBerlinDrumKitToLive, routeBerlinDrumPanners } from './osc-source.js?v=157';
 import { clampRatch, nextRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { berlinHooks } from './berlin-hooks.js?v=1';
-import { berlinLaneMidiChannels, setBerlinLaneMidiChannel } from './berlin-lane-midi.js?v=1';
+import { berlinLaneMidiChannels, setBerlinLaneMidiChannel } from './berlin-lane-midi.js?v=2';
 
 /** Warm phosphor (O1–O4) then blue→white (M1–M4). */
 export const BERLIN_COLORS = [

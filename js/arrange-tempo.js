@@ -1,10 +1,11 @@
 // Arrange transport tempo and metronome, laid out like Ableton's control bar:
 // TAP, a BPM field (drag up/down, arrows, wheel, double-click or type to edit)
-// and a metronome toggle that clicks while the arrangement plays.
+// a metronome toggle that clicks while the arrangement plays, and the record
+// count-in length (Off, 1 or 2 bars; song-record.js reads state.songCountInBars).
 
 import { state } from './state.js?v=120';
 import { getNumber, set, subscribe } from './params.js?v=44';
-import { songBeatsBetween } from './song-conductor.js?v=32';
+import { songBeatsBetween } from './song-conductor.js?v=34';
 
 const TEMPO_MIN = 20;
 const TEMPO_MAX = 240;
@@ -12,6 +13,8 @@ const DRAG_PX_PER_BPM = 3;
 const TAP_RESET_MS = 2000;
 const TAP_KEEP = 4;
 const METRO_KEY = 'ingysynth.metronome';
+const COUNT_IN_KEY = 'ingysynth.countIn';
+const COUNT_IN_STEPS = [1, 2, 0];
 const LOOKAHEAD_SEC = 0.12;
 const PUMP_MS = 25;
 
@@ -32,6 +35,8 @@ export function arrangeTempoMarkup() {
                     title="Drag up or down, or double-click to type"><span id="arrangeBpmValue">120</span></div>
                 <button type="button" id="arrangeMetronome" class="arrange-btn arrange-btn-icon arrange-metronome"
                     aria-pressed="false" aria-label="Metronome" title="Metronome"><span class="arrange-icon-metro" aria-hidden="true"><i></i><i></i></span></button>
+                <button type="button" id="arrangeCountIn" class="arrange-btn arrange-count-in"
+                    title="Record count-in: click to change"><span class="arrange-count-in-kicker">COUNT-IN</span><span id="arrangeCountInValue">1 BAR</span></button>
             </div>`;
 }
 
@@ -64,6 +69,23 @@ function paintMetronome() {
     if (!btn) return;
     btn.setAttribute('aria-pressed', metronomeOn ? 'true' : 'false');
     btn.classList.toggle('is-on', metronomeOn);
+}
+
+function paintCountIn() {
+    const btn = document.getElementById('arrangeCountIn');
+    const value = document.getElementById('arrangeCountInValue');
+    if (!btn || !value) return;
+    const bars = state.songCountInBars;
+    const text = bars === 0 ? 'OFF' : bars === 2 ? '2 BARS' : '1 BAR';
+    value.textContent = text;
+    btn.classList.toggle('is-off', bars === 0);
+    btn.setAttribute('aria-label', `Record count-in: ${bars === 0 ? 'off' : text.toLowerCase()}`);
+}
+
+function setCountIn(bars) {
+    state.songCountInBars = bars === 0 || bars === 2 ? bars : 1;
+    try { localStorage.setItem(COUNT_IN_KEY, String(state.songCountInBars)); } catch (_) { /* private mode */ }
+    paintCountIn();
 }
 
 function onTap() {
@@ -184,8 +206,9 @@ function clickAt(when, bar) {
     osc.stop(when + 0.06);
 }
 
+// A Preview pad one-shot runs the song clock too; the metronome stays out of it.
 function songRunning() {
-    return !!state.songPlaying && !!state.isPlaying && !!state.audioContext;
+    return !!state.songPlaying && !!state.isPlaying && !!state.audioContext && !state.songOneShot;
 }
 
 function pump() {
@@ -220,6 +243,17 @@ export function initArrangeTempo() {
     const field = document.getElementById('arrangeBpm');
     if (!field) return;
     try { metronomeOn = localStorage.getItem(METRO_KEY) === '1'; } catch (_) { metronomeOn = false; }
+    let bars = 1;
+    try {
+        const saved = localStorage.getItem(COUNT_IN_KEY);
+        if (saved != null) bars = Number(saved);
+    } catch (_) { /* private mode */ }
+    state.songCountInBars = bars === 0 || bars === 2 ? bars : 1;
+    document.getElementById('arrangeCountIn').addEventListener('click', () => {
+        const at = COUNT_IN_STEPS.indexOf(state.songCountInBars);
+        setCountIn(COUNT_IN_STEPS[(at + 1) % COUNT_IN_STEPS.length]);
+    });
+    paintCountIn();
     document.getElementById('arrangeTap').addEventListener('click', onTap);
     document.getElementById('arrangeMetronome').addEventListener('click', () => setMetronome(!metronomeOn));
     bindField(field);

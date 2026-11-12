@@ -150,7 +150,7 @@ function land(result) {
 async function share() {
     if (busy) return;
     busy = true;
-    flashPad('#00ee00', 240);
+    flashPad('#16dd5e', 240);
     arrow.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(2px)', offset: 0.25 }, { transform: ARROW_LIFT }],
         { duration: still() ? 1 : 520, easing: 'ease-out', fill: 'forwards' });
     const started = performance.now();

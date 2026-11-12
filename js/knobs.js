@@ -3,12 +3,12 @@
 // #stepCount / #cutoff / #resonance / #highPass controls so Sequencer / Filter
 // panel, XY pad, and audio engine stay in sync.
 
-import { previewStepsOnVfd } from './sequencer.js?v=456';
+import { previewStepsOnVfd } from './sequencer.js?v=459';
 import { state } from './state.js?v=120';
 import { beginMidiLearn } from './midi-learn.js?v=35';
 import { connectedElementFor, get, getNumber, keyFromElement, set, subscribe } from './params.js?v=44';
 import { getParam, isCatalogKey } from './param-catalog.js?v=13';
-import { stepTuneBounds } from './step-tune-range.js?v=60';
+import { stepTuneBounds } from './step-tune-range.js?v=61';
 
 const ANGLE_MIN = -135;
 const ANGLE_MAX = 135;

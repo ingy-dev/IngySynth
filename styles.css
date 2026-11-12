@@ -279,18 +279,18 @@ html {
     }
 
     @keyframes glowFlicker {
-        0%, 100% { filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)); }
-        5% { filter: drop-shadow(0 0 3px #00ff00) drop-shadow(0 0 7px rgba(0, 255, 0, 0.5)); }
-        7% { filter: drop-shadow(0 0 8px #00ff00) drop-shadow(0 0 12px rgba(0, 255, 0, 0.8)); }
-        10% { filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)); }
-        50% { filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)); }
-        52% { filter: drop-shadow(0 0 3px #00ff00) drop-shadow(0 0 7px rgba(0, 255, 0, 0.5)); }
-        54% { filter: drop-shadow(0 0 6px #00ff00) drop-shadow(0 0 11px rgba(0, 255, 0, 0.7)); }
-        56% { filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)); }
-        85% { filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)); }
-        87% { filter: drop-shadow(0 0 2px #00ff00) drop-shadow(0 0 5px rgba(0, 255, 0, 0.4)); }
-        89% { filter: drop-shadow(0 0 7px #00ff00) drop-shadow(0 0 13px rgba(0, 255, 0, 0.8)); }
-        91% { filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)); }
+        0%, 100% { filter: drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7)); }
+        5% { filter: drop-shadow(0 0 3px #18ed64) drop-shadow(0 0 7px rgba(24, 237, 100, 0.5)); }
+        7% { filter: drop-shadow(0 0 8px #18ed64) drop-shadow(0 0 12px rgba(24, 237, 100, 0.8)); }
+        10% { filter: drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7)); }
+        50% { filter: drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7)); }
+        52% { filter: drop-shadow(0 0 3px #18ed64) drop-shadow(0 0 7px rgba(24, 237, 100, 0.5)); }
+        54% { filter: drop-shadow(0 0 6px #18ed64) drop-shadow(0 0 11px rgba(24, 237, 100, 0.7)); }
+        56% { filter: drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7)); }
+        85% { filter: drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7)); }
+        87% { filter: drop-shadow(0 0 2px #18ed64) drop-shadow(0 0 5px rgba(24, 237, 100, 0.4)); }
+        89% { filter: drop-shadow(0 0 7px #18ed64) drop-shadow(0 0 13px rgba(24, 237, 100, 0.8)); }
+        91% { filter: drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7)); }
     }
 
     #kb-logo-overlay svg {
@@ -298,9 +298,9 @@ html {
         max-width: 230px;
         height: auto;
         /* Remove static filter since we're using animation */
-        /* filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)); */
+        /* filter: drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7)); */
         transform: none; /* Remove vertical adjustment */
-        filter: drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7));
+        filter: drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7));
         animation: glowFlicker 4s infinite;
     }
     
@@ -476,13 +476,13 @@ html {
     }
     
     input[type="range"]::-webkit-slider-thumb:hover {
-        box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        box-shadow: 0 0 15px rgba(24, 237, 100, 0.3);
         transform: scale(1.05);
     }
     
     input[type="range"]::-webkit-slider-thumb:active {
         transform: scale(1.1);
-        box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        box-shadow: 0 0 20px rgba(24, 237, 100, 0.5);
     }
     
     /* Firefox Track Styling */
@@ -506,13 +506,13 @@ html {
     }
     
     input[type="range"]::-moz-range-thumb:hover {
-        box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        box-shadow: 0 0 15px rgba(24, 237, 100, 0.3);
         transform: scale(1.05);
     }
     
     input[type="range"]::-moz-range-thumb:active {
         transform: scale(1.1);
-        box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        box-shadow: 0 0 20px rgba(24, 237, 100, 0.5);
     }
     
     /* Edge/IE Track Styling */
@@ -548,13 +548,13 @@ html {
     }
     
     input[type="range"]::-ms-thumb:hover {
-        box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        box-shadow: 0 0 15px rgba(24, 237, 100, 0.3);
         transform: scale(1.05);
     }
     
     input[type="range"]::-ms-thumb:active {
         transform: scale(1.1);
-        box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        box-shadow: 0 0 20px rgba(24, 237, 100, 0.5);
     }
     
     /* Focus state for accessibility */
@@ -563,17 +563,17 @@ html {
     }
     
     input[type="range"]:focus::-webkit-slider-thumb {
-        outline: 2px solid #00ff00;
+        outline: 2px solid #18ed64;
         outline-offset: 2px;
     }
     
     input[type="range"]:focus::-moz-range-thumb {
-        outline: 2px solid #00ff00;
+        outline: 2px solid #18ed64;
         outline-offset: 2px;
     }
     
     input[type="range"]:focus::-ms-thumb {
-        outline: 2px solid #00ff00;
+        outline: 2px solid #18ed64;
         outline-offset: 2px;
     }
     
@@ -714,7 +714,7 @@ html {
     select {
         font-family: 'Michroma', sans-serif;
         background: #333;
-        color: #00ff00;  /* Changed from #fff to #00ff00 */
+        color: #18ed64;  /* Changed from #fff to #18ed64 */
         border: 1px solid #808080;  /* Changed from #fff to #808080 to match visualizers */
         padding: 5px;
         border-radius: 4px;
@@ -762,8 +762,8 @@ html {
         display: none !important;
     }
     #midiLogoToggle.pushable.keyboard-midi-logo-toggle {
-        background: rgba(0, 170, 0, 0.5);
-        box-shadow: 0 0 4px rgba(0, 255, 0, 0.55);
+        background: rgba(16, 158, 67, 0.5);
+        box-shadow: 0 0 4px rgba(24, 237, 100, 0.55);
         box-sizing: border-box;
         width: 168px;
         height: 44px;
@@ -791,7 +791,7 @@ html {
         height: 22px;
         width: calc(22px * 685.88 / 373.88);
         flex: 0 0 auto;
-        color: #00ff00;
+        color: #18ed64;
         background-color: currentColor;
         -webkit-mask: url('SVG/midi-logo.svg') center / 100% 100% no-repeat;
         mask: url('SVG/midi-logo.svg') center / 100% 100% no-repeat;
@@ -896,7 +896,7 @@ html {
         z-index: 3;
     }
     .midi-mapped {
-        box-shadow: 0 0 10px 5px rgba(0, 255, 0, 0.7);
+        box-shadow: 0 0 10px 5px rgba(24, 237, 100, 0.7);
         border-radius: 5px;
         transition: box-shadow 0.3s ease;
         position: relative;
@@ -908,7 +908,7 @@ html {
         top: -20px;
         left: 50%;
         transform: translateX(-50%);
-        background: #00ff00;
+        background: #18ed64;
         color: #000;
         padding: 2px 5px;
         border-radius: 3px;
@@ -1023,11 +1023,11 @@ html {
         width: 100%;
         max-width: none;
         margin: 0 0 25px;
-        border: 1px solid #00aa00;
+        border: 1px solid #109e43;
         border-radius: 5px;
         box-sizing: border-box;
         overflow: visible;
-        background: rgba(0, 20, 0, 0.45);
+        background: rgba(2, 19, 8, 0.45);
     }
     .midi-fieldset.midi-section-on {
         border-color: #00aaaa;
@@ -1074,7 +1074,7 @@ html {
         max-height: min(280px, 100vw - 48px);
         aspect-ratio: 1;
         margin: 0 auto;
-        border: 1px solid #00aa00;
+        border: 1px solid #109e43;
         border-radius: 3px;
         background: #111;
         overflow: hidden;
@@ -1095,11 +1095,11 @@ html {
         width: 14px;
         height: 14px;
         border-radius: 50%;
-        background: #00ff00;
+        background: #18ed64;
         border: none;
         transform: translate(-50%, -50%);
         pointer-events: none;
-        box-shadow: 0 0 6px rgba(0, 255, 0, 0.55);
+        box-shadow: 0 0 6px rgba(24, 237, 100, 0.55);
         transition: box-shadow 0.1s;
     }
 
@@ -1128,7 +1128,7 @@ html {
         font-size: 7px;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        color: #00aa00;
+        color: #109e43;
         line-height: 1;
     }
 
@@ -1137,9 +1137,9 @@ html {
         font-size: 11px;
         height: 25px;
         padding: 0 8px;
-        color: #00ff00;
+        color: #18ed64;
         background: #111;
-        border: 1px solid #00aa00;
+        border: 1px solid #109e43;
         border-radius: 3px;
         width: 100%;
         box-sizing: border-box;
@@ -1147,12 +1147,12 @@ html {
     }
 
     .xy-select:focus-visible {
-        outline: 1px solid #00ff00;
+        outline: 1px solid #18ed64;
         outline-offset: 1px;
     }
 
     .xy-select optgroup {
-        color: #00aa00;
+        color: #109e43;
         background: #111;
         font-style: normal;
     }
@@ -1676,7 +1676,7 @@ html {
         aspect-ratio: 360 / 64.11;
         height: auto;
         margin: 0 auto 8px;
-        color: #00ff00;
+        color: #18ed64;
         background-color: currentColor;
         -webkit-mask: url('SVG/plaititudes-logo.svg') center / 100% 100% no-repeat;
         mask: url('SVG/plaititudes-logo.svg') center / 100% 100% no-repeat;
@@ -1692,7 +1692,7 @@ html {
         aspect-ratio: 360 / 28.77;
         height: auto;
         margin: 16px auto 10px;
-        color: #00ff00;
+        color: #18ed64;
         background-color: currentColor;
         -webkit-mask: url('SVG/multi-model-body.svg') center / 100% 100% no-repeat;
         mask: url('SVG/multi-model-body.svg') center / 100% 100% no-repeat;
@@ -1719,7 +1719,7 @@ html {
         font-family: 'Michroma', sans-serif;
         font-size: 9px;
         letter-spacing: 0.04em;
-        color: #00ff00;
+        color: #18ed64;
         text-transform: uppercase;
         line-height: 1.2;
         min-height: 1em;
@@ -1734,16 +1734,16 @@ html {
         font-family: 'Michroma', sans-serif;
         font-size: 7px;
         letter-spacing: 0.06em;
-        color: #00aa00;
+        color: #109e43;
         text-transform: uppercase;
         line-height: 1;
     }
     .osc4-model-select {
         font-family: 'Michroma', sans-serif;
         font-size: 8px;
-        color: #00ff00;
+        color: #18ed64;
         background: #111;
-        border: 1px solid #00aa00;
+        border: 1px solid #109e43;
         border-radius: 3px;
         padding: 4px 8px;
         min-width: 7.5rem;
@@ -1753,11 +1753,11 @@ html {
         text-align: center;
     }
     .osc4-model-select:focus-visible {
-        outline: 1px solid #00ff00;
+        outline: 1px solid #18ed64;
         outline-offset: 1px;
     }
     .osc4-model-select optgroup {
-        color: #00aa00;
+        color: #109e43;
         background: #111;
         font-style: normal;
     }
@@ -2147,7 +2147,7 @@ html {
         font-size: 8px;
         padding: 3px 0;
         text-align: center;
-        color: #00aa00;
+        color: #109e43;
     }
     .step-slide.off .front,
     .step-accent.off .front,
@@ -2157,7 +2157,7 @@ html {
 
     /* --- Scale mode (sequencer step quantization) --- */
     #scaleToggle .front {
-        color: #00aa00;
+        color: #109e43;
     }
     #scaleToggle.off .front {
         color: #ff0000;
@@ -2168,7 +2168,7 @@ html {
 
     /* --- Microtuning Full / Lock --- */
     #microtuneLockToggle .front {
-        color: #00aa00;
+        color: #109e43;
         font-size: 11px;
         padding: 6px 10px;
     }
@@ -2193,7 +2193,7 @@ body.note-in-header {
     height: var(--site-bar-h);
     padding-top: env(safe-area-inset-top, 0px);
     background: #000;
-    color: #00ff00;
+    color: #18ed64;
 }
 .site-bar-row {
     display: grid;
@@ -2240,7 +2240,7 @@ body:not([data-page="synth"]) .site-bar-transport {
     padding: 0;
     border: 0;
     background: transparent;
-    color: #00ff00;
+    color: #18ed64;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2263,7 +2263,7 @@ body:not([data-page="synth"]) .site-bar-transport {
     height: 0;
     border-style: solid;
     border-width: 8px 0 8px 14px;
-    border-color: transparent transparent transparent #00ff00;
+    border-color: transparent transparent transparent #18ed64;
     margin-left: 3px;
 }
 .site-bar-play.stop .site-bar-play-icon {
@@ -2337,7 +2337,7 @@ body:not([data-page="synth"]) .site-bar-transport {
     align-items: center;
     min-height: 44px;
     padding: 0 16px;
-    color: #00ff00;
+    color: #18ed64;
     text-decoration: none;
     font-family: "changeling-neo", Michroma, sans-serif;
     font-size: 13px;
@@ -2354,7 +2354,7 @@ body:not([data-page="synth"]) .site-bar-transport {
     height: 44px;
     padding: 0 max(4px, env(safe-area-inset-right, 0px)) 0 max(4px, env(safe-area-inset-left, 0px));
     box-sizing: border-box;
-    border-top: 1px solid rgba(0, 170, 0, 0.45);
+    border-top: 1px solid rgba(16, 158, 67, 0.45);
 }
 .site-bar-note[hidden] {
     display: none;
@@ -2521,11 +2521,11 @@ body:not([data-page="synth"]) .site-bar-transport {
     width: 100%;
     max-width: none;
     margin: 0;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
     box-sizing: border-box;
     overflow: visible;
-    background: rgba(0, 20, 0, 0.45);
+    background: rgba(2, 19, 8, 0.45);
 }
 .keyboard-section .midi-fieldset.midi-section-on {
     border-color: #00aaaa;
@@ -2536,8 +2536,8 @@ body:not([data-page="synth"]) .site-bar-transport {
 }
 .keyboard-section .midi-fieldset .legend-hex {
     --hex-bg: #050805;
-    --hex-stroke: #00aa00;
-    color: #00ff00;
+    --hex-stroke: var(--tp-ink);
+    color: #18ed64;
 }
 .keyboard-section .midi-fieldset.midi-section-on .legend-hex {
     --hex-bg: #050808;
@@ -2545,7 +2545,7 @@ body:not([data-page="synth"]) .site-bar-transport {
     color: #00aaaa;
 }
 .keyboard-stage-oscilloscope .oscilloscope-border {
-    background: #00aa00;
+    background: #109e43;
     background-image: none;
     -webkit-mask: url('internal-oscilloscope-border.svg') center / 100% 100% no-repeat;
     mask: url('internal-oscilloscope-border.svg') center / 100% 100% no-repeat;
@@ -2586,7 +2586,7 @@ body:not([data-page="synth"]) .site-bar-transport {
     width: 100%;
 }
 .keyboard-controls-fieldset > .collapsible-legend {
-    color: #00ff00;
+    color: #18ed64;
     font-family: "changeling-neo", sans-serif;
 }
 
@@ -2602,9 +2602,9 @@ body:not([data-page="synth"]) .site-bar-transport {
 .midi-fieldset .legend-hex {
     --hex-h: 20px;
     --hex-cut: 9.87px; /* 20 * 74/150 — locked; do not use % of width */
-    --hex-border: 1.5px;
+    --hex-border: 2px;
     --hex-slant-len: 28.1px; /* sqrt(H^2 + 4C^2) */
-    --hex-stroke: #00aa00;
+    --hex-stroke: var(--tp-ink);
     --hex-bg: rgba(0, 0, 0, 0.72); /* ≈ .keyboard-section panel behind legend */
     /* Parallel offset: tip moves along +x by d*L/H; flat start by [C*(H-2d)+d*L]/H */
     --inner-tip-x: calc(var(--hex-border) * var(--hex-slant-len) / var(--hex-h));
@@ -2647,8 +2647,8 @@ body:not([data-page="synth"]) .site-bar-transport {
     font-weight: 400;
     letter-spacing: 0.04em;
     text-transform: lowercase;
-    color: #00ff00;
-    text-shadow: 0 0 2px #00ff00, 0 0 4px rgba(0, 255, 0, 0.35);
+    color: #18ed64;
+    text-shadow: 0 0 2px #18ed64, 0 0 4px rgba(24, 237, 100, 0.35);
     border: none;
     -webkit-appearance: none;
     appearance: none;
@@ -2657,8 +2657,8 @@ body:not([data-page="synth"]) .site-bar-transport {
 }
 .midi-fieldset .legend-hex {
     --hex-bg: #0a0a0a;
-    --hex-stroke: #00aa00;
-    color: #00ff00;
+    --hex-stroke: var(--tp-ink);
+    color: #18ed64;
 }
 .midi-fieldset.midi-section-on .legend-hex {
     --hex-bg: #0a0a0a;
@@ -2753,14 +2753,14 @@ body:not([data-page="synth"]) .site-bar-transport {
 }
 .keyboard-section .collapsible-toggle.legend-hex:hover,
 .keyboard-section .collapsible-toggle.legend-hex:focus-visible {
-    --hex-stroke: #00ff00;
-    color: #00ff00;
+    --hex-stroke: #18ed64;
+    color: #18ed64;
     outline: none;
 }
 .midi-fieldset .collapsible-toggle.legend-hex:hover,
 .midi-fieldset .collapsible-toggle.legend-hex:focus-visible {
-    --hex-stroke: #00ff00;
-    color: #00ff00;
+    --hex-stroke: #18ed64;
+    color: #18ed64;
     outline: none;
 }
 .midi-fieldset.midi-section-on .collapsible-toggle.legend-hex:hover,
@@ -2832,9 +2832,9 @@ body:not([data-page="synth"]) .site-bar-transport {
 .keyboard-scale-select {
     font-family: 'Michroma', sans-serif;
     font-size: 11px;
-    color: #00ff00;
+    color: #18ed64;
     background: #111;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     padding: 0 10px;
     height: 25px;
@@ -2845,7 +2845,7 @@ body:not([data-page="synth"]) .site-bar-transport {
     line-height: 1;
 }
 .keyboard-scale-select:focus-visible {
-    outline: 1px solid #00ff00;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 .keyboard-master-tune {
@@ -2857,22 +2857,22 @@ body:not([data-page="synth"]) .site-bar-transport {
     padding: 0 10px;
     height: 25px;
     border-radius: 3px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
     box-sizing: border-box;
 }
 .keyboard-master-tune-label {
     font-family: 'Michroma', sans-serif;
     font-size: 11px;
-    color: #00aa00;
+    color: #109e43;
     white-space: nowrap;
     line-height: 1;
 }
 .keyboard-master-tune-value {
     font-family: 'Michroma', sans-serif;
     font-size: 11px;
-    color: #00ff00;
+    color: #18ed64;
     min-width: 2.25rem;
     text-align: right;
     line-height: 1;
@@ -2905,7 +2905,7 @@ body:not([data-page="synth"]) .site-bar-transport {
     appearance: none;
     height: 3px;
     background: #0a0f0a;
-    border: 1px solid #1a3a1a;
+    border: 1px solid #1b3625;
     border-radius: 1px;
     box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.75);
 }
@@ -2917,8 +2917,8 @@ body:not([data-page="synth"]) .site-bar-transport {
     height: 11px;
     margin-top: -5px;
     border-radius: 1px;
-    background: #00aa00;
-    border: 1px solid #00ff00;
+    background: #109e43;
+    border: 1px solid #18ed64;
     box-shadow: none;
     cursor: pointer;
     transition: none;
@@ -2927,20 +2927,20 @@ body:not([data-page="synth"]) .site-bar-transport {
 .keyboard-section input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:active,
 .site-bar-note input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:hover,
 .site-bar-note input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:active {
-    background: #00ff00;
+    background: #18ed64;
     transform: none;
     box-shadow: none;
 }
 .keyboard-section input[type="range"].keyboard-master-tune-slider:focus::-webkit-slider-thumb,
 .site-bar-note input[type="range"].keyboard-master-tune-slider:focus::-webkit-slider-thumb {
-    background: #00ff00;
+    background: #18ed64;
     box-shadow: none;
 }
 .keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-track,
 .site-bar-note input[type="range"].keyboard-master-tune-slider::-moz-range-track {
     height: 3px;
     background: #0a0f0a;
-    border: 1px solid #1a3a1a;
+    border: 1px solid #1b3625;
     border-radius: 1px;
     box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.75);
 }
@@ -2949,8 +2949,8 @@ body:not([data-page="synth"]) .site-bar-transport {
     width: 8px;
     height: 11px;
     border-radius: 1px;
-    background: #00aa00;
-    border: 1px solid #00ff00;
+    background: #109e43;
+    border: 1px solid #18ed64;
     box-shadow: none;
     cursor: pointer;
     transition: none;
@@ -2959,13 +2959,13 @@ body:not([data-page="synth"]) .site-bar-transport {
 .keyboard-section input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:active,
 .site-bar-note input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:hover,
 .site-bar-note input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:active {
-    background: #00ff00;
+    background: #18ed64;
     transform: none;
     box-shadow: none;
 }
 .keyboard-section input[type="range"].keyboard-master-tune-slider:focus::-moz-range-thumb,
 .site-bar-note input[type="range"].keyboard-master-tune-slider:focus::-moz-range-thumb {
-    background: #00ff00;
+    background: #18ed64;
     box-shadow: none;
 }
 .keyboard-transpose-screen {
@@ -2979,9 +2979,9 @@ body:not([data-page="synth"]) .site-bar-transport {
     padding: 0 10px;
     margin: 0;
     border-radius: 3px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
     text-align: center;
 }
 .keyboard-transpose-screen.is-dimmed {
@@ -2989,7 +2989,7 @@ body:not([data-page="synth"]) .site-bar-transport {
 }
 .keyboard-transpose-readout {
     font-family: 'Michroma', sans-serif;
-    color: #00aa00;
+    color: #109e43;
     font-size: 11px;
     line-height: 1;
     white-space: nowrap;
@@ -3005,7 +3005,7 @@ body:not([data-page="synth"]) .site-bar-transport {
 
 /* Every fieldset in the keyboard window — including nested groups — stays green */
 .keyboard-section fieldset {
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-style: solid;
 }
 /*
@@ -3026,7 +3026,7 @@ fieldset > legend {
     }
 }
 .keyboard-section fieldset > legend {
-    color: #00aa00;
+    color: #109e43;
     font-family: 'Michroma', sans-serif;
 }
 .chromatic-keyboard-panel {
@@ -3042,7 +3042,7 @@ fieldset > legend {
     /* Room under the keys so the scrollbar sits clearly below the keyboard */
     padding-bottom: 14px;
     margin-top: 4px;
-    scrollbar-color: #00aa00 #111;
+    scrollbar-color: #109e43 #111;
     scrollbar-gutter: stable both-edges;
     scrollbar-width: auto;
 }
@@ -3111,13 +3111,13 @@ fieldset > legend {
     min-width: 56px;
     transform: translateY(-50%);
     border-radius: 9px;
-    background: #00aa00;
+    background: #109e43;
     border: none;
     box-sizing: border-box;
     pointer-events: none;
 }
 .chromatic-keyboard-scroller.is-dragging .chromatic-keyboard-scroller-thumb {
-    background: #00ff00;
+    background: #18ed64;
 }
 @media (max-width: 768px), (hover: none) and (pointer: coarse) {
     .chromatic-keyboard-panel {
@@ -3184,10 +3184,10 @@ fieldset > legend {
     min-width: 0;
     padding: 4px 4px 2px;
     box-sizing: border-box;
-    border: 1px solid #2e4a30;
+    border: 1px solid #2d4536;
     border-radius: 2px;
     background:
-        linear-gradient(180deg, #1a2a1c 0%, #0e1610 100%);
+        linear-gradient(180deg, #1a271e 0%, #0e1410 100%);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.06),
         0 1px 2px rgba(0, 0, 0, 0.35);
@@ -3197,7 +3197,7 @@ fieldset > legend {
     width: 100%;
     min-width: 0;
     margin: 0;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
     background: transparent;
     box-shadow: none;
@@ -3265,20 +3265,20 @@ fieldset > legend {
     font-weight: 400;
     letter-spacing: 0.04em;
     text-transform: lowercase;
-    color: #00ff00;
+    color: #18ed64;
     line-height: 1;
     -webkit-tap-highlight-color: transparent;
 }
 .collapsible-toggle:hover,
 .collapsible-toggle:focus-visible {
-    color: #00ff00;
+    color: #18ed64;
     outline: none;
 }
 .collapsible-fieldset.collapse-locked > .collapsible-legend .collapsible-toggle,
 .collapsible-fieldset.collapse-locked > .collapsible-legend .collapsible-toggle:hover,
 .collapsible-fieldset.collapse-locked > .collapsible-legend .collapsible-toggle:focus-visible {
     cursor: default;
-    color: #00ff00;
+    color: #18ed64;
 }
 .collapsible-fieldset.collapse-locked > .collapsible-legend .collapsible-arrow {
     opacity: 0.35;
@@ -3288,7 +3288,7 @@ fieldset > legend {
     font-family: "changeling-neo", sans-serif;
     font-weight: 400;
     text-transform: lowercase;
-    text-shadow: 0 0 2px #00ff00, 0 0 4px rgba(0, 255, 0, 0.35);
+    text-shadow: 0 0 2px #18ed64, 0 0 4px rgba(24, 237, 100, 0.35);
 }
 .midi-fieldset.midi-section-on .collapsible-label {
     text-shadow: 0 0 2px #00ffff, 0 0 4px rgba(0, 220, 230, 0.35);
@@ -3375,7 +3375,7 @@ body.view-tabbed .keyboard-tab-strip {
     --tab-cut: 19.74px; /* 2 × legend --hex-cut: half of the legend hex at 2× height */
     --tab-border: 1.5px;
     --tab-slant-len: 28.1px; /* sqrt(H^2 + C^2) */
-    --tab-stroke: #00aa00;
+    --tab-stroke: #109e43;
     --tab-bg: #050805;
     --tab-inner-bottom-x: calc(var(--tab-border) * var(--tab-slant-len) / var(--tab-h));
     --tab-inner-top-x: calc(
@@ -3399,7 +3399,7 @@ body.view-tabbed .keyboard-tab-strip {
     border: none;
     background: transparent;
     box-sizing: border-box;
-    color: #00aa00;
+    color: #109e43;
     font-family: "changeling-neo", sans-serif;
     font-size: 12px;
     font-weight: 400;
@@ -3439,18 +3439,18 @@ body.view-tabbed .keyboard-tab-strip {
 }
 .keyboard-tab:hover,
 .keyboard-tab:focus-visible {
-    --tab-stroke: #00ff00;
-    color: #00ff00;
+    --tab-stroke: #18ed64;
+    color: #18ed64;
 }
 .keyboard-tab.active {
     --tab-inner-bottom-y: 100%; /* punch through the panel stroke: tab + panel read as one */
-    color: #00ff00;
-    text-shadow: 0 0 2px #00ff00, 0 0 4px rgba(0, 255, 0, 0.35);
+    color: #18ed64;
+    text-shadow: 0 0 2px #18ed64, 0 0 4px rgba(24, 237, 100, 0.35);
     z-index: 1;
 }
 .keyboard-tab.active:hover,
 .keyboard-tab.active:focus-visible {
-    --tab-stroke: #00aa00;
+    --tab-stroke: #109e43;
 }
 /* Reserved on steps / automation so the label does not jump when the dot appears.
    Shown by body.write-mode-on / body.automation-mode-active. */
@@ -3511,7 +3511,7 @@ body.view-tabbed #keyboardMixerFieldset {
 }
 /* The drum dock has no frame in full screen; as a tab panel it gets the folder border */
 body.view-tabbed #keyboardDrumDock {
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
     padding: 12px 8px 8px;
 }
@@ -3529,8 +3529,8 @@ body.view-tabbed #keyboardDrumDock {
     }
     .keyboard-section .collapsible-mobile-only .collapsible-toggle.legend-hex:hover,
     .keyboard-section .collapsible-mobile-only .collapsible-toggle.legend-hex:focus-visible {
-        --hex-stroke: #00aa00;
-        color: #00ff00;
+        --hex-stroke: var(--tp-ink);
+        color: #18ed64;
     }
 }
 
@@ -3541,7 +3541,7 @@ body.view-tabbed #keyboardDrumDock {
 .keyboard-xy-fieldset,
 .keyboard-controls-fieldset {
     margin: 0;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px; /* Steps reference — keep all top fieldsets identical */
     min-width: 0;
     width: 100%;
@@ -3648,7 +3648,7 @@ body.note-in-header #kbXyNoteDock {
     padding: 0;
     border: 0;
     background: transparent;
-    color: #00ff00;
+    color: #18ed64;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3725,19 +3725,19 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
 .keyboard-tuning-semi-amount {
     font-family: 'Michroma', sans-serif;
     font-size: 11px;
-    color: #00ff00;
+    color: #18ed64;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     height: 25px;
     min-width: 3rem;
     padding: 0 6px;
     box-sizing: border-box;
     line-height: 1;
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
 }
 .keyboard-tuning-semi-amount:focus-visible {
-    outline: 1px solid #00ff00;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 @media (max-width: 900px) {
@@ -3752,7 +3752,7 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
 #kbAutomationUndo.pushable.keyboard-automation-btn,
 #kbAutomationRedo.pushable.keyboard-automation-btn,
 #kbAutomationClear.pushable.keyboard-automation-btn {
-    background: rgba(0, 170, 0, 0.5);
+    background: rgba(16, 158, 67, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -3774,7 +3774,7 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
     font-size: 9px;
     letter-spacing: 0.04em;
     line-height: 1;
-    color: #00ff00;
+    color: #18ed64;
 }
 #kbAutomationUndo.pushable.keyboard-automation-btn .kb-auto-history-icon,
 #kbAutomationRedo.pushable.keyboard-automation-btn .kb-auto-history-icon {
@@ -3793,11 +3793,11 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
 }
 #kbAutomationUndo.pushable.keyboard-automation-btn:disabled .front,
 #kbAutomationRedo.pushable.keyboard-automation-btn:disabled .front {
-    color: #00ff00;
+    color: #18ed64;
 }
 #kbAutomationRecord.pushable.keyboard-automation-btn .kb-auto-rec-label {
     display: none;
-    color: #00ff00;
+    color: #18ed64;
     font-size: 9px;
     letter-spacing: 0.04em;
 }
@@ -3826,7 +3826,7 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
     display: block;
 }
 #kbAutomationClear.pushable.keyboard-automation-btn .front {
-    color: #00ff00;
+    color: #18ed64;
 }
 #kbAutomationClear.pushable.keyboard-automation-btn:active .front {
     color: #ff0000;
@@ -3988,7 +3988,7 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
 .keyboard-section fieldset.keyboard-filter-section > legend,
 .keyboard-section fieldset.keyboard-amp-section > legend {
     font-family: 'Michroma', sans-serif;
-    color: #00ff00;
+    color: #18ed64;
     text-shadow: none;
     font-size: 10px;
     letter-spacing: 0.08em;
@@ -4109,7 +4109,7 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
 .keyboard-vol-env-field legend,
 .keyboard-synth-panel .keyboard-filter-env-group > legend {
     font-family: 'Michroma', sans-serif;
-    color: #00aa00;
+    color: #109e43;
     font-size: 9px;
     padding: 0 4px;
     width: fit-content;
@@ -4147,7 +4147,7 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
 }
 .keyboard-phase-reset-field legend {
     font-family: 'Michroma', sans-serif;
-    color: #00aa00;
+    color: #109e43;
     font-size: 9px;
     padding: 0 4px;
     width: fit-content;
@@ -4199,16 +4199,16 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     letter-spacing: 0.04em;
-    color: #00aa00;
+    color: #109e43;
     text-transform: uppercase;
     line-height: 1;
 }
 .keyboard-unison-voices select {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
-    color: #00ff00;
+    color: #18ed64;
     background: #111;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     padding: 4px 6px;
     min-width: 3.25rem;
@@ -4217,7 +4217,7 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
     box-sizing: border-box;
 }
 .keyboard-unison-voices select:focus-visible {
-    outline: 1px solid #00ff00;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 .keyboard-unison-toggle-row {
@@ -4338,16 +4338,16 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     letter-spacing: 0.04em;
-    color: #00aa00;
+    color: #109e43;
     text-transform: uppercase;
     line-height: 1;
 }
 .keyboard-noise-type-select {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
-    color: #00ff00;
+    color: #18ed64;
     background: #111;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     padding: 4px 6px;
     min-width: 4.5rem;
@@ -4356,7 +4356,7 @@ body.note-in-header .note-vfd-float .note-vfd-float-down {
     box-sizing: border-box;
 }
 .keyboard-noise-type-select:focus-visible {
-    outline: 1px solid #00ff00;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 .keyboard-noise-toggle-row {
@@ -4524,7 +4524,7 @@ body.acid-mode .berlin-step-ratch {
 }
 .keyboard-volume-field legend {
     font-family: 'Michroma', sans-serif;
-    color: #00aa00;
+    color: #109e43;
     font-size: 9px;
     padding: 0 4px;
     width: fit-content;
@@ -4604,7 +4604,7 @@ body.acid-mode .berlin-step-ratch {
 .keyboard-effects-delay-field legend,
 .keyboard-effects-reverb-field legend {
     font-family: 'Michroma', sans-serif;
-    color: #00aa00;
+    color: #109e43;
     font-size: 9px;
     padding: 0 4px;
     width: fit-content;
@@ -4675,7 +4675,7 @@ body.acid-mode .berlin-step-ratch {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     letter-spacing: 0.04em;
-    color: #00aa00;
+    color: #109e43;
     text-transform: uppercase;
     line-height: 1;
 }
@@ -4697,7 +4697,7 @@ body.acid-mode .berlin-step-ratch {
     width: 100%;
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px solid rgba(0, 170, 0, 0.22);
+    border-top: 1px solid rgba(16, 158, 67, 0.22);
 }
 .keyboard-effects-sc-src {
     display: flex;
@@ -4750,9 +4750,9 @@ body.acid-mode .berlin-step-ratch {
 .keyboard-delay-time-select {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
-    color: #00ff00;
+    color: #18ed64;
     background: #111;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     padding: 4px 6px;
     min-width: 3.25rem;
@@ -4766,7 +4766,7 @@ body.acid-mode .berlin-step-ratch {
     opacity: 0.45;
 }
 .keyboard-delay-time-select:focus-visible {
-    outline: 1px solid #00ff00;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 .keyboard-effects-knob .synth-knob-dial-wrap {
@@ -4787,7 +4787,7 @@ body.acid-mode .berlin-step-ratch {
 .keyboard-osc-field {
     margin: 0;
     padding: 6px 8px 8px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 4px;
     min-width: 0;
     width: 100%;
@@ -4800,7 +4800,7 @@ body.acid-mode .berlin-step-ratch {
 }
 .keyboard-osc-field legend {
     font-family: 'Michroma', sans-serif;
-    color: #00aa00;
+    color: #109e43;
     font-size: 9px;
     padding: 0 4px;
     width: fit-content;
@@ -4841,7 +4841,7 @@ body.acid-mode .berlin-step-ratch {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     line-height: 1;
-    color: #00aa00;
+    color: #109e43;
     letter-spacing: 0.04em;
 }
 .keyboard-osc-toggle-row {
@@ -4891,7 +4891,7 @@ body.acid-mode .berlin-step-ratch {
     min-width: 0;
     margin-bottom: 0;
     padding: 2px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     background: #111;
     box-sizing: border-box;
@@ -4912,7 +4912,7 @@ body.acid-mode .berlin-step-ratch {
     align-items: center;
     gap: 4px;
     margin: 0;
-    color: #00aa00;
+    color: #109e43;
     font-size: 10px;
 }
 body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
@@ -4931,21 +4931,21 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     border: 1px solid transparent;
     border-radius: 2px;
     background: transparent;
-    color: #00aa00;
+    color: #109e43;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     box-sizing: border-box;
 }
 .keyboard-osc-wave-btn:hover,
 .keyboard-osc-wave-btn:focus-visible {
-    color: #00ff00;
-    border-color: #00aa00;
+    color: #18ed64;
+    border-color: #109e43;
     outline: none;
 }
 .keyboard-osc-wave-btn.active {
     color: #000;
-    background: #00ff00;
-    border-color: #00ff00;
+    background: #18ed64;
+    border-color: #18ed64;
     box-shadow: none;
 }
 .keyboard-osc-wave-icon {
@@ -4975,7 +4975,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     width: 100%;
     max-width: 54px;
     box-sizing: border-box;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 4px;
     position: relative;
 }
@@ -4983,7 +4983,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     display: none;
 }
 .keyboard-step legend {
-    color: #00aa00;
+    color: #109e43;
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
     padding: 0 2px;
@@ -5041,7 +5041,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     -webkit-appearance: none;
     appearance: none;
     height: 1px;
-    background: #00aa00;
+    background: #109e43;
     border: none;
     border-radius: 0;
     box-shadow: none;
@@ -5054,7 +5054,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     margin-top: 2px; /* sit below the green line */
     border: none;
     border-radius: 0;
-    background: #00ff00;
+    background: #18ed64;
     box-shadow: none;
     cursor: pointer;
     transition: none;
@@ -5064,13 +5064,13 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
 .keyboard-section input[type="range"].kb-step-fine::-webkit-slider-thumb:hover,
 .keyboard-section input[type="range"].kb-step-fine::-webkit-slider-thumb:active,
 .keyboard-section input[type="range"].kb-step-fine:focus::-webkit-slider-thumb {
-    background: #66ff66;
+    background: #6ded9b;
     transform: none;
     box-shadow: none;
 }
 .keyboard-section input[type="range"].kb-step-fine::-moz-range-track {
     height: 1px;
-    background: #00aa00;
+    background: #109e43;
     border: none;
     border-radius: 0;
     box-shadow: none;
@@ -5080,7 +5080,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     height: 6px;
     border: none;
     border-radius: 0;
-    background: #00ff00;
+    background: #18ed64;
     box-shadow: none;
     cursor: pointer;
     transition: none;
@@ -5090,7 +5090,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
 .keyboard-section input[type="range"].kb-step-fine::-moz-range-thumb:hover,
 .keyboard-section input[type="range"].kb-step-fine::-moz-range-thumb:active,
 .keyboard-section input[type="range"].kb-step-fine:focus::-moz-range-thumb {
-    background: #66ff66;
+    background: #6ded9b;
     transform: none;
     box-shadow: none;
 }
@@ -5100,7 +5100,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     font-family: 'Michroma', sans-serif;
     font-size: 6px;
     line-height: 1;
-    color: #00aa00;
+    color: #109e43;
     letter-spacing: 0;
     margin-top: 3px;
     text-align: center;
@@ -5133,7 +5133,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     -webkit-appearance: none;
     appearance: none;
     height: 1px;
-    background: #00aa00;
+    background: #109e43;
     border: none;
     border-radius: 0;
     box-shadow: none;
@@ -5146,7 +5146,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     margin-top: 2px;
     border: none;
     border-radius: 0;
-    background: #00ff00;
+    background: #18ed64;
     box-shadow: none;
     cursor: pointer;
     transition: none;
@@ -5156,13 +5156,13 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
 .keyboard-section input[type="range"].kb-osc-pan::-webkit-slider-thumb:hover,
 .keyboard-section input[type="range"].kb-osc-pan::-webkit-slider-thumb:active,
 .keyboard-section input[type="range"].kb-osc-pan:focus::-webkit-slider-thumb {
-    background: #66ff66;
+    background: #6ded9b;
     transform: none;
     box-shadow: none;
 }
 .keyboard-section input[type="range"].kb-osc-pan::-moz-range-track {
     height: 1px;
-    background: #00aa00;
+    background: #109e43;
     border: none;
     border-radius: 0;
     box-shadow: none;
@@ -5172,7 +5172,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     height: 6px;
     border: none;
     border-radius: 0;
-    background: #00ff00;
+    background: #18ed64;
     box-shadow: none;
     cursor: pointer;
     transition: none;
@@ -5182,7 +5182,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
 .keyboard-section input[type="range"].kb-osc-pan::-moz-range-thumb:hover,
 .keyboard-section input[type="range"].kb-osc-pan::-moz-range-thumb:active,
 .keyboard-section input[type="range"].kb-osc-pan:focus::-moz-range-thumb {
-    background: #66ff66;
+    background: #6ded9b;
     transform: none;
     box-shadow: none;
 }
@@ -5192,7 +5192,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     font-family: 'Michroma', sans-serif;
     font-size: 6px;
     line-height: 1;
-    color: #00aa00;
+    color: #109e43;
     letter-spacing: 0;
     margin-top: 3px;
     text-align: center;
@@ -5212,7 +5212,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     line-height: 1;
-    color: #00aa00;
+    color: #109e43;
     letter-spacing: 0.04em;
 }
 .keyboard-section input[type="range"].kb-osc-fine {
@@ -5241,7 +5241,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     -webkit-appearance: none;
     appearance: none;
     height: 1px;
-    background: #00aa00;
+    background: #109e43;
     border: none;
     border-radius: 0;
     box-shadow: none;
@@ -5254,14 +5254,14 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     margin-top: 2px;
     border: none;
     border-radius: 0;
-    background: #00ff00;
+    background: #18ed64;
     box-shadow: none;
     cursor: pointer;
     clip-path: polygon(50% 0, 0 100%, 100% 100%);
 }
 .keyboard-section input[type="range"].kb-osc-fine::-moz-range-track {
     height: 1px;
-    background: #00aa00;
+    background: #109e43;
     border: none;
 }
 .keyboard-section input[type="range"].kb-osc-fine::-moz-range-thumb {
@@ -5269,7 +5269,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     height: 6px;
     border: none;
     border-radius: 0;
-    background: #00ff00;
+    background: #18ed64;
     cursor: pointer;
     clip-path: polygon(50% 0, 0 100%, 100% 100%);
 }
@@ -5279,7 +5279,7 @@ body.osc4-wavetable .keyboard-osc-field[data-osc="0"] .keyboard-osc-wave {
     font-family: 'Michroma', sans-serif;
     font-size: 6px;
     line-height: 1;
-    color: #00aa00;
+    color: #109e43;
     margin-top: 3px;
     text-align: center;
     white-space: nowrap;
@@ -5307,7 +5307,7 @@ body.acid-osc-locked .keyboard-osc-field[data-osc="0"] .keyboard-osc-fine-row {
     justify-content: center;
     gap: 10px;
     padding: 4px 2px 6px;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.35);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.35);
     margin-bottom: 4px;
     position: relative;
 }
@@ -5322,7 +5322,7 @@ body.acid-osc-locked .keyboard-osc-field[data-osc="0"] .keyboard-osc-fine-row {
 .keyboard-section fieldset.pattern-bank-select {
     margin: 0;
     padding: 6px 10px 8px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
     width: fit-content;
     max-width: 100%;
@@ -5343,7 +5343,7 @@ body.acid-osc-locked .keyboard-osc-field[data-osc="0"] .keyboard-osc-fine-row {
     width: auto;
     flex: 0 1 auto;
     margin: 0;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
 }
 /* P1–P8 and the repeat row share one 8-column track */
@@ -5389,7 +5389,7 @@ body:not(.berlin-mode) .pattern-bank-berlin {
 .keyboard-section fieldset.berlin-lane-select {
     margin: 0;
     padding: 6px 10px 8px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
     width: fit-content;
     max-width: 100%;
@@ -5422,7 +5422,7 @@ body:not(.berlin-mode) .pattern-bank-berlin {
 .pattern-copied {
     position: relative;
     z-index: 2;
-    box-shadow: 0 0 10px 5px color-mix(in srgb, var(--berlin-color, #00ff00) 70%, transparent);
+    box-shadow: 0 0 10px 5px color-mix(in srgb, var(--berlin-color, #18ed64) 70%, transparent);
     border-radius: 5px;
     transition: box-shadow 0.3s ease;
 }
@@ -5432,7 +5432,7 @@ body:not(.berlin-mode) .pattern-bank-berlin {
     top: -20px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--berlin-color, #00ff00);
+    background: var(--berlin-color, #18ed64);
     color: #000;
     padding: 2px 5px;
     border-radius: 3px;
@@ -5446,7 +5446,7 @@ body:not(.berlin-mode) .pattern-bank-berlin {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     letter-spacing: 1px;
-    color: #00aa00;
+    color: #109e43;
     white-space: nowrap;
 }
 .pattern-bank-bar .kb-step-btn {
@@ -5509,15 +5509,15 @@ body:not(.berlin-mode) .pattern-bank-berlin {
 }
 @keyframes patternSlotFlash {
     0%, 42% {
-        background: #00ff00;
+        background: #18ed64;
         color: #000;
-        border-color: #00ff00;
-        box-shadow: 0 0 8px rgba(0, 255, 0, 0.85);
+        border-color: #18ed64;
+        box-shadow: 0 0 8px rgba(24, 237, 100, 0.85);
     }
     58%, 100% {
         background: #101010;
-        color: #00ff00;
-        border-color: #00ff00;
+        color: #18ed64;
+        border-color: #18ed64;
         box-shadow: none;
     }
 }
@@ -5527,10 +5527,10 @@ body:not(.berlin-mode) .pattern-bank-berlin {
     height: 20px;
     min-width: 0;
     box-sizing: border-box;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
     overflow: hidden;
     --repeat: 1;
     --pass: 1;
@@ -5542,7 +5542,7 @@ body:not(.berlin-mode) .pattern-bank-berlin {
     bottom: 0;
     left: 0;
     width: 0;
-    background: rgba(0, 255, 0, 0.55);
+    background: rgba(24, 237, 100, 0.55);
     pointer-events: none;
     z-index: 0;
 }
@@ -5561,16 +5561,16 @@ body:not(.berlin-mode) .pattern-bank-berlin {
     bottom: 0;
     width: 1px;
     margin-left: -1px;
-    background: rgba(0, 255, 0, 0.7);
+    background: rgba(24, 237, 100, 0.7);
 }
 .pattern-bank-grid .pattern-cycle-count.kb-step-btn {
     color: #000;
-    border-color: #00aa00;
+    border-color: #109e43;
     /* Same stack as the cycle meter: dark well + the light-green fill */
     background:
-        linear-gradient(rgba(0, 255, 0, 0.55), rgba(0, 255, 0, 0.55)),
+        linear-gradient(rgba(24, 237, 100, 0.55), rgba(24, 237, 100, 0.55)),
         linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
     padding: 0 1px;
     font-size: 7px;
     letter-spacing: 0;
@@ -5580,11 +5580,11 @@ body:not(.berlin-mode) .pattern-bank-berlin {
 .pattern-bank-grid .pattern-cycle-count.kb-step-btn:hover,
 .pattern-bank-grid .pattern-cycle-count.kb-step-btn:focus-visible {
     color: #000;
-    border-color: #00aa00;
+    border-color: #109e43;
     background:
-        linear-gradient(rgba(0, 255, 0, 0.55), rgba(0, 255, 0, 0.55)),
+        linear-gradient(rgba(24, 237, 100, 0.55), rgba(24, 237, 100, 0.55)),
         linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
 }
 
 .berlin-panel[hidden] {
@@ -5633,7 +5633,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     gap: 8px;
     margin: 4px 0 2px;
     padding: 6px 8px 4px;
-    border: 1px solid color-mix(in srgb, var(--berlin-color, #00aa00) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--berlin-color, #109e43) 55%, transparent);
     border-radius: 4px;
     min-width: 0;
 }
@@ -5655,9 +5655,9 @@ body:not(.berlin-mode) .berlin-drum-bar {
     font-size: 7px;
     letter-spacing: 0.06em;
     line-height: 1.1;
-    color: var(--berlin-color, #00aa00);
-    border-color: var(--berlin-color, #00aa00);
-    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #00aa00) 22%, transparent);
+    color: var(--berlin-color, #109e43);
+    border-color: var(--berlin-color, #109e43);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #109e43) 22%, transparent);
 }
 .berlin-drum-engine-switch .berlin-drum-engine-btn[data-engine="analog"] {
     border-top-right-radius: 0;
@@ -5672,11 +5672,11 @@ body:not(.berlin-mode) .berlin-drum-bar {
 .berlin-drum-engine-switch .berlin-drum-engine-btn:focus-visible,
 .berlin-drum-engine-switch .berlin-drum-engine-btn.off:hover,
 .berlin-drum-engine-switch .berlin-drum-engine-btn.off:focus-visible {
-    border-color: color-mix(in srgb, var(--berlin-color, #00aa00) 55%, #fff);
+    border-color: color-mix(in srgb, var(--berlin-color, #109e43) 55%, #fff);
     background: linear-gradient(
         to bottom,
-        color-mix(in srgb, var(--berlin-color, #00aa00) 18%, #1a1a1a) 0%,
-        color-mix(in srgb, var(--berlin-color, #00aa00) 10%, #0d0d0d) 100%
+        color-mix(in srgb, var(--berlin-color, #109e43) 18%, #1a1a1a) 0%,
+        color-mix(in srgb, var(--berlin-color, #109e43) 10%, #0d0d0d) 100%
     );
 }
 .berlin-drum-engine-switch .berlin-drum-engine-btn:not(.off),
@@ -5684,15 +5684,15 @@ body:not(.berlin-mode) .berlin-drum-bar {
 .berlin-drum-engine-switch .berlin-drum-engine-btn:not(.off):hover,
 .berlin-drum-engine-switch .berlin-drum-engine-btn:not(.off):focus-visible {
     color: #000;
-    border-color: var(--berlin-color, #00ff00);
-    background: var(--berlin-color, #00ff00);
+    border-color: var(--berlin-color, #18ed64);
+    background: var(--berlin-color, #18ed64);
     box-shadow: none;
 }
 .berlin-drum-engine-switch .berlin-drum-engine-btn.off {
-    color: var(--berlin-color, #00aa00);
-    border-color: var(--berlin-color, #00aa00);
+    color: var(--berlin-color, #109e43);
+    border-color: var(--berlin-color, #109e43);
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #00aa00) 22%, transparent);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #109e43) 22%, transparent);
 }
 .berlin-drum-toolbar.is-analog .berlin-drum-switches {
     display: none !important;
@@ -5724,13 +5724,13 @@ body:not(.berlin-mode) .berlin-drum-bar {
     font-size: 6px;
     letter-spacing: 0.04em;
     height: 8px;
-    color: var(--berlin-color, #00aa00);
+    color: var(--berlin-color, #109e43);
 }
 .berlin-drum-knob .synth-knob-value {
     font-size: 7px;
     height: 8px;
     min-width: 2.2em;
-    color: color-mix(in srgb, var(--berlin-color, #00aa00) 80%, #fff);
+    color: color-mix(in srgb, var(--berlin-color, #109e43) 80%, #fff);
 }
 .berlin-drum-knob .synth-knob-dial-wrap {
     width: 34px;
@@ -5740,10 +5740,10 @@ body:not(.berlin-mode) .berlin-drum-bar {
 .berlin-drum-knob .synth-knob-dial {
     width: 30px;
     height: 30px;
-    border-color: var(--berlin-color, #00aa00);
+    border-color: var(--berlin-color, #109e43);
 }
 .berlin-drum-knob .synth-knob-indicator {
-    background: var(--berlin-color, #00aa00);
+    background: var(--berlin-color, #109e43);
     transform-origin: 50% 12px;
 }
 .berlin-drum-switches {
@@ -5756,19 +5756,19 @@ body:not(.berlin-mode) .berlin-drum-bar {
     height: 20px;
     padding: 0 6px;
     font-size: 7px;
-    color: var(--berlin-color, #00aa00);
-    border-color: var(--berlin-color, #00aa00);
-    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #00aa00) 22%, transparent);
+    color: var(--berlin-color, #109e43);
+    border-color: var(--berlin-color, #109e43);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #109e43) 22%, transparent);
 }
 .berlin-drum-switches .ingy6-switch-btn:hover,
 .berlin-drum-switches .ingy6-switch-btn:focus-visible,
 .berlin-drum-switches .ingy6-switch-btn.off:hover,
 .berlin-drum-switches .ingy6-switch-btn.off:focus-visible {
-    border-color: color-mix(in srgb, var(--berlin-color, #00aa00) 55%, #fff);
+    border-color: color-mix(in srgb, var(--berlin-color, #109e43) 55%, #fff);
     background: linear-gradient(
         to bottom,
-        color-mix(in srgb, var(--berlin-color, #00aa00) 18%, #1a1a1a) 0%,
-        color-mix(in srgb, var(--berlin-color, #00aa00) 10%, #0d0d0d) 100%
+        color-mix(in srgb, var(--berlin-color, #109e43) 18%, #1a1a1a) 0%,
+        color-mix(in srgb, var(--berlin-color, #109e43) 10%, #0d0d0d) 100%
     );
 }
 .berlin-drum-switches .ingy6-switch-btn:not(.off),
@@ -5776,15 +5776,15 @@ body:not(.berlin-mode) .berlin-drum-bar {
 .berlin-drum-switches .ingy6-switch-btn:not(.off):hover,
 .berlin-drum-switches .ingy6-switch-btn:not(.off):focus-visible {
     color: #000;
-    border-color: var(--berlin-color, #00ff00);
-    background: var(--berlin-color, #00ff00);
+    border-color: var(--berlin-color, #18ed64);
+    background: var(--berlin-color, #18ed64);
     box-shadow: none;
 }
 .berlin-drum-switches .ingy6-switch-btn.off {
-    color: var(--berlin-color, #00aa00);
-    border-color: var(--berlin-color, #00aa00);
+    color: var(--berlin-color, #109e43);
+    border-color: var(--berlin-color, #109e43);
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #00aa00) 22%, transparent);
+    box-shadow: inset 0 0 6px color-mix(in srgb, var(--berlin-color, #109e43) 22%, transparent);
 }
 .berlin-drum-switches .ingy6-switch-btn.is-grey,
 .berlin-drum-switches .ingy6-switch-btn:disabled {
@@ -5820,7 +5820,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     width: 100%;
     padding: 10px 8px 12px;
     box-sizing: border-box;
-    color: #00ff00;
+    color: #18ed64;
 }
 .berlin-footer-logo {
     display: block;
@@ -5837,12 +5837,12 @@ body:not(.berlin-mode) .berlin-drum-bar {
     margin: 0;
     padding: 10px 8px 8px;
     border-radius: 5px;
-    box-shadow: inset 0 0 12px color-mix(in srgb, var(--berlin-color, #00aa00) 12%, transparent);
+    box-shadow: inset 0 0 12px color-mix(in srgb, var(--berlin-color, #109e43) 12%, transparent);
     min-width: 0;
 }
 /* Beat .keyboard-section fieldset { border-color: green } so the frame matches the steps */
 .keyboard-section fieldset.berlin-row {
-    border: 1px solid var(--berlin-color, #00aa00);
+    border: 1px solid var(--berlin-color, #109e43);
 }
 .berlin-row.hidden {
     display: none;
@@ -5867,7 +5867,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     font-size: 7px;
 }
 .berlin-row .berlin-row-solo:not(.off) {
-    background: var(--berlin-color, #00aa00);
+    background: var(--berlin-color, #109e43);
     color: #000;
 }
 .berlin-row-ms {
@@ -5886,9 +5886,9 @@ body:not(.berlin-mode) .berlin-drum-bar {
 }
 .berlin-row .berlin-row-mute:not(.off),
 .keyboard-drum-row .berlin-row-solo:not(.off) {
-    background: var(--berlin-color, #00aa00);
+    background: var(--berlin-color, #109e43);
     color: #000;
-    border-color: var(--berlin-color, #00aa00);
+    border-color: var(--berlin-color, #109e43);
 }
 .berlin-row.is-muted .berlin-row-mute,
 .berlin-row.is-solo .berlin-row-solo {
@@ -5912,15 +5912,15 @@ body:not(.berlin-mode) .berlin-drum-bar {
     text-align: left;
 }
 .berlin-row legend .legend-hex.berlin-row-enable {
-    --hex-stroke: var(--berlin-color, #00aa00);
+    --hex-stroke: var(--berlin-color, #109e43);
     --hex-bg: rgba(0, 0, 0, 0.72);
-    color: var(--berlin-color, #00aa00);
+    color: var(--berlin-color, #109e43);
     font-family: "changeling-neo", sans-serif;
     font-size: 12px;
     font-weight: 400;
     letter-spacing: 0.04em;
     text-transform: lowercase;
-    text-shadow: 0 0 2px color-mix(in srgb, var(--berlin-color, #00aa00) 50%, transparent);
+    text-shadow: 0 0 2px color-mix(in srgb, var(--berlin-color, #109e43) 50%, transparent);
     cursor: pointer;
     margin: 0;
     background-color: transparent;
@@ -5933,7 +5933,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
 }
 /* On: filled phosphor hex, black label */
 .berlin-row legend .legend-hex.berlin-row-enable:not(.off) {
-    --hex-bg: var(--berlin-color, #00aa00);
+    --hex-bg: var(--berlin-color, #109e43);
     color: #000;
     text-shadow: none;
 }
@@ -5944,7 +5944,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     min-width: 0;
 }
 .keyboard-section fieldset.berlin-row-controls {
-    border: 1px solid var(--berlin-color, #00aa00);
+    border: 1px solid var(--berlin-color, #109e43);
 }
 .berlin-row-controls-body {
     display: flex;
@@ -5978,7 +5978,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     letter-spacing: 0.5px;
-    color: var(--berlin-color, #00aa00);
+    color: var(--berlin-color, #109e43);
     white-space: nowrap;
 }
 .berlin-ctl-value {
@@ -6001,7 +6001,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     height: 4px;
     margin: 0;
     padding: 0;
-    accent-color: var(--berlin-color, #00aa00);
+    accent-color: var(--berlin-color, #109e43);
 }
 /* Berlin pattern-control sliders match Tune / Semitone chrome */
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider {
@@ -6011,36 +6011,36 @@ body:not(.berlin-mode) .berlin-drum-bar {
     accent-color: unset;
 }
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider::-webkit-slider-runnable-track {
-    border-color: color-mix(in srgb, var(--berlin-color, #00aa00) 55%, #0a0f0a);
+    border-color: color-mix(in srgb, var(--berlin-color, #109e43) 55%, #0a0f0a);
 }
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb {
-    background: var(--berlin-color, #00aa00);
-    border-color: color-mix(in srgb, var(--berlin-color, #00aa00) 70%, #fff);
+    background: var(--berlin-color, #109e43);
+    border-color: color-mix(in srgb, var(--berlin-color, #109e43) 70%, #fff);
 }
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:hover,
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider::-webkit-slider-thumb:active,
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider:focus::-webkit-slider-thumb {
-    background: color-mix(in srgb, var(--berlin-color, #00aa00) 75%, #fff);
+    background: color-mix(in srgb, var(--berlin-color, #109e43) 75%, #fff);
 }
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider::-moz-range-track {
-    border-color: color-mix(in srgb, var(--berlin-color, #00aa00) 55%, #0a0f0a);
+    border-color: color-mix(in srgb, var(--berlin-color, #109e43) 55%, #0a0f0a);
 }
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider::-moz-range-thumb {
-    background: var(--berlin-color, #00aa00);
-    border-color: color-mix(in srgb, var(--berlin-color, #00aa00) 70%, #fff);
+    background: var(--berlin-color, #109e43);
+    border-color: color-mix(in srgb, var(--berlin-color, #109e43) 70%, #fff);
 }
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:hover,
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider::-moz-range-thumb:active,
 .keyboard-section .berlin-row input[type="range"].keyboard-master-tune-slider:focus::-moz-range-thumb {
-    background: color-mix(in srgb, var(--berlin-color, #00aa00) 75%, #fff);
+    background: color-mix(in srgb, var(--berlin-color, #109e43) 75%, #fff);
 }
 .berlin-row select {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
     padding: 2px 4px;
-    color: var(--berlin-color, #00aa00);
+    color: var(--berlin-color, #109e43);
     background: #0d0d0d;
-    border: 1px solid var(--berlin-color, #00aa00);
+    border: 1px solid var(--berlin-color, #109e43);
     border-radius: 3px;
     outline: none;
 }
@@ -6052,8 +6052,8 @@ body:not(.berlin-mode) .berlin-drum-bar {
     font-size: 7px;
 }
 .berlin-row .berlin-step-btn {
-    border-color: var(--berlin-color, #00aa00);
-    color: var(--berlin-color, #00aa00);
+    border-color: var(--berlin-color, #109e43);
+    color: var(--berlin-color, #109e43);
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
     font-family: 'Michroma', sans-serif;
     line-height: 1;
@@ -6068,7 +6068,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     outline: none;
 }
 .berlin-row .berlin-step-btn:not(.off) {
-    background: var(--berlin-color, #00aa00);
+    background: var(--berlin-color, #109e43);
     color: #000;
 }
 
@@ -6091,7 +6091,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     max-width: 48px;
     min-width: 0;
     box-sizing: border-box;
-    border: 1px solid color-mix(in srgb, var(--berlin-color, #00aa00) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--berlin-color, #109e43) 55%, transparent);
     border-radius: 4px;
     position: relative;
 }
@@ -6102,13 +6102,13 @@ body:not(.berlin-mode) .berlin-drum-bar {
     font-family: 'Michroma', sans-serif;
     font-size: 6px;
     line-height: 1;
-    color: color-mix(in srgb, var(--berlin-color, #00aa00) 80%, transparent);
+    color: color-mix(in srgb, var(--berlin-color, #109e43) 80%, transparent);
 }
 .berlin-step-value {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     line-height: 1;
-    color: var(--berlin-color, #00aa00);
+    color: var(--berlin-color, #109e43);
 }
 .keyboard-section .berlin-step input[type="range"].berlin-step-tune {
     display: none;
@@ -6139,7 +6139,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     -webkit-appearance: none;
     appearance: none;
     height: 1px;
-    background: var(--berlin-color, #00aa00);
+    background: var(--berlin-color, #109e43);
     border: none;
     border-radius: 0;
     box-shadow: none;
@@ -6152,7 +6152,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     margin-top: 2px;
     border: none;
     border-radius: 0;
-    background: var(--berlin-color, #00ff00);
+    background: var(--berlin-color, #18ed64);
     box-shadow: none;
     cursor: pointer;
     transition: none;
@@ -6161,7 +6161,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
 }
 .keyboard-section input[type="range"].berlin-step-fine::-moz-range-track {
     height: 1px;
-    background: var(--berlin-color, #00aa00);
+    background: var(--berlin-color, #109e43);
     border: none;
     border-radius: 0;
     box-shadow: none;
@@ -6171,7 +6171,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     height: 6px;
     border: none;
     border-radius: 0;
-    background: var(--berlin-color, #00ff00);
+    background: var(--berlin-color, #18ed64);
     box-shadow: none;
     cursor: pointer;
     transition: none;
@@ -6184,7 +6184,7 @@ body:not(.berlin-mode) .berlin-drum-bar {
     font-family: 'Michroma', sans-serif;
     font-size: 6px;
     line-height: 1;
-    color: var(--berlin-color, #00aa00);
+    color: var(--berlin-color, #109e43);
     letter-spacing: 0;
     margin-top: 2px;
     text-align: center;
@@ -6204,18 +6204,18 @@ body:not(.berlin-mode) .berlin-drum-bar {
 .berlin-step-knob .synth-knob-dial {
     width: 22px;
     height: 22px;
-    border-color: var(--berlin-color, #00aa00);
+    border-color: var(--berlin-color, #109e43);
 }
 .berlin-step-knob .synth-knob-indicator {
     width: 2px;
     height: 7px;
     top: 2px;
     transform-origin: 50% 9px; /* dial radius (11) - top (2) */
-    background: var(--berlin-color, #00aa00);
+    background: var(--berlin-color, #109e43);
 }
 .berlin-step.active .berlin-step-knob .synth-knob-dial {
-    background: var(--berlin-color, #00aa00);
-    box-shadow: 0 0 8px color-mix(in srgb, var(--berlin-color, #00aa00) 60%, transparent);
+    background: var(--berlin-color, #109e43);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--berlin-color, #109e43) 60%, transparent);
 }
 .berlin-step.active .berlin-step-knob .synth-knob-indicator {
     background: #000;
@@ -6262,7 +6262,7 @@ body.berlin-mode .berlin-locked {
     width: 100%;
     padding: 4px 8px 8px;
     box-sizing: border-box;
-    color: #00ff00;
+    color: #18ed64;
 }
 body.berlin-mode .berlin-mode-brand {
     display: flex;
@@ -6316,8 +6316,8 @@ body.berlin-mode .berlin-mode-brand {
     transform-origin: 50% 10px; /* dial radius (13) - top (3) */
 }
 .keyboard-step.active .keyboard-step-knob .synth-knob-dial {
-    border-color: #00ff00;
-    background: #00ff00;
+    border-color: #18ed64;
+    background: #18ed64;
     box-shadow: none;
 }
 .keyboard-step.active .keyboard-step-knob .synth-knob-indicator {
@@ -6339,14 +6339,14 @@ body.berlin-mode .berlin-mode-brand {
     padding: 3px 1px;
     margin: 0;
     border-radius: 3px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     letter-spacing: 0;
     line-height: 1;
-    color: #00aa00;
+    color: #109e43;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -6361,31 +6361,31 @@ body.berlin-mode .berlin-mode-brand {
 }
 .kb-step-btn:hover,
 .kb-step-btn:focus-visible {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
 }
 .kb-step-btn:active,
 .kb-step-btn:not(.off) {
-    border-color: #00ff00;
-    background: #00ff00;
+    border-color: #18ed64;
+    background: #18ed64;
     box-shadow: none;
     color: #000;
 }
 .kb-step-btn.off {
-    color: #00aa00;
-    border-color: #00aa00;
+    color: #109e43;
+    border-color: #109e43;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
 }
 .kb-step-btn.off:hover,
 .kb-step-btn.off:focus-visible {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
 }
 .kb-step-btn:not(.off):hover,
 .kb-step-btn:not(.off):focus-visible {
-    border-color: #00ff00;
-    background: #00ff00;
+    border-color: #18ed64;
+    background: #18ed64;
     color: #000;
 }
 .keyboard-toolbar-btn {
@@ -6489,7 +6489,7 @@ body.berlin-mode .berlin-mode-brand {
 .keyboard-pattern-fieldset {
     margin: 0 0 6px;
     padding: 6px 8px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
     width: 100%;
     max-width: 100%;
@@ -6509,10 +6509,10 @@ body.berlin-mode .berlin-mode-brand {
 
 /* --- Note readout: fixed 14-cell 5×7 matrix VFD (not the 16-seg DISP) --- */
 .note-vfd {
-    /* Playing / idle: green (matches former #00ff00 readout) */
-    --note-vfd-on: #00ff00;
-    --note-vfd-on-glow: 0 0 3px rgba(0, 255, 0, 0.95), 0 0 7px rgba(0, 200, 60, 0.45);
-    --note-vfd-off: rgba(0, 48, 0, 0.55);
+    /* Playing / idle: green (matches former #18ed64 readout) */
+    --note-vfd-on: #18ed64;
+    --note-vfd-on-glow: 0 0 3px rgba(24, 237, 100, 0.95), 0 0 7px rgba(19, 186, 79, 0.45);
+    --note-vfd-off: rgba(4, 45, 19, 0.55);
     display: flex;
     justify-content: center;
     box-sizing: border-box;
@@ -6535,8 +6535,8 @@ body.berlin-mode .berlin-mode-brand {
     justify-content: center;
     padding: 2px 3px;
     background:
-        linear-gradient(180deg, #2a4a2e 0%, #1a3020 40%, #142418 100%);
-    border: 1px solid #2e4a30;
+        linear-gradient(180deg, #2a4534 0%, #1a2d21 40%, #142119 100%);
+    border: 1px solid #2d4536;
     border-radius: 2px;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
@@ -6552,12 +6552,12 @@ body.berlin-mode .berlin-mode-brand {
     justify-content: center;
     box-sizing: border-box;
     background: #050805;
-    border: 1px solid #0c1a0c;
+    border: 1px solid #0c1811;
     border-radius: 1px;
     overflow: hidden;
     box-shadow:
         inset 0 0 12px rgba(0, 0, 0, 0.75),
-        inset 0 -8px 14px rgba(0, 40, 0, 0.35);
+        inset 0 -8px 14px rgba(4, 37, 16, 0.35);
 }
 canvas.vfd-glass {
     display: block;
@@ -6582,7 +6582,7 @@ canvas.vfd-glass {
     right: 0;
     bottom: 0;
     height: 6px;
-    background: linear-gradient(to top, rgba(0, 35, 0, 0.5), transparent);
+    background: linear-gradient(to top, rgba(3, 33, 14, 0.5), transparent);
     pointer-events: none;
     z-index: 0;
 }
@@ -6594,7 +6594,7 @@ canvas.vfd-glass {
     right: 3px;
     bottom: 2px;
     height: 6px;
-    background: linear-gradient(to top, rgba(0, 35, 0, 0.5), transparent);
+    background: linear-gradient(to top, rgba(3, 33, 14, 0.5), transparent);
     pointer-events: none;
     z-index: 1;
     border-radius: 0 0 1px 1px;
@@ -6682,7 +6682,7 @@ canvas.vfd-glass {
 .keyboard-pattern-shift-label {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
-    color: #00ff00;
+    color: #18ed64;
     letter-spacing: 0.04em;
     line-height: 1;
     white-space: nowrap;
@@ -6809,14 +6809,14 @@ body:not(.drum-mode) #keyboardDrumLanes {
     padding: 0 10px;
     margin: 0;
     border-radius: 3px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
     text-align: center;
 }
 .keyboard-octave-readout {
     font-family: 'Michroma', sans-serif;
-    color: #00ff00;
+    color: #18ed64;
     font-size: 11px;
     line-height: 1;
     white-space: nowrap;
@@ -6847,7 +6847,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
 }
 .keyboard-pattern-ctl .berlin-ctl-label,
 .keyboard-pattern-ctl .berlin-ctl-value {
-    color: #00aa00;
+    color: #109e43;
 }
 .keyboard-pattern-ctl .berlin-ctl-value {
     min-width: 24px;
@@ -6882,8 +6882,8 @@ body:not(.drum-mode) #keyboardDrumLanes {
 }
 /* Green push-depth base on dark keyboard chrome pushables (modes, play, write, automation, …) */
 .keyboard-section button.pushable[class*="keyboard-"] {
-    background: rgba(0, 170, 0, 0.5);
-    box-shadow: 0 0 4px rgba(0, 255, 0, 0.55);
+    background: rgba(16, 158, 67, 0.5);
+    box-shadow: 0 0 4px rgba(24, 237, 100, 0.55);
 }
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle,
 #berlinToggle.pushable.keyboard-berlin-toggle,
@@ -6891,7 +6891,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle,
 #keyboardMultitudesToggle.pushable.keyboard-multitudes-toggle,
 #computerKeyboardToggle.pushable.keyboard-computer-keys-toggle {
-    background: rgba(0, 170, 0, 0.5);
+    background: rgba(16, 158, 67, 0.5);
     width: 168px;
     height: 44px;
     flex: 0 0 168px;
@@ -6899,7 +6899,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
 }
 /* Column dock: flex-basis is height. Never use the 168px face width as basis. */
 #kbDrumMode.pushable.keyboard-drum-mode-toggle {
-    background: rgba(0, 170, 0, 0.5);
+    background: rgba(16, 158, 67, 0.5);
     width: min(168px, 100%);
     max-width: 100%;
     height: 44px;
@@ -6961,7 +6961,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
 #berlinToggle.pushable.keyboard-berlin-toggle:not(.off) .front,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle.on .front,
 #keyboardPolyToggle.pushable.keyboard-poly-toggle:not(.off) .front {
-    color: #00ff00;
+    color: #18ed64;
 }
 #kbAcidStripToggle.pushable.keyboard-acid-strip-toggle.off .front,
 #berlinToggle.pushable.keyboard-berlin-toggle.off .front,
@@ -7130,8 +7130,8 @@ body:not(.drum-mode) #keyboardDrumLanes {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: #00ff00;
-    box-shadow: 0 0 6px rgba(0, 255, 0, 0.65);
+    background: #18ed64;
+    box-shadow: 0 0 6px rgba(24, 237, 100, 0.65);
     pointer-events: none;
     opacity: var(--kb-rec-blink);
 }
@@ -7152,7 +7152,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
 /* Armed poly Chord Mem: solid green SVG, no rec dot */
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.chord-mem-on:not(.active) .kb-chord-mem-label {
     display: block;
-    color: #00ff00;
+    color: #18ed64;
 }
 #keyboardChordMemToggle.pushable.keyboard-chord-mem-toggle.chord-mem-on:not(.active) .kb-chord-mem-dot {
     display: none;
@@ -7177,11 +7177,11 @@ body:not(.drum-mode) #keyboardDrumLanes {
     width: 100%;
     box-sizing: border-box;
     padding: 10px 12px 12px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background:
-        linear-gradient(to bottom, rgba(0, 40, 0, 0.35) 0%, transparent 14px),
-        linear-gradient(to bottom, #0a120a 0%, #050805 100%);
-    box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.08);
+        linear-gradient(to bottom, rgba(4, 37, 16, 0.35) 0%, transparent 14px),
+        linear-gradient(to bottom, #0a110c 0%, #050805 100%);
+    box-shadow: inset 0 0 0 1px rgba(24, 237, 100, 0.08);
     position: relative;
 }
 .keyboard-acid-strip-panel::before {
@@ -7191,7 +7191,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
     right: 10px;
     top: 8px;
     height: 1px;
-    background: rgba(0, 170, 0, 0.55);
+    background: rgba(16, 158, 67, 0.55);
     pointer-events: none;
 }
 .keyboard-acid-strip-brand-col {
@@ -7203,7 +7203,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
     flex: 0 0 auto;
     align-self: stretch;
     padding-right: 12px;
-    border-right: 1px solid rgba(0, 170, 0, 0.55);
+    border-right: 1px solid rgba(16, 158, 67, 0.55);
     min-width: 88px;
     box-sizing: border-box;
 }
@@ -7212,7 +7212,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
     padding-right: 0;
     padding-left: 12px;
     border-right: none;
-    border-left: 1px solid rgba(0, 170, 0, 0.55);
+    border-left: 1px solid rgba(16, 158, 67, 0.55);
     min-width: 0;
 }
 /* Same wave toggle chrome as fullscreen oscillators — saw/square only */
@@ -7223,7 +7223,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
 }
 .keyboard-acid-logo {
     display: block;
-    background-color: #00ff00;
+    background-color: #18ed64;
     pointer-events: none;
     flex: 0 0 auto;
     flex-shrink: 0;
@@ -7323,8 +7323,8 @@ body:not(.drum-mode) #keyboardDrumLanes {
         justify-content: safe center;
         margin-top: 2px;
         padding: 8px 0 0;
-        border-top: 1px solid rgba(0, 170, 0, 0.55);
-        scrollbar-color: #00aa00 #111;
+        border-top: 1px solid rgba(16, 158, 67, 0.55);
+        scrollbar-color: #109e43 #111;
         scrollbar-width: thin;
     }
     .keyboard-acid-strip-knobs .acid-303-knob.synth-knob {
@@ -7382,8 +7382,8 @@ body:not(.drum-mode) #keyboardDrumLanes {
         justify-content: safe center;
         margin-top: 2px;
         padding: 8px 0 0;
-        border-top: 1px solid rgba(0, 170, 0, 0.55);
-        scrollbar-color: #00aa00 #111;
+        border-top: 1px solid rgba(16, 158, 67, 0.55);
+        scrollbar-color: #109e43 #111;
         scrollbar-width: thin;
     }
     .keyboard-acid-strip-knobs .acid-303-knob.synth-knob {
@@ -7411,7 +7411,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
     top: 16px;
     bottom: 8px;
     width: 1px;
-    background: rgba(0, 170, 0, 0.35);
+    background: rgba(16, 158, 67, 0.35);
     pointer-events: none;
 }
 .acid-303-knob .synth-knob-label {
@@ -7468,25 +7468,25 @@ body:not(.drum-mode) #keyboardDrumLanes {
     width: var(--acid-size);
     height: var(--acid-size);
     z-index: 2;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: transparent;
     box-shadow:
         0 8px 5px -5px rgba(0, 0, 0, 0.85),
-        inset 0 0 0 1px rgba(0, 255, 0, 0.1);
+        inset 0 0 0 1px rgba(24, 237, 100, 0.1);
     overflow: hidden; /* keep pointer dash inside the knob rim */
 }
 .acid-303-knob .synth-knob-dial.acid-303-dial:hover,
 .acid-303-knob .synth-knob-dial.acid-303-dial:focus-visible {
-    border-color: #00ff00;
+    border-color: #18ed64;
     box-shadow:
         0 8px 5px -5px rgba(0, 0, 0, 0.85),
-        inset 0 0 0 1px rgba(0, 255, 0, 0.2);
+        inset 0 0 0 1px rgba(24, 237, 100, 0.2);
 }
 .acid-303-knob .synth-knob-dial.acid-303-dial.active {
-    border-color: #00ff00;
+    border-color: #18ed64;
     box-shadow:
         0 8px 5px -5px rgba(0, 0, 0, 0.9),
-        inset 0 0 0 1px rgba(0, 255, 0, 0.28);
+        inset 0 0 0 1px rgba(24, 237, 100, 0.28);
 }
 .acid-303-knurl,
 .acid-303-bevel,
@@ -7502,13 +7502,13 @@ body:not(.drum-mode) #keyboardDrumLanes {
     border-radius: 50%;
     background: repeating-conic-gradient(
         from 0deg,
-        #1a2a1a 0deg 3.5deg,
+        #1a271e 0deg 3.5deg,
         #050805 3.5deg 7deg,
-        #142014 7deg 10.5deg,
+        #141e17 7deg 10.5deg,
         #020402 10.5deg 14deg
     );
     box-shadow:
-        inset 0 0 0 1px rgba(0, 255, 0, 0.35),
+        inset 0 0 0 1px rgba(24, 237, 100, 0.35),
         inset 0 0 0 2px rgba(0, 0, 0, 0.85);
     -webkit-mask: radial-gradient(
         farthest-side,
@@ -7535,26 +7535,26 @@ body:not(.drum-mode) #keyboardDrumLanes {
             circle at 50% 50%,
             #000 0%,
             #000 calc(var(--acid-face) - 2%),
-            #081208 calc(var(--acid-face) + 2%),
-            #122012 82%,
-            #1a2e1a 92%,
-            #243824 100%
+            #08110b calc(var(--acid-face) + 2%),
+            #121e16 82%,
+            #1a2b20 92%,
+            #233429 100%
         ),
         radial-gradient(
             circle at 30% 26%,
-            rgba(0, 180, 60, 0.22) 0%,
-            rgba(0, 100, 40, 0.08) 40%,
+            rgba(17, 167, 71, 0.22) 0%,
+            rgba(9, 93, 39, 0.08) 40%,
             transparent 65%
         ),
         conic-gradient(
             from 210deg,
-            #1a2e1a 0deg,
-            #0c160c 50deg,
+            #1a2b20 0deg,
+            #0c140f 50deg,
             #040804 110deg,
             #000 160deg,
-            #0a120a 220deg,
-            #162416 280deg,
-            #1a2e1a 360deg
+            #0a110c 220deg,
+            #16211a 280deg,
+            #1a2b20 360deg
         );
     -webkit-mask: radial-gradient(
         farthest-side,
@@ -7571,9 +7571,9 @@ body:not(.drum-mode) #keyboardDrumLanes {
         transparent var(--acid-bevel-outer)
     );
     box-shadow:
-        inset 0 1px 1px rgba(0, 180, 60, 0.22),
+        inset 0 1px 1px rgba(17, 167, 71, 0.22),
         inset 0 -2px 3px rgba(0, 0, 0, 0.95),
-        inset 0 0 0 1px rgba(0, 140, 0, 0.3);
+        inset 0 0 0 1px rgba(13, 130, 55, 0.3);
     z-index: 2;
 }
 /* Flat top face — soft dish, not neon */
@@ -7589,14 +7589,14 @@ body:not(.drum-mode) #keyboardDrumLanes {
             circle at 50% 50%,
             #000 0%,
             #020502 45%,
-            #0a120a 78%,
-            #121c12 100%
+            #0a110c 78%,
+            #121a15 100%
         ),
-        radial-gradient(circle at 34% 30%, rgba(0, 160, 60, 0.12) 0%, transparent 50%);
+        radial-gradient(circle at 34% 30%, rgba(15, 149, 63, 0.12) 0%, transparent 50%);
     box-shadow:
         inset 0 0 5px rgba(0, 0, 0, 0.95),
-        inset 0 1px 1px rgba(0, 160, 60, 0.15),
-        0 0 0 1px #00aa00;
+        inset 0 1px 1px rgba(15, 149, 63, 0.15),
+        0 0 0 1px #109e43;
     z-index: 3;
 }
 /*
@@ -7611,15 +7611,15 @@ body:not(.drum-mode) #keyboardDrumLanes {
     background:
         radial-gradient(
             ellipse 100% 85% at 50% 0%,
-            rgba(0, 160, 60, 0.28) 0%,
-            rgba(0, 80, 30, 0.12) 35%,
+            rgba(15, 149, 63, 0.28) 0%,
+            rgba(7, 74, 31, 0.12) 35%,
             transparent 60%
         ),
         linear-gradient(
             to bottom,
-            #1a2e1a 0%,
-            #0e1a0e 25%,
-            #060c06 55%,
+            #1a2b20 0%,
+            #0e1812 25%,
+            #060b08 55%,
             #020402 80%,
             #000 100%
         );
@@ -7637,7 +7637,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
     );
     box-shadow:
         inset 0 -2px 3px rgba(0, 0, 0, 0.9),
-        inset 0 1px 1px rgba(0, 160, 60, 0.2);
+        inset 0 1px 1px rgba(15, 149, 63, 0.2);
     transform: translate(-50%, -50%) rotate(var(--knob-angle, -135deg));
     transform-origin: 50% 50%;
     z-index: 4;
@@ -7654,9 +7654,9 @@ body:not(.drum-mode) #keyboardDrumLanes {
     background: linear-gradient(
         to right,
         transparent 0%,
-        #006600 25%,
-        #00aa00 50%,
-        #006600 75%,
+        #095f28 25%,
+        #109e43 50%,
+        #095f28 75%,
         transparent 100%
     );
     opacity: 0.55;
@@ -7668,19 +7668,19 @@ body:not(.drum-mode) #keyboardDrumLanes {
     width: 2px;
     height: 9px;
     margin-left: -1px;
-    background: #00ff00;
+    background: #18ed64;
     border-radius: 1px;
     /* dial radius 20 - top 7 = 13 */
     transform-origin: 50% 13px;
     transform: rotate(var(--knob-angle, -135deg));
-    box-shadow: 0 0 4px rgba(0, 255, 0, 0.6);
+    box-shadow: 0 0 4px rgba(24, 237, 100, 0.6);
     z-index: 5;
 }
 /* Static printed scale marks (TB-303) — radiate outward like a clock/sun */
 .acid-303-knob .synth-knob-tick.acid-303-tick {
     width: 1.5px;
     height: 4px;
-    background: #00aa00;
+    background: #109e43;
     font-size: 0;
     color: transparent;
     opacity: 0.85;
@@ -7696,7 +7696,7 @@ body:not(.drum-mode) #keyboardDrumLanes {
 .acid-303-knob .synth-knob-tick.acid-303-tick--major {
     height: 5.5px;
     width: 1.5px;
-    background: #00cc00;
+    background: #13be50;
     opacity: 1;
 }
 body.acid-osc-locked .keyboard-synth-panel .kb-osc-toggle[data-osc="1"],
@@ -7772,7 +7772,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 .kb-semi-label {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
-    color: #00ff00;
+    color: #18ed64;
     letter-spacing: 0.04em;
     line-height: 1;
     white-space: nowrap;
@@ -7796,12 +7796,12 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     -webkit-appearance: none;
     appearance: none;
     height: 5px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     background: linear-gradient(to bottom, #333 0%, #000 30%, #000 70%, #111 100%);
     box-shadow:
         inset 0 2px 4px rgba(0, 0, 0, 0.85),
-        inset 0 -1px 2px rgba(0, 255, 0, 0.1),
+        inset 0 -1px 2px rgba(24, 237, 100, 0.1),
         0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .keyboard-section .kb-semi-group input[type="range"]::-webkit-slider-thumb {
@@ -7812,30 +7812,30 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     margin-top: -6.5px; /* (5px track - 18px thumb) / 2 */
     border-radius: 50%;
     background: linear-gradient(to bottom, #333, #000);
-    border: 2px solid #00aa00;
+    border: 2px solid #109e43;
     box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.6),
-        inset 0 1px 2px rgba(0, 255, 0, 0.15),
+        inset 0 1px 2px rgba(24, 237, 100, 0.15),
         inset 0 -1px 2px rgba(0, 0, 0, 0.6);
     cursor: pointer;
     transition: all 0.2s ease-out;
 }
 .keyboard-section .kb-semi-group input[type="range"]::-webkit-slider-thumb:hover {
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+    box-shadow: 0 0 15px rgba(24, 237, 100, 0.3);
     transform: scale(1.05);
 }
 .keyboard-section .kb-semi-group input[type="range"]::-webkit-slider-thumb:active {
     transform: scale(1.1);
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+    box-shadow: 0 0 20px rgba(24, 237, 100, 0.5);
 }
 .keyboard-section .kb-semi-group input[type="range"]::-moz-range-track {
     height: 5px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     background: linear-gradient(to bottom, #333 0%, #000 30%, #000 70%, #111 100%);
     box-shadow:
         inset 0 2px 4px rgba(0, 0, 0, 0.85),
-        inset 0 -1px 2px rgba(0, 255, 0, 0.1),
+        inset 0 -1px 2px rgba(24, 237, 100, 0.1),
         0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .keyboard-section .kb-semi-group input[type="range"]::-moz-range-thumb {
@@ -7843,33 +7843,33 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     height: 18px;
     border-radius: 50%;
     background: linear-gradient(to bottom, #333, #000);
-    border: 2px solid #00aa00;
+    border: 2px solid #109e43;
     box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.6),
-        inset 0 1px 2px rgba(0, 255, 0, 0.15),
+        inset 0 1px 2px rgba(24, 237, 100, 0.15),
         inset 0 -1px 2px rgba(0, 0, 0, 0.6);
     cursor: pointer;
     transition: all 0.2s ease-out;
 }
 .keyboard-section .kb-semi-group input[type="range"]::-moz-range-thumb:hover {
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+    box-shadow: 0 0 15px rgba(24, 237, 100, 0.3);
     transform: scale(1.05);
 }
 .keyboard-section .kb-semi-group input[type="range"]::-moz-range-thumb:active {
     transform: scale(1.1);
-    box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+    box-shadow: 0 0 20px rgba(24, 237, 100, 0.5);
 }
 .keyboard-section .kb-semi-group select {
     font-family: 'Michroma', sans-serif;
     background: #333;
-    color: #00ff00;
+    color: #18ed64;
     border: 1px solid #808080;
     padding: 5px;
     border-radius: 4px;
     min-width: 3.5rem;
 }
 .keyboard-section .kb-semi-group span {
-    color: #00ff00;
+    color: #18ed64;
     font-family: 'Michroma', sans-serif;
     font-size: 10px;
 }
@@ -7881,7 +7881,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     gap: 8px;
 }
 .pushable.keyboard-pattern-octave-btn {
-    background: rgba(0, 170, 0, 0.5);
+    background: rgba(16, 158, 67, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -7902,7 +7902,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     font-size: 9px;
     letter-spacing: 0.04em;
     line-height: 1;
-    color: #00ff00;
+    color: #18ed64;
 }
 .pushable.keyboard-pattern-octave-btn .kb-pattern-oct-text {
     display: block;
@@ -7917,11 +7917,11 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 }
 .pushable.keyboard-pattern-octave-btn .kb-pattern-oct-dir-up {
     border-width: 0 5px 8px 5px;
-    border-color: transparent transparent #00ff00 transparent;
+    border-color: transparent transparent #18ed64 transparent;
 }
 .pushable.keyboard-pattern-octave-btn .kb-pattern-oct-dir-down {
     border-width: 8px 5px 0 5px;
-    border-color: #00ff00 transparent transparent transparent;
+    border-color: #18ed64 transparent transparent transparent;
 }
 .pushable.keyboard-pattern-octave-btn:disabled {
     opacity: 0.35;
@@ -7937,7 +7937,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 /* Acc/On footprint + transport (Rev / write-nav) look */
 #kbPatternShiftBack.pushable.keyboard-pattern-shift-btn,
 #kbPatternShiftForward.pushable.keyboard-pattern-shift-btn {
-    background: rgba(0, 170, 0, 0.5);
+    background: rgba(16, 158, 67, 0.5);
     flex: 0 0 auto;
     width: 54px;
     height: auto;
@@ -7957,7 +7957,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     font-size: 7px;
     letter-spacing: 0;
     line-height: 1;
-    color: #00ff00;
+    color: #18ed64;
 }
 .kb-dir-arrow {
     display: block;
@@ -7983,7 +7983,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 .pattern-shift-label {
     font-family: 'Michroma', sans-serif;
     font-size: 10px;
-    color: #00ff00;
+    color: #18ed64;
     letter-spacing: 0.04em;
     line-height: 1;
     white-space: nowrap;
@@ -8005,7 +8005,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     align-items: center;
     justify-content: center;
     background: linear-gradient(to bottom, #333, #000);
-    color: #00ff00;
+    color: #18ed64;
 }
 .keyboard-write-step-select {
     display: flex;
@@ -8019,7 +8019,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 .keyboard-write-step-select-label {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
-    color: #00ff00;
+    color: #18ed64;
     letter-spacing: 0.04em;
     line-height: 1;
     height: 8px;
@@ -8044,13 +8044,13 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 .keyboard-perf-fieldset {
     margin: 0;
     padding: 8px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
     box-sizing: border-box;
 }
 .keyboard-perf-fieldset legend {
     font-family: 'Michroma', sans-serif;
-    color: #00aa00;
+    color: #109e43;
     padding: 0 5px;
     font-size: 10px;
     font-weight: normal;
@@ -8070,7 +8070,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     text-align: left;
 }
 #kbStartStop.pushable.keyboard-start-stop {
-    background: rgba(0, 170, 0, 0.5);
+    background: rgba(16, 158, 67, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -8097,7 +8097,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     height: 0;
     border-style: solid;
     border-width: 9px 0 9px 16px;
-    border-color: transparent transparent transparent #00ff00;
+    border-color: transparent transparent transparent #18ed64;
     margin-left: 3px;
 }
 #kbStartStop.stop .kb-transport-icon {
@@ -8109,7 +8109,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     margin-left: 0;
 }
 #kbRev.pushable.keyboard-rev {
-    background: rgba(0, 170, 0, 0.5);
+    background: rgba(16, 158, 67, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -8128,14 +8128,14 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     font-size: 9px;
     letter-spacing: 0.04em;
     line-height: 1;
-    color: #00ff00;
+    color: #18ed64;
 }
 #kbRev.pushable.keyboard-rev.on .front,
 #kbRev.pushable.keyboard-rev:not(.off) .front {
     color: #ff0000;
 }
 #kbRev.pushable.keyboard-rev.off .front {
-    color: #00ff00;
+    color: #18ed64;
 }
 .keyboard-write-fine-knob.synth-knob {
     position: relative;
@@ -8178,7 +8178,7 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 #kbRest.pushable.keyboard-write-rest,
 #kbWriteAcc.pushable.keyboard-write-arm,
 #kbWriteSld.pushable.keyboard-write-arm {
-    background: rgba(0, 170, 0, 0.5);
+    background: rgba(16, 158, 67, 0.5);
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
@@ -8210,14 +8210,14 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
     font-size: 9px;
     letter-spacing: 0.04em;
     line-height: 1;
-    color: #00ff00;
+    color: #18ed64;
 }
 #kbWrite.pushable.keyboard-write .front {
     width: 72px;
 }
 #kbWrite.pushable.keyboard-write .kb-write-label {
     display: none;
-    color: #00ff00;
+    color: #18ed64;
     font-size: 9px;
     letter-spacing: 0.04em;
 }
@@ -8260,14 +8260,14 @@ fieldset.control-group.unison-group.poly-classic-unison-locked #unisonVoices,
 }
 #kbWriteAcc.pushable.keyboard-write-arm.off .front,
 #kbWriteSld.pushable.keyboard-write-arm.off .front {
-    color: #00ff00;
+    color: #18ed64;
 }
 #kbRest.pushable.keyboard-write-rest.on .front,
 #kbRest.pushable.keyboard-write-rest:not(.off) .front {
     color: #ff0000;
 }
 #kbRest.pushable.keyboard-write-rest.off .front {
-    color: #00ff00;
+    color: #18ed64;
 }
 .keyboard-step.write-cursor {
     outline: 1px solid rgba(255, 51, 51, var(--kb-rec-blink));
@@ -8309,7 +8309,7 @@ body.write-mode-on .keyboard-step {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
     letter-spacing: 0.04em;
-    color: #00ff00;
+    color: #18ed64;
     line-height: 1;
     height: 8px;
     display: flex;
@@ -8339,9 +8339,9 @@ body.write-mode-on .keyboard-step {
     position: relative;
     width: 22px;
     height: 34px;
-    --seg-on: #00ff66;
-    --seg-off: rgba(0, 48, 0, 0.55);
-    --seg-glow: 0 0 4px rgba(0, 255, 102, 0.9), 0 0 8px rgba(0, 200, 60, 0.4);
+    --seg-on: #18ed64;
+    --seg-off: rgba(4, 45, 19, 0.55);
+    --seg-glow: 0 0 4px rgba(24, 237, 100, 0.9), 0 0 8px rgba(19, 186, 79, 0.4);
     --seg-w: 2.5px;
 }
 /* Write / Arp / Scale / STEPS preview & write cursor: cyan; playback & brand stay green.
@@ -8353,7 +8353,7 @@ body.write-mode-on .keyboard-step {
 }
 .keyboard-step-vfd-digits.lit .sixteen-seg .seg {
     /* Keep unused segments nearly invisible so they don't veil lit bars */
-    background: rgba(0, 40, 0, 0.32);
+    background: rgba(4, 37, 16, 0.32);
 }
 .keyboard-step-vfd-digits.lit.vfd-cyan .sixteen-seg .seg {
     background: rgba(0, 40, 40, 0.32);
@@ -8469,7 +8469,7 @@ body.write-mode-on .keyboard-step {
 
 /* Lit segments are toggled via JS (.on) from vfd-charset.js */
 .keyboard-step-vfd-digits.lit .sixteen-seg .seg {
-    background: rgba(0, 40, 0, 0.32);
+    background: rgba(4, 37, 16, 0.32);
 }
 .keyboard-step-vfd-digits.lit .sixteen-seg .seg.on {
     background: var(--seg-on);
@@ -8588,7 +8588,7 @@ body.write-mode-on .keyboard-step {
     min-width: 0;
     margin: 0;
     padding: 2px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     background: #111;
     box-sizing: border-box;
@@ -8668,17 +8668,17 @@ body.write-mode-on .keyboard-step {
     font-size: clamp(6px, 1.7cqi, 9px);
     line-height: 1;
     min-height: 0.9em;
-    color: #00cc00;
+    color: #13be50;
     letter-spacing: 0.02em;
     white-space: nowrap;
 }
 .keyboard-pitch-bend-track {
     position: relative;
     height: 44px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px; /* match Steps / other keyboard fieldsets */
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 8px rgba(24, 237, 100, 0.15);
     cursor: ew-resize;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
@@ -8689,10 +8689,10 @@ body.write-mode-on .keyboard-step {
 .keyboard-lfo-strip-track {
     position: relative;
     height: 44px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 8px rgba(24, 237, 100, 0.15);
     cursor: ew-resize;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
@@ -8702,23 +8702,23 @@ body.write-mode-on .keyboard-step {
 }
 .keyboard-pitch-bend:hover .keyboard-pitch-bend-track,
 .keyboard-pitch-bend:focus-visible .keyboard-pitch-bend-track {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
 }
 .keyboard-lfo-strip:hover .keyboard-lfo-strip-track,
 .keyboard-lfo-strip:focus-visible .keyboard-lfo-strip-track {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
 }
 .keyboard-pitch-bend.active .keyboard-pitch-bend-track {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #004400 0%, #002200 100%);
-    box-shadow: inset 0 0 12px rgba(0, 255, 0, 0.35);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #063f1b 0%, #03200d 100%);
+    box-shadow: inset 0 0 12px rgba(24, 237, 100, 0.35);
 }
 .keyboard-lfo-strip.active .keyboard-lfo-strip-track {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #004400 0%, #002200 100%);
-    box-shadow: inset 0 0 12px rgba(0, 255, 0, 0.35);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #063f1b 0%, #03200d 100%);
+    box-shadow: inset 0 0 12px rgba(24, 237, 100, 0.35);
 }
 .keyboard-pitch-bend-center {
     position: absolute;
@@ -8727,7 +8727,7 @@ body.write-mode-on .keyboard-step {
     bottom: 6px;
     width: 1px;
     margin-left: -0.5px;
-    background: rgba(0, 255, 0, 0.35);
+    background: rgba(24, 237, 100, 0.35);
     pointer-events: none;
 }
 .keyboard-pitch-bend-thumb {
@@ -8737,9 +8737,9 @@ body.write-mode-on .keyboard-step {
     width: 10px;
     margin-left: -5px;
     left: calc(50% + var(--bend) * 50%);
-    border: 1px solid #00ff00;
-    background: linear-gradient(to bottom, #00cc00, #006600);
-    box-shadow: 0 0 6px rgba(0, 255, 0, 0.45);
+    border: 1px solid #18ed64;
+    background: linear-gradient(to bottom, #13be50, #095f28);
+    box-shadow: 0 0 6px rgba(24, 237, 100, 0.45);
     pointer-events: none;
 }
 .keyboard-lfo-strip-thumb {
@@ -8748,9 +8748,9 @@ body.write-mode-on .keyboard-step {
     bottom: 4px;
     width: 10px;
     left: calc(var(--lfo) * (100% - 10px));
-    border: 1px solid #00ff00;
-    background: linear-gradient(to bottom, #00cc00, #006600);
-    box-shadow: 0 0 6px rgba(0, 255, 0, 0.45);
+    border: 1px solid #18ed64;
+    background: linear-gradient(to bottom, #13be50, #095f28);
+    box-shadow: 0 0 6px rgba(24, 237, 100, 0.45);
     pointer-events: none;
 }
 .keyboard-pitch-bend .synth-knob-label,
@@ -8773,7 +8773,7 @@ body.write-mode-on .keyboard-step {
     width: 3px;
     height: 3px;
     border-radius: 50%;
-    background: #00cc00;
+    background: #13be50;
     font-size: 0;
 }
 .synth-knob-dial-wrap {
@@ -8798,7 +8798,7 @@ body.write-mode-on .keyboard-step {
     top: 50%;
     font-family: 'Michroma', sans-serif;
     font-size: 6px;
-    color: #00cc00;
+    color: #13be50;
     letter-spacing: 0.02em;
     line-height: 1;
     white-space: nowrap;
@@ -8815,9 +8815,9 @@ body.write-mode-on .keyboard-step {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 8px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 8px rgba(24, 237, 100, 0.15);
     cursor: ns-resize;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
@@ -8825,13 +8825,13 @@ body.write-mode-on .keyboard-step {
 }
 .synth-knob-dial:hover,
 .synth-knob-dial:focus-visible {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
 }
 .synth-knob-dial.active {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #004400 0%, #002200 100%);
-    box-shadow: inset 0 0 12px rgba(0, 255, 0, 0.35);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #063f1b 0%, #03200d 100%);
+    box-shadow: inset 0 0 12px rgba(24, 237, 100, 0.35);
 }
 .synth-knob-indicator {
     position: absolute;
@@ -8840,17 +8840,17 @@ body.write-mode-on .keyboard-step {
     width: 2px;
     height: 12px;
     margin-left: -1px;
-    background: #00ff00;
+    background: #18ed64;
     border-radius: 1px;
     transform-origin: 50% 17px; /* dial radius (22) - top offset (5) */
     transform: rotate(var(--knob-angle, -135deg));
     pointer-events: none;
-    box-shadow: 0 0 4px rgba(0, 255, 0, 0.6);
+    box-shadow: 0 0 4px rgba(24, 237, 100, 0.6);
 }
 .synth-knob-label {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
-    color: #00ff00;
+    color: #18ed64;
     letter-spacing: 0.04em;
     line-height: 1;
     pointer-events: none;
@@ -8862,7 +8862,7 @@ body.write-mode-on .keyboard-step {
 .synth-knob-value {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
-    color: #00cc00;
+    color: #13be50;
     letter-spacing: 0.02em;
     line-height: 1;
     pointer-events: none;
@@ -8902,7 +8902,7 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-track {
 .keyboard-acid-strip-knobs::-webkit-scrollbar-thumb,
 .computer-keyboard-panel::-webkit-scrollbar-thumb,
 body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb {
-    background: #00aa00;
+    background: #109e43;
     border-radius: 7px;
     min-width: 24px;
 }
@@ -8913,7 +8913,7 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb {
 .keyboard-acid-strip-knobs::-webkit-scrollbar-thumb:hover,
 .computer-keyboard-panel::-webkit-scrollbar-thumb:hover,
 body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
-    background: #00ff00;
+    background: #18ed64;
 }
 .chromatic-keyboard {
     --white-count: 52;
@@ -8968,32 +8968,32 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     width: var(--white-key-width);
     height: 100%;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    border-color: #00aa00;
-    color: #00ff00;
+    border-color: #109e43;
+    color: #18ed64;
 }
 .piano-key-white:hover {
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
-    border-color: #00ff00;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
+    border-color: #18ed64;
 }
 .piano-key-black {
     position: absolute;
     top: 0;
     height: 58%;
     background: linear-gradient(to bottom, #050505 0%, #111 100%);
-    border-color: #00aa00;
-    color: #00cc00;
+    border-color: #109e43;
+    color: #13be50;
     pointer-events: auto;
     z-index: 3;
 }
 .piano-key-black:hover {
-    background: linear-gradient(to bottom, #0a1a0a 0%, #152515 100%);
-    border-color: #00ff00;
+    background: linear-gradient(to bottom, #0b1810 0%, #15221a 100%);
+    border-color: #18ed64;
 }
 .piano-key.active,
 .piano-key.latched {
-    background: linear-gradient(to bottom, #004400 0%, #002200 100%) !important;
-    border-color: #00ff00 !important;
-    box-shadow: inset 0 0 12px rgba(0, 255, 0, 0.35);
+    background: linear-gradient(to bottom, #063f1b 0%, #03200d 100%) !important;
+    border-color: #18ed64 !important;
+    box-shadow: inset 0 0 12px rgba(24, 237, 100, 0.35);
 }
 .piano-key.key-root:not(.active):not(.latched) {
     border-color: #00ffff;
@@ -9009,7 +9009,7 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
 .piano-key-black .piano-key-label {
     font-size: 7px;
     padding-bottom: 4px;
-    color: #88ff88;
+    color: #8aedad;
 }
 .piano-key.active .piano-key-label,
 .piano-key.latched .piano-key-label {
@@ -9073,7 +9073,7 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     }
     body.view-tabbed .keyboard-tab-strip {
         overflow-x: auto;
-        scrollbar-color: #00aa00 #111;
+        scrollbar-color: #109e43 #111;
         scrollbar-width: auto;
     }
     /* Sequencer, then the Automation / Scale folder, then the mode toggles and
@@ -9208,14 +9208,14 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     }
     .keyboard-unison-voices-label {
         font-size: 6px;
-        color: #00aa00;
+        color: #109e43;
     }
     .keyboard-unison-voices select {
         min-width: 0;
         max-width: 4rem;
         font-size: 8px;
-        color: #00ff00;
-        border-color: #00aa00;
+        color: #18ed64;
+        border-color: #109e43;
     }
     .keyboard-phase-reset-field {
         height: auto;
@@ -9347,14 +9347,14 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     }
     .keyboard-noise-type-label {
         font-size: 6px;
-        color: #00aa00;
+        color: #109e43;
     }
     .keyboard-noise-type-select {
         min-width: 0;
         max-width: 4.5rem;
         font-size: 8px;
-        color: #00ff00;
-        border-color: #00aa00;
+        color: #18ed64;
+        border-color: #109e43;
     }
     .kb-step-btn.kb-noise-toggle {
         font-size: 6px;
@@ -9745,7 +9745,7 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     box-sizing: border-box;
     user-select: none;
     -webkit-user-select: none;
-    scrollbar-color: #00aa00 #111;
+    scrollbar-color: #109e43 #111;
     scrollbar-width: auto;
 }
 .computer-keyboard-case {
@@ -9763,11 +9763,11 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     box-sizing: border-box;
     padding: 16px var(--ckb-case-pad-x);
     background: #050505;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 10px;
     box-shadow:
-        inset 0 0 0 1px rgba(0, 170, 0, 0.15),
-        0 0 12px rgba(0, 170, 0, 0.12);
+        inset 0 0 0 1px rgba(16, 158, 67, 0.15),
+        0 0 12px rgba(16, 158, 67, 0.12);
 }
 .ckb-model-m-logo {
     flex: 0 0 var(--ckb-logo-w);
@@ -9830,9 +9830,9 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     height: var(--ckb-key-size);
     padding: 4px 2px;
     border-radius: 5px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: linear-gradient(to bottom, #2a2a2a 0%, #161616 55%, #0e0e0e 100%);
-    color: #00ff00;
+    color: #18ed64;
     font-family: 'Michroma', sans-serif;
     transform: translateY(calc(-1 * var(--ckb-travel)));
     transition: transform 0.12s ease-out, background 0.12s ease-out, border-color 0.12s ease-out;
@@ -9847,15 +9847,15 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
         inset 0 -2px 0 rgba(0, 0, 0, 0.45);
 }
 .ckb-key.pushable:hover .front {
-    border-color: #00ff00;
+    border-color: #18ed64;
     background: linear-gradient(to bottom, #303830 0%, #1a221a 55%, #101610 100%);
 }
 .ckb-key.pushable:active .front,
 .ckb-key.pushable.is-down .front {
     transform: translateY(-1px);
-    background: linear-gradient(to bottom, #004400 0%, #002200 100%);
-    border-color: #00ff00;
-    box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.3);
+    background: linear-gradient(to bottom, #063f1b 0%, #03200d 100%);
+    border-color: #18ed64;
+    box-shadow: inset 0 0 10px rgba(24, 237, 100, 0.3);
 }
 /* Match chromatic .piano-key.key-root cyan border (C4 reference cell) */
 .ckb-key.ckb-root:not(.is-down):not(:active) .front {
@@ -9876,7 +9876,7 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
 .ckb-note {
     font-size: 7px;
     line-height: 1;
-    color: #00aa00;
+    color: #109e43;
 }
 .ckb-key.is-down .ckb-note,
 .ckb-key:active .ckb-note {
@@ -9887,14 +9887,14 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     opacity: 0.35;
 }
 .ckb-key.ckb-out-of-scale:hover .front {
-    border-color: #00aa00;
+    border-color: #109e43;
     background: linear-gradient(to bottom, #2a2a2a 0%, #161616 55%, #0e0e0e 100%);
 }
 .ckb-key.ckb-out-of-scale:active .front,
 .ckb-key.ckb-out-of-scale.is-down .front {
     transform: translateY(calc(-1 * var(--ckb-travel)));
     background: linear-gradient(to bottom, #2a2a2a 0%, #161616 55%, #0e0e0e 100%);
-    border-color: #00aa00;
+    border-color: #109e43;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.08),
         inset 0 -2px 0 rgba(0, 0, 0, 0.45);
@@ -9924,7 +9924,7 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
 .ckb-key.ckb-octave .ckb-oct-label {
     font-size: 9px;
     line-height: 1;
-    color: #00ff00;
+    color: #18ed64;
     letter-spacing: 0.04em;
 }
 .ckb-key.ckb-octave .ckb-oct-dir {
@@ -9936,11 +9936,11 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
 }
 .ckb-key.ckb-octave .ckb-oct-dir-up {
     border-width: 0 5px 8px 5px;
-    border-color: transparent transparent #00ff00 transparent;
+    border-color: transparent transparent #18ed64 transparent;
 }
 .ckb-key.ckb-octave .ckb-oct-dir-down {
     border-width: 8px 5px 0 5px;
-    border-color: #00ff00 transparent transparent transparent;
+    border-color: #18ed64 transparent transparent transparent;
 }
 .ckb-key.ckb-octave.is-down .ckb-oct-dir-up,
 .ckb-key.ckb-octave:active .ckb-oct-dir-up {
@@ -9974,7 +9974,7 @@ body.view-tabbed .keyboard-tab-strip::-webkit-scrollbar-thumb:hover {
     height: 0;
     border-style: solid;
     border-width: 9px 0 9px 16px;
-    border-color: transparent transparent transparent #00ff00;
+    border-color: transparent transparent transparent #18ed64;
     margin-left: 3px;
     background: none;
     border-radius: 0;
@@ -10048,12 +10048,12 @@ body.poly-mode {
     box-sizing: border-box;
     width: 100%;
     padding: 0 14px 12px;
-    border-top: 1px solid rgba(0, 170, 0, 0.65);
-    border-bottom: 1px solid rgba(0, 170, 0, 0.65);
+    border-top: 1px solid rgba(16, 158, 67, 0.65);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.65);
     background:
-        linear-gradient(to bottom, rgba(0, 40, 0, 0.4) 0%, transparent 18px),
-        linear-gradient(to bottom, #0a120a 0%, #050805 100%);
-    box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.06);
+        linear-gradient(to bottom, rgba(4, 37, 16, 0.4) 0%, transparent 18px),
+        linear-gradient(to bottom, #0a110c 0%, #050805 100%);
+    box-shadow: inset 0 0 0 1px rgba(24, 237, 100, 0.06);
 }
 /*
  * Top rail — Juno-60 puts JUNO-60 in the black margin above the red line,
@@ -10068,7 +10068,7 @@ body.poly-mode {
     padding-right: 4px;
     padding-left: 4px;
     box-sizing: border-box;
-    color: #00ff00;
+    color: #18ed64;
 }
 /* Poly | Multitudes stay centered as a pair; logo far right */
 .ingy6-brand {
@@ -10080,9 +10080,9 @@ body.poly-mode {
     padding: 10px 4px 8px;
     margin-bottom: 2px;
     min-height: 58px;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.55);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.55);
     box-sizing: border-box;
-    color: #00ff00;
+    color: #18ed64;
 }
 .ingy6-brand-left {
     grid-column: 1;
@@ -10158,7 +10158,7 @@ body.poly-mode {
     align-items: stretch;
     min-width: 0;
     padding: 0 10px;
-    border-right: 1px solid rgba(0, 170, 0, 0.5);
+    border-right: 1px solid rgba(16, 158, 67, 0.5);
     box-sizing: border-box;
 }
 .ingy6-section:first-child {
@@ -10172,9 +10172,9 @@ body.poly-mode {
     font-family: 'Michroma', sans-serif;
     font-size: 10px;
     letter-spacing: 0.12em;
-    color: #00ff00;
-    background: #004400;
-    border: 1px solid #00aa00;
+    color: #18ed64;
+    background: #063f1b;
+    border: 1px solid #109e43;
     text-align: center;
     padding: 3px 4px 2px;
     margin: 0 0 8px;
@@ -10234,7 +10234,7 @@ body.poly-mode {
     align-items: flex-end;
     font-size: 7px;
     line-height: 1;
-    color: #00cc00;
+    color: #13be50;
     font-family: 'Michroma', sans-serif;
     padding: 4px 0;
     width: 12px;
@@ -10255,13 +10255,13 @@ body.poly-mode {
     display: block;
     width: 5px;
     height: 1px;
-    background: #00aa00;
+    background: #109e43;
     flex: 0 0 auto;
 }
 .ingy6-fader-tick--major {
     width: 10px;
     height: 1.5px;
-    background: #00ff00;
+    background: #18ed64;
 }
 .ingy6-fader-ticks--hpf .ingy6-fader-tick,
 .ingy6-fader-ticks--hpf .ingy6-fader-tick--major {
@@ -10297,7 +10297,7 @@ body.poly-mode {
         );
     box-shadow:
         inset 1px 0 0 rgba(0, 0, 0, 0.85),
-        inset -1px 0 0 rgba(0, 255, 0, 0.08),
+        inset -1px 0 0 rgba(24, 237, 100, 0.08),
         inset 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 .ingy6-fader-track::before {
@@ -10347,7 +10347,7 @@ body.poly-mode {
         0 0 0 1px #000,
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
         inset 0 -1px 0 rgba(0, 0, 0, 0.55);
-    outline: 1px solid #00aa00;
+    outline: 1px solid #109e43;
     outline-offset: 0;
 }
 .ingy6-fader-cap::before {
@@ -10373,9 +10373,9 @@ body.poly-mode {
     margin-top: -1px;
     background: linear-gradient(
         to right,
-        #00aa00 0%,
-        #00ff00 50%,
-        #00aa00 100%
+        #109e43 0%,
+        #18ed64 50%,
+        #109e43 100%
     );
     box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
     pointer-events: none;
@@ -10431,7 +10431,7 @@ body.poly-mode {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     letter-spacing: 0.06em;
-    color: #00cc00;
+    color: #13be50;
     text-align: center;
     white-space: nowrap;
     line-height: 1.1;
@@ -10453,11 +10453,11 @@ body.poly-mode {
     width: 34px;
     height: 28px;
     padding: 0;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 2px;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
-    color: #00aa00;
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
+    color: #109e43;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -10465,24 +10465,24 @@ body.poly-mode {
 }
 .ingy6-wave-btn:hover,
 .ingy6-wave-btn:focus-visible {
-    color: #00ff00;
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
+    color: #18ed64;
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
     outline: none;
 }
 /* Match kb-step-btn / keyboard wave pickers: press flash + solid green when lit */
 .ingy6-wave-btn:active,
 .ingy6-wave-btn.active {
     color: #000;
-    background: #00ff00;
-    border-color: #00ff00;
+    background: #18ed64;
+    border-color: #18ed64;
     box-shadow: none;
 }
 .ingy6-wave-btn.active:hover,
 .ingy6-wave-btn.active:focus-visible {
     color: #000;
-    background: #00ff00;
-    border-color: #00ff00;
+    background: #18ed64;
+    border-color: #18ed64;
 }
 .ingy6-wave-icon {
     width: 22px;
@@ -10528,7 +10528,7 @@ body.poly-mode {
     border-radius: 4px;
     background: #030503;
     box-shadow:
-        inset 0 0 0 0.5px rgba(0, 170, 0, 0.45),
+        inset 0 0 0 0.5px rgba(16, 158, 67, 0.45),
         inset 0 1px 1px rgba(0, 0, 0, 0.9);
     cursor: pointer;
 }
@@ -10542,9 +10542,9 @@ body.poly-mode {
     height: 7px;
     margin-left: -3.5px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #e8ffe8 0%, #a8e8a8 40%, #6ab86a 100%);
+    background: radial-gradient(circle at 35% 30%, #e8ffe8 0%, #a8e8a8 40%, #6aab81 100%);
     box-shadow:
-        0 0 0 0.5px rgba(0, 255, 0, 0.4),
+        0 0 0 0.5px rgba(24, 237, 100, 0.4),
         0 1px 1px rgba(0, 0, 0, 0.55);
     transition: top 0.12s ease;
     pointer-events: none;
@@ -10563,7 +10563,7 @@ body.poly-mode {
     font-size: 7px;
     letter-spacing: 0.04em;
     line-height: 8px;
-    color: #007a00;
+    color: #0b7130;
     background: none;
     border: none;
     padding: 0;
@@ -10573,11 +10573,11 @@ body.poly-mode {
     white-space: nowrap;
 }
 #ingy6Panel .ingy6-lever-label.is-on {
-    color: #00ff00;
-    text-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
+    color: #18ed64;
+    text-shadow: 0 0 4px rgba(24, 237, 100, 0.5);
 }
 #ingy6Panel .ingy6-lever-label:focus-visible {
-    outline: 1px solid #00ff00;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 #ingy6Panel .ingy6-lever-label:disabled {
@@ -10616,11 +10616,11 @@ body.poly-mode {
     font-size: 8px;
     letter-spacing: 0.06em;
     line-height: 1;
-    color: #00aa00;
-    border: 1px solid #00aa00;
+    color: #109e43;
+    border: 1px solid #109e43;
     border-radius: 3px;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
     padding: 6px 8px;
     min-width: 40px;
     cursor: pointer;
@@ -10632,8 +10632,8 @@ body.poly-mode {
 .ingy6-switch-btn:focus-visible,
 .ingy6-chorus-btn:hover,
 .ingy6-chorus-btn:focus-visible {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
 }
 /* Same on/press language as .kb-step-btn elsewhere in the keyboard UI */
 .ingy6-switch-btn:active,
@@ -10641,31 +10641,31 @@ body.poly-mode {
 .ingy6-chorus-btn:active,
 .ingy6-chorus-btn:not(.off) {
     color: #000;
-    border-color: #00ff00;
-    background: #00ff00;
+    border-color: #18ed64;
+    background: #18ed64;
     box-shadow: none;
 }
 .ingy6-switch-btn.off,
 .ingy6-chorus-btn.off {
-    color: #00aa00;
-    border-color: #00aa00;
+    color: #109e43;
+    border-color: #109e43;
     background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
-    box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.15);
+    box-shadow: inset 0 0 6px rgba(24, 237, 100, 0.15);
 }
 .ingy6-switch-btn.off:hover,
 .ingy6-switch-btn.off:focus-visible,
 .ingy6-chorus-btn.off:hover,
 .ingy6-chorus-btn.off:focus-visible {
-    border-color: #00ff00;
-    background: linear-gradient(to bottom, #1f2f1f 0%, #122012 100%);
+    border-color: #18ed64;
+    background: linear-gradient(to bottom, #1f2f1f 0%, #121e16 100%);
 }
 .ingy6-switch-btn:not(.off):hover,
 .ingy6-switch-btn:not(.off):focus-visible,
 .ingy6-chorus-btn:not(.off):hover,
 .ingy6-chorus-btn:not(.off):focus-visible {
     color: #000;
-    border-color: #00ff00;
-    background: #00ff00;
+    border-color: #18ed64;
+    background: #18ed64;
 }
 .ingy6-switch-btn:disabled,
 .ingy6-chorus-btn:disabled,
@@ -10749,7 +10749,7 @@ body.poly-mode {
     overflow: visible;
     pointer-events: none;
     z-index: 1;
-    color: #00cc00;
+    color: #13be50;
 }
 .ingy6-section--hpf .ingy6-fader {
     width: 100%;
@@ -10817,7 +10817,7 @@ body.poly-mode {
     border-radius: 4px;
     background: #030503;
     box-shadow:
-        inset 0 0 0 0.5px rgba(0, 170, 0, 0.45),
+        inset 0 0 0 0.5px rgba(16, 158, 67, 0.45),
         inset 0 1px 1px rgba(0, 0, 0, 0.9);
 }
 .ingy6-polarity-lever {
@@ -10832,10 +10832,10 @@ body.poly-mode {
         circle at 35% 30%,
         #e8ffe8 0%,
         #a8e8a8 40%,
-        #6ab86a 100%
+        #6aab81 100%
     );
     box-shadow:
-        0 0 0 0.5px rgba(0, 255, 0, 0.4),
+        0 0 0 0.5px rgba(24, 237, 100, 0.4),
         0 1px 1px rgba(0, 0, 0, 0.55);
     transition: top 0.12s ease;
 }
@@ -10860,12 +10860,12 @@ body.poly-mode {
     flex: 0 0 auto;
     width: 14px;
     height: 8.5px;
-    background-color: #00aa00;
+    background-color: #109e43;
     -webkit-mask: center / contain no-repeat;
     mask: center / contain no-repeat;
 }
 .ingy6-polarity-glyph--norm {
-    background-color: #00ff00;
+    background-color: #18ed64;
     -webkit-mask-image: url('env%20up.svg');
     mask-image: url('env%20up.svg');
 }
@@ -10874,10 +10874,10 @@ body.poly-mode {
     mask-image: url('env%20down.svg');
 }
 .ingy6-vcf-polarity:has(.ingy6-polarity-switch[aria-pressed="true"]) .ingy6-polarity-glyph--norm {
-    background-color: #00aa00;
+    background-color: #109e43;
 }
 .ingy6-vcf-polarity:has(.ingy6-polarity-switch[aria-pressed="true"]) .ingy6-polarity-glyph--inv {
-    background-color: #00ff00;
+    background-color: #18ed64;
 }
 
 /*
@@ -10929,7 +10929,7 @@ body.poly-mode {
         padding-bottom: 6px;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-x: contain;
-        scrollbar-color: #00aa00 #111;
+        scrollbar-color: #109e43 #111;
         scrollbar-width: thin;
         touch-action: pan-x pan-y;
     }
@@ -11012,8 +11012,8 @@ body.multitudes-mode {
     --mi-phos-white: #e8ffe8;
     --mi-phos-teal: #00e5c8;
     --mi-phos-magenta: #ff3d9a;
-    --mi-face: #0c140c;
-    --mi-face-edge: rgba(0, 170, 0, 0.45);
+    --mi-face: #0c130e;
+    --mi-face-edge: rgba(16, 158, 67, 0.45);
 }
 @font-face {
     font-family: 'DIN Pro';
@@ -11046,12 +11046,12 @@ body.multitudes-mode {
     box-sizing: border-box;
     width: 100%;
     padding: 0;
-    border-top: 1px solid rgba(0, 170, 0, 0.65);
-    border-bottom: 1px solid rgba(0, 170, 0, 0.65);
+    border-top: 1px solid rgba(16, 158, 67, 0.65);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.65);
     background:
-        linear-gradient(to bottom, rgba(0, 40, 0, 0.4) 0%, transparent 18px),
-        linear-gradient(to bottom, #0a120a 0%, #050805 100%);
-    box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.06);
+        linear-gradient(to bottom, rgba(4, 37, 16, 0.4) 0%, transparent 18px),
+        linear-gradient(to bottom, #0a110c 0%, #050805 100%);
+    box-shadow: inset 0 0 0 1px rgba(24, 237, 100, 0.06);
 }
 /* Hairline under switches — modules start immediately below */
 .multitudes-rule {
@@ -11059,7 +11059,7 @@ body.multitudes-mode {
     width: 100%;
     height: 0;
     border: none;
-    border-top: 1px solid rgba(0, 170, 0, 0.55);
+    border-top: 1px solid rgba(16, 158, 67, 0.55);
     margin: 0;
     pointer-events: none;
 }
@@ -11074,7 +11074,7 @@ body.multitudes-mode {
     min-height: 58px;
     border-bottom: none;
     box-sizing: border-box;
-    color: #00ff00;
+    color: #18ed64;
 }
 .multitudes-brand-left {
     grid-column: 1;
@@ -11153,7 +11153,7 @@ body.multitudes-mode {
     letter-spacing: 0.02em;
     line-height: 1;
     text-align: left;
-    color: #00ff00;
+    color: #18ed64;
     text-transform: none;
     white-space: nowrap;
     overflow: hidden;
@@ -11202,7 +11202,7 @@ body.multitudes-mode {
     border-radius: 50%;
     background:
         radial-gradient(circle at 35% 30%, #555 0%, #222 45%, #000 100%);
-    box-shadow: inset 0 0 0 1px #111, 0 0 0 1px rgba(0, 255, 0, 0.12);
+    box-shadow: inset 0 0 0 1px #111, 0 0 0 1px rgba(24, 237, 100, 0.12);
     pointer-events: none;
     z-index: 1;
 }
@@ -11227,7 +11227,7 @@ body.multitudes-mode {
     width: 100%;
     padding: 12px 14px 14px;
     box-sizing: border-box;
-    color: #00ff00;
+    color: #18ed64;
 }
 .multitudes-instruments-logo {
     display: block;
@@ -11260,7 +11260,7 @@ body.multitudes-mode {
     left: 10%;
     right: 10%;
     height: 1px;
-    background: rgba(0, 170, 0, 0.55);
+    background: rgba(16, 158, 67, 0.55);
     pointer-events: none;
 }
 .mi-row {
@@ -11288,14 +11288,14 @@ body.multitudes-mode {
     font-weight: 500;
     font-size: 10px;
     letter-spacing: 0.04em;
-    color: #00ff00;
+    color: #18ed64;
     background: #050805;
-    border: 1px solid rgba(0, 170, 0, 0.55);
+    border: 1px solid rgba(16, 158, 67, 0.55);
     border-radius: 3px;
     padding: 4px 6px;
 }
 .mi-select optgroup {
-    color: #00aa00;
+    color: #109e43;
     background: #050805;
     font-style: normal;
 }
@@ -11308,7 +11308,7 @@ body.multitudes-mode {
     text-transform: uppercase;
     color: #ff3d9a;
     background: linear-gradient(to bottom, #222, #050505);
-    border: 1px solid rgba(0, 170, 0, 0.45);
+    border: 1px solid rgba(16, 158, 67, 0.45);
     border-radius: 3px;
     padding: 5px 8px;
     cursor: pointer;
@@ -11466,7 +11466,7 @@ body.multitudes-mode {
         justify-content: flex-start;
         padding-bottom: 6px;
         -webkit-overflow-scrolling: touch;
-        scrollbar-color: #00aa00 #111;
+        scrollbar-color: #109e43 #111;
         scrollbar-width: auto;
     }
     .multitudes-module {
@@ -11542,8 +11542,8 @@ body.multitudes-mode {
     transition: width 0.15s linear;
 }
 .speech-rec-ready {
-    background: #14261a;
-    border: 1px solid #3a7a4a;
+    background: #14231a;
+    border: 1px solid #3c714f;
     border-radius: 8px;
     padding: 12px 12px 10px;
     margin: 0 0 14px;
@@ -11556,7 +11556,7 @@ body.multitudes-mode {
     font-size: 0.78rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #8d8;
+    color: #86cea0;
 }
 .speech-rec-ready__stats {
     margin: 0 0 10px;
@@ -11655,7 +11655,7 @@ body.multitudes-mode {
     overflow-y: hidden;
     touch-action: pan-x;
     -webkit-overflow-scrolling: touch;
-    scrollbar-color: #00aa00 #111;
+    scrollbar-color: #109e43 #111;
     scrollbar-gutter: stable both-edges;
     scrollbar-width: auto;
 }
@@ -11698,14 +11698,14 @@ body.multitudes-mode {
 }
 .mixer-group:not(:last-child) {
     padding-right: 6px;
-    border-right: 1px solid rgba(0, 170, 0, 0.4);
+    border-right: 1px solid rgba(16, 158, 67, 0.4);
 }
 .mixer-group-title {
     display: block;
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
     letter-spacing: 0.08em;
-    color: #00ff00;
+    color: #18ed64;
     text-shadow: none;
     text-align: center;
     line-height: 1;
@@ -11731,7 +11731,7 @@ body.multitudes-mode {
     flex: 1 0 56px;
     min-width: 56px;
     padding: 6px 4px 8px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     box-sizing: border-box;
 }
@@ -11750,7 +11750,7 @@ body.multitudes-mode .mixer-strip[data-strip="osc"][data-index="3"] {
 .mixer-strip-master {
     flex: 1 0 68px;
     min-width: 68px;
-    border-color: #00ff00;
+    border-color: #18ed64;
 }
 .mixer-name {
     display: block;
@@ -11759,7 +11759,7 @@ body.multitudes-mode .mixer-strip[data-strip="osc"][data-index="3"] {
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
     letter-spacing: 0.06em;
-    color: #00ff00;
+    color: #18ed64;
     text-shadow: none;
     text-align: center;
     line-height: 1;
@@ -11768,10 +11768,10 @@ body.multitudes-mode .mixer-strip[data-strip="osc"][data-index="3"] {
     overflow: hidden;
     text-overflow: ellipsis;
     padding-bottom: 4px;
-    border-bottom: 1px solid #00aa00;
+    border-bottom: 1px solid #109e43;
 }
 .mixer-strip-master .mixer-name {
-    color: #00ff00;
+    color: #18ed64;
 }
 .mixer-pan-row {
     display: flex;
@@ -11827,7 +11827,7 @@ body.multitudes-mode .mixer-strip[data-strip="osc"][data-index="3"] {
         );
     box-shadow:
         inset 1px 0 0 rgba(0, 0, 0, 0.85),
-        inset -1px 0 0 rgba(0, 255, 0, 0.1),
+        inset -1px 0 0 rgba(24, 237, 100, 0.1),
         inset 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 .mixer-fader-track::before {
@@ -11891,8 +11891,8 @@ body.multitudes-mode .mixer-strip[data-strip="osc"][data-index="3"] {
     top: 50%;
     height: 2px;
     margin-top: -1px;
-    background: #00ff00;
-    box-shadow: 0 0 3px rgba(0, 255, 0, 0.45);
+    background: #18ed64;
+    box-shadow: 0 0 3px rgba(24, 237, 100, 0.45);
     pointer-events: none;
 }
 body .mixer-level {
@@ -11944,14 +11944,14 @@ body .mixer-level::-moz-range-thumb {
     width: 4px;
     height: 1px;
     flex: 0 0 auto;
-    background: #00aa00;
+    background: #109e43;
     opacity: 0.55;
 }
 .mixer-fader-tick--major {
     width: 8px;
     height: 1.5px;
     opacity: 1;
-    background: #00cc00;
+    background: #13be50;
 }
 .mixer-fader-scale {
     grid-column: 3;
@@ -11962,14 +11962,14 @@ body .mixer-level::-moz-range-thumb {
     font-family: 'Michroma', sans-serif;
     font-size: 6px;
     line-height: 1;
-    color: #00aa00;
+    color: #109e43;
     padding: calc(var(--mixer-cap-h) / 2) 0;
     box-sizing: border-box;
     min-width: 0;
     justify-self: start;
 }
 .mixer-fader-scale span:first-child {
-    color: #00ff00;
+    color: #18ed64;
 }
 .mixer-level-value {
     order: 5;
@@ -11979,7 +11979,7 @@ body .mixer-level::-moz-range-thumb {
     font-size: 7px;
     line-height: 1;
     letter-spacing: 0.04em;
-    color: #00ff00;
+    color: #18ed64;
     text-align: center;
     min-height: 8px;
 }
@@ -12020,7 +12020,7 @@ body .mixer-level::-moz-range-thumb {
     font-size: 7px;
     letter-spacing: 0.04em;
     line-height: 1.15;
-    color: #00ff00;
+    color: #18ed64;
     text-shadow: none;
 }
 /* Same chrome as Effects On/Off (Chorus-width toggles). */
@@ -12042,7 +12042,7 @@ body .mixer-level::-moz-range-thumb {
     width: 100%;
     margin: 2px 0;
     border: 0;
-    border-top: 1px solid rgba(0, 170, 0, 0.4);
+    border-top: 1px solid rgba(16, 158, 67, 0.4);
     height: 0;
 }
 .mixer-sc-src {
@@ -12056,7 +12056,7 @@ body .mixer-level::-moz-range-thumb {
     font-family: 'Michroma', sans-serif;
     font-size: 7px;
     letter-spacing: 0.04em;
-    color: #00aa00;
+    color: #109e43;
     text-transform: uppercase;
     line-height: 1;
 }
@@ -12066,9 +12066,9 @@ body .mixer-level::-moz-range-thumb {
     max-width: 100%;
     font-family: 'Michroma', sans-serif;
     font-size: 8px;
-    color: #00ff00;
+    color: #18ed64;
     background: #111;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 3px;
     padding: 4px 4px;
     box-sizing: border-box;
@@ -12077,7 +12077,7 @@ body .mixer-level::-moz-range-thumb {
     opacity: 0.45;
 }
 .mixer-sc-src select:focus-visible {
-    outline: 1px solid #00ff00;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 .mixer-strip-comp .synth-knob {
@@ -12130,12 +12130,12 @@ body .mixer-level::-moz-range-thumb {
     max-width: min(70vw, 240px);
     margin: 0;
     padding: 6px 10px 5px;
-    border: 1px solid #00ff00;
+    border: 1px solid #18ed64;
     border-radius: 4px;
     background: rgba(4, 10, 4, 0.96);
     box-shadow:
-        0 0 10px rgba(0, 255, 0, 0.35),
-        inset 0 0 8px rgba(0, 255, 0, 0.12);
+        0 0 10px rgba(24, 237, 100, 0.35),
+        inset 0 0 8px rgba(24, 237, 100, 0.12);
     pointer-events: none;
     user-select: none;
     -webkit-user-select: none;
@@ -12164,8 +12164,8 @@ body .mixer-level::-moz-range-thumb {
     height: 8px;
     box-sizing: border-box;
     background: rgba(4, 10, 4, 0.96);
-    border-right: 1px solid #00ff00;
-    border-bottom: 1px solid #00ff00;
+    border-right: 1px solid #18ed64;
+    border-bottom: 1px solid #18ed64;
     transform: translateX(-50%) rotate(45deg);
 }
 .touch-readout--below::after {
@@ -12173,8 +12173,8 @@ body .mixer-level::-moz-range-thumb {
     top: -5px;
     border-right: none;
     border-bottom: none;
-    border-left: 1px solid #00ff00;
-    border-top: 1px solid #00ff00;
+    border-left: 1px solid #18ed64;
+    border-top: 1px solid #18ed64;
 }
 .touch-readout-caption {
     max-width: 100%;
@@ -12187,7 +12187,7 @@ body .mixer-level::-moz-range-thumb {
     text-align: center;
     text-transform: uppercase;
     white-space: normal;
-    color: #00aa00;
+    color: #109e43;
 }
 .touch-readout-caption:empty {
     display: none;
@@ -12201,8 +12201,8 @@ body .mixer-level::-moz-range-thumb {
     font-variant-numeric: tabular-nums;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #00ff00;
-    text-shadow: 0 0 6px rgba(0, 255, 0, 0.55);
+    color: #18ed64;
+    text-shadow: 0 0 6px rgba(24, 237, 100, 0.55);
 }
 
 /* =========================================================================
@@ -12455,7 +12455,7 @@ body .mixer-level::-moz-range-thumb {
         flex-wrap: nowrap;
         margin: 0 -16px;
         padding: 0 16px 8px;
-        border-bottom: 1px solid rgba(0, 170, 0, 0.55);
+        border-bottom: 1px solid rgba(16, 158, 67, 0.55);
     }
     .multitudes-brand {
         display: flex;
@@ -12738,7 +12738,7 @@ body .mixer-level::-moz-range-thumb {
     margin: 0;
     border: 0;
     background: transparent;
-    color: #00aa00;
+    color: #109e43;
     font-family: "changeling-neo", Michroma, sans-serif;
     font-size: 11px;
     letter-spacing: 0.03em;
@@ -12749,11 +12749,11 @@ body .mixer-level::-moz-range-thumb {
     white-space: nowrap;
 }
 .arrange-mode-switch button[aria-pressed="true"] {
-    color: #00ff00;
-    text-shadow: 0 0 4px rgba(0, 255, 0, 0.45);
+    color: #18ed64;
+    text-shadow: 0 0 4px rgba(24, 237, 100, 0.45);
 }
 .arrange-mode-switch button + button {
-    box-shadow: inset 1px 0 0 rgba(0, 170, 0, 0.85);
+    box-shadow: inset 1px 0 0 rgba(16, 158, 67, 0.85);
 }
 .arrange-mode-switch button:focus-visible {
     outline: 1px solid #fff;
@@ -12822,7 +12822,7 @@ body.is-arrange #arrangeView:not([hidden]) {
     flex-direction: column;
     gap: 4px;
     overflow: hidden;
-    color: #00aa00;
+    color: #109e43;
     background: #050805;
 }
 body.is-arrange .keyboard-play-row {
@@ -12857,9 +12857,9 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     height: 28px;
     margin: 0;
     padding: 0 8px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: #050805;
-    color: #00aa00;
+    color: #109e43;
     font-family: "changeling-neo", Michroma, sans-serif;
     font-size: 11px;
     letter-spacing: 0.04em;
@@ -12876,8 +12876,8 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 }
 .arrange-btn:hover,
 .arrange-btn:focus-visible {
-    color: #00ff00;
-    border-color: #00ff00;
+    color: #18ed64;
+    border-color: #18ed64;
 }
 .arrange-btn:focus-visible {
     outline: 1px solid #fff;
@@ -12886,9 +12886,14 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 .arrange-btn.is-on,
 .arrange-btn.is-armed,
 .arrange-btn[aria-pressed="true"] {
-    color: #00ff00;
-    border-color: #00ff00;
-    box-shadow: 0 0 6px rgba(0, 255, 0, 0.35);
+    color: #18ed64;
+    border-color: #18ed64;
+    box-shadow: 0 0 6px rgba(24, 237, 100, 0.35);
+}
+/* Roll Preview: a speaker with waves when on, struck through when off. */
+#arrangeRollPreview[aria-pressed="true"] .arrange-icon-mute,
+#arrangeRollPreview[aria-pressed="false"] .arrange-icon-waves {
+    display: none;
 }
 .arrange-btn:disabled {
     opacity: 0.35;
@@ -12939,8 +12944,8 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     padding: 0 7px;
 }
 .arrange-tap:active {
-    background: #00ff00;
-    border-color: #00ff00;
+    background: #18ed64;
+    border-color: #18ed64;
     color: #000;
 }
 .arrange-bpm {
@@ -12950,9 +12955,9 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     width: 52px;
     height: 28px;
     box-sizing: border-box;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: #000;
-    color: #00ff00;
+    color: #18ed64;
     font-family: Michroma, sans-serif;
     font-size: 13px;
     font-variant-numeric: tabular-nums;
@@ -12964,16 +12969,16 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 }
 .arrange-bpm:hover,
 .arrange-bpm.is-dragging {
-    border-color: #00ff00;
+    border-color: #18ed64;
 }
 .arrange-bpm:focus-visible {
-    border-color: #00ff00;
-    outline: 1px solid #00ff00;
+    border-color: #18ed64;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 .arrange-bpm.is-editing {
     cursor: text;
-    border-color: #00ff00;
+    border-color: #18ed64;
 }
 .arrange-bpm-input {
     width: 100%;
@@ -12982,7 +12987,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     padding: 0;
     border: 0;
     outline: none;
-    background: #00ff00;
+    background: #18ed64;
     color: #000;
     font: inherit;
     text-align: center;
@@ -13002,6 +13007,28 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 .arrange-metronome.is-on .arrange-icon-metro i {
     background: currentColor;
 }
+.arrange-count-in {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 58px;
+    padding: 0 6px;
+    line-height: 1;
+}
+.arrange-count-in-kicker {
+    font-size: 6px;
+    letter-spacing: 0.08em;
+    color: #109e43;
+}
+#arrangeCountInValue {
+    font-size: 9px;
+    color: #18ed64;
+}
+.arrange-count-in.is-off #arrangeCountInValue {
+    color: #109e43;
+}
 .arrange-time {
     display: flex;
     align-items: baseline;
@@ -13012,17 +13039,17 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     line-height: 1;
 }
 .arrange-time-kicker {
-    color: #00aa00;
+    color: #109e43;
     font-size: 9px;
     letter-spacing: 0.14em;
 }
 #arrangeClock {
-    color: #00ff00;
+    color: #18ed64;
     font-size: 16px;
     letter-spacing: 0.06em;
 }
 #arrangePosition {
-    color: #00aa00;
+    color: #109e43;
     font-size: 13px;
 }
 /* The timeline box fits its tracks; the pads sit right under it. */
@@ -13043,7 +13070,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     grid-template-rows: minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: #050805;
     box-sizing: border-box;
 }
@@ -13053,7 +13080,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     min-width: 0;
     min-height: 0;
     height: 100%;
-    border-right: 1px solid rgba(0, 170, 0, 0.65);
+    border-right: 1px solid rgba(16, 158, 67, 0.65);
 }
 .arrange-gutter-scrub,
 .arrange-scrub {
@@ -13065,7 +13092,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     display: flex;
     align-items: flex-end;
     padding: 0 4px 2px;
-    color: #00aa00;
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 7px;
     letter-spacing: 0.04em;
@@ -13081,8 +13108,8 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     box-sizing: border-box;
     min-height: 0;
     padding: 0 4px 4px;
-    border-top: 1px solid rgba(0, 170, 0, 0.45);
-    color: #00aa00;
+    border-top: 1px solid rgba(16, 158, 67, 0.45);
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 8px;
     letter-spacing: 0.06em;
@@ -13112,7 +13139,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 .arrange-gutter-lane[data-track="o4"],
 .arrange-lane[data-track="o2"],
 .arrange-lane[data-track="o4"] {
-    border-top-color: rgba(0, 170, 0, 0.2);
+    border-top-color: rgba(16, 158, 67, 0.2);
 }
 /* Tracks keep fixed heights like Ableton's arrangement. */
 .arrange-gutter-lane[data-track="synth"] { flex: 0 1 72px; }
@@ -13124,7 +13151,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
-    scrollbar-color: #00aa00 #050805;
+    scrollbar-color: #109e43 #050805;
     scrollbar-width: thin;
 }
 .arrange-sheet {
@@ -13145,13 +13172,13 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     position: relative;
     touch-action: none;
     cursor: ew-resize;
-    background-color: rgba(0, 170, 0, 0.08);
+    background-color: rgba(16, 158, 67, 0.08);
     background-image: repeating-linear-gradient(
         to right,
         transparent 0,
         transparent calc(var(--arrange-px, 80px) - 1px),
-        rgba(0, 170, 0, 0.45) calc(var(--arrange-px, 80px) - 1px),
-        rgba(0, 170, 0, 0.45) var(--arrange-px, 80px)
+        rgba(16, 158, 67, 0.45) calc(var(--arrange-px, 80px) - 1px),
+        rgba(16, 158, 67, 0.45) var(--arrange-px, 80px)
     );
 }
 .arrange-scrub::after {
@@ -13161,7 +13188,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     right: 0;
     bottom: 0;
     height: 1px;
-    background: rgba(0, 170, 0, 0.45);
+    background: rgba(16, 158, 67, 0.45);
 }
 .arrange-bar-mark,
 .arrange-beat-mark {
@@ -13171,7 +13198,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 .arrange-bar-mark {
     top: 1px;
     padding-left: 3px;
-    color: #00aa00;
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 9px;
     line-height: 1;
@@ -13183,19 +13210,19 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     top: 12px;
     width: 1px;
     height: 10px;
-    background: #00aa00;
+    background: #109e43;
 }
 .arrange-beat-mark {
     top: 16px;
     width: 1px;
     height: 6px;
-    background: rgba(0, 170, 0, 0.55);
+    background: rgba(16, 158, 67, 0.55);
 }
 .arrange-lane {
     position: relative;
     box-sizing: border-box;
     min-height: 0;
-    border-top: 1px solid rgba(0, 170, 0, 0.45);
+    border-top: 1px solid rgba(16, 158, 67, 0.45);
 }
 /* The lane grid and ruler subdivisions (drawGrid): viewport-wide, behind clips. */
 .arrange-grid-canvas {
@@ -13208,7 +13235,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 .arrange-lane[data-track="synth"] { flex: 0 1 72px; }
 .arrange-lane[data-track="drums"] { flex: 0 1 64px; }
 .arrange-lane.is-target {
-    background-color: rgba(0, 255, 0, 0.06);
+    background-color: rgba(24, 237, 100, 0.06);
 }
 .arrange-playhead,
 .arrange-insert {
@@ -13234,7 +13261,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     z-index: 6;
 }
 .arrange-insert {
-    background: rgba(0, 255, 0, 0.55);
+    background: rgba(24, 237, 100, 0.55);
     z-index: 4;
     animation: arrange-insert-blink 1s steps(2, end) infinite;
 }
@@ -13245,7 +13272,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     left: -4px;
     border-left: 4px solid transparent;
     border-right: 4px solid transparent;
-    border-top: 6px solid rgba(0, 255, 0, 0.75);
+    border-top: 6px solid rgba(24, 237, 100, 0.75);
 }
 .arrange-insert[hidden] {
     display: none !important;
@@ -13260,9 +13287,9 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     position: absolute;
     top: 0;
     bottom: 0;
-    background: rgba(0, 170, 0, 0.14);
-    border-left: 1px solid #00aa00;
-    border-right: 1px solid #00aa00;
+    background: rgba(16, 158, 67, 0.14);
+    border-left: 1px solid #109e43;
+    border-right: 1px solid #109e43;
     pointer-events: none;
     z-index: 1;
 }
@@ -13274,7 +13301,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     top: 3px;
     bottom: 3px;
     box-sizing: border-box;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     /* See-through enough that the grid reads behind clips. */
     background: rgba(5, 8, 5, 0.8);
     overflow: hidden;
@@ -13346,7 +13373,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     position: absolute;
     left: 0;
     bottom: 0;
-    border-left: 7px solid #00ff00;
+    border-left: 7px solid #18ed64;
     border-top: 7px solid transparent;
     pointer-events: none;
     z-index: 2;
@@ -13380,7 +13407,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
 }
 .arrange-clip.is-foreign {
     opacity: 0.45;
-    border-color: #1e4a1e;
+    border-color: #20452d;
 }
 .arrange-clip.is-blocked {
     border-style: dashed;
@@ -13403,7 +13430,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     top: 2px;
     left: 4px;
     z-index: 2;
-    color: #00ff00;
+    color: #18ed64;
     font-family: Michroma, sans-serif;
     font-size: 8px;
     letter-spacing: 0.04em;
@@ -13411,7 +13438,7 @@ body.is-arrange .keyboard-section .chromatic-keyboard {
     pointer-events: none;
 }
 .arrange-clip.is-foreign .arrange-clip-label {
-    color: #3f7a3f;
+    color: #407152;
 }
 .arrange-clip-handle {
     /* Trim grips on both edges: always grabbable, drawn only on the selected clip. */
@@ -13559,14 +13586,14 @@ html.arrange-trimming * {
     top: 0;
     bottom: 0;
     z-index: 1;
-    background: rgba(0, 255, 0, 0.16);
-    box-shadow: inset 0 0 0 1px #00ff00;
+    background: rgba(24, 237, 100, 0.16);
+    box-shadow: inset 0 0 0 1px #18ed64;
     pointer-events: none;
 }
 .arrange-notice {
     flex: 0 0 auto;
     margin: 0;
-    color: #00ff00;
+    color: #18ed64;
     font-family: Michroma, sans-serif;
     font-size: 8px;
     letter-spacing: 0.03em;
@@ -13580,10 +13607,10 @@ html.arrange-trimming * {
     z-index: 10040;
     height: 48px;
     box-sizing: border-box;
-    border: 1px solid #00ff00;
+    border: 1px solid #18ed64;
     background: rgba(5, 8, 5, 0.92);
     pointer-events: none;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.35);
+    box-shadow: 0 0 8px rgba(24, 237, 100, 0.35);
     transition: width 0.12s ease-out, height 0.12s ease-out, border-radius 0.12s ease-out,
         background-color 0.12s ease-out;
 }
@@ -13592,14 +13619,14 @@ html.arrange-trimming * {
     opacity: 0.6;
 }
 .arrange-ghost.is-pad {
-    border: 1.5px solid #00cc00;
+    border: 1.5px solid #13be50;
     border-radius: 7px;
-    background: #00cc00;
-    box-shadow: 0 0 10px rgba(0, 255, 0, 0.45);
+    background: #13be50;
+    box-shadow: 0 0 10px rgba(24, 237, 100, 0.45);
 }
 .arrange-ghost.is-pad.is-empty {
     background: #050805;
-    border-color: #00aa00;
+    border-color: #109e43;
 }
 .arrange-ghost.is-pad canvas {
     left: 5px;
@@ -13613,14 +13640,14 @@ html.arrange-trimming * {
     color: #000;
 }
 .arrange-ghost.is-pad.is-empty .arrange-clip-label {
-    color: #00aa00;
+    color: #109e43;
 }
 .arrange-ghost.is-pad.is-carry {
-    border-color: #00ff00;
+    border-color: #18ed64;
     background: #050805;
 }
 .arrange-ghost.is-pad.is-carry .arrange-clip-label {
-    color: #00ff00;
+    color: #18ed64;
 }
 .arrange-ghost.is-landing {
     overflow: hidden;
@@ -13631,7 +13658,7 @@ html.arrange-trimming * {
     position: absolute;
     inset: -25%;
     border-radius: 50%;
-    background: #00cc00;
+    background: #13be50;
     transform: scale(0);
     will-change: transform;
 }
@@ -13644,7 +13671,7 @@ html.arrange-trimming * {
     right: 0;
     bottom: 0;
     padding: 2px 0 1px;
-    background: #00ff00;
+    background: #18ed64;
     color: #000;
     font-family: Michroma, sans-serif;
     font-size: 7px;
@@ -13726,10 +13753,10 @@ html.arrange-trimming * {
     align-items: center;
     gap: 8px;
     padding: 2px 2px 2px 8px;
-    border: 1px solid #00ff00;
+    border: 1px solid #18ed64;
     border-radius: 5px;
     background: #050805;
-    color: #00ff00;
+    color: #18ed64;
     font-family: Michroma, sans-serif;
     font-size: 8px;
     letter-spacing: 0.03em;
@@ -13761,7 +13788,7 @@ html.arrange-trimming * {
     padding: 3px 8px;
     border: 0;
     border-radius: 3px;
-    background: #00ff00;
+    background: #18ed64;
     color: #000;
     font: inherit;
     text-transform: uppercase;
@@ -13792,7 +13819,7 @@ html.arrange-trimming * {
     min-width: 0;
     margin: 0;
     padding: 0 6px 6px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     border-radius: 5px; /* = main page fieldsets */
     box-sizing: border-box;
 }
@@ -13822,7 +13849,7 @@ html.arrange-trimming * {
     --tab-cut: 12px;
     --tab-border: 1.5px;
     --tab-slant-len: 22.6px;
-    --tab-stroke: #00aa00;
+    --tab-stroke: #109e43;
     --tab-bg: #050805;
     --field-border: 1px;
     --tab-inner-bottom-x: calc(var(--tab-border) * var(--tab-slant-len) / var(--tab-h));
@@ -13847,7 +13874,7 @@ html.arrange-trimming * {
     border: 0;
     background: transparent;
     box-sizing: border-box;
-    color: #00aa00;
+    color: #109e43;
     font-family: "changeling-neo", sans-serif;
     font-size: 12px;
     letter-spacing: 0.03em;
@@ -13883,8 +13910,8 @@ html.arrange-trimming * {
 }
 .arrange-tab.is-active {
     --tab-inner-bottom-y: 100%;
-    color: #00ff00;
-    text-shadow: 0 0 2px #00ff00, 0 0 4px rgba(0, 255, 0, 0.35);
+    color: #18ed64;
+    text-shadow: 0 0 2px #18ed64, 0 0 4px rgba(24, 237, 100, 0.35);
     z-index: 1;
 }
 .arrange-tab:focus-visible {
@@ -13899,7 +13926,7 @@ html.arrange-trimming * {
  * pads: transport, clock, timelines minimum, tab strip, gaps and padding. */
 .arrange-bank-grid {
     --pad-gap: 10px;
-    --pad-reserve: 186px;
+    --pad-reserve: 216px; /* + the Preview row under the pads */
     --pad-cap: max(44px, calc((100cqh - var(--pad-reserve) - var(--pad-gap)) / 2));
     display: grid;
     grid-template-columns: repeat(4, minmax(0, var(--pad-cap)));
@@ -13916,9 +13943,9 @@ html.arrange-trimming * {
     min-height: 0;
     margin: 0;
     padding: 0;
-    border: 1.5px solid #00cc00;
+    border: 1.5px solid #13be50;
     border-radius: 10px;
-    background: #00cc00;
+    background: #13be50;
     color: #000;
     overflow: hidden;
     box-sizing: border-box;
@@ -13941,7 +13968,7 @@ html.arrange-trimming * {
 }
 .arrange-square.is-empty {
     background: #050805;
-    border-color: #00aa00;
+    border-color: #109e43;
 }
 /* The band (oscillator lane) a clip dropped on this pad would write. */
 .arrange-square-band {
@@ -13971,7 +13998,7 @@ html.arrange-trimming * {
 }
 .arrange-square[data-kind="b"]:not(.is-empty).is-armed,
 .arrange-square[data-kind="b"]:not(.is-empty).is-drop {
-    border-color: #00ff00;
+    border-color: #18ed64;
 }
 .arrange-square[data-kind="b"]:not(.is-empty) .arrange-square-name {
     top: 4px;
@@ -13999,13 +14026,28 @@ html.arrange-trimming * {
 }
 .arrange-square.is-empty .arrange-square-rev,
 .arrange-square.is-empty .arrange-square-name {
-    color: #00aa00;
+    color: #109e43;
+}
+/* Record / Preview: the pad playing its hit keeps its own look. A dark layer covers the part not yet
+   played and its left edge follows the playhead, so the pad redraws left to right in time; the notes
+   under the layer stay visible, dimmed. The pad drops overflow:hidden while playing so the layer
+   (the pad's own rounded shape, cropped with clip-path) covers the border too. */
+.arrange-square.is-hit {
+    overflow: visible;
+}
+.arrange-square-progress {
+    position: absolute;
+    inset: -1.5px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    z-index: 4;
 }
 .arrange-square.is-armed,
 .arrange-square.is-drop {
-    border-color: #00ff00;
-    background: #00ff00;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.55);
+    border-color: #18ed64;
+    background: #18ed64;
+    box-shadow: 0 0 8px rgba(24, 237, 100, 0.55);
 }
 .arrange-square.is-empty.is-armed,
 .arrange-square.is-empty.is-drop {
@@ -14015,7 +14057,7 @@ html.arrange-trimming * {
 .arrange-square.is-empty.is-drop .arrange-square-rev,
 .arrange-square.is-empty.is-armed .arrange-square-name,
 .arrange-square.is-empty.is-drop .arrange-square-name {
-    color: #00ff00;
+    color: #18ed64;
 }
 @media (min-width: 640px) {
     .arrange-bank-grid {
@@ -14029,8 +14071,8 @@ html.arrange-trimming * {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-top: 1px solid #00aa00;
-    color: #00aa00;
+    border-top: 1px solid #109e43;
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 12px;
     letter-spacing: 0.08em;
@@ -14042,9 +14084,9 @@ html.arrange-trimming * {
     max-width: calc(100vw - 16px);
     box-sizing: border-box;
     padding: 4px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: #050805;
-    box-shadow: 0 0 10px rgba(0, 170, 0, 0.28);
+    box-shadow: 0 0 10px rgba(16, 158, 67, 0.28);
 }
 .arrange-menu > button {
     display: block;
@@ -14053,7 +14095,7 @@ html.arrange-trimming * {
     padding: 7px 8px;
     border: 0;
     background: transparent;
-    color: #00aa00;
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 10px;
     letter-spacing: 0.03em;
@@ -14062,19 +14104,19 @@ html.arrange-trimming * {
 }
 .arrange-menu > button:hover,
 .arrange-menu > button:focus-visible {
-    color: #00ff00;
-    background: rgba(0, 170, 0, 0.12);
+    color: #18ed64;
+    background: rgba(16, 158, 67, 0.12);
 }
 .arrange-menu-lanes {
     display: flex;
     flex-wrap: wrap;
     gap: 3px;
     padding: 4px 4px 2px;
-    border-top: 1px solid rgba(0, 170, 0, 0.45);
+    border-top: 1px solid rgba(16, 158, 67, 0.45);
 }
 .arrange-menu-lanes-label {
     flex: 1 0 100%;
-    color: #00aa00;
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 8px;
     letter-spacing: 0.08em;
@@ -14084,15 +14126,15 @@ html.arrange-trimming * {
     height: 22px;
     margin: 0;
     padding: 0 4px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: #050805;
-    color: #00ff00;
+    color: #18ed64;
     font-family: Michroma, sans-serif;
     font-size: 8px;
     cursor: pointer;
 }
 .arrange-menu-lanes button[aria-pressed="false"] {
-    color: #00aa00;
+    color: #109e43;
     opacity: 0.4;
 }
 @media (max-width: 420px) {
@@ -14132,8 +14174,8 @@ html.arrange-trimming * {
 
 /* Phosphor window: the shared floating popover (ingy-window.js). Desktop floats; phones get a bottom sheet. */
 .ingy-window {
-    --win-line: #00aa00;
-    --win-lit: #00ff00;
+    --win-line: #109e43;
+    --win-lit: #18ed64;
     --win-bg: #030603;
     --win-bar: 26px;
     position: fixed;
@@ -14147,9 +14189,9 @@ html.arrange-trimming * {
     border: 1px solid var(--win-line);
     box-shadow:
         0 0 0 2px #000,
-        0 0 0 3px rgba(0, 170, 0, 0.45),
+        0 0 0 3px rgba(16, 158, 67, 0.45),
         7px 7px 0 3px rgba(0, 0, 0, 0.75),
-        0 0 24px rgba(0, 255, 0, 0.12);
+        0 0 24px rgba(24, 237, 100, 0.12);
     box-sizing: border-box;
     transform-origin: 50% 50%;
     animation: ingy-window-on 140ms ease-out;
@@ -14210,7 +14252,7 @@ html.arrange-trimming * {
     text-transform: uppercase;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-shadow: 0 0 6px rgba(0, 255, 0, 0.45);
+    text-shadow: 0 0 6px rgba(24, 237, 100, 0.45);
 }
 /* Close: an X at the right end of the title bar. Lit on hover = green square, black X. */
 .ingy-window__close {
@@ -14239,7 +14281,7 @@ html.arrange-trimming * {
     height: 2px;
     margin: -1px 0 0 calc(var(--x-size) * -0.707);
     background: var(--x-ink);
-    box-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
+    box-shadow: 0 0 4px rgba(24, 237, 100, 0.5);
     transform: rotate(45deg);
 }
 .ingy-window__close::after {
@@ -14300,7 +14342,7 @@ html.arrange-trimming * {
     height: min(80vh, 80dvh);
     box-shadow:
         0 0 0 2px #000,
-        0 0 0 3px rgba(0, 170, 0, 0.45),
+        0 0 0 3px rgba(16, 158, 67, 0.45),
         0 -12px 32px rgba(0, 0, 0, 0.8);
     transform-origin: 50% 100%;
 }
@@ -14363,7 +14405,7 @@ html.arrange-trimming * {
     flex-direction: column;
     overflow: hidden;
     background: #050805;
-    color: #00aa00;
+    color: #109e43;
     box-sizing: border-box;
 }
 .arrange-roll-bar {
@@ -14376,7 +14418,7 @@ html.arrange-trimming * {
     max-width: 100%;
     padding: 4px;
     box-sizing: border-box;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.45);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.45);
 }
 .arrange-roll-lanes,
 .arrange-roll-transport {
@@ -14391,13 +14433,13 @@ html.arrange-trimming * {
     gap: 3px;
     margin-left: 2px;
     padding-left: 6px;
-    border-left: 1px solid rgba(0, 170, 0, 0.45);
+    border-left: 1px solid rgba(16, 158, 67, 0.45);
 }
 .arrange-roll-transpose[hidden] {
     display: none !important;
 }
 .arrange-roll-transpose-label {
-    color: #00aa00;
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 9px;
     letter-spacing: 0.03em;
@@ -14433,9 +14475,9 @@ html.arrange-trimming * {
     height: 22px;
     margin: 0;
     padding: 0 6px;
-    border: 1px solid #00aa00;
+    border: 1px solid #109e43;
     background: #050805;
-    color: #00aa00;
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 9px;
     letter-spacing: 0.03em;
@@ -14445,20 +14487,20 @@ html.arrange-trimming * {
 }
 .arrange-roll-tab.is-on,
 .arrange-roll-tab[aria-selected="true"] {
-    color: #00ff00;
-    border-color: #00ff00;
-    box-shadow: 0 0 6px rgba(0, 255, 0, 0.35);
+    color: #18ed64;
+    border-color: #18ed64;
+    box-shadow: 0 0 6px rgba(24, 237, 100, 0.35);
 }
 .arrange-roll-tab:focus-visible,
 .arrange-roll-bar .arrange-btn:focus-visible {
-    outline: 1px solid #00ff00;
+    outline: 1px solid #18ed64;
     outline-offset: 1px;
 }
 .arrange-roll-hint {
     flex: 0 0 auto;
     margin: 0;
     padding: 4px 6px;
-    color: #00ff00;
+    color: #18ed64;
     font-family: Michroma, sans-serif;
     font-size: 9px;
     letter-spacing: 0.02em;
@@ -14473,7 +14515,7 @@ html.arrange-trimming * {
     min-width: 0;
     overflow: auto;
     overscroll-behavior: contain;
-    scrollbar-color: #00aa00 #050805;
+    scrollbar-color: #109e43 #050805;
     scrollbar-width: thin;
 }
 .arrange-roll-sheet {
@@ -14496,8 +14538,8 @@ html.arrange-trimming * {
     left: 0;
     z-index: 5;
     height: 18px;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.45);
-    border-right: 1px solid rgba(0, 170, 0, 0.45);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.45);
+    border-right: 1px solid rgba(16, 158, 67, 0.45);
 }
 .arrange-roll-heads,
 .arrange-roll-grid,
@@ -14517,18 +14559,18 @@ html.arrange-trimming * {
     z-index: 4;
     align-self: end;
     background: #050805;
-    border-top: 1px solid rgba(0, 170, 0, 0.65);
+    border-top: 1px solid rgba(16, 158, 67, 0.65);
 }
 .arrange-roll-pcorner {
     left: 0;
     z-index: 5;
     display: grid;
     grid-auto-rows: 16px;
-    border-right: 1px solid rgba(0, 170, 0, 0.65);
+    border-right: 1px solid rgba(16, 158, 67, 0.65);
 }
 .arrange-roll-plabel {
     padding-right: 6px;
-    color: #00aa00;
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 8px;
     line-height: 16px;
@@ -14546,8 +14588,8 @@ html.arrange-trimming * {
 .arrange-roll-prop {
     position: relative;
     box-sizing: border-box;
-    border-left: 1px solid rgba(0, 170, 0, 0.14);
-    border-bottom: 1px solid rgba(0, 170, 0, 0.16);
+    border-left: 1px solid rgba(16, 158, 67, 0.14);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.16);
     color: #050805;
     font-family: Michroma, sans-serif;
     font-size: 8px;
@@ -14558,10 +14600,10 @@ html.arrange-trimming * {
     touch-action: none;
 }
 .arrange-roll-prop.is-bar {
-    border-left-color: rgba(0, 170, 0, 0.55);
+    border-left-color: rgba(16, 158, 67, 0.55);
 }
 .arrange-roll-prop.is-col {
-    box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(24, 237, 100, 0.28);
 }
 .arrange-roll-prop.is-on {
     background: #00cccc;
@@ -14576,7 +14618,7 @@ html.arrange-trimming * {
 }
 .arrange-roll-prop.is-play:not(.is-on),
 .arrange-roll-head.is-play {
-    background: rgba(0, 255, 0, 0.16);
+    background: rgba(24, 237, 100, 0.16);
 }
 .arrange-roll-playcol {
     position: absolute;
@@ -14584,8 +14626,8 @@ html.arrange-trimming * {
     bottom: 0;
     z-index: 2;
     pointer-events: none;
-    background: rgba(0, 255, 0, 0.08);
-    box-shadow: inset 1px 0 0 rgba(0, 255, 0, 0.55), inset -1px 0 0 rgba(0, 255, 0, 0.55);
+    background: rgba(24, 237, 100, 0.08);
+    box-shadow: inset 1px 0 0 rgba(24, 237, 100, 0.55), inset -1px 0 0 rgba(24, 237, 100, 0.55);
 }
 .arrange-roll-playcol.is-line {
     width: 2px;
@@ -14594,7 +14636,7 @@ html.arrange-trimming * {
     box-shadow: 0 0 6px rgba(0, 255, 255, 0.6);
 }
 .arrange-roll-cell.is-play {
-    background: rgba(0, 255, 0, 0.14);
+    background: rgba(24, 237, 100, 0.14);
 }
 .arrange-roll-keys,
 .arrange-roll-grid {
@@ -14605,15 +14647,15 @@ html.arrange-trimming * {
     left: 0;
     z-index: 3;
     background: #050805;
-    border-right: 1px solid rgba(0, 170, 0, 0.65);
+    border-right: 1px solid rgba(16, 158, 67, 0.65);
 }
 .arrange-roll-head {
     position: relative;
     height: 18px;
     box-sizing: border-box;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.45);
-    border-left: 1px solid rgba(0, 170, 0, 0.18);
-    color: #00aa00;
+    border-bottom: 1px solid rgba(16, 158, 67, 0.45);
+    border-left: 1px solid rgba(16, 158, 67, 0.18);
+    color: #109e43;
     font-family: Michroma, sans-serif;
     font-size: 8px;
     line-height: 18px;
@@ -14622,18 +14664,18 @@ html.arrange-trimming * {
     user-select: none;
 }
 .arrange-roll-head.is-bar {
-    border-left-color: rgba(0, 170, 0, 0.7);
+    border-left-color: rgba(16, 158, 67, 0.7);
 }
 .arrange-roll-head.is-col {
-    color: #00ff00;
-    box-shadow: inset 0 -2px 0 #00ff00;
+    color: #18ed64;
+    box-shadow: inset 0 -2px 0 #18ed64;
 }
 .arrange-roll-key {
     box-sizing: border-box;
     height: var(--row, 16px);
     padding: 0 3px 0 0;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.16);
-    color: #00aa00;
+    border-bottom: 1px solid rgba(16, 158, 67, 0.16);
+    color: #109e43;
     background: #050805;
     font-family: Michroma, sans-serif;
     font-size: 8px;
@@ -14644,10 +14686,10 @@ html.arrange-trimming * {
 }
 .arrange-roll-key.is-black {
     background: #020402;
-    color: #148014;
+    color: #1d773d;
 }
 .arrange-roll-key.is-c {
-    color: #00ff00;
+    color: #18ed64;
 }
 /* Piano keys (pitch and Rec clips). Phosphor version of a piano: no white keys, naturals are lit-edge
    panels, sharps are black bars two thirds wide; keys in the selected step light up green with black type. */
@@ -14666,17 +14708,17 @@ html.arrange-trimming * {
 }
 .arrange-roll-wkey {
     right: 0;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.55);
-    background: linear-gradient(to right, #041204, #0a2a0a 70%, #0d340d);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.55);
+    background: linear-gradient(to right, #051109, #0c2716 70%, #10301b);
 }
 .arrange-roll-wkey.is-c {
-    border-bottom-color: #00aa00;
+    border-bottom-color: #109e43;
 }
 .arrange-roll-bkey {
     width: 62%;
     height: var(--row, 16px);
     z-index: 1;
-    border: 1px solid rgba(0, 170, 0, 0.75);
+    border: 1px solid rgba(16, 158, 67, 0.75);
     border-left: 0;
     background: #000;
     box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9);
@@ -14685,9 +14727,9 @@ html.arrange-trimming * {
 .arrange-roll-bkey.is-lit,
 .arrange-roll-wkey.is-down,
 .arrange-roll-bkey.is-down {
-    background: #00ff00;
-    border-color: #00ff00;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+    background: #18ed64;
+    border-color: #18ed64;
+    box-shadow: 0 0 8px rgba(24, 237, 100, 0.6);
 }
 .arrange-roll-bkey.is-lit,
 .arrange-roll-bkey.is-down {
@@ -14698,7 +14740,7 @@ html.arrange-trimming * {
     position: absolute;
     right: 3px;
     bottom: 1px;
-    color: #00ff00;
+    color: #18ed64;
     font-family: Michroma, sans-serif;
     font-size: 7px;
     line-height: 1;
@@ -14707,7 +14749,7 @@ html.arrange-trimming * {
 .arrange-roll-wkey.is-down,
 .arrange-roll-bkey.is-down {
     filter: brightness(1.15);
-    box-shadow: 0 0 12px rgba(0, 255, 0, 0.85);
+    box-shadow: 0 0 12px rgba(24, 237, 100, 0.85);
 }
 .arrange-roll-wkey.is-lit .arrange-roll-klabel,
 .arrange-roll-wkey.is-down .arrange-roll-klabel {
@@ -14719,7 +14761,7 @@ html.arrange-trimming * {
     justify-content: flex-end;
     height: auto;
     min-height: 28px;
-    color: #00ff00;
+    color: #18ed64;
     font-size: 10px;
 }
 .arrange-roll-cell {
@@ -14727,8 +14769,8 @@ html.arrange-trimming * {
     box-sizing: border-box;
     height: var(--row, 16px);
     min-width: 0;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.16);
-    border-left: 1px solid rgba(0, 170, 0, 0.14);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.16);
+    border-left: 1px solid rgba(16, 158, 67, 0.14);
     background: #050805;
     cursor: pointer;
     touch-action: pan-x pan-y;
@@ -14737,13 +14779,13 @@ html.arrange-trimming * {
     background: #020402;
 }
 .arrange-roll-cell.is-bar {
-    border-left-color: rgba(0, 170, 0, 0.55);
+    border-left-color: rgba(16, 158, 67, 0.55);
 }
 .arrange-roll-cell.is-c {
-    border-bottom-color: rgba(0, 170, 0, 0.38);
+    border-bottom-color: rgba(16, 158, 67, 0.38);
 }
 .arrange-roll-cell.is-col {
-    box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(24, 237, 100, 0.28);
 }
 .arrange-roll-cell.is-on {
     z-index: 1;
@@ -14757,13 +14799,13 @@ html.arrange-trimming * {
     right: 1px;
     top: 1px;
     bottom: 4px;
-    background: #00aa00;
-    box-shadow: 0 0 4px rgba(0, 170, 0, 0.45);
+    background: #109e43;
+    box-shadow: 0 0 4px rgba(16, 158, 67, 0.45);
     pointer-events: none;
 }
 .arrange-roll-cell.is-on.is-accent::before {
-    background: #00ff00;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.85);
+    background: #18ed64;
+    box-shadow: 0 0 8px rgba(24, 237, 100, 0.85);
 }
 .arrange-roll-cell.is-drag::before {
     background: #00ffff;
@@ -14773,7 +14815,7 @@ html.arrange-trimming * {
     background: #020302;
 }
 .arrange-roll-cell.is-out.is-on:not(.is-drag)::before {
-    background: #005500;
+    background: #084f21;
     box-shadow: none;
 }
 /* A step turned off with On/Off keeps its notes: drawn grey, no glow. */
@@ -14817,12 +14859,12 @@ html.arrange-trimming * {
 .arrange-roll-fkey {
     position: relative;
     box-sizing: border-box;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.55);
-    background: linear-gradient(to right, #041204, #0a2a0a 70%, #0d340d);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.55);
+    background: linear-gradient(to right, #051109, #0c2716 70%, #10301b);
     user-select: none;
 }
 .arrange-roll-fkey.is-root {
-    border-bottom-color: #00aa00;
+    border-bottom-color: #109e43;
 }
 .arrange-roll-fkey-cap {
     position: absolute;
@@ -14831,7 +14873,7 @@ html.arrange-trimming * {
     bottom: 0;
     width: 62%;
     box-sizing: border-box;
-    border: 1px solid rgba(0, 170, 0, 0.75);
+    border: 1px solid rgba(16, 158, 67, 0.75);
     border-left: 0;
     background: #000;
     box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9);
@@ -14852,9 +14894,9 @@ html.arrange-trimming * {
 .arrange-roll-fkey.is-down,
 .arrange-roll-fkey.is-lit .arrange-roll-fkey-cap,
 .arrange-roll-fkey.is-down .arrange-roll-fkey-cap {
-    background: #00ff00;
-    border-color: #00ff00;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+    background: #18ed64;
+    border-color: #18ed64;
+    box-shadow: 0 0 8px rgba(24, 237, 100, 0.6);
 }
 .arrange-roll-fkey.is-lit .arrange-roll-klabel,
 .arrange-roll-fkey.is-down .arrange-roll-klabel {
@@ -14909,7 +14951,7 @@ html.arrange-trimming * {
 .arrange-roll-ratch-head {
     position: static;
     margin-left: 2px;
-    color: #00ff00;
+    color: #18ed64;
 }
 .arrange-roll.is-drums .arrange-roll-sheet {
     height: 100%;
@@ -14936,7 +14978,7 @@ html.arrange-trimming * {
     position: sticky;
     min-width: 0;
     height: 18px;
-    border-bottom: 1px solid rgba(0, 170, 0, 0.45);
+    border-bottom: 1px solid rgba(16, 158, 67, 0.45);
     overflow: hidden;
 }
 .arrange-roll-barnum {
@@ -14944,10 +14986,10 @@ html.arrange-trimming * {
     top: 0;
     height: 18px;
     padding-left: 3px;
-    border-left: 1px solid rgba(0, 255, 0, 0.45);
+    border-left: 1px solid rgba(24, 237, 100, 0.45);
     font-size: 9px;
     line-height: 18px;
-    color: #00aa00;
+    color: #109e43;
     pointer-events: none;
 }
 .arrange-roll.is-notes .arrange-roll-sheet {
@@ -14970,9 +15012,9 @@ html.arrange-trimming * {
     box-sizing: border-box;
     z-index: 2;
     pointer-events: none;
-    background: rgba(0, 255, 0, 0.12);
-    border-top: 1px solid rgba(0, 255, 0, 0.45);
-    border-bottom: 1px solid rgba(0, 255, 0, 0.45);
+    background: rgba(24, 237, 100, 0.12);
+    border-top: 1px solid rgba(24, 237, 100, 0.45);
+    border-bottom: 1px solid rgba(24, 237, 100, 0.45);
 }
 .arrange-roll-notes {
     position: absolute;
@@ -14983,15 +15025,15 @@ html.arrange-trimming * {
     position: absolute;
     box-sizing: border-box;
     min-width: 4px;
-    background: #00aa00;
-    box-shadow: 0 0 4px rgba(0, 170, 0, 0.55);
+    background: #109e43;
+    box-shadow: 0 0 4px rgba(16, 158, 67, 0.55);
     pointer-events: none;
 }
 /* Notes clips are editable (arrange-roll.js paintNotes). */
 .arrange-roll.is-notes .arrange-roll-note {
     pointer-events: auto;
     cursor: grab;
-    border: 1px solid #00ff00;
+    border: 1px solid #18ed64;
 }
 .arrange-roll.is-notes .arrange-roll-note.is-sel {
     background: #00ffff;
@@ -15010,19 +15052,27 @@ html.arrange-trimming * {
 .arrange-roll.is-notes .arrange-roll-grid {
     cursor: crosshair;
 }
+/* Draw tool (arrange-roll.js startPaint): a pencil cursor, and touch strokes paint instead of scrolling. */
+.arrange-roll.is-draw .arrange-roll-cell:not(.is-dim),
+.arrange-roll.is-draw.is-notes .arrange-roll-grid,
+.arrange-roll.is-draw.is-notes .arrange-roll-note,
+.arrange-roll.is-draw.is-notes .arrange-roll-note-end {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23000000' stroke='%2300ff00' stroke-width='1.2' stroke-linejoin='round' d='M2.5 21.5l1.3-5.2L15.6 4.5l3.9 3.9L7.7 20.2z'/%3E%3Cpath fill='none' stroke='%2300ff00' stroke-width='1.2' d='M13.6 6.5l3.9 3.9'/%3E%3C/svg%3E") 2 22, crosshair;
+    touch-action: none;
+}
 .arrange-roll-beats {
     position: absolute;
     inset: 0;
     pointer-events: none;
     background-image:
-        repeating-linear-gradient(90deg, rgba(0, 255, 0, 0.35) 0 1px, transparent 1px var(--bar-px)),
-        repeating-linear-gradient(90deg, rgba(0, 170, 0, 0.2) 0 1px, transparent 1px var(--beat-px));
+        repeating-linear-gradient(90deg, rgba(24, 237, 100, 0.35) 0 1px, transparent 1px var(--bar-px)),
+        repeating-linear-gradient(90deg, rgba(16, 158, 67, 0.2) 0 1px, transparent 1px var(--beat-px));
 }
 .arrange-roll-beats.is-fine {
     background-image:
-        repeating-linear-gradient(90deg, rgba(0, 255, 0, 0.35) 0 1px, transparent 1px var(--bar-px)),
-        repeating-linear-gradient(90deg, rgba(0, 170, 0, 0.2) 0 1px, transparent 1px var(--beat-px)),
-        repeating-linear-gradient(90deg, rgba(0, 170, 0, 0.08) 0 1px, transparent 1px var(--grid-px));
+        repeating-linear-gradient(90deg, rgba(24, 237, 100, 0.35) 0 1px, transparent 1px var(--bar-px)),
+        repeating-linear-gradient(90deg, rgba(16, 158, 67, 0.2) 0 1px, transparent 1px var(--beat-px)),
+        repeating-linear-gradient(90deg, rgba(16, 158, 67, 0.08) 0 1px, transparent 1px var(--grid-px));
 }
 @media (max-width: 420px) {
     /* The key column narrows to 52px: Acc / Sld / Rat instead of the full names. */
@@ -15065,23 +15115,23 @@ html.arrange-trimming * {
 }
 .mi-link {
     fill: none;
-    stroke: color-mix(in srgb, var(--mi-cap, #00aa00) 55%, transparent);
+    stroke: color-mix(in srgb, var(--mi-cap, #109e43) 55%, transparent);
     stroke-width: 1.5px;
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-dasharray: 0.01 3.5;
 }
 .mi-link.is-hot {
-    stroke: var(--mi-cap, #00ff00);
+    stroke: var(--mi-cap, #18ed64);
 }
 .mi-knob.is-link-hot .mi-knob-dial {
     --mi-knob-face: var(--mi-cap);
 }
 .synth-knob.is-link-hot .synth-knob-dial {
-    box-shadow: 0 0 7px color-mix(in srgb, var(--mi-cap, #00ff00) 50%, transparent);
+    box-shadow: 0 0 7px color-mix(in srgb, var(--mi-cap, #18ed64) 50%, transparent);
 }
 .plaits-grid {
-    --mi-cap: #00ff00;
+    --mi-cap: #18ed64;
 }
 /* Knobs and attenuverters the current model or patch does not use (plaits-panel.js). */
 .mi-knob.is-model-inactive,
@@ -15151,7 +15201,7 @@ html.arrange-trimming * {
 }
 .share-ring {
     fill: none;
-    stroke: #00ff00;
+    stroke: #18ed64;
     stroke-width: 2;
     stroke-linejoin: miter;
     filter: url(#shareGlow);
@@ -15173,30 +15223,32 @@ html.arrange-trimming * {
     padding: 0;
     margin: 0;
     border: 0;
-    background: #00aa00;
-    color: #00ff00;
+    background: var(--tp-ink);
+    color: #18ed64;
     display: grid;
     place-items: center;
     cursor: pointer;
     clip-path: var(--share-hex);
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
 }
+/* Inner panel = the outer hex offset inward by a 2px stroke, parallel on every side (64×50, cut 15:
+   slant length 29.15, so the tips move in 2·29.15/25 = 2.33px and the flats start at 15 − 1.2 + 2.33 = 16.13px). */
 .share-btn::before,
 .share-btn::after {
     content: "";
     position: absolute;
-    inset: 1.5px;
-    clip-path: polygon(calc(var(--cut) - 1px) 0, calc(100% - var(--cut) + 1px) 0, 100% 50%, calc(100% - var(--cut) + 1px) 100%, calc(var(--cut) - 1px) 100%, 0 50%);
+    inset: 0;
+    clip-path: polygon(16.13px 2px, calc(100% - 16.13px) 2px, calc(100% - 2.33px) 50%, calc(100% - 16.13px) calc(100% - 2px), 16.13px calc(100% - 2px), 2.33px 50%);
 }
 .share-btn::before {
     background: #050805;
 }
 .share-btn::after {
-    background: var(--share-flash, #00ee00);
+    background: var(--share-flash, #16dd5e);
     opacity: 0;
 }
 .share-btn:hover {
-    background: #00ff00;
+    background: #18ed64;
     transform: translateY(-1px);
 }
 .share-btn:active {
@@ -15219,7 +15271,7 @@ html.arrange-trimming * {
 }
 @keyframes share-ink {
     0%, 30% { color: #000; }
-    100% { color: #00ff00; }
+    100% { color: #18ed64; }
 }
 .share-icon {
     position: relative;
@@ -15240,7 +15292,7 @@ html.arrange-trimming * {
     min-height: 1.2em;
     font-size: 8px;
     letter-spacing: 0.14em;
-    color: #00aa00;
+    color: #109e43;
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.25s;
@@ -15250,4 +15302,411 @@ html.arrange-trimming * {
 }
 .share-status.is-ok {
     color: #00ffff;
+}
+/* Preview under the pads: pads play over the song with Record and Play off. */
+.arrange-bank-actions {
+    display: flex;
+    justify-content: center;
+    padding: 2px 2px 0;
+}
+.arrange-pad-preview {
+    height: 24px;
+    min-width: 96px;
+    font-family: Michroma, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+}
+/* On: solid green, black text (lit elements never take white). */
+.arrange-btn.arrange-pad-preview[aria-pressed="true"] {
+    background: #18ed64;
+    border-color: #18ed64;
+    color: #000;
+}
+/* A preview hit on the timeline: heard now, gone at Stop. */
+.arrange-clip.is-preview {
+    opacity: 0.55;
+    border-style: dashed;
+}
+
+/* ==========================================================================
+   Touch-plate keyboard, pitch / LFO faders and press flash
+   (designed in the Design Lab, ported 2026-11-11). Colours: irrigation green, nudged 4.5° bluer.
+   Keyboard: EH-0400-style touch plates — glowing divider lines, dim flat sharps, lit presses,
+   a rim round the keys, letters only on the Cs / root / transpose key.
+   Faders: black wells with a 2px glowing outline and a flat plate that lights while touched;
+   LFO shows its amount as a fill. Behaviour lives in js/touch-plate.js.
+   ========================================================================== */
+:root {
+    --tp-ink: #13bf51;    /* key lines, fader outlines */
+    --tp-plate: #0d8538;  /* idle sharps and fader plates */
+    --tp-lit: #52ff90;    /* pressed / touched */
+    --tp-hot: #d8ffe7;    /* hot core of a lit key */
+}
+/* Touch-plate keyboard skin (EH-0400 proportions, glowing phosphor) for the IngySynth web app.
+   Drop in after styles.css. Colours come from --tp-ink / --tp-plate / --tp-lit / --tp-hot. */
+.chromatic-keyboard { --tp-glow: 1; }
+
+/* naturals: black strips, a glowing line on the right edge */
+.piano-key-white {
+    background: #040604 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    color: var(--tp-ink) !important;
+    box-shadow: none !important;
+    transition: background .18s ease-out, box-shadow .18s ease-out;
+}
+.piano-key-white::after {
+    content: ""; position: absolute; top: 0; bottom: 0; right: -1px; width: 2px; z-index: 1; pointer-events: none;
+    background: var(--tp-ink);
+    box-shadow: 0 0 calc(2px * var(--tp-glow)) var(--tp-ink),
+                0 0 calc(8px * var(--tp-glow)) color-mix(in srgb, var(--tp-ink) 55%, transparent),
+                0 0 calc(22px * var(--tp-glow)) color-mix(in srgb, var(--tp-ink) 25%, transparent);
+}
+.piano-white-layer .piano-key-white:first-child { box-shadow: inset 2px 0 0 var(--tp-ink) !important; }
+.piano-key-white:hover { background: color-mix(in srgb, var(--tp-ink) 6%, #040604) !important; }
+
+/* sharps: solid plates, 55% of the key length, a step dimmer than the lines */
+.piano-key-black {
+    height: 55% !important;
+    background: var(--tp-plate) !important;
+    border: 0 !important;
+    border-radius: 1px !important;
+    color: #000 !important;
+    transition: background-color .18s ease-out, box-shadow .18s ease-out;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tp-lit) 18%, transparent),
+                0 0 calc(6px * var(--tp-glow)) color-mix(in srgb, var(--tp-ink) 45%, transparent),
+                0 0 calc(20px * var(--tp-glow)) color-mix(in srgb, var(--tp-ink) 22%, transparent) !important;
+}
+.piano-key-black:hover { background: color-mix(in srgb, var(--tp-plate) 80%, var(--tp-lit)) !important; }
+.piano-key-black .piano-key-label { color: #000 !important; opacity: .55; }
+
+/* pressed / latched: instant attack, phosphor decay on release */
+.piano-key-white.active, .piano-key-white.latched {
+    transition: none;
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--tp-lit) 55%, transparent), color-mix(in srgb, var(--tp-lit) 85%, transparent)) !important;
+    box-shadow: inset 0 0 24px color-mix(in srgb, var(--tp-hot) 35%, transparent), 0 0 26px color-mix(in srgb, var(--tp-lit) 55%, transparent) !important;
+}
+.piano-key-white.active::after, .piano-key-white.latched::after { background: var(--tp-lit); }
+.piano-key-black.active, .piano-key-black.latched {
+    transition: none;
+    background: var(--tp-lit) !important;
+    box-shadow: inset 0 0 10px color-mix(in srgb, var(--tp-hot) 45%, transparent),
+                0 0 10px var(--tp-lit), 0 0 30px color-mix(in srgb, var(--tp-lit) 75%, transparent),
+                0 0 60px color-mix(in srgb, var(--tp-lit) 35%, transparent) !important;
+}
+.piano-key.active .piano-key-label, .piano-key.latched .piano-key-label { color: #000 !important; }
+
+/* root key: keep the cue, but as a brighter line instead of a cyan box */
+.piano-key.key-root:not(.active):not(.latched) { box-shadow: inset 0 -3px 0 var(--tp-lit) !important; }
+
+/* the well behind the keys */
+.chromatic-keyboard-panel {
+    background: #040604;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.95), inset 0 0 calc(60px * var(--tp-glow)) color-mix(in srgb, var(--tp-ink) 10%, transparent);
+}
+
+/* Labels: only the Cs, the root key and the transpose target */
+.piano-key .piano-key-label { visibility: hidden; }
+.piano-key[aria-label^="C"]:not([aria-label^="C#"]) .piano-key-label,
+.piano-key.key-root .piano-key-label,
+.piano-key.key-transpose .piano-key-label { visibility: visible; }
+
+/* Frame, from the straight-on EH-0400 photo: the key lines run down into a bevelled rim that
+   wraps the left, bottom and right of the key well. The rim is a touch heavier and dimmer than the
+   lines, lit along its top edge. Below it sits a strip of matte panel with screws. */
+.piano-white-layer::after {
+    content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    border: 3px solid color-mix(in srgb, var(--tp-ink) 78%, #000);
+    border-top: 0;
+    border-bottom-width: 1px;
+    box-shadow: inset 0 -1px 0 var(--tp-ink),                      /* lit top edge of the bottom rim */
+                inset 1px 0 0 var(--tp-ink), inset -1px 0 0 var(--tp-ink),
+                0 0 calc(8px * var(--tp-glow)) color-mix(in srgb, var(--tp-ink) 35%, transparent),
+                0 0 calc(22px * var(--tp-glow)) color-mix(in srgb, var(--tp-ink) 15%, transparent);
+}
+/* panel strip under the well */
+.chromatic-keyboard { margin-bottom: 24px !important; }
+.chromatic-keyboard::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 18px; pointer-events: none;
+    background: linear-gradient(#0b0d0b, #070807);
+    border-bottom: 1px solid #000;
+}
+
+/* Pitch bend + LFO amount strips in the touch-plate keyboard style:
+   a black well with a thicker glowing outline, and a flat plate for the fader that lights up while touched.
+   Uses the keyboard colours: --tp-ink (lines), --tp-plate (idle plate), --tp-lit / --tp-hot (touched). */
+
+.keyboard-pitch-bend-track,
+.keyboard-lfo-strip-track {
+    border: 2px solid var(--tp-ink) !important;
+    border-radius: 3px !important;
+    background: #040604 !important;
+    box-shadow: 0 0 2px var(--tp-ink),
+                0 0 8px color-mix(in srgb, var(--tp-ink) 45%, transparent),
+                0 0 20px color-mix(in srgb, var(--tp-ink) 18%, transparent),
+                inset 0 2px 8px rgba(0, 0, 0, .95),
+                inset 0 0 26px color-mix(in srgb, var(--tp-ink) 10%, transparent) !important;
+    overflow: visible !important;
+}
+/* hover / value-set states stay dark: only the plate lights up */
+.keyboard-pitch-bend:hover .keyboard-pitch-bend-track,
+.keyboard-pitch-bend:focus-visible .keyboard-pitch-bend-track,
+.keyboard-lfo-strip:hover .keyboard-lfo-strip-track,
+.keyboard-lfo-strip:focus-visible .keyboard-lfo-strip-track,
+.keyboard-pitch-bend.active .keyboard-pitch-bend-track,
+.keyboard-lfo-strip.active .keyboard-lfo-strip-track {
+    border-color: var(--tp-ink) !important;
+    background: #040604 !important;
+}
+
+/* bend centre: a key-divider line */
+.keyboard-pitch-bend-center {
+    top: 0 !important; bottom: 0 !important;
+    width: 2px !important; margin-left: -1px !important;
+    background: var(--tp-ink) !important;
+    box-shadow: 0 0 2px var(--tp-ink), 0 0 8px color-mix(in srgb, var(--tp-ink) 45%, transparent);
+    opacity: .7;
+}
+
+/* the fader: a flat plate, like a sharp key */
+.keyboard-pitch-bend-thumb,
+.keyboard-lfo-strip-thumb {
+    top: 5px !important; bottom: 5px !important;
+    width: 16px !important;
+    border: 0 !important;
+    border-radius: 1px !important;
+    background: var(--tp-plate) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tp-lit) 18%, transparent),
+                0 0 6px color-mix(in srgb, var(--tp-ink) 45%, transparent),
+                0 0 18px color-mix(in srgb, var(--tp-ink) 20%, transparent) !important;
+    transition: background-color .18s ease-out, box-shadow .18s ease-out;
+    z-index: 1;
+}
+.keyboard-pitch-bend-thumb { margin-left: -8px !important; }
+.keyboard-lfo-strip-thumb  { left: calc(var(--lfo) * (100% - 16px)) !important; }
+
+.keyboard-pitch-bend:hover .keyboard-pitch-bend-thumb,
+.keyboard-lfo-strip:hover .keyboard-lfo-strip-thumb {
+    background: color-mix(in srgb, var(--tp-plate) 80%, var(--tp-lit)) !important;
+}
+
+/* touched: instant light, phosphor decay on release (same as a pressed sharp) */
+.keyboard-pitch-bend.is-touching .keyboard-pitch-bend-thumb,
+.keyboard-lfo-strip.is-touching .keyboard-lfo-strip-thumb {
+    transition: none;
+    background: var(--tp-lit) !important;
+    box-shadow: inset 0 0 8px color-mix(in srgb, var(--tp-hot) 45%, transparent),
+                0 0 10px var(--tp-lit),
+                0 0 28px color-mix(in srgb, var(--tp-lit) 75%, transparent),
+                0 0 56px color-mix(in srgb, var(--tp-lit) 35%, transparent) !important;
+}
+.keyboard-pitch-bend.is-touching .keyboard-pitch-bend-track,
+.keyboard-lfo-strip.is-touching .keyboard-lfo-strip-track {
+    border-color: var(--tp-lit) !important;
+}
+
+/* LFO amount: a phosphor fill from the left edge up to the plate, so you can see how much is on.
+   Brighter towards the plate, like a level meter; it lights up a step further while touched. */
+.keyboard-lfo-strip-track::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; pointer-events: none;
+    width: calc(var(--lfo, 0) * (100% - 16px) + 8px);
+    background: linear-gradient(to right,
+        color-mix(in srgb, var(--tp-ink) 6%, transparent),
+        color-mix(in srgb, var(--tp-ink) 34%, transparent));
+    box-shadow: inset 0 0 14px color-mix(in srgb, var(--tp-ink) 18%, transparent);
+    opacity: calc(min(1, var(--lfo, 0) * 40));   /* fully hidden at zero */
+    transition: background .18s ease-out;
+}
+.keyboard-lfo-strip.is-touching .keyboard-lfo-strip-track::before {
+    transition: none;
+    background: linear-gradient(to right,
+        color-mix(in srgb, var(--tp-lit) 10%, transparent),
+        color-mix(in srgb, var(--tp-lit) 48%, transparent));
+}
+
+/* Gap between pitch bend and LFO: half a natural key wide, so it scales with the keyboard
+   (--tp-key-w is copied from the keyboard by touch-faders.js; 8px until it's known). */
+.keyboard-play-strips { column-gap: calc(var(--tp-key-w, 16px) * 0.5) !important; }
+
+/* ---- Vertical versions: the hex page's LFO / PITCH wheels (Bare Metal) ---- */
+.hex-wheel .keyboard-pitch-bend-thumb,
+.hex-wheel .keyboard-lfo-strip-thumb {
+    left: 5px !important; right: 5px !important;
+    width: auto !important; height: 16px !important;
+    margin: 0 !important;
+}
+.hex-wheel .keyboard-pitch-bend-thumb {
+    top: calc(50% - var(--bend) * 50%) !important; bottom: auto !important;
+    margin-top: -8px !important;
+}
+.hex-wheel .keyboard-lfo-strip-thumb {
+    top: auto !important;
+    bottom: calc(var(--lfo) * (100% - 16px)) !important;
+}
+.hex-wheel .keyboard-pitch-bend-center {
+    left: 0 !important; right: 0 !important;
+    top: 50% !important; bottom: auto !important;
+    width: auto !important; height: 2px !important;
+    margin: -1px 0 0 !important;
+}
+/* LFO amount fills from the bottom up to the plate */
+.hex-wheel .keyboard-lfo-strip-track::before {
+    left: 0; right: 0; top: auto; bottom: 0;
+    width: auto;
+    height: calc(var(--lfo, 0) * (100% - 16px) + 8px);
+    background: linear-gradient(to top,
+        color-mix(in srgb, var(--tp-ink) 6%, transparent),
+        color-mix(in srgb, var(--tp-ink) 34%, transparent));
+}
+.hex-wheel.is-touching .keyboard-lfo-strip-track::before {
+    background: linear-gradient(to top,
+        color-mix(in srgb, var(--tp-lit) 10%, transparent),
+        color-mix(in srgb, var(--tp-lit) 48%, transparent));
+}
+
+/* Pitch bend / LFO strips are always exactly one natural key tall (--tp-key-w is the
+   keyboard's white-key width, copied onto the strips by js/touch-plate.js). Hex-page wheels excluded. */
+.keyboard-play-strips .keyboard-pitch-bend-track,
+.keyboard-play-strips .keyboard-lfo-strip-track {
+    height: var(--tp-key-w, 44px) !important;
+    min-height: var(--tp-key-w, 44px) !important;
+    max-height: var(--tp-key-w, 44px) !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box;
+}
+.keyboard-play-strips .keyboard-pitch-bend,
+.keyboard-play-strips .keyboard-lfo-strip { height: auto !important; }
+
+/* ===================================================================================================
+   2px outer fieldset lines + seamless hex titles (locked in the Design Lab, 2026-11-11).
+   Outer fieldsets (not nested in another) draw a 2px line in the touch-plate line green; Berlin rows keep
+   their lane colour and MIDI keeps cyan when on (--fs-line). Hex titles are 2px too (their rules above).
+   A fieldset cuts its border out behind the legend, which left a stub at each hex tip; the legend's
+   ::before bridges that gap with the same line, behind the hex (whose inner panel covers the middle).
+   No glow on these lines. Tabs are unchanged (still being worked on in the lab).
+   =================================================================================================== */
+fieldset:not(fieldset fieldset):not(.osc4-voice-record-fieldset) {
+    --fs-line: var(--tp-ink);
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: var(--fs-line) !important;
+}
+.keyboard-section fieldset.berlin-row:not(fieldset fieldset) { --fs-line: var(--berlin-color, #109e43); }
+.midi-fieldset.midi-section-on:not(fieldset fieldset) { --fs-line: #00aaaa; }
+fieldset:not(fieldset fieldset):not(.osc4-voice-record-fieldset) > legend { --field-border: 2px !important; }
+fieldset:not(fieldset fieldset):not(.osc4-voice-record-fieldset) > legend:has(> .legend-hex)::before {
+    content: ""; position: absolute; left: 0; right: 0; z-index: -1; pointer-events: none;
+    top: calc(50% - 1px); height: 2px;
+    background: var(--fs-line);
+}
+/* The fieldsets inside Steps (Write, pattern select, Berlin lane selects, Pattern) get the same 2px line. */
+#keyboardStepsFieldset fieldset {
+    --fs-line: var(--tp-ink);
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: var(--fs-line) !important;
+}
+#keyboardStepsFieldset fieldset > legend { --field-border: 2px !important; }
+#keyboardStepsFieldset fieldset > legend:has(> .legend-hex)::before {
+    content: ""; position: absolute; left: 0; right: 0; z-index: -1; pointer-events: none;
+    top: calc(50% - 1px); height: 2px;
+    background: var(--fs-line);
+}
+
+/* ===================================================================================================
+   Plate pointer knob — the default IngySynth knob (Design Lab knob-plate.html, locked 2026-11-11).
+   js/plate-knobs.js gives every main .synth-knob-dial the class .pk and an SVG: a 2px ring with a plate
+   that starts on the ring's outer edge and fades towards the centre, so ring and pointer read as one shape.
+   The dial keeps its size and (now transparent) border, so nothing moves. Not used on Plaits/OSC 4,
+   Multitudes/Sequins, acid, NG-101 or the faders (see EXCLUDE in plate-knobs.js).
+   --k = line colour; --u = glow scale. Sizing follows the original knob: big knobs (cutoff, volume) keep
+   the standard line weights and only grow the plate a little; small knobs scale down (plate-knobs.js).
+   =================================================================================================== */
+.synth-knob-dial.pk {
+    --k: var(--tp-ink);
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+.synth-knob-dial.pk > .synth-knob-indicator { visibility: hidden !important; }
+.synth-knob-dial.pk > .plate-knob {
+    position: absolute;
+    left: calc(-1 * var(--pk-bw, 1px)); top: calc(-1 * var(--pk-bw, 1px));
+    width: calc(100% + 2 * var(--pk-bw, 1px)); height: calc(100% + 2 * var(--pk-bw, 1px));
+    overflow: visible; pointer-events: none;
+    color: var(--k);
+    filter: drop-shadow(0 0 calc(1px * var(--u, 1)) var(--k))
+            drop-shadow(0 0 calc(5px * var(--u, 1)) color-mix(in srgb, var(--k) 50%, transparent));
+    transition: color .18s ease-out, filter .18s ease-out;
+}
+.plate-knob .pk-face { fill: none; }
+.plate-knob .pk-ring { fill: none; stroke: currentColor; }
+.plate-knob stop { stop-color: currentColor; }
+/* Berlin lanes keep their colour; mixer sends stay dim */
+.berlin-step-knob .synth-knob-dial.pk,
+.berlin-drum-knob .synth-knob-dial.pk { --k: var(--berlin-color, #109e43); }
+.mixer-sends .synth-knob-dial.pk { --k: #0b6f2f; }
+/* touched / dragged: lights like a pressed key, phosphor decay on release */
+.synth-knob-dial.pk.active,
+.synth-knob-dial.pk.pk-on { --k: var(--tp-lit); }
+.synth-knob-dial.pk.active > .plate-knob,
+.synth-knob-dial.pk.pk-on > .plate-knob {
+    transition: none;
+    filter: drop-shadow(0 0 calc(3px * var(--u, 1)) var(--tp-lit))
+            drop-shadow(0 0 calc(12px * var(--u, 1)) color-mix(in srgb, var(--tp-lit) 70%, transparent));
+}
+/* Step flash (playing step): the knob fills solid, the plate turns black, glow like a pressed key.
+   Keyboard steps flash #18ed64, Berlin steps their lane colour. */
+.keyboard-step.active .keyboard-step-knob .synth-knob-dial.pk { --flash: #18ed64; }
+.berlin-step.active .berlin-step-knob .synth-knob-dial.pk { --flash: var(--berlin-color, #109e43); }
+:is(.keyboard-step.active .keyboard-step-knob, .berlin-step.active .berlin-step-knob) .synth-knob-dial.pk { --k: var(--flash); }
+:is(.keyboard-step.active .keyboard-step-knob, .berlin-step.active .berlin-step-knob) .synth-knob-dial.pk .pk-face { fill: var(--flash); }
+:is(.keyboard-step.active .keyboard-step-knob, .berlin-step.active .berlin-step-knob) .synth-knob-dial.pk stop { stop-color: #000; }
+:is(.keyboard-step.active .keyboard-step-knob, .berlin-step.active .berlin-step-knob) .synth-knob-dial.pk > .plate-knob {
+    transition: none;
+    filter: drop-shadow(0 0 calc(4px * var(--u, 1)) var(--flash))
+            drop-shadow(0 0 calc(14px * var(--u, 1)) color-mix(in srgb, var(--flash) 75%, transparent))
+            drop-shadow(0 0 calc(30px * var(--u, 1)) color-mix(in srgb, var(--flash) 35%, transparent));
+}
+
+/* ===================================================================================================
+   Pitch bend fill (Design Lab, locked 2026-11-11): the same phosphor fill as LFO amount, but bipolar —
+   it grows from the centre line out to the plate, brightest at the plate, and lights up a step further
+   while touched. Anchored at the centre and mirrored with scale(±1), so one gradient serves both ways.
+   Hidden at rest (--bend 0). The hex page's vertical PITCH wheel (Bare Metal) fills up / down.
+   =================================================================================================== */
+.keyboard-pitch-bend-track::before {
+    --b: var(--bend, 0);
+    content: ""; position: absolute; top: 0; bottom: 0; left: 50%; pointer-events: none;
+    width: calc(max(var(--b), -1 * var(--b)) * 50%);
+    transform-origin: left center;
+    transform: scaleX(clamp(-1, var(--b) * 100000, 1));
+    background: linear-gradient(to right,
+        color-mix(in srgb, var(--tp-ink) 6%, transparent),
+        color-mix(in srgb, var(--tp-ink) 34%, transparent));
+    box-shadow: inset 0 0 14px color-mix(in srgb, var(--tp-ink) 18%, transparent);
+    opacity: calc(min(1, max(var(--b), -1 * var(--b)) * 40));
+    transition: background .18s ease-out;
+}
+.keyboard-pitch-bend.is-touching .keyboard-pitch-bend-track::before {
+    transition: none;
+    background: linear-gradient(to right,
+        color-mix(in srgb, var(--tp-lit) 10%, transparent),
+        color-mix(in srgb, var(--tp-lit) 48%, transparent));
+}
+/* hex page PITCH wheel: up = positive, so the fill hangs from the centre and flips upwards */
+.hex-wheel .keyboard-pitch-bend-track::before {
+    left: 0; right: 0; top: 50%; bottom: auto;
+    width: auto;
+    height: calc(max(var(--b), -1 * var(--b)) * 50%);
+    transform-origin: center top;
+    transform: scaleY(clamp(-1, var(--b) * -100000, 1));
+    background: linear-gradient(to bottom,
+        color-mix(in srgb, var(--tp-ink) 6%, transparent),
+        color-mix(in srgb, var(--tp-ink) 34%, transparent));
+}
+.hex-wheel.is-touching .keyboard-pitch-bend-track::before {
+    background: linear-gradient(to bottom,
+        color-mix(in srgb, var(--tp-lit) 10%, transparent),
+        color-mix(in srgb, var(--tp-lit) 48%, transparent));
 }

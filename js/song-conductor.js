@@ -8,11 +8,11 @@
 
 import { state } from './state.js?v=120';
 import { getNumber } from './params.js?v=44';
-import { setSongConductor, uiOutputLatency } from './sequencer.js?v=456';
+import { setSongConductor, uiOutputLatency } from './sequencer.js?v=459';
 import { semitonesToNoteName } from './tuning.js?v=108';
-import { scheduleMonoNote } from './voice.js?v=191';
-import { schedulePolySeqVoicing } from './poly-voice.js?v=200';
-import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=102';
+import { scheduleMonoNote } from './voice.js?v=192';
+import { schedulePolySeqVoicing } from './poly-voice.js?v=202';
+import { applyBankAutomation, notifyAutomationLoopAnchor, useAutomationBank } from './automation.js?v=103';
 import {
     DRUM_LANE_COUNT,
     PATTERN_COUNT,
@@ -34,7 +34,7 @@ import {
     splitBerlinClips,
     setPlayhead,
     wrapTick,
-} from './song-model.js?v=12';
+} from './song-model.js?v=14';
 
 const SIXTEENTH = 240;
 const DIVS = new Set([2, 3, 4, 6, 8, 12, 16, 24, 48]);
@@ -67,6 +67,19 @@ let returnTick = 0;
 let continueTick = null;
 let pendingContinue = false;
 let hasReturn = false;
+/**
+ * A Preview pad one-shot (song-record.js) plays a song of its own through this conductor:
+ * one clip at tick 0, no loop. The arrangement's insert, return and continue ticks are
+ * kept aside while it runs, so the timeline is left exactly as it was.
+ */
+let soloSong = null;
+let soloKept = null;
+function curSong() {
+    return soloSong || state.song;
+}
+export function setConductorSong(song) {
+    soloSong = song || null;
+}
 
 const recordBridge = {
     recording: () => false,
@@ -178,7 +191,7 @@ function pruneAnchors() {
 }
 
 function loopEndTick() {
-    const loop = state.song?.loop;
+    const loop = curSong()?.loop;
     if (!loop?.on) return null;
     const start = loop.startTick | 0;
     const end = loop.endTick | 0;
@@ -187,7 +200,7 @@ function loopEndTick() {
 }
 
 function pushLoopAnchor(atEnd) {
-    const start = state.song?.loop?.startTick | 0;
+    const start = curSong()?.loop?.startTick | 0;
     const last = anchors[anchors.length - 1];
     if (!last) return false;
     if (last.loop && Math.abs(last.audioTime - atEnd) < 1e-5 && last.tick === start) return false;
@@ -211,16 +224,16 @@ function paintTransposeReadout() {
 }
 
 function updateLiveKeys(tick) {
-    if (!state.songPlaying || state.berlinMode || !state.song) {
+    if (!state.songPlaying || state.berlinMode || !curSong()) {
         state.songLiveKeys = false;
         return;
     }
-    const clip = clipAt(state.song, 'synth', tick);
+    const clip = clipAt(curSong(), 'synth', tick);
     state.songLiveKeys = !clip || clip.kind === 'notes';
 }
 
 function laneSemi(tick) {
-    const events = state.song?.transpose;
+    const events = curSong()?.transpose;
     if (!Array.isArray(events) || !events.length) return null;
     let semi = null;
     for (const event of events) {
@@ -326,8 +339,8 @@ function mode() {
 }
 
 function trackCues(track) {
-    if (!state.song) return [];
-    return buildCues(state.song, mode()).filter((cue) => cue.track === track);
+    if (!curSong()) return [];
+    return buildCues(curSong(), mode()).filter((cue) => cue.track === track);
 }
 
 function cueAtTick(track, tick) {
@@ -436,9 +449,9 @@ function restorePerformSlots() {
 }
 
 function publishPlayhead() {
-    if (!state.song) return;
+    if (!curSong()) return;
     document.dispatchEvent(new CustomEvent('ingysynth:song-tick', {
-        detail: { tick: state.song.playheadTick },
+        detail: { tick: curSong().playheadTick },
     }));
 }
 
@@ -471,8 +484,13 @@ function finishSong() {
     anchors = [];
     state.songSynthSilent = false;
     state.songDrumSilent = false;
-    if (hasReturn && state.song) {
-        setPlayhead(state.song, Math.max(0, returnTick || 0));
+    if (soloKept) {
+        ({ returnTick, hasReturn, continueTick } = soloKept);
+        soloKept = null;
+        return;
+    }
+    if (hasReturn && curSong()) {
+        setPlayhead(curSong(), Math.max(0, returnTick || 0));
         publishPlayhead();
     }
 }
@@ -641,16 +659,16 @@ function applyBerlinRows(audioTime, force) {
 function startRaf() {
     if (raf) return;
     const loop = () => {
-        if (!state.songPlaying || !state.isPlaying || !state.audioContext || !state.song) {
+        if (!state.songPlaying || !state.isPlaying || !state.audioContext || !curSong()) {
             raf = 0;
             return;
         }
         pruneAnchors();
         const tick = Math.max(0, tickAt(state.audioContext.currentTime - uiOutputLatency()));
         updateLiveKeys(tick);
-        setPlayhead(state.song, tick);
+        setPlayhead(curSong(), tick);
         document.dispatchEvent(new CustomEvent('ingysynth:song-tick', {
-            detail: { tick: state.song.playheadTick },
+            detail: { tick: curSong().playheadTick },
         }));
         raf = requestAnimationFrame(loop);
     };
@@ -665,18 +683,19 @@ function stopRaf() {
 function begin(audioTime, opts = {}) {
     const useContinue = !!opts.allowContinue && pendingContinue && continueTick != null;
     pendingContinue = false;
-    if (!state.song) return;
+    if (!curSong()) return;
+    if (soloSong && !soloKept) soloKept = { returnTick, hasReturn, continueTick };
     if (!hasSavedTranspose) {
         savedTranspose = state.keyboardTranspose || 0;
         hasSavedTranspose = true;
     }
     scheduledNotes.clear();
     // A song from before the oscillator rows keeps its Berlin clips on the synth track.
-    splitBerlinClips(state.song);
+    splitBerlinClips(curSong());
     const tps = ticksPerSecondNow();
-    const insert = Math.max(0, Math.round(Number(state.song.playheadTick) || 0));
+    const insert = Math.max(0, Math.round(Number(curSong().playheadTick) || 0));
     let tick = useContinue ? Math.max(0, Math.round(continueTick)) : insert;
-    tick = Math.round(wrapTick(state.song, tick));
+    tick = Math.round(wrapTick(curSong(), tick));
     returnTick = useContinue ? insert : tick;
     hasReturn = true;
     anchors = [{ tick, audioTime, tps }];
@@ -689,7 +708,7 @@ function begin(audioTime, opts = {}) {
     lastDrumArrived = null;
     state.songSynthSilent = false;
     state.songDrumSilent = false;
-    setPlayhead(state.song, tick);
+    setPlayhead(curSong(), tick);
     armDrumsAt(audioTime);
     if (!state.berlinMode) {
         const cue = cueAtTick('synth', tick);

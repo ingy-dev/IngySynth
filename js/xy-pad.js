@@ -1,6 +1,7 @@
 // ----- XY Pad Functionality -----
 import { getNumber, set } from './params.js?v=44';
-import { getParam, xyPadEntries } from './param-catalog.js?v=13';
+import { state } from './state.js?v=120';
+import { getParam, snapToStep, xyPadEntries } from './param-catalog.js?v=13';
 
 function populateXYPadControls() {
     return xyPadEntries();
@@ -43,7 +44,12 @@ function populateXYSelect(select, params) {
 
 function getXYAxisLabel(select) {
     const opt = select.options[select.selectedIndex];
-    return opt?.textContent ?? '';
+    const label = opt?.textContent ?? '';
+    const key = optionValueToAutomationKey(select.value);
+    const target = xyEngineKey(key);
+    if (!key || target === key) return label;
+    const name = getParam(target)?.xyName || target;
+    return `${label} \u2192 ${name}`;
 }
 
 let drawXYPadFn = null;
@@ -81,6 +87,46 @@ function optionValueToAutomationKey(optionValue) {
     return getParam(optionValue) ? optionValue : null;
 }
 
+// Modes with their own panel ignore some generic targets (the native and web engines
+// never read them there), so the pad drives the mode's own control instead.
+// NG-101 (Bare Metal): one ADSR, its own VCF and LFO; `cutoff` etc. never reach it.
+const NG101_TARGETS = {
+    cutoff: 'ng101Freq',
+    resonance: 'ng101Res',
+    filterEnvAmount: 'ng101VcfEnv',
+    filterKeyTrack: 'ng101Kybd',
+    attack: 'ng101Attack',
+    decay: 'ng101Decay',
+    sustain: 'ng101Sustain',
+    release: 'ng101Release',
+    filterAttack: 'ng101Attack',
+    filterDecay: 'ng101Decay',
+    filterSustain: 'ng101Sustain',
+    filterRelease: 'ng101Release',
+    lfoSpeed: 'ng101LfoRate',
+    cutoffMod: 'ng101VcfMod',
+    osc1PitchMod: 'ng101VcoMod',
+    noiseVol: 'ng101Noise',
+    subVol: 'ng101Sub',
+    'osc-pw-0': 'ng101Pw',
+};
+// Ingy 6: the Juno has one envelope; poly-voice.js copies the amp ADSR over the filter
+// ADSR on every amp move, so a filter ADSR target would be undone at once.
+const INGY6_TARGETS = {
+    filterAttack: 'attack',
+    filterDecay: 'decay',
+    filterSustain: 'sustain',
+    filterRelease: 'release',
+};
+
+/** The key an axis assigned to `key` drives in the current mode. */
+export function xyEngineKey(key) {
+    if (!key) return key;
+    const table = state.keyboardNg101 ? NG101_TARGETS : state.keyboardPoly ? INGY6_TARGETS : null;
+    const target = table?.[key];
+    return target && getParam(target) ? target : key;
+}
+
 function normalizeFromKey(key) {
     const spec = getParam(key);
     if (!spec || spec.type !== 'range') return null;
@@ -94,7 +140,7 @@ function normalizeFromKey(key) {
 function mapNormToKey(norm, key) {
     const spec = getParam(key);
     if (!spec || spec.type !== 'range') return null;
-    return spec.min + norm * (spec.max - spec.min);
+    return snapToStep(key, spec.min + norm * (spec.max - spec.min));
 }
 
 // Initialize XY pad and dropdowns
@@ -140,7 +186,7 @@ function initXYPad() {
         ctx.fillRect(0, 0, width, height);
 
         // Draw grid lines
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.2)';
+        ctx.strokeStyle = 'rgba(24, 237, 100, 0.2)';
         ctx.lineWidth = 1;
 
         // Vertical grid lines
@@ -177,7 +223,7 @@ function initXYPad() {
         }
 
         // Draw parameter labels
-        ctx.fillStyle = '#00ff00';
+        ctx.fillStyle = '#18ed64';
         ctx.font = '12px Michroma, sans-serif';
         ctx.textAlign = 'center';
 
@@ -196,15 +242,20 @@ function initXYPad() {
     }
 
     drawXYPadFn = drawXYPad;
+    // A mode switch can change what an axis drives (xyEngineKey): redraw its label.
+    ['ingysynth:native-flags', 'ingysynth:seq-engine-bump'].forEach((name) => {
+        document.addEventListener(name, () => queueMicrotask(drawXYPad));
+    });
 
+    // Automation records and plays the key the axis really drives in this mode.
     getAxisKeysFn = () => ({
-        x: optionValueToAutomationKey(xAxisSelect.value),
-        y: optionValueToAutomationKey(yAxisSelect.value),
+        x: xyEngineKey(optionValueToAutomationKey(xAxisSelect.value)),
+        y: xyEngineKey(optionValueToAutomationKey(yAxisSelect.value)),
     });
 
     function readParamNormalized(param) {
         if (!param || param.isNone || !param.key) return null;
-        return normalizeFromKey(param.key);
+        return normalizeFromKey(xyEngineKey(param.key));
     }
 
     followAutomationFn = (axes) => {
@@ -257,13 +308,15 @@ function initXYPad() {
 
     function updateParameterValues() {
         if (xParam && !xParam.isNone && xParam.key) {
-            const mapped = mapNormToKey(currentX, xParam.key);
-            if (mapped != null) set(xParam.key, mapped);
+            const key = xyEngineKey(xParam.key);
+            const mapped = mapNormToKey(currentX, key);
+            if (mapped != null) set(key, mapped);
         }
 
         if (yParam && !yParam.isNone && yParam.key) {
-            const mapped = mapNormToKey(1 - currentY, yParam.key);
-            if (mapped != null) set(yParam.key, mapped);
+            const key = xyEngineKey(yParam.key);
+            const mapped = mapNormToKey(1 - currentY, key);
+            if (mapped != null) set(key, mapped);
         }
 
         updatePointerPosition();
@@ -272,7 +325,7 @@ function initXYPad() {
     // Handle touch/mouse events
     function handleStart(e) {
         isActive = true;
-        xyPointer.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.9)';
+        xyPointer.style.boxShadow = '0 0 15px rgba(24, 237, 100, 0.9)';
 
         // Clear trail points when starting a new interaction
         trailPoints.length = 0;
@@ -317,7 +370,7 @@ function initXYPad() {
 
     function handleEnd() {
         isActive = false;
-        xyPointer.style.boxShadow = '0 0 6px rgba(0, 255, 0, 0.55)';
+        xyPointer.style.boxShadow = '0 0 6px rgba(24, 237, 100, 0.55)';
 
         // Clear trail after a short delay
         setTimeout(() => {

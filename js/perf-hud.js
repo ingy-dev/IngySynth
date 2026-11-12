@@ -39,7 +39,7 @@ export function initPerfHud() {
         'background:rgba(0,0,0,0.82)',
         'color:#c8ffc8',
         'padding:10px 12px',
-        'border:1px solid #2f6',
+        'border:1px solid #34ed76',
         'border-radius:6px',
         'min-width:300px',
         'pointer-events:none',
@@ -207,7 +207,7 @@ export function initPerfHud() {
         const meter = s.hasTs && s.keepHw != null ? s.keepHw : s.keepUp1s;
         const behind = meter < 0.95 || s.stalls > 0;
         box.style.color = behind ? '#ffb0b0' : '#c8ffc8';
-        box.style.borderColor = behind ? '#f66' : '#2f6';
+        box.style.borderColor = behind ? '#f66' : '#34ed76';
         const keep = Number.isFinite(s.keepUp1s) ? s.keepUp1s.toFixed(3) : '—';
         const hw = s.keepHw != null ? s.keepHw.toFixed(3) : '—';
         const dLag = `${s.dLagMs >= 0 ? '+' : ''}${s.dLagMs.toFixed(1)}ms`;

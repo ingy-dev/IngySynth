@@ -13,15 +13,15 @@ import {
 } from './tuning.js?v=108';
 import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer, previewNoteVisualizer, soundingNotesForStep, hideLogoOverlay, showLogoOverlay } from './visualizers.js?v=150';
 import { updateFilterCutoffRange, getFilterEnvAmount, getFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { forceNoteOff } from './voice.js?v=191';
-import { retriggerLfoIfNeeded } from './lfo-rate.js?v=68';
-import { bentFrequency } from './pitch-bend.js?v=141';
+import { forceNoteOff } from './voice.js?v=192';
+import { retriggerLfoIfNeeded } from './lfo-rate.js?v=69';
+import { bentFrequency } from './pitch-bend.js?v=142';
 import { applyVfdChar, VFD_BRAND_SCROLL } from './vfd-charset.js?v=73';
-import { setKeyboardStepActive } from './keyboard-steps.js?v=177';
+import { setKeyboardStepActive } from './keyboard-steps.js?v=178';
 import { spawnOscStack, firePhaseResetOscStack, stopDisabledOscStacks, voiceTargetFreq, getUnisonVoices, getUnisonSpread, unisonCents, readOscPanValue } from './unison.js?v=214';
 import { analogLogicalWave, createOscSource, createPlaitsSource, softStartVoiceGain, wtAttackSecForFilter, wtFilterClickRisk, hasDarkOscActive, fadeStopOsc, DRUM_ENGINES, isTriggeredEngine, OSC4_INDEX, ENGINE_TAIL_SEC, routeBerlinDrumPanners, warmPlaitsPool, warmAnalogShells, startAnalogOsc } from './osc-source.js?v=157';
 import { createAnalog808Voice, analogKitHz, digitalDrumTuneHz } from './analog-808.js?v=21';
-import { notifyAutomationLoopAnchor } from './automation.js?v=102';
+import { notifyAutomationLoopAnchor } from './automation.js?v=103';
 import { nextCyclePass } from './pattern-repeat.js?v=3';
 import { createSwingClock } from './swing.js?v=2';
 import { buildOrderList, getChordArpSourceNotes, expandArpNotesByRange } from './held-notes.js?v=13';
@@ -55,8 +55,8 @@ import {
     isRowSounding,
     isOscLane,
     patternGate,
-} from './berlin.js?v=124';
-import { berlinLaneMidiChannels } from './berlin-lane-midi.js?v=1';
+} from './berlin.js?v=125';
+import { berlinLaneMidiChannels } from './berlin-lane-midi.js?v=2';
 import {
     getPattern,
     getBerlinLane,
@@ -72,10 +72,10 @@ import {
     patternRepeat,
     patternStepCount,
 } from './pattern-bank.js?v=51';
-import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=200';
+import { schedulePolySeqVoicing, bumpSeqEngine, releasePolySeqHold } from './poly-voice.js?v=202';
 import { isPolyChordMemoryOn, getPolyChordIntervals } from './chord-memory.js?v=52';
-import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=53';
-import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=49';
+import { setDrumStepActive, clearDrumStepActive } from './drum-dock.js?v=54';
+import { parseScSource, scheduleSidechainDuck, resetSidechainDucker } from './sc-time.js?v=50';
 import { rampFromHere } from './audio-param-hold.js?v=1';
 import {
     clampRatch,
@@ -1262,23 +1262,25 @@ function togglePlay() {
         resetSidechainDucker(state.nextStepTime);
         scheduleNextStep();
         
-        // Update all start/stop buttons
-        if (startStopFront) startStopFront.textContent = 'Stop';
-        startStopButton?.classList.remove('start');
-        startStopButton?.classList.add('stop');
-        
-        if (mobileStartStopFront) mobileStartStopFront.textContent = 'Stop';
-        mobileStartStopButton?.classList.remove('start');
-        mobileStartStopButton?.classList.add('stop');
+        // Update all start/stop buttons (not for a Preview pad one-shot: the transport stays off)
+        if (!state.songOneShot) {
+            if (startStopFront) startStopFront.textContent = 'Stop';
+            startStopButton?.classList.remove('start');
+            startStopButton?.classList.add('stop');
 
-        if (kbStartStopButton) {
-            kbStartStopButton.classList.remove('start');
-            kbStartStopButton.classList.add('stop');
+            if (mobileStartStopFront) mobileStartStopFront.textContent = 'Stop';
+            mobileStartStopButton?.classList.remove('start');
+            mobileStartStopButton?.classList.add('stop');
+
+            if (kbStartStopButton) {
+                kbStartStopButton.classList.remove('start');
+                kbStartStopButton.classList.add('stop');
+            }
+            ckbSpaceButtons.forEach((btn) => {
+                btn.classList.remove('start');
+                btn.classList.add('stop');
+            });
         }
-        ckbSpaceButtons.forEach((btn) => {
-            btn.classList.remove('start');
-            btn.classList.add('stop');
-        });
     } else {
         if (stoppingSong && songConductor) songConductor.restorePerformSlots();
         state.playGeneration += 1;
@@ -4465,3 +4467,24 @@ export {
     stopArp,
     retuneArpTranspose,
 };
+
+// One drum hit now, for the piano roll's Preview: the lane's kit at the step's tune.
+// Bare Metal plays drums natively (live note kind 9, the drum lane, semis + cents / 100).
+export function auditionDrumHit(lane, step) {
+    lane |= 0;
+    if (lane < 0 || lane >= DRUM_LANE_COUNT) return;
+    const semi = Math.round(Number(step?.tune) || 0);
+    const fine = Number(step?.fine) || 0;
+    if (window.__JUCE__?.backend) {
+        window.ingyPostLiveNote?.(9, semi + fine / 100, 0, lane);
+        return;
+    }
+    const ctx = state.audioContext;
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    const tempo = getNumber('tempo', 120);
+    const stepDuration = 60 / (Number.isFinite(tempo) && tempo > 0 ? tempo : 120) / 4;
+    const data = { semi, fine, on: true, accent: false, slide: false, ratch: 1 };
+    const playhead = { semi, fine, sounded: false, prevSlide: false, prevGliss: false };
+    triggerBerlinDrumLane(lane, { gate: 0.9 }, ctx.currentTime + 0.005, stepDuration, data, playhead, null);
+}

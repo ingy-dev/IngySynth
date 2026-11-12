@@ -31,7 +31,7 @@ export function resolveShareDelivery({ doc, link, canShareFiles, hasWebShare }) 
 }
 
 export function ingyFileBlob(doc) {
-    const text = serialize(doc, { pretty: true });
+    const text = serialize(doc);   // compact: indenting a big arrangement doubled the file
     return new Blob([text], { type: 'application/json' });
 }
 

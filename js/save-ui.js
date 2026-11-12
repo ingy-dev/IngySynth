@@ -1,4 +1,4 @@
-import { captureProject, applyDoc } from './save-capture.js?v=23';
+import { captureProject, applyDoc } from './save-capture.js?v=24';
 import {
     LIBRARY_CAPS,
     SESSION_KEY,
@@ -350,7 +350,7 @@ function dropToast(message, isError) {
     el.setAttribute('role', isError ? 'alert' : 'status');
     el.textContent = message;
     el.style.cssText = 'position:fixed;left:50%;top:1rem;transform:translateX(-50%);padding:0.6rem 1rem;'
-        + `border:1px solid ${isError ? '#f44' : '#3f3'};background:#000;color:${isError ? '#f88' : '#3f3'};`
+        + `border:1px solid ${isError ? '#f44' : '#42ed80'};background:#000;color:${isError ? '#f88' : '#42ed80'};`
         + 'z-index:99999;font:inherit;border-radius:4px;pointer-events:none';
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 3500);

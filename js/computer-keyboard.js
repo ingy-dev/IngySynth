@@ -1,7 +1,7 @@
 import { state } from './state.js?v=120';
 import { semitonesToNoteName } from './tuning.js?v=108';
-import { initAudio } from './audio-engine.js?v=247';
-import { togglePlay } from './sequencer.js?v=456';
+import { initAudio } from './audio-engine.js?v=248';
+import { togglePlay } from './sequencer.js?v=459';
 import {
     pressKey,
     releaseKey,
@@ -12,9 +12,9 @@ import {
     syncVisibilityUI,
     KEYBOARD_SEMI_MIN,
     KEYBOARD_SEMI_MAX,
-} from './keyboard.js?v=276';
+} from './keyboard.js?v=277';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
-import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=160';
+import { isPolyWriteMode, polyWriteNoteDown, polyWriteNoteUp } from './pattern-write.js?v=161';
 
 /** Ableton home-row octave: relative semitones from A-key root. */
 const NOTE_CODES = {
@@ -180,8 +180,9 @@ function syncToggleUI() {
 
 function syncSpaceTransportUI() {
     document.querySelectorAll('.ckb-space').forEach((space) => {
-        space.classList.toggle('start', !state.isPlaying);
-        space.classList.toggle('stop', !!state.isPlaying);
+        const playing = !!state.isPlaying && !state.songOneShot;
+        space.classList.toggle('start', !playing);
+        space.classList.toggle('stop', playing);
     });
 }
 

@@ -188,14 +188,38 @@ export function clampToCatalog(key, value) {
     return v;
 }
 
-/** Scale a 0–127 CC onto a catalog range. Never uses || 127 as max. */
+/**
+ * Index-valued ranges: switch positions and sync divisions. Only whole numbers mean
+ * anything, so every write lands on one (params.js set). A fraction here once put the
+ * keyboard's note names out by a fraction of a semitone (NaN labels).
+ */
+export const WHOLE_STEP_KEYS = new Set([
+    'octaveSwitch', 'semitoneSwitch',
+    'lfoSyncDivision', 'ingy6LfoSyncDivision', 'scTimeSyncDivision',
+]);
+
+/** Lands `value` on the param's own `step` grid (from `min`), inside its range. */
+export function snapToStep(key, value) {
+    const spec = getParam(key);
+    if (!spec || spec.type !== 'range' || !Number.isFinite(value)) return value;
+    const v = clampToCatalog(key, value);
+    const step = Number(spec.step);
+    if (!(step > 0)) return v;
+    const min = Number.isFinite(spec.min) ? spec.min : 0;
+    const snapped = min + Math.round((v - min) / step) * step;
+    // Trim float noise (0.1 * 3 = 0.30000000000000004) to the step's decimals.
+    const decimals = Math.min(10, (String(step).split('.')[1] || '').length);
+    return clampToCatalog(key, Number(snapped.toFixed(decimals)));
+}
+
+/** Scale a 0–127 CC onto a catalog range, on the param's step grid. Never uses || 127 as max. */
 export function scaleCcToCatalog(key, ccValue) {
     const spec = getParam(key);
     if (!spec || spec.type !== 'range') return null;
     const min = Number.isFinite(spec.min) ? spec.min : 0;
     const max = Number.isFinite(spec.max) ? spec.max : min;
     const cc = Math.max(0, Math.min(127, Number(ccValue) || 0));
-    return min + (cc / 127) * (max - min);
+    return snapToStep(key, min + (cc / 127) * (max - min));
 }
 
 /** XY dropdown rows: today's scrape minus kb* / write proxy / steps / Berlin. */

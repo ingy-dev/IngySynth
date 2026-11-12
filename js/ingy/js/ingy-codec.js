@@ -20,6 +20,7 @@ export const KINDS = ['project', 'patch', 'pattern'];
 
 export const LIMITS = Object.freeze({
     maxDecodedBytes: 1024 * 1024,
+    maxFileBytes: 16 * 1024 * 1024,
     maxLinkChars: 2000,
     maxNameChars: 64,
     maxByChars: 64,
@@ -632,7 +633,7 @@ export function parseValue(raw) {
 
 export function parse(text) {
     if (typeof text !== 'string') return { ok: false, error: ERRORS.notText, warnings: [], doc: null };
-    if (utf8Length(text) > LIMITS.maxDecodedBytes) return { ok: false, error: ERRORS.tooLarge, warnings: [], doc: null };
+    if (utf8Length(text) > LIMITS.maxFileBytes) return { ok: false, error: ERRORS.tooLarge, warnings: [], doc: null };
     let raw;
     try {
         raw = JSON.parse(text);

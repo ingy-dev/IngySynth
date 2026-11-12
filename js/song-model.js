@@ -177,11 +177,16 @@ function raiseClip(song, clip) {
     }
 }
 
+// Pad Preview clips (song-record.js) are only heard: undo never brings them back.
+function keptClips(list) {
+    return deepClone((list || []).filter((clip) => !clip?.preview));
+}
+
 function snapshotSong(song) {
     return {
-        synth: { clips: deepClone(song.synth.clips) },
-        drums: { clips: deepClone(song.drums.clips) },
-        lanes: LANE_TRACKS.map((track) => ({ clips: deepClone(trackClips(song, track)) })),
+        synth: { clips: keptClips(song.synth.clips) },
+        drums: { clips: keptClips(song.drums.clips) },
+        lanes: LANE_TRACKS.map((track) => ({ clips: keptClips(trackClips(song, track)) })),
         transpose: deepClone(song.transpose),
         loop: deepClone(song.loop),
         playheadTick: song.playheadTick,
@@ -769,7 +774,8 @@ function buildClipFromSpec(spec, startTick, lengthTick) {
     };
 }
 
-export function placeClip(song, spec, grid = BAR_TICKS) {
+// `opts.live` (arrange pad record): no undo step and no start snap. The take owns both.
+export function placeClip(song, spec, grid = BAR_TICKS, opts = {}) {
     if (!validatePlaceSpec(spec)) return false;
     const draft = buildClipFromSpec(
         spec,
@@ -787,8 +793,10 @@ export function placeClip(song, spec, grid = BAR_TICKS) {
     }
 
     // Dropping over clips covers them; they stay underneath (see visibleClips).
-    const snappedStart = snapStartTick(song, spec.track, null, spec.startTick, grid);
-    pushUndo(song);
+    const snappedStart = opts.live
+        ? Math.max(0, Math.round(Number(spec.startTick) || 0))
+        : snapStartTick(song, spec.track, null, spec.startTick, grid);
+    if (!opts.live) pushUndo(song);
     draft.startTick = snappedStart;
     trackClips(song, spec.track).push(draft);
     return draft;
@@ -800,7 +808,7 @@ export function placeClip(song, spec, grid = BAR_TICKS) {
  * `spec.track` is the row the drop is over; the start snaps against that row.
  * Returns the clips placed, or false.
  */
-export function placeBerlinRows(song, spec, grid = BAR_TICKS) {
+export function placeBerlinRows(song, spec, grid = BAR_TICKS, opts = {}) {
     const base = { ...spec, kind: 'b' };
     const anchor = laneTrackRow(spec?.track) >= 0 ? spec.track : LANE_TRACKS[0];
     if (!validatePlaceSpec({ ...base, track: anchor })) return false;
@@ -812,8 +820,10 @@ export function placeBerlinRows(song, spec, grid = BAR_TICKS) {
         rows.push(row);
     }
     if (!rows.length) return false;
-    const start = snapStartTick(song, anchor, null, spec.startTick, grid);
-    pushUndo(song);
+    const start = opts.live
+        ? Math.max(0, Math.round(Number(spec.startTick) || 0))
+        : snapStartTick(song, anchor, null, spec.startTick, grid);
+    if (!opts.live) pushUndo(song);
     return rows.map((row) => {
         const draft = buildClipFromSpec({ ...base, track: LANE_TRACKS[row] }, start, 0);
         draft.lengthTick = spec.lengthTick != null
@@ -1460,9 +1470,10 @@ export function setTranspose(song, events) {
  * Pattern clips on the synth track are left in place.
  * Does not call placeClip or setTranspose.
  */
-export function applyTake(song, { transpose, regions } = {}) {
+// `undo: false` when the take already checkpointed (pad hits go in as they are played).
+export function applyTake(song, { transpose, regions, undo = true } = {}) {
     if (!song) return false;
-    pushUndo(song);
+    if (undo) pushUndo(song);
     song.transpose = deepClone(transpose ?? []);
     const list = song.synth.clips;
     for (const region of regions || []) {
@@ -1486,6 +1497,17 @@ export function applyTake(song, { transpose, regions } = {}) {
         });
     }
     return true;
+}
+
+/** Take a pad hit back out while it records: no undo step. */
+export function removeLiveClips(song, ids) {
+    const gone = new Set(ids);
+    for (const track of ALL_TRACKS) {
+        const list = trackClips(song, track);
+        for (let i = list.length - 1; i >= 0; i -= 1) {
+            if (gone.has(list[i].id)) list.splice(i, 1);
+        }
+    }
 }
 
 /** One arrangement undo plus a bank payload. Does not edit clips. */

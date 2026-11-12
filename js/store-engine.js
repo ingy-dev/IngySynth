@@ -14,12 +14,12 @@ import {
 } from './params.js?v=44';
 import { refreshFilterInputDrive, applyFilterResonance } from './filter-drive.js?v=58';
 import { updateFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { previewStepsOnVfd } from './sequencer.js?v=456';
-import { resetSidechainDucker } from './sc-time.js?v=49';
+import { previewStepsOnVfd } from './sequencer.js?v=459';
+import { resetSidechainDucker } from './sc-time.js?v=50';
 import { drawADSRVisualizer, drawFilterADSRVisualizer, updateNoteVisualizer, updateChordVisualizer, soundingNotesForStep } from './visualizers.js?v=150';
 import { calculateSemitoneShift, getQuantizedStepTune, getStepFineCents } from './tuning.js?v=108';
-import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=177';
-import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=191';
+import { updateKeyboardStepVisibility, setKeyboardStepActive } from './keyboard-steps.js?v=178';
+import { formatRangeValue, ensureDisplayStep } from './knobs.js?v=192';
 import {
     setLfoEnabled,
     getLfoAmountAudio,
@@ -27,9 +27,9 @@ import {
     updateLfoSmoothing,
     updateLfoCutoffSafety,
     updateLfoHighpassSafety,
-} from './lfo-strip.js?v=71';
-import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=68';
-import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=200';
+} from './lfo-strip.js?v=72';
+import { applyLfoRate, forEachLiveLfoOsc } from './lfo-rate.js?v=69';
+import { applyPolyOscPan, forEachPolyOsc, applyPolyMixerMutes } from './poly-voice.js?v=202';
 import { applyAnalogOscShape, applyLiveOscVolume, OSC4_INDEX } from './osc-source.js?v=157';
 
 let wired = false;

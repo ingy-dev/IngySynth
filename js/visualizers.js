@@ -77,7 +77,7 @@ function paintOscilloscopeCanvas(canvas, dataArray) {
     }
     ctx.lineTo(width, height / 2);
     ctx.lineWidth = 2;
-    ctx.strokeStyle = '#00ff00';
+    ctx.strokeStyle = '#18ed64';
     ctx.stroke();
 }
 
@@ -307,7 +307,7 @@ function paintADSRVisualizer(options = {}) {
         decayId = 'decay',
         sustainId = 'sustain',
         releaseId = 'release',
-        lineColor = '#66ff66',
+        lineColor = '#6ded9b',
         invert = false,
     } = options;
 
@@ -681,13 +681,13 @@ function startLogoFlicker() {
                         glitchContainer.style.transform = `translate(${(Math.random() * 4) - 2}px, ${(Math.random() * 4) - 2}px)`;
                     }
 
-                    logoSvg.style.filter = `drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7)) 
+                    logoSvg.style.filter = `drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7)) 
                                        drop-shadow(${(Math.random() * 2) - 1}px 0 1px rgba(255,0,0,0.5)) 
                                        drop-shadow(0 ${(Math.random() * 2) - 1}px 1px rgba(0,0,255,0.5))`;
 
                     setTimeout(() => {
                         if (glitchContainer) glitchContainer.style.transform = '';
-                        logoSvg.style.filter = 'drop-shadow(0 0 5px #00ff00) drop-shadow(0 0 10px rgba(0, 255, 0, 0.7))';
+                        logoSvg.style.filter = 'drop-shadow(0 0 5px #18ed64) drop-shadow(0 0 10px rgba(24, 237, 100, 0.7))';
                     }, 100);
                 }
 

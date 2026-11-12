@@ -8,9 +8,9 @@
 // links/<name>.json     : { url, length, tooLong, decoded } for every ok example
 // Every check here must also pass in C++ (tests/format, agent F0) and is cross-run by G.
 
-import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import * as codec from '../js/ingy-codec.js';
 
@@ -112,8 +112,10 @@ for (const file of names) {
 
 // Cases that are not files.
 {
-    const big = `{"format":"ingysynth","version":1,"kind":"patch","name":"${'x'.repeat(1024 * 1024)}"}`;
-    check(codec.parse(big).error === 'too-large', 'file over 1 MB is rejected with too-large');
+    const big = `{"format":"ingysynth","version":1,"kind":"patch","name":"${'x'.repeat(16 * 1024 * 1024)}"}`;
+    check(codec.parse(big).error === 'too-large', 'file over 16 MB is rejected with too-large');
+    const midsize = `{"format":"ingysynth","version":1,"kind":"patch","name":"x","pad":"${'x'.repeat(2 * 1024 * 1024)}"}`;
+    check(codec.parse(midsize).ok, 'a 2 MB file (a long arrangement) still loads');
 
     const bomb = await (async () => {
         const text = `{"format":"ingysynth","version":1,"kind":"patch","pad":"${' '.repeat(2 * 1024 * 1024)}"}`;
@@ -146,6 +148,38 @@ for (const file of names) {
         check(isDeepStrictEqual(codec.makeDefault('project'), readJson(fullDefaultPath)), 'makeDefault(project) matches expected/default-project.full.json');
     }
     check(isDeepStrictEqual(codec.minimize(codec.makeDefault('project')), { format: 'ingysynth', version: 1, kind: 'project' }), 'minimal default project is just format/version/kind');
+}
+
+// arrangement v2: each distinct clip pattern is stored once (SPEC.md `arrangement`).
+{
+    // song-save.js is shared: ui/js in Bare Metal, js/ in the web repo.
+    const bm = join(root, '..', '..', 'ui', 'js', 'song-save.js');
+    const save = await import(pathToFileURL(existsSync(bm) ? bm : join(root, '..', 'song-save.js')).href);
+    const pad = (tune) => ({ lanes: [{ steps: [{ on: true, tune }] }], repeat: 1 });
+    const clip = (id, track, data, extra = {}) => ({ id, kind: 'b', track, startTick: 0, lengthTick: 3840, source: 0, data, ...extra });
+    const song = {
+        synth: { clips: [] },
+        drums: { clips: [] },
+        lanes: [
+            { clips: [clip('a', 'o1', pad(3)), clip('b', 'o1', pad(5))] },
+            { clips: [clip('c', 'o2', { repeat: 1, lanes: [{ steps: [{ tune: 3, on: true }] }] })] },
+            { clips: [] }, { clips: [] },
+        ],
+        transpose: [],
+        loop: { on: false, startTick: 0, endTick: 0 },
+    };
+    const arr = save.songToArrangement(song);
+    check(arr.v === 2 && Object.keys(arr.patterns).length === 2, 'arrangement v2: equal clip patterns share one entry');
+    check(arr.lanes.every((lane) => lane.clips.every((c) => c.data === undefined && typeof c.pattern === 'string')), 'arrangement v2: clips name their pattern instead of carrying data');
+    check(song.lanes[0].clips[0].data != null, 'arrangement v2: saving leaves the song model untouched');
+    const back = save.arrangementToSong(JSON.parse(JSON.stringify(arr)));
+    check(isDeepStrictEqual(back.lanes[1].clips[0].data, pad(3)) && back.lanes[0].clips[1].data.lanes[0].steps[0].tune === 5, 'arrangement v2: loading gives each clip its pattern');
+    check(back.lanes[0].clips[0].data !== back.lanes[1].clips[0].data, 'arrangement v2: loaded clips get their own copies');
+    check(back.lanes[0].clips.every((c) => c.pattern === undefined), 'arrangement v2: loaded clips drop the pattern key');
+    const v1 = { v: 1, lanes: [{ clips: [clip('x', 'o1', pad(7))] }] };
+    check(save.arrangementToSong(v1).lanes[0].clips[0].data.lanes[0].steps[0].tune === 7, 'arrangement v1 files still load');
+    const missing = { v: 2, patterns: {}, lanes: [{ clips: [clip('y', 'o1', undefined, { pattern: 'p9' })] }] };
+    check(save.arrangementToSong(missing).lanes[0].clips.length === 0, 'arrangement v2: a clip naming a missing pattern is dropped');
 }
 
 if (failures) {

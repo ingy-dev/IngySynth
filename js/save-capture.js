@@ -22,14 +22,15 @@ import {
     writeDrumSlot,
     writeSynthSlot,
 } from './pattern-bank.js?v=51';
-import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=102';
+import { snapshotBankAutomation, applyBankAutomation } from './automation.js?v=103';
 import { applyAcidOscLock, syncAcidStripUi } from './keyboard-acid-strip.js?v=46';
-import { setPolyMode } from './poly-voice.js?v=200';
-import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=89';
+import { setPolyMode } from './poly-voice.js?v=202';
+import { setMultitudesMode } from './keyboard-multitudes-panel.js?v=90';
 import { applyBerlinDrumKitToLive, setSpeechUserBankActive } from './osc-source.js?v=157';
-import { setBerlinMode } from './berlin.js?v=124';
-import { applyChordMemoryIntervals } from './chord-memory.js?v=46';
-import { arrangementToSong, songToArrangement } from './song-save.js?v=2';
+import { setBerlinMode } from './berlin.js?v=125';
+import { applyChordMemoryIntervals } from './chord-memory.js?v=52';
+import { arrangementToSong, songToArrangement } from './song-save.js?v=4';
+import { compactHash } from './text-digest.js';
 const ALL_PARAMS = { ...PARAMS, ...BAREMETAL_PARAMS };
 const TOP_DOC_KEYS = new Set([
     'format', 'version', 'kind', 'name', 'by',
@@ -443,6 +444,7 @@ export function applyDoc(doc, kind) {
     // patterns leave it alone. arrange-view.js redraws on ingysynth:song-loaded.
     if (k === 'project') {
         state.song = arrangementToSong(canonical.arrangement);
+        compactClipHashes(state.song);
         document.dispatchEvent(new CustomEvent('ingysynth:song-loaded'));
     }
 
@@ -496,6 +498,17 @@ export function initSaveBoot() {
     tryBootFromHash().catch(() => {
         plainLinkError('Could not read share link.');
     });
+}
+
+// Files saved before text-digest.js carry the whole source pattern as text in each clip's
+// hashes, which doubled their size. Shrink them to the digest they stand for.
+function compactClipHashes(song) {
+    for (const track of [song.synth, song.drums, ...(song.lanes || [])]) {
+        for (const clip of track?.clips || []) {
+            if ('copiedHash' in clip) clip.copiedHash = compactHash(clip.copiedHash);
+            if ('keptHash' in clip) clip.keptHash = compactHash(clip.keptHash);
+        }
+    }
 }
 
 export function captureRoundTripCheck(doc) {

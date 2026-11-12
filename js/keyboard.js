@@ -1,7 +1,7 @@
 import { state } from './state.js?v=120';
 import { getActiveScale, getGlobalTune, semitonesToNoteName, SCALE_BANKS } from './tuning.js?v=108';
-import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=191';
-import { initAudio } from './audio-engine.js?v=247';
+import { noteOn, noteOff, forceNoteOff, retuneNote } from './voice.js?v=192';
+import { initAudio } from './audio-engine.js?v=248';
 import { updateNoteVisualizer, updateChordVisualizer, clearNoteVisualizer } from './visualizers.js?v=150';
 import {
     refreshStepTuneReadouts,
@@ -12,7 +12,7 @@ import {
     beginScaleVfdPrompt,
     endScaleVfdPrompt,
     invalidateChordArpOrder,
-} from './sequencer.js?v=456';
+} from './sequencer.js?v=459';
 import { refreshXYPad } from './xy-pad.js?v=106';
 import {
     initPatternWrite,
@@ -22,7 +22,7 @@ import {
     polyWriteNoteDown,
     polyWriteNoteUp,
     getPolyWriteHeldNotes,
-} from './pattern-write.js?v=160';
+} from './pattern-write.js?v=161';
 import {
     addHeldNote,
     removeHeldNote,
@@ -53,7 +53,7 @@ import {
 import {
     initMultitudesPanel,
     setMultitudesMode,
-} from './keyboard-multitudes-panel.js?v=89';
+} from './keyboard-multitudes-panel.js?v=90';
 import {
     togglePolyMode,
     togglePolyUnison,
@@ -66,7 +66,7 @@ import {
     hasPolyVoices,
     initPolyVoice,
     forceDrumFiltOffForPoly,
-} from './poly-voice.js?v=200';
+} from './poly-voice.js?v=202';
 
 const ARP_ORDER_CYCLE = ['up', 'down', 'upDown', 'random'];
 const POLY_ARP_ORDER_CYCLE = ['up', 'down', 'upDown'];
@@ -1927,6 +1927,12 @@ export function initKeyboard() {
 
     subscribe('octaveSwitch', () => {
         syncOctaveSwitchUi();
+        retuneKeyboardFromGlobalPitch();
+    });
+    // XY pad, automation and MIDI CC move masterTune through set(), which fires no DOM
+    // input event, so the slider listener below never saw them.
+    subscribe('masterTune', () => {
+        syncKeyboardMasterTune();
         retuneKeyboardFromGlobalPitch();
     });
     subscribe('semitoneSwitch', () => {

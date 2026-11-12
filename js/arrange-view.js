@@ -7,17 +7,28 @@
 
 import { state } from './state.js?v=120';
 import { getNumber, subscribe } from './params.js?v=44';
-import { initAudio } from './audio-engine.js?v=247';
-import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=456';
-import { arrangeStop, cancelArrangeCountIn, liveTakeRegions } from './song-record.js?v=28';
-import { arrangeTempoMarkup, initArrangeTempo } from './arrange-tempo.js?v=4';
+import { initAudio } from './audio-engine.js?v=248';
+import { togglePlay, stopArp, relocateArrangement } from './sequencer.js?v=459';
+import {
+    arrangePadHit,
+    stopPadOneShot,
+    arrangePadProgress,
+    arrangePadUndo,
+    arrangeStop,
+    cancelArrangeCountIn,
+    liveTakeRegions,
+    setArrangePreview,
+    setArrangeRecordArmed,
+    setPadGrid,
+} from './song-record.js?v=32';
+import { arrangeTempoMarkup, initArrangeTempo } from './arrange-tempo.js?v=7';
 import {
     armArrangementContinue,
     arrangementInsertTick,
     cancelArrangementContinue,
     homeArrangement,
     placeArrangementInsert,
-} from './song-conductor.js?v=32';
+} from './song-conductor.js?v=34';
 import {
     SONG_SLOT,
     patternHash,
@@ -26,7 +37,7 @@ import {
     writeDrumSlot,
     writeSynthSlot,
 } from './pattern-bank.js?v=51';
-import { snapshotBankAutomation } from './automation.js?v=102';
+import { snapshotBankAutomation } from './automation.js?v=103';
 import {
     BAR_TICKS,
     PPQ,
@@ -79,10 +90,10 @@ import {
     splitBerlinClips,
     trackClips,
     visibleClips,
-} from './song-model.js?v=12';
+} from './song-model.js?v=14';
 import { quantizeToPattern } from './song-quantize.js?v=19';
 import { isMidiFileName, parseMidiFile } from './midi-file.js?v=1';
-import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=51';
+import { arrangeRollIsOpen, closeArrangeRoll } from './arrange-roll.js?v=55';
 
 const MIN_PX = 24;
 const MAX_PX = 1280;
@@ -100,6 +111,8 @@ const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent 
 let snapBypass = false;
 const SIXTEENTH = PPQ / 4;
 const SLOP = 8;
+// With Record armed a pad plays on press, like an MPC; held this long, a move drags it instead.
+const PAD_HOLD_MS = 300;
 /** While a grip is dragged: the clip as it will be, for drawing and the label. */
 let drawOverride = null;
 // The same for the other clips of a selection being trimmed together: id -> patch.
@@ -201,6 +214,7 @@ export function setArrangeView(on) {
     }
     cancelArrangeCountIn();
     cancelArrangementContinue();
+    stopPadOneShot();
     if (state.isPlaying) togglePlay();
     stopArp();
     state.songPlaying = false;
@@ -393,14 +407,22 @@ function revealTick(tick) {
 function bind() {
     document.addEventListener('ingysynth:song-loaded', onSongLoaded);
     bindMidiFileDrop();
+    setPadGrid(() => gridTicks());
     document.getElementById('arrangeRecord').addEventListener('click', () => {
-        state.songRecordArmed = !state.songRecordArmed;
-        recordArmed = !!state.songRecordArmed;
+        recordArmed = !state.songRecordArmed;
         const btn = document.getElementById('arrangeRecord');
         btn.classList.toggle('is-armed', recordArmed);
         btn.setAttribute('aria-pressed', recordArmed ? 'true' : 'false');
+        // Arming starts the count-in (or the take, mid-song); disarming commits the take.
+        setArrangeRecordArmed(recordArmed);
+        armed = null;
+        paintArm();
+        paintPadProgress();
+        syncArrangeTransport();
     });
     document.getElementById('arrangePlay').addEventListener('click', (event) => {
+        // Play during a Preview pad one-shot: the one-shot ends and the song starts.
+        if (state.songOneShot) stopPadOneShot();
         if (state.songCountIn || !(state.isPlaying && state.songPlaying)) {
             if (event.shiftKey && !state.isPlaying && !state.songCountIn) armArrangementContinue();
             else cancelArrangementContinue();
@@ -500,12 +522,16 @@ function bind() {
     document.addEventListener('ingysynth:sequencer-start', syncArrangeTransport);
     document.addEventListener('ingysynth:sequencer-stop', syncArrangeTransport);
     // The take commits just after the stop event: clear the live take once it has.
-    document.addEventListener('ingysynth:sequencer-stop', () => requestAnimationFrame(paintTake));
+    document.addEventListener('ingysynth:sequencer-stop', () => requestAnimationFrame(() => {
+        paintTake();
+        paintPadProgress();
+    }));
     document.addEventListener('ingysynth:arrange-transport', syncArrangeTransport);
     document.addEventListener('ingysynth:song-changed', () => {
         refreshArrange();
     });
     document.addEventListener('ingysynth:song-tick', onSongTick);
+    document.addEventListener('ingysynth:pad-oneshot', () => { if (shown()) paintPadProgress(); });
     document.addEventListener('ingysynth:pattern-slot', onPatternEvent);
     document.addEventListener('ingysynth:berlin-slot', onPatternEvent);
     document.addEventListener('ingysynth:drum-slot', onPatternEvent);
@@ -665,7 +691,7 @@ function drawGrid() {
             label = `${bar}.${beat}.${Math.floor((tick % BEAT) / SIXTEENTH) + 1}`;
         }
         if (label) {
-            ctx.fillStyle = 'rgba(0, 170, 0, 0.6)';
+            ctx.fillStyle = 'rgba(16, 158, 67, 0.6)';
             ctx.fillText(label, x + 3, ruler.offsetTop + 3);
         }
     }
@@ -725,6 +751,7 @@ function clipElement(clip) {
         el.dataset.row = String(row);
         if (clip.mute) el.classList.add('is-muted');
     }
+    if (clip.preview) el.classList.add('is-preview');
     if (isSelected(clip.id)) el.classList.add('is-selected');
     if (isForeign(clip)) el.classList.add('is-foreign');
     if (coversClip(state.song, clip.id)) el.classList.add('is-covering');
@@ -802,6 +829,23 @@ function layoutBank() {
         grid.appendChild(button);
     }
     body.appendChild(grid);
+    // Preview: the pads play over the song with Record and Play off. Nothing is written.
+    const bar = document.createElement('div');
+    bar.className = 'arrange-bank-actions';
+    const preview = document.createElement('button');
+    preview.type = 'button';
+    preview.id = 'arrangePadPreview';
+    preview.className = 'arrange-btn arrange-pad-preview';
+    preview.textContent = 'Preview';
+    preview.title = 'Preview: pads play over the song without recording';
+    preview.setAttribute('aria-pressed', state.songPreview ? 'true' : 'false');
+    preview.addEventListener('click', () => {
+        setArrangePreview(!state.songPreview);
+        preview.setAttribute('aria-pressed', state.songPreview ? 'true' : 'false');
+        paintPadProgress();
+    });
+    bar.appendChild(preview);
+    body.appendChild(bar);
 }
 
 function syncChrome() {
@@ -820,7 +864,7 @@ function syncHistory() {
 function syncArrangeTransport() {
     const play = document.getElementById('arrangePlay');
     if (!play) return;
-    const on = (!!state.songPlaying && !!state.isPlaying) || !!state.songCountIn;
+    const on = (!!state.songPlaying && !!state.isPlaying && !state.songOneShot) || !!state.songCountIn;
     play.classList.toggle('is-on', on);
     play.setAttribute('aria-pressed', on ? 'true' : 'false');
     const stop = document.getElementById('arrangeStop');
@@ -833,9 +877,42 @@ function onSongTick(event) {
     if (!shown()) return;
     const tick = Number(event.detail?.tick);
     if (!Number.isFinite(tick)) return;
+    // A Preview pad one-shot plays a song of its own: the timeline stays put.
+    if (state.songOneShot) {
+        paintPadProgress();
+        return;
+    }
     syncPlayhead();
     followPlayhead(tick);
     paintTake();
+    paintPadProgress();
+}
+
+/**
+ * Record / Preview: the pad whose hit is playing goes dark and redraws in its own look
+ * from left to right as it plays, so you can see how long is left before the pattern runs out.
+ */
+function paintPadProgress() {
+    if (!root) return;
+    const lane = bankTab === 'drums' ? 'drums' : bankTab === 'synth' ? 'synth' : null;
+    const prog = lane ? arrangePadProgress(lane) : null;
+    root.querySelectorAll('.arrange-square').forEach((square) => {
+        const on = !!prog && (square.dataset.slot | 0) === prog.slot && square.dataset.kind === prog.kind;
+        let shade = square.querySelector('.arrange-square-progress');
+        square.classList.toggle('is-hit', on);
+        if (!on) {
+            shade?.remove();
+            return;
+        }
+        if (!shade) {
+            shade = document.createElement('span');
+            shade.className = 'arrange-square-progress';
+            shade.setAttribute('aria-hidden', 'true');
+            square.appendChild(shade);
+        }
+        // Inline style: WKWebView drops stylesheet calc() on custom properties.
+        shade.style.clipPath = `inset(0 0 0 ${((1 - prog.remaining) * 100).toFixed(2)}%)`;
+    });
 }
 
 /**
@@ -913,7 +990,7 @@ export function setArrangeLoop(loop, { jump = false } = {}) {
     state.song.loop = next;
     syncLoop();
     document.dispatchEvent(new CustomEvent('ingysynth:song-loop'));
-    if (!jump || !next.on || !(state.isPlaying && state.songPlaying)) return;
+    if (!jump || !next.on || !(state.isPlaying && state.songPlaying) || state.songOneShot) return;
     const tick = Number(state.song.playheadTick) || 0;
     if (tick < next.startTick || tick >= next.endTick) relocateArrangement(next.startTick);
 }
@@ -1931,13 +2008,36 @@ function onSquarePointerDown(event) {
     let dragging = false;
     let ghost = null;
     let dragLen = 0;
+    // Record armed or Preview on: the press plays the pad at once (MPC style). A drag
+    // needs a hold first, and taking the pad off as a drag takes the hit back out.
+    const recording = (!!state.songRecordArmed || !!state.songPreview) && shown();
+    let hit = null;
+    let holdReady = !recording;
+    let holdTimer = 0;
+    if (recording) {
+        if (!patternEmpty(kind, slot)) {
+            hit = arrangePadHit(
+                { lane: track, slot, kind },
+                (at) => placeFromBank(track, kind, slot, at, { live: true }),
+                (song) => placeFromBank(track, kind, slot, 0, { live: true, song }),
+            );
+            paintPadProgress();
+        }
+        holdTimer = setTimeout(() => { holdReady = true; }, PAD_HOLD_MS);
+    }
     const move = (ev) => {
         if (ev.pointerId !== event.pointerId) return;
         snapBypass = bypassesSnap(ev);
-        if (!dragging && Math.hypot(ev.clientX - startX, ev.clientY - startY) > SLOP) {
+        if (!dragging && holdReady && Math.hypot(ev.clientX - startX, ev.clientY - startY) > SLOP) {
+            if (hit) {
+                arrangePadUndo(hit);
+                hit = null;
+            }
             dragging = true;
             dragLen = cycleTicks(kind, slot);
-            ghost = showGhost(kind, slot, square, startX, startY);
+            // A hit re-renders the bank, so the pad pressed may be a fresh element now.
+            const pad = root.querySelector(`.arrange-square[data-slot="${slot}"]`) || square;
+            ghost = showGhost(kind, slot, pad, startX, startY);
         }
         if (!dragging) return;
         clearTargets();
@@ -1958,6 +2058,7 @@ function onSquarePointerDown(event) {
         if (ev.pointerId !== event.pointerId) return;
         snapBypass = bypassesSnap(ev);
         queueMicrotask(() => { snapBypass = false; });
+        clearTimeout(holdTimer);
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', up);
@@ -1966,6 +2067,8 @@ function onSquarePointerDown(event) {
         if (ghost) ghost.remove();
         if (ev.type === 'pointercancel') return;
         if (!dragging) {
+            // Record or Preview: the press already played the pad, no click-to-place arming.
+            if (recording) return;
             if (armed && armed.slot === slot && armed.track === track) armed = null;
             else armed = { slot, track };
             if (dirty) renderAll();
@@ -2000,7 +2103,9 @@ function commitPlace(track, kind, slot, tick) {
     renderAll();
 }
 
-function placeFromBank(track, kind, slot, startTick) {
+// `opts.live`: a pad hit while recording. No undo or snap (the take owns both), and
+// every clip placed comes back as an array.
+function placeFromBank(track, kind, slot, startTick, opts = {}) {
     // On the timeline a clip holds the notes as they sound: a reversed pattern is flipped.
     const data = playOrderData(kind, kind === 'd'
         ? { lanes: snapshotDrumSlot(slot) }
@@ -2016,12 +2121,17 @@ function placeFromBank(track, kind, slot, startTick) {
         automation,
         copiedHash: patternHash(kind, slot),
     };
+    // `opts.song`: place into another song (the Preview one-shot) instead of the arrangement.
+    const song = opts.song || state.song;
     if (kind === 'b') {
         // One clip per oscillator row; the one in the row it was dropped on ends up selected.
-        const placed = placeBerlinRows(state.song, spec, startGrid());
+        const placed = placeBerlinRows(song, spec, startGrid(), opts);
+        if (opts.live) return placed || [];
         return placed ? (placed.find((clip) => clip.track === track) || placed[0]) : false;
     }
-    return placeClip(state.song, spec, startGrid());
+    const clip = placeClip(song, spec, startGrid(), opts);
+    if (opts.live) return clip ? [clip] : [];
+    return clip;
 }
 
 function cycleTicks(kind, slot) {
@@ -3191,7 +3301,7 @@ function drawCanvas(canvas) {
         };
         // The selected clip's notes light cyan, matching its frame. Only on the timeline:
         // a copy carried to the bank stays green on black.
-        const ink = canvas.closest('.arrange-clip.is-selected') ? '#00e5ff' : '#00ff00';
+        const ink = canvas.closest('.arrange-clip.is-selected') ? '#00e5ff' : '#18ed64';
         if (clip.kind === 'notes') drawNotes(ctx, w, h, clip, geom, ink);
         else if (clip.kind === 'b') {
             // An oscillator row clip draws its one lane wherever it shows, the carried copy included.
@@ -3206,7 +3316,7 @@ function drawCanvas(canvas) {
     const kind = canvas.dataset.kind;
     const slot = canvas.dataset.slot | 0;
     // Bank pads are lit green, so their note preview is black.
-    const color = canvas.dataset.role === 'bank' ? '#000' : '#00ff00';
+    const color = canvas.dataset.role === 'bank' ? '#000' : '#18ed64';
     if (kind === 'd') drawRows(ctx, w, h, snapshotDrumSlot(slot), 4, color);
     else if (kind === 'b') {
         // A lit pad reserves its top strip for the P label; an empty pad shows nothing.
@@ -3244,7 +3354,7 @@ function stepCells(w, count, division, geom) {
     };
 }
 
-function drawNormal(ctx, w, h, data, color = '#00ff00', geom = null) {
+function drawNormal(ctx, w, h, data, color = '#18ed64', geom = null) {
     const steps = data?.steps || [];
     const count = Math.max(1, Math.min(32, data?.stepCount || 8));
     const { cell, total, x0 } = stepCells(w, count, data?.division, geom);
@@ -3271,7 +3381,7 @@ function drawNormal(ctx, w, h, data, color = '#00ff00', geom = null) {
     }
 }
 
-function drawRows(ctx, w, h, lanes, rowCount, color = '#00ff00', geom = null) {
+function drawRows(ctx, w, h, lanes, rowCount, color = '#18ed64', geom = null) {
     const rowH = h / rowCount;
     ctx.fillStyle = color;
     for (let row = 0; row < rowCount; row += 1) {
@@ -3383,7 +3493,7 @@ function drawBerlinBands(ctx, w, h, data, {
     }
 }
 
-function drawNotes(ctx, w, h, clip, geom = null, color = '#00ff00') {
+function drawNotes(ctx, w, h, clip, geom = null, color = '#18ed64') {
     const notes = clip?.notes || [];
     const scale = geom ? geom.tickPx : w / Math.max(1, clip?.lengthTick || 1);
     const lead = geom ? geom.lead : 0;

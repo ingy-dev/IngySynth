@@ -21,7 +21,7 @@ the document untouched, and writes it back out. It may show a small "made in the
 | `voice.speechBank` | the bank, if the web supports the frame format; otherwise factory speech | yes |
 | `voice.fm6Bank`, `osc4Bank` / `osc-bank-N` = `"3"` on `fm6` | factory six-op bank 0 (Bass). The web has no SysEx loader | yes |
 | `mix` (channels, inserts, sends, 4 aux buses, master; see SPEC.md) | the web's fixed effects chain from the catalog keys. The web mixer does not read this object | yes |
-| `arrangement` | nothing (arrange mode is out of scope) | yes |
+| `arrangement` | the web's arrange mode, read with the same `song-save.js` (`v` 2 shared patterns in both apps) | yes |
 | sample rate 48 kHz and up | the browser's rate (not stored in documents) | n/a |
 
 The web codec already knows every key in `params-baremetal.json`: it clamps them and fills defaults, so they

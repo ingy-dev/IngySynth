@@ -4,7 +4,7 @@
 import { state } from './state.js?v=120';
 import { beginMidiLearn } from './midi-learn.js?v=35';
 import { getFilterCutoffRange, getFilterEnvAmount, refreshFilterCutoffRange } from './filter-cutoff.js?v=111';
-import { getLfoRateHz } from './lfo-rate.js?v=68';
+import { getLfoRateHz } from './lfo-rate.js?v=69';
 import { getNumber, getString, set } from './params.js?v=44';
 
 const AMOUNT_RAMP = 0.08;

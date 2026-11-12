@@ -4,6 +4,7 @@
 // Repeat Pattern (×1–×8) is stored on each pattern. One cycle = one pass × repeat.
 // The first time Berlin opens, each main pattern is copied onto that slot's O1.
 
+import { textDigest } from './text-digest.js';
 import { state } from './state.js?v=120';
 import { clampRatch, syncRatchButton } from './step-ratch.js?v=1';
 import { getNumber, getString, set } from './params.js?v=44';
@@ -1237,8 +1238,12 @@ function automationForHash(kind, slot) {
     };
 }
 
-/** Stable JSON of steps, clock, repeat, and lanes. Key order does not change the hash. */
+/** A short digest of the stable JSON of steps, clock, repeat, and lanes. Key order does not change the hash. */
 export function patternHash(kind, slot) {
+    return textDigest(patternHashText(kind, slot));
+}
+
+function patternHashText(kind, slot) {
     if (kind === 'd') return stableStringify({ lanes: snapshotDrumSlot(slot) });
     if (kind === 'b') {
         const pattern = snapshotSynthSlot('b', slot);

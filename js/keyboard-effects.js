@@ -3,7 +3,7 @@
 // (same keys as acid / Multitudes). Compressor / sidechain live on the mixer strip.
 
 import { state } from './state.js?v=120';
-import { bindKnob, formatRangeValue } from './knobs.js?v=191';
+import { bindKnob, formatRangeValue } from './knobs.js?v=192';
 import {
     elementFor,
     get,
@@ -11,7 +11,7 @@ import {
     wireSelect,
     wireToggle,
 } from './params.js?v=44';
-import { initScTimeKnob } from './sc-time.js?v=49';
+import { initScTimeKnob } from './sc-time.js?v=50';
 
 const syncFns = [];
 

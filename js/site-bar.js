@@ -2,10 +2,10 @@
 // Master mute holds the output at 0 without writing the volume parameter.
 
 import { state } from './state.js?v=120';
-import { togglePlay } from './sequencer.js?v=456';
+import { togglePlay } from './sequencer.js?v=459';
 import { getNumber, subscribe } from './params.js?v=44';
-import { setArrangeView } from './arrange-view.js?v=56';
-import { initFileDrop, initSaveLibraryUi, initSiteShare } from './save-ui.js?v=15';
+import { setArrangeView } from './arrange-view.js?v=61';
+import { initFileDrop, initSaveLibraryUi, initSiteShare } from './save-ui.js?v=16';
 
 function writeMasterGain(level, ramp) {
     const gain = state.masterGain;
@@ -70,7 +70,7 @@ export function initSiteBar() {
     play?.addEventListener('click', () => {
         togglePlay();
     });
-    document.addEventListener('ingysynth:sequencer-start', () => syncPlayButton(true));
+    document.addEventListener('ingysynth:sequencer-start', () => syncPlayButton(!state.songOneShot));
     document.addEventListener('ingysynth:sequencer-stop', () => syncPlayButton(false));
 
     mute?.addEventListener('click', () => {

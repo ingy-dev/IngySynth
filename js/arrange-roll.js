@@ -2,7 +2,7 @@
 // markEdited runs once per gesture, before the mutation.
 
 import { state } from './state.js?v=120';
-import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, checkpointUndo, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks, findClipById, BAR_TICKS } from './song-model.js?v=12';
+import { markEdited, reverseClip, invertClip, transposeClip, clipTransposeRoom, checkpointUndo, clipCycleTicks, clipPlaySpan, clipStartOffset, clipStepTicks, findClipById, BAR_TICKS } from './song-model.js?v=14';
 import {
     POLY_CHORD_MAX,
     chordFromCellNotes,
@@ -14,11 +14,12 @@ import { nextRatch } from './step-ratch.js?v=1';
 import { semitonesToNoteName, getActiveScale, getStepTotalTuneFromRaw } from './tuning.js?v=108';
 import { previewChordVisualizer } from './visualizers.js?v=150';
 import { subscribe } from './params.js?v=44';
-import { placeArrangementInsert } from './song-conductor.js?v=32';
-import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=56';
+import { placeArrangementInsert } from './song-conductor.js?v=34';
+import { refreshArrange, setArrangeLoop, setArrangeRollOpener } from './arrange-view.js?v=61';
 import { createIngyWindow } from './ingy-window.js?v=3';
-import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=276';
+import { pressKey, releaseKey, heldNoteDown, heldNoteUp } from './keyboard.js?v=277';
 import { needsHeldNoteSet } from './held-notes.js?v=13';
+import { auditionDrumHit } from './sequencer.js?v=459';
 
 const TUNE_LO = -39;
 const TUNE_HI = 48;
@@ -83,11 +84,23 @@ let session = null;
 let dragY = 0;
 let dragRAF = 0;
 let audition = null;
+// Preview (Ableton's headphones): notes sound as they are written, pressed or dragged.
+// The piano keys always sound. Remembered per browser.
+const PREVIEW_KEY = 'ingysynth.rollPreview';
+let previewOn = readPreview();
+let previewBtn;
 // Notes-clip editing (paintNotes): selected note objects, view geometry, the length a
 // new note gets (the last one resized), and the last note pressed (double-click delete).
 const NOTE_GRID = 240;
 const NOTE_BAR_PX = 160;
 const NOTES_HINT = 'Click to add a note · drag empty space to select · drag a note to move · drag its end to resize · double-click or Delete removes · Alt: no snap';
+const DRAW_HINT = 'Draw: click or drag to paint notes · start on a note to erase · Alt: no snap';
+// Draw tool (pencil): a press writes and a drag keeps writing, one undo step per stroke;
+// a stroke that starts on a note erases instead. Remembered per browser.
+const DRAW_KEY = 'ingysynth.rollDraw';
+let drawOn = readFlag(DRAW_KEY, false);
+let drawBtn;
+let paint = null;
 let noteSel = new Set();
 let notesGeom = null;
 let lastNoteLen = NOTE_GRID;
@@ -106,6 +119,7 @@ export function closeArrangeRoll() {
     cancelSession();
     cancelMarquee();
     cancelPropPaint();
+    endPaint();
     stopAudition();
     releaseLoopClip();
     openId = null;
@@ -128,6 +142,8 @@ export function initArrangeRoll() {
     roll.innerHTML = `
         <div class="arrange-roll-bar">
             <div class="arrange-roll-transport" role="group" aria-label="Transport">
+                <button type="button" id="arrangeRollPreview" class="arrange-btn arrange-btn-icon" aria-pressed="true" aria-label="Preview" title="Preview: hear notes as you write or drag them"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M0.6 4.6h3L8.6 0v16L3.6 11.4H0.6z"/><path class="arrange-icon-waves" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M11 3.6a4.2 4.2 0 0 1 0 8.8"/><path class="arrange-icon-mute" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M1.4 1.4l13.2 13.2"/></svg></button>
+                <button type="button" id="arrangeRollDraw" class="arrange-btn arrange-btn-icon" aria-pressed="false" aria-label="Draw" title="Draw: click or drag to paint notes. Start on a note to erase"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M1.6 14.4l0.9-3.6 8.6-8.6 2.7 2.7-8.6 8.6z"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M9.4 3.9l2.7 2.7M2.5 10.8l2.7 2.7"/></svg></button>
                 <button type="button" id="arrangeRollPlay" class="arrange-btn arrange-btn-icon" aria-pressed="false" aria-label="Play"><span class="arrange-icon-play" aria-hidden="true"></span></button>
                 <button type="button" id="arrangeRollStop" class="arrange-btn arrange-btn-icon" aria-label="Stop"><span class="arrange-icon-stop" aria-hidden="true"></span></button>
                 <button type="button" id="arrangeRollLoop" class="arrange-btn" aria-pressed="false" title="Loop the song around this clip">Loop clip</button>
@@ -185,6 +201,21 @@ export function initArrangeRoll() {
     stopBtn = roll.querySelector('#arrangeRollStop');
     loopBtn = roll.querySelector('#arrangeRollLoop');
     foldBtn = roll.querySelector('#arrangeRollFold');
+    previewBtn = roll.querySelector('#arrangeRollPreview');
+    syncPreviewBtn();
+    previewBtn.addEventListener('click', () => {
+        previewOn = !previewOn;
+        writePreview(previewOn);
+        syncPreviewBtn();
+        if (!previewOn) stopAudition();
+    });
+    drawBtn = roll.querySelector('#arrangeRollDraw');
+    syncDrawBtn();
+    drawBtn.addEventListener('click', () => {
+        drawOn = !drawOn;
+        writeFlag(DRAW_KEY, drawOn);
+        syncDrawBtn();
+    });
     scaleBtn = roll.querySelector('#arrangeRollScale');
     monoBtn = roll.querySelector('#arrangeRollMono');
     polyBtn = roll.querySelector('#arrangeRollPoly');
@@ -250,6 +281,7 @@ export function initArrangeRoll() {
     document.addEventListener('ingysynth:sequencer-stop', syncTransport);
     document.addEventListener('ingysynth:arrange-transport', syncTransport);
     document.addEventListener('ingysynth:song-tick', (event) => {
+        if (state.songOneShot) return;
         lastTick = Number(event.detail?.tick);
         if (openId != null) paintPlayhead();
     });
@@ -378,7 +410,7 @@ function render({ jump }) {
         roll.classList.toggle('is-notes', clip.kind === 'notes');
         win.setTitle(`Piano Roll · ${clipTitle(clip)}`);
         hintEl.hidden = clip.kind !== 'notes';
-        if (clip.kind === 'notes') hintEl.textContent = NOTES_HINT;
+        if (clip.kind === 'notes') hintEl.textContent = drawOn ? DRAW_HINT : NOTES_HINT;
         if (clip.kind !== 'notes') {
             sheet.style.width = '';
             notesGeom = null;
@@ -835,8 +867,45 @@ function snapNoteTick(tick, free, mode = Math.round) {
     return free ? Math.round(tick) : mode(tick / NOTE_GRID) * NOTE_GRID;
 }
 
+function readPreview() {
+    return readFlag(PREVIEW_KEY, true);
+}
+
+function writePreview(on) {
+    writeFlag(PREVIEW_KEY, on);
+}
+
+function readFlag(key, fallback) {
+    try {
+        const v = localStorage.getItem(key);
+        return v == null ? fallback : v !== '0';
+    } catch {
+        return fallback;
+    }
+}
+
+function writeFlag(key, on) {
+    try {
+        localStorage.setItem(key, on ? '1' : '0');
+    } catch { /* storage blocked: the choice lasts this session */ }
+}
+
+function syncDrawBtn() {
+    if (!drawBtn) return;
+    drawBtn.setAttribute('aria-pressed', drawOn ? 'true' : 'false');
+    drawBtn.classList.toggle('is-on', drawOn);
+    roll.classList.toggle('is-draw', drawOn);
+    if (roll.classList.contains('is-notes')) hintEl.textContent = drawOn ? DRAW_HINT : NOTES_HINT;
+}
+
+function syncPreviewBtn() {
+    if (!previewBtn) return;
+    previewBtn.setAttribute('aria-pressed', previewOn ? 'true' : 'false');
+    previewBtn.classList.toggle('is-on', previewOn);
+}
+
 function auditionNote(pointerId, tune) {
-    if (!canAudition()) return;
+    if (!previewOn || !canAudition()) return;
     if (!audition) audition = { pointer: pointerId, tune: null, held: needsHeldNoteSet() };
     soundKey(tune);
 }
@@ -867,6 +936,10 @@ function deleteSelectedNotes() {
 
 function onNotesPointerDown(event, clip) {
     if (!notesGeom || !Array.isArray(clip.notes)) return;
+    if (drawOn) {
+        if (event.target.closest('.arrange-roll-grid')) startNotesPaint(event, clip);
+        return;
+    }
     const noteEl = event.target.closest('.arrange-roll-note');
     if (!noteEl) {
         if (event.target.closest('.arrange-roll-grid')) onNotesEmptyDown(event, clip);
@@ -1584,7 +1657,7 @@ function cancelPropPaint() {
 }
 
 function songRunning() {
-    return !!state.songPlaying && !!state.isPlaying;
+    return !!state.songPlaying && !!state.isPlaying && !state.songOneShot;
 }
 
 function syncTransport() {
@@ -1759,7 +1832,7 @@ function reconcileLoopClip() {
 }
 
 function onPointerDown(event) {
-    if (event.button !== 0 || session) return;
+    if (event.button !== 0 || session || paint) return;
     const head = event.target.closest('.arrange-roll-head');
     if (head && roll.contains(head)) {
         selectedCol = head.dataset.col | 0;
@@ -1776,6 +1849,10 @@ function onPointerDown(event) {
     if (!cell || !roll.contains(cell)) return;
     const clip = findClip(openId);
     if (!clip || clip.kind === 'notes') return;
+    if (drawOn) {
+        startStepPaint(event, cell, clip);
+        return;
+    }
     const col = cell.dataset.col | 0;
     const dim = cell.classList.contains('is-dim');
     if (!dim) {
@@ -1822,6 +1899,14 @@ function onPointerDown(event) {
         cell.classList.add('is-drag');
         previewStep(patternOf(clip)?.steps?.[col]);
     }
+    // Preview: a write or a Shift-pick sounds at once. A plain press on a note may be a
+    // delete, so it sounds only once it drags. Mod lanes hold CV, not notes.
+    if (!dim && clip.kind === 'd') {
+        const step = clip.data?.lanes?.[session.row]?.steps?.[col];
+        if (!on && previewOn && canAudition()) auditionDrumHit(session.row, step);
+    } else if (!dim && tune != null && pitchLane(clip) && (pick || (!on && (!stepSel.size || event.shiftKey)))) {
+        auditionNote(event.pointerId, tune);
+    }
     try { cell.setPointerCapture(event.pointerId); } catch { /* pointer already gone */ }
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
@@ -1840,10 +1925,12 @@ function onPointerMove(event) {
     }
     dragY = event.clientY;
     if (!session.drag && Math.abs(event.clientY - session.y) < 5) return;
+    if (!session.drag && pitchLane(findClip(openId))) auditionNote(session.id, session.from);
     session.drag = true;
     if (shiftMoves(tuneFromClientY(event.clientY))) {
         paintDrag(session.moves);
         previewDrag();
+        if (pitchLane(findClip(openId))) auditionNote(session.id, session.to);
     }
     kickEdgeScroll();
 }
@@ -1882,7 +1969,15 @@ function onPointerUp(event) {
     togglePitch(s.col, s.tune);
 }
 
+// Step clips and Berlin oscillator lanes play notes; Berlin mod lanes (M1-M4) do not.
+function pitchLane(clip) {
+    if (!clip) return false;
+    if (clip.kind === 'n') return true;
+    return clip.kind === 'b' && laneIndex < 4;
+}
+
 function cancelSession() {
+    if (session) stopAudition();
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
     window.removeEventListener('pointercancel', onPointerUp);
@@ -2110,4 +2205,185 @@ function toggleDrum(row, col) {
     liveStep.on = liveStep.on === false;
     selectedCol = col;
     refreshArrange();
+}
+
+// Draw tool strokes. The grid is updated in place while the stroke runs, so rows never
+// shift under the pencil (Fold drops an emptied row only once the stroke ends), and the
+// pointer path is sampled every few pixels so a fast stroke skips no cell.
+function strokeSamples(x0, y0, x1, y1, visit) {
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 4));
+    for (let i = 1; i <= n; i += 1) visit(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n);
+}
+
+function startPaint(event, onPoint, onEnd) {
+    event.preventDefault();
+    paint = { id: event.pointerId, x: event.clientX, y: event.clientY, onPoint, onEnd };
+    onPoint(event.clientX, event.clientY);
+    window.addEventListener('pointermove', onPaintMove);
+    window.addEventListener('pointerup', onPaintUp);
+    window.addEventListener('pointercancel', onPaintUp);
+}
+
+function onPaintMove(event) {
+    if (!paint || event.pointerId !== paint.id) return;
+    const p = paint;
+    strokeSamples(p.x, p.y, event.clientX, event.clientY, (x, y) => {
+        if (paint === p) p.onPoint(x, y, event.altKey);
+    });
+    p.x = event.clientX;
+    p.y = event.clientY;
+}
+
+function onPaintUp(event) {
+    if (!paint || event.pointerId !== paint.id) return;
+    const p = paint;
+    endPaint();
+    p.onEnd();
+}
+
+function endPaint() {
+    window.removeEventListener('pointermove', onPaintMove);
+    window.removeEventListener('pointerup', onPaintUp);
+    window.removeEventListener('pointercancel', onPaintUp);
+    if (paint) stopAudition();
+    paint = null;
+}
+
+// Step clips and Berlin lanes: the pencil follows the pointer's row. Mono makes each
+// column it crosses that one note; Poly adds the note to the column's chord. Drums keep
+// to the row the stroke started on.
+function startStepPaint(event, cell, clip) {
+    if (cell.classList.contains('is-dim')) return;
+    const drum = clip.kind === 'd';
+    if (!drum && (clip.kind !== 'n' && clip.kind !== 'b' || cell.dataset.tune == null)) return;
+    clearStepSel();
+    const erase = cell.classList.contains('is-on');
+    const row = drum ? (cell.dataset.row | 0) : 0;
+    const pointerId = event.pointerId;
+    let edited = false;
+    const edit = () => {
+        if (!edited) edited = !!markEdited(state.song, clip.id);
+        return edited;
+    };
+    const paintDrum = (el, col) => {
+        if ((el.dataset.row | 0) !== row || el.classList.contains('is-dim')) return;
+        const lane = clip.data?.lanes?.[row];
+        if (!lane) return;
+        const own = clampCount(lane.stepCount);
+        const ext = col >= own;
+        if (ext && (erase || col >= viewCols(clip, own, laneTicks(lane), 1))) return;
+        if (!ext && (!lane.steps?.[col] || (lane.steps[col].on !== false) !== erase)) return;
+        if (!edit()) return;
+        if (ext) growPattern(lane, col);
+        const step = lane.steps?.[col];
+        if (!step) return;
+        step.on = !erase;
+        el.classList.toggle('is-on', !erase);
+        el.setAttribute('aria-pressed', erase ? 'false' : 'true');
+        if (!erase && previewOn && canAudition()) auditionDrumHit(row, step);
+    };
+    const paintPitchCell = (el, col) => {
+        const tune = Number(el.dataset.tune);
+        const pattern = patternOf(clip);
+        if (!pattern || col >= pattern.cols || !Number.isFinite(tune) || tune < TUNE_LO || tune > TUNE_HI) return;
+        const ext = col >= pattern.count;
+        const step = ext ? null : pattern.steps[col];
+        if (!ext && !step) return;
+        const pitches = stepPitches(step);
+        const has = pitches.includes(tune);
+        const off = step?.on === false;
+        let next;
+        if (erase) {
+            if (!has) return;
+            next = pitches.filter((t) => t !== tune);
+        } else if (!polyEdit) {
+            if (has && pitches.length === 1 && !off) return;
+            next = [tune];
+        } else if (has) {
+            if (!off) return;
+            next = pitches;
+        } else if (pitches.length >= POLY_CHORD_MAX) {
+            return;
+        } else {
+            next = pitches.concat(tune);
+        }
+        if (!edit()) return;
+        if (ext) growPattern(patternTarget(clip), col);
+        const target = patternOf(clip)?.steps?.[col];
+        if (!target) return;
+        applyPitches(target, next, erase && off);
+        selectedCol = col;
+        repaintColumn(col, target);
+        if (!erase) {
+            previewStep(target);
+            if (pitchLane(clip)) auditionNote(pointerId, tune);
+        }
+    };
+    // A drum stroke reads the row it started on, wherever the pointer drifts.
+    const rowY = event.clientY;
+    startPaint(event, (x, y) => {
+        const el = document.elementFromPoint(x, drum ? rowY : y)?.closest?.('.arrange-roll-cell');
+        if (!el || !gridEl.contains(el)) return;
+        const col = el.dataset.col | 0;
+        if (drum) paintDrum(el, col);
+        else paintPitchCell(el, col);
+    }, () => {
+        if (edited) refreshArrange();
+        else render({ jump: false });
+    });
+}
+
+function repaintColumn(col, step) {
+    const shown = new Set(viewPitches(step));
+    const ghost = step.on === false;
+    gridEl.querySelectorAll(`.arrange-roll-cell[data-col="${col}"]`).forEach((el) => {
+        const on = shown.has(Number(el.dataset.tune));
+        el.dataset.on = on ? '1' : '0';
+        el.classList.toggle('is-on', on);
+        el.classList.toggle('is-ghost', on && ghost);
+        el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+}
+
+// Notes clips: the pencil lays a run of notes, one per slot (the length of the last note
+// resized, snapped to 1/16; Alt: unsnapped), each at the pointer's pitch. Starting on a
+// note erases every note the stroke crosses.
+function startNotesPaint(event, clip) {
+    const erase = !!event.target.closest('.arrange-roll-note');
+    const free = event.altKey;
+    const slot = free ? lastNoteLen : Math.max(NOTE_GRID, Math.round(lastNoteLen / NOTE_GRID) * NOTE_GRID);
+    const t0 = snapNoteTick(noteTickAt(event.clientX), free, Math.floor);
+    const pointerId = event.pointerId;
+    const placed = new Set();
+    let changed = false;
+    noteSel.clear();
+    const change = () => {
+        if (!changed) checkpointUndo(state.song);
+        changed = true;
+    };
+    startPaint(event, (x, y) => {
+        if (!notesGeom) return;
+        if (erase) {
+            const el = document.elementFromPoint(x, y)?.closest?.('.arrange-roll-note');
+            const note = el && gridEl.contains(el) ? clip.notes[el.dataset.i | 0] : null;
+            if (!note) return;
+            change();
+            clip.notes = clip.notes.filter((n) => n !== note);
+            render({ jump: false });
+            return;
+        }
+        const k = Math.floor((noteTickAt(x) - t0) / slot);
+        const start = t0 + k * slot;
+        if (placed.has(k) || start < 0 || start >= notesGeom.len) return;
+        placed.add(k);
+        const semi = noteTuneAt(y);
+        if (clip.notes.some((n) => n.startTick === start && Math.round(Number(n.semi)) === semi)) return;
+        change();
+        clip.notes.push({ startTick: start, durTick: slot, semi, fine: 0, velocity: 0.8, legato: false });
+        render({ jump: false });
+        auditionNote(pointerId, semi);
+    }, () => {
+        if (changed) commitNotes(clip);
+        else render({ jump: false });
+    });
 }

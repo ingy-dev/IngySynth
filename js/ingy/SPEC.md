@@ -261,7 +261,8 @@ Like `mix`, v1 codecs keep the `arrangement` **object verbatim**: no defaults, c
 
 ```json
 "arrangement": {
-  "v": 1,
+  "v": 2,
+  "patterns": { "p0": { ... }, "p1": { ... } },
   "synth": { "clips": [ ... ] },
   "drums": { "clips": [ ... ] },
   "lanes": [ { "clips": [ ... ] }, { "clips": [ ... ] }, { "clips": [ ... ] }, { "clips": [ ... ] } ],
@@ -273,13 +274,22 @@ Like `mix`, v1 codecs keep the `arrangement` **object verbatim**: no defaults, c
 `lanes` is optional and written only when it holds a clip: the four Berlin oscillator rows, O1 first, each a
 track of its own (`o1`..`o4`).
 
+`patterns` (`v` 2) holds each distinct clip pattern once, keyed `p0`, `p1`, ... in first-use order. A clip whose
+pattern is in it has `pattern` (the key) in place of `data`; loading gives each clip its own copy. Equal patterns
+(compared with keys sorted) share one entry, so a song of copies of a few pads stores each pad once. `v` 1 files
+have `data` on every clip and no `patterns`; they still load, and save back as `v` 2. A clip with both keeps
+its `data`. `pattern` naming a missing entry counts as no `data`.
+
+`copiedHash` and `keptHash` are short digests (16 hex characters) of the source pad, used only to tell whether
+the pad has changed since the clip was copied. Older files held the whole pad as text there; it is shortened on load.
+
 Ticks are 960 per quarter note; a bar is 3840. Each track's `clips` is a stack, bottom first: clips may
 overlap and a later clip covers an earlier one where they overlap. Every clip has `id`, `kind`, `startTick`,
 `lengthTick` and an optional `startOffset` (ticks trimmed off the front of its pattern; negative = silence before it).
 
 | `kind` | Track | Extra keys |
 |---|---|---|
-| `n` | `synth` | `source` (P slot 0-7), `data` (a pattern, same shape as a `pattern.slots` entry), `automation`, `edited`, `copiedHash`, `keptHash` |
+| `n` | `synth` | `source` (P slot 0-7), `data` (a pattern, same shape as a `pattern.slots` entry; or `pattern`, see above), `automation`, `edited`, `copiedHash`, `keptHash` |
 | `b` | `synth` | as `n`, with `data` a Berlin pattern and `laneMask` (8 booleans, `false` = lane muted). Files from before the oscillator rows only: on load each becomes one row clip per oscillator the pattern uses |
 | `b` | `lanes[row]` | an oscillator row clip: as above, plus `row` (0-3, the same as its place in `lanes`) and optional `mute`. It plays only lane `row` of `data`; the pattern's mod lanes play from the first row, O1 down, that has a clip at that moment. `laneMask` only matters for the mod lanes (indexes 4-7) |
 | `d` | `drums` | as `n`, with `data.lanes` the 4 drum lanes and `laneMask` (4 booleans) |
@@ -354,7 +364,7 @@ the UTF-8 compact minimal serialization, with `voice.speechBank` and `voice.fm6B
 
 - Extension `.ingy`, MIME `application/vnd.ingysynth+json`, UTI `com.ingysynth.ingy` (conforms to `public.json`).
 - Share as `Name.ingy` (name sanitized for file systems). Files carry everything, including `speechBank` and `fm6Bank`.
-- Files over 1 MB are refused (`too-large`).
+- Files over 16 MB are refused (`too-large`). Bare Metal writes files compact.
 
 ## Errors
 
@@ -394,7 +404,8 @@ Web apply rules: set params with `params.set` so subscribers run, never by writi
 
 | Limit | Value |
 |---|---|
-| decoded file or link | 1 MB |
+| file | 16 MB |
+| decoded link | 1 MB |
 | link length | 2000 characters |
 | `name`, `by` | 64 code points |
 | param/lane/map keys | 64 characters |

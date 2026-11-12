@@ -11,6 +11,7 @@ import {
     getParam,
     isCatalogKey,
     isStepKey,
+    WHOLE_STEP_KEYS,
 } from './param-catalog.js?v=13';
 
 const subscribers = new Map();
@@ -108,7 +109,8 @@ function coerceForKey(key, value) {
     if (spec.type === 'range') {
         const n = typeof value === 'number' ? value : parseFloat(value);
         if (!Number.isFinite(n)) return undefined;
-        return clampToCatalog(key, n);
+        const v = clampToCatalog(key, n);
+        return WHOLE_STEP_KEYS.has(key) ? Math.round(v) : v;
     }
     if (spec.type === 'button') return !!value;
     if (spec.type === 'ratch') {

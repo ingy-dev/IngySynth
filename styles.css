@@ -14438,17 +14438,14 @@ html.arrange-trimming * {
     --win-bar: 44px;
     /* Inset on every side so the full phosphor frame shows, clear of the notch, rounded corners
        and home bar (the sheet is fixed, so the body's safe-area padding doesn't reach it). */
-    --sheet-gap: 4px;
+    --sheet-gap: 12px;   /* never edge to edge: a clear gap on both sides (and below) */
     left: max(var(--sheet-gap), env(safe-area-inset-left, 0px));
     right: max(var(--sheet-gap), env(safe-area-inset-right, 0px));
     bottom: max(var(--sheet-gap), env(safe-area-inset-bottom, 0px));
     top: auto;
     width: auto;
     height: min(80vh, 80dvh);
-    box-shadow:
-        0 0 0 2px #000,
-        0 0 0 3px rgba(16, 158, 67, 0.45),
-        0 -12px 32px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.8);   /* no offset slab: the gaps stay even */
     transform-origin: 50% 100%;
 }
 .ingy-window.is-sheet .ingy-window__bar {
@@ -14463,15 +14460,16 @@ html.arrange-trimming * {
     width: 36px;
     height: 3px;
     margin-left: -18px;
-    background: var(--win-line);
+    background: #000;   /* black on the lit band */
 }
 .ingy-window.is-sheet .ingy-window__close {
+    /* the desktop close (black X on the lit band, black square on press), with a finger-sized target */
     --x-size: 14px;
     flex-basis: 36px;
     width: 36px;
     height: 36px;
-    margin-right: -6px;
-    border-color: var(--win-line);
+    margin-right: 0;
+    border-color: transparent;
 }
 .ingy-window.is-sheet .ingy-window__title {
     font-size: 11px;
